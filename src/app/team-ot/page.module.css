@@ -1,0 +1,371 @@
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+.page {
+  font-family: "Sarabun", sans-serif;
+  background: #f4f6f9;
+  min-height: 100vh;
+  color: #111827;
+  position: relative;
+}
+
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle,
+      rgba(217, 48, 37, 0.045) 1px,
+      transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  /* Aligned with other team pages for consistency */
+  margin: 0 auto;
+  padding: 0 16px 80px;
+}
+
+.hero {
+  padding: 28px 0 20px;
+  position: relative;
+}
+
+.heroH1 {
+  font-family: "Prompt", sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.heroMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #6b7280;
+  font-family: "Prompt", sans-serif;
+}
+
+.heroMetaDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d93025;
+  flex-shrink: 0;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 28px 26px 32px;
+  margin-bottom: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.04),
+    0 1px 4px rgba(0, 0, 0, 0.02);
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.35s ease both;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #d93025, #e8450a, transparent);
+  border-radius: 20px 20px 0 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  font-family: "Prompt", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #374151;
+}
+
+.btnRefresh {
+  background: none;
+  border: none;
+  color: #d93025;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemCard {
+  border: 1px solid #e5e8ef;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+}
+
+.itemHead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.empName {
+  font-weight: 700;
+  color: #111827;
+  font-size: 16px;
+}
+
+.empId {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.reqHours {
+  font-weight: 700;
+  color: #7c3aed;
+  font-size: 14px;
+}
+
+.itemDetails {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.detailLabel {
+  color: #6b7280;
+}
+
+.detailVal {
+  color: #111827;
+  font-weight: 500;
+}
+
+.reasonBox {
+  background: #f9fafb;
+  padding: 8px 10px;
+  border-radius: 6px;
+  grid-column: 2;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fdf2f2;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.inputLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #d93025;
+}
+
+.inputHours {
+  width: 60px;
+  padding: 6px;
+  border: 1px solid #d93025;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.actionRow {
+  display: flex;
+  gap: 10px;
+}
+
+.btnApprove {
+  flex: 1;
+  padding: 10px 0;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btnReject {
+  flex: 12;
+  padding: 10px 0;
+  background: white;
+  border: 1px solid #ef4444;
+  color: #dc2626;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* History */
+.histCard {
+  border: 1px solid #e5e8ef;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f9fafb;
+}
+
+.histHead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.histName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.badgeOk {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 999px;
+  border: 1px solid #bbf7d0;
+}
+
+.badgeBad {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  border-radius: 999px;
+  border: 1px solid #fecaca;
+}
+
+.histGrid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 2px 8px;
+  font-size: 12px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* Alert Modal */
+.alertOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alertModal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px 28px;
+  width: 90%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.alertIcon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.alertTitle {
+  font-family: "Prompt", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.alertMsg {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 24px;
+}
+
+.alertBtn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alertBtnOk {
+  background: #16a34a;
+  color: white;
+}
+
+.alertBtnErr {
+  background: #dc2626;
+  color: white;
+}

@@ -1,0 +1,149 @@
+.wrap {
+    padding: 30px;
+}
+
+.header {
+    margin-bottom: 24px;
+}
+
+.h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--surface-2);
+    padding: 4px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.tab {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-3);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.tabActive {
+    padding: 8px 16px;
+    border: none;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.tableWrap {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 16px;
+    background: var(--surface-1);
+    font-size: 13px;
+    color: var(--text-4);
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+}
+
+.table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.empInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.empName {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.empId {
+    font-size: 12px;
+    color: var(--text-4);
+}
+
+.tagSub {
+    font-size: 10px;
+    background: #fff9db;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+    width: fit-content;
+}
+
+.receiptLink {
+    color: #4c6ef5;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btnApprove {
+    background: #ebfbee;
+    color: #2b8a3e;
+    border: 1px solid #d3f9d8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btnReject {
+    background: #fff5f5;
+    color: #c92a2a;
+    border: 1px solid #ffe3e3;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-4);
+}
+
+.stApproved {
+    color: #2b8a3e;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.stRejected {
+    color: #c92a2a;
+    font-weight: 700;
+    font-size: 13px;
+}

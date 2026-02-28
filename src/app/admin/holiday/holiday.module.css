@@ -1,0 +1,381 @@
+:root {
+  --text1: #111827;
+  --text2: #374151;
+  --text3: #6b7280;
+  --text4: #9ca3af;
+}
+
+.page {
+  padding: 18px;
+  background: #f6f7fb;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text1);
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--text3);
+}
+
+.headerRight {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.input {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  outline: none;
+  min-width: 140px;
+}
+
+.btnGhost {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btnGhost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+  border: 1px solid #eef0f5;
+  padding: 16px;
+}
+
+.cardTitle {
+  font-weight: 900;
+  color: var(--text1);
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.kpiBox {
+  border: 1px solid #eef0f5;
+  border-radius: 14px;
+  background: #fbfcff;
+  padding: 12px;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text3);
+  font-weight: 800;
+}
+
+.kpiValue {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text1);
+  margin-top: 4px;
+}
+
+.kpiValueSmall {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text1);
+  margin-top: 4px;
+}
+
+.kpiHint {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 160px 1fr 110px;
+  gap: 10px;
+}
+
+.btnPrimary {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text4);
+  font-weight: 700;
+}
+
+.tableWrap {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+  border: 1px solid #eef0f5;
+  overflow: hidden;
+}
+
+/* Calendar styles */
+.calendarWrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.calendarNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendarTitle {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.calendarGridWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weekHead {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.weekDay {
+  font-size: 12px;
+  color: var(--text4);
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendarCell {
+  min-height: 72px;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.calendarCell.outside {
+  opacity: 0.35;
+}
+
+.cellInner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cellDateRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cellDate {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.today {
+  background: linear-gradient(90deg, var(--bad), var(--red3));
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(201, 32, 32, 0.18);
+}
+
+.holidayBadge {
+  background: var(--bad);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--bad-bdr);
+  box-shadow: 0 6px 18px rgba(201, 32, 32, 0.12);
+}
+
+.calendarCell .holidayBadge {
+  white-space: nowrap;
+}
+
+.bdayBadge {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--ok-bdr);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef0f5;
+}
+
+.tableTitle {
+  font-weight: 900;
+  color: var(--text1);
+  font-size: 16px;
+}
+
+.rowCount {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.tableScroll {
+  overflow: auto;
+  max-height: 520px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid #eef0f5;
+  padding: 10px 12px;
+  text-align: left;
+  color: #334155;
+  font-weight: 900;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 12px;
+  color: var(--text1);
+}
+
+.mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+}
+
+.btnDanger {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.btnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empty {
+  text-align: center;
+  padding: 28px 0;
+  color: var(--text4);
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}

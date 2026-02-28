@@ -1,0 +1,182 @@
+.container {
+    padding: 40px;
+    font-family: var(--font-th);
+}
+
+.header {
+    margin-bottom: 32px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: var(--text3);
+}
+
+.tableWrap {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 16px 20px;
+    background: var(--gray-50);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14px;
+    vertical-align: top;
+}
+
+.typeTag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--gray-100);
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.statusBadge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.status_pending {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.status_approved {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.status_rejected {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.miniBadge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    margin-right: 4px;
+    margin-top: 4px;
+}
+
+.link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.btnApprove,
+.btnReject {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.btnApprove {
+    background: #22c55e;
+    color: white;
+}
+
+.btnReject {
+    background: #ef4444;
+    color: white;
+}
+
+.btnApprove:hover {
+    background: #16a34a;
+    transform: scale(1.1);
+}
+
+.btnReject:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.msgOk {
+    padding: 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-weight: 600;
+}
+
+.msgBad {
+    padding: 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-weight: 600;
+}
+
+.empty {
+    text-align: center;
+    padding: 60px;
+    color: var(--text4);
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: var(--text3);
+    font-weight: 700;
+}

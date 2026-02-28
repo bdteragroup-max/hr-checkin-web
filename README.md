@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TERA HR Check-in Web
 
-## Getting Started
+A comprehensive Human Resources and Employee Management system built with Next.js, handling everything from daily attendance to complex payroll calculations.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Employee Attendance & Check-in
+- **Distance-Based Check-in**: Geographic-aware check-in system for office and project sites.
+- **Photo Verification**: Real-time photo capture for attendance validation.
+- **Dashboard**: Live monitoring of present, late, absent, and on-leave employees.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Payroll & Allowances
+- **Automated Calculation**: Seamlessly calculates base salary, OT, and various allowances.
+- **Allowance Types**:
+  - **Diligence Allowance** (เบี้ยขยัน): Automated based on attendance records.
+  - **Meal Allowance**: Per-day or fixed meal support.
+  - **Travel & Off-Site Claims**: Integrated workflow for travel expenses and accommodation.
+  - **Telephone Allowance**: Configurable per-employee.
+  - **Position Allowance** (เงินประจำตำแหน่ง): Variable role-based allowances.
+  - **Birthday Benefits**: Monthly cash gift and meal allowance submission system.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Management & Workflows
+- **Leave Management**: Support for multiple leave types with specific entitlements (Annual, Sick, Personal, etc.).
+- **OT Management**: Request and approval workflow for overtime work.
+- **Employee Admin**: Centralized management of employee profiles, branches, departments, and payroll settings.
+- **Administrative Tools**: Export functionality for payroll and reports.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Tech Stack
+- **Framework**: [Next.js](https://nextjs.org) (App Router)
+- **Database**: [PostgreSQL](https://www.postgresql.org/) via [Prisma ORM](https://www.prisma.io/)
+- **Authentication**: JWT-based security with separate User and Admin tokens.
+- **Styling**: Vanilla CSS Modules for premium, responsive UI.
+- **Form Handling**: Multi-part form data support for file uploads (Receipts, Slips, Photos).
 
-## Learn More
+## 📁 Project Structure
+- `/src/app`: Application routes and UI components.
+  - `/src/app/admin`: Administrative dashboard and management pages.
+  - `/src/app/api`: Server-side API endpoints (Protected by `requireAdmin` or user tokens).
+  - `/src/app/app`: Main employee-facing dashboard and features.
+- `/src/lib`: Core utility functions (Prisma client, JWT handling, Auth guards).
+- `/src/components`: Shared React components (e.g., `AlertModal`, `Sidebar`).
+- `/public/uploads`: File system storage for uploaded evidence (Photos, Slips).
+- `/prisma`: Database schema definition and migrations.
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Getting Started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
+- Node.js (Latest LTS recommended)
+- PostgreSQL Database
+- `.env` file with `DATABASE_URL` and `JWT_SECRET`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Generate Prisma client:
+   ```bash
+   npx prisma generate
+   ```
+4. Push schema to database:
+   ```bash
+   npx prisma db push
+   ```
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔒 Security
+The application uses a dual-token system:
+- `token`: Used for employee-level access.
+- `admin_token`: Used for administrative functions.
+API routes use the `requireAdmin()` utility to enforce strict authorization for management endpoints.

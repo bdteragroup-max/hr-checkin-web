@@ -1,0 +1,51 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/adminAuth";
+
+export const runtime = "nodejs";
+
+function jsonSafe<T>(v: T): any {
+    if (typeof v === "bigint") return v.toString();
+    if (v instanceof Date) return v.toISOString();
+    if (Array.isArray(v)) return v.map(jsonSafe);
+    if (v && typeof v === "object") {
+        const out: any = {};
+        for (const [k, val] of Object.entries(v as any)) out[k] = jsonSafe(val);
+        return out;
+    }
+    return v;
+}
+
+export async function POST(
+    req: Request,
+    ctx: { params: Promise<{ id: string }> } // ✅ สำคัญ: params เป็น Promise
+) {
+    try {
+        const admin = await requireAdmin();
+
+        const { id } = await ctx.params; // ✅ ต้อง await ไม่งั้น id = undefined
+        if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
+
+        const body = await req.json().catch(() => ({} as any));
+        const noteRaw = body?.reason ?? body?.note ?? null;
+        const note = noteRaw ? String(noteRaw).trim() : "";
+
+        const updated = await prisma.leave_requests.update({
+            where: { id }, // ✅ id ของคุณเป็น string แบบ LV-...
+            data: {
+                status: "rejected",
+                approved_by: admin.emp_id,
+                approved_at: new Date(),
+                ...(note ? { reason: note } : {}),
+            },
+            select: { id: true, status: true, approved_by: true, approved_at: true, reason: true },
+        });
+
+        return NextResponse.json(jsonSafe({ ok: true, updated }));
+    } catch (e: any) {
+        console.error("reject error:", e);
+        const msg = e instanceof Error ? e.message : "ERROR";
+        const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : 500;
+        return NextResponse.json(jsonSafe({ ok: false, error: msg }), { status });
+    }
+}

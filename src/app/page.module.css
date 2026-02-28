@@ -1,0 +1,413 @@
+/* ══════════════════════════════════════════════════
+   TERA GROUP — Login Page
+   Same design system as check-in app
+   ══════════════════════════════════════════════════ */
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --red: #d93025;
+  --red2: #b71c1c;
+  --red-glow: rgba(217, 48, 37, 0.2);
+  --red-lt: #fdecea;
+
+  --bg: #edf1f7;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --surface3: #f1f5f9;
+
+  --line: #e2e8f0;
+  --line2: #cbd5e1;
+
+  --text: #0f172a;
+  --text2: #334155;
+  --text3: #64748b;
+  --text4: #94a3b8;
+
+  --bad: #dc2626;
+  --bad-bg: #fef2f2;
+  --bad-bdr: #fecaca;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.07), 0 8px 24px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.14);
+  --shadow-red: 0 4px 20px rgba(217, 48, 37, 0.32);
+}
+
+/* ── Full page layout ── */
+.page {
+  font-family: "Noto Sans Thai", "DM Sans", system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  background-image:
+    radial-gradient(
+      ellipse 70% 50% at 100% 0%,
+      rgba(217, 48, 37, 0.07) 0%,
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 60% 60% at 0% 100%,
+      rgba(15, 23, 42, 0.05) 0%,
+      transparent 65%
+    );
+}
+
+/* ── Dark hero top band ── */
+.hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1a2540 100%);
+  padding: 48px 24px 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Top red-orange gradient bar */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--red), #ff6b35, #ffb347);
+}
+
+/* Decorative circles */
+.hero::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.heroCircle2 {
+  position: absolute;
+  left: -40px;
+  bottom: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+/* Logo */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--red);
+  box-shadow: var(--shadow-red);
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+  animation: popIn 0.5s cubic-bezier(0.22, 0.68, 0, 1.4) both;
+}
+
+.logo span {
+  font-family: "DM Sans", sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.heroTitle {
+  font-family: "DM Sans", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px;
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 0.45s 0.1s ease both;
+}
+
+.heroSub {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+  animation: fadeUp 0.45s 0.18s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+
+  width: calc(100% - 32px);
+  max-width: 400px;
+  margin: -40px auto 0;
+  padding: 28px 24px 32px;
+  position: relative;
+  z-index: 10;
+
+  animation: cardUp 0.4s 0.05s cubic-bezier(0.22, 0.68, 0, 1.2) both;
+}
+
+@keyframes cardUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Form field label ── */
+.label {
+  display: block;
+  font-family: "DM Sans", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text4);
+  margin-bottom: 6px;
+}
+
+/* ── Input wrapper (for icon) ── */
+.inputWrap {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── Input ── */
+.input {
+  width: 100%;
+  font-family: "Noto Sans Thai", "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 12px 14px 12px 40px;
+  background: var(--surface2);
+  border: 1.5px solid var(--line2);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.2s,
+    background 0.15s;
+  box-sizing: border-box;
+}
+
+.input::placeholder {
+  color: var(--text4);
+  font-weight: 400;
+}
+.input:hover {
+  border-color: var(--text3);
+  background: var(--surface);
+}
+.input:focus {
+  border-color: var(--red);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+
+/* PIN input — bigger, monospaced, centered */
+.inputPin {
+  letter-spacing: 0.35em;
+  font-family: "DM Sans", monospace;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  padding-left: 14px;
+}
+
+/* ── Login button ── */
+.btnLogin {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 8px;
+  padding: 13px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: var(--shadow-red);
+  transition:
+    background 0.15s,
+    box-shadow 0.2s,
+    transform 0.12s;
+}
+
+.btnLogin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btnLogin:hover:not(:disabled)::before {
+  opacity: 1;
+}
+.btnLogin:hover:not(:disabled) {
+  background: var(--red2);
+  box-shadow: 0 6px 28px rgba(217, 48, 37, 0.4);
+  transform: translateY(-1px);
+}
+.btnLogin:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: var(--shadow-red);
+}
+
+.btnLogin:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Loading spinner inside button */
+.btnLogin.loading {
+  color: transparent;
+}
+.btnLogin.loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.55s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Error toast (inline, inside card) ── */
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px 14px;
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-bdr);
+  border-radius: var(--radius-sm);
+  font-family: "DM Sans", sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--bad);
+  animation: shake 0.35s ease;
+}
+
+.error::before {
+  content: "⚠";
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+/* ── Footer note ── */
+.footer {
+  text-align: center;
+  padding: 24px 16px 40px;
+  font-size: 11px;
+  color: var(--text4);
+  letter-spacing: 0.5px;
+  animation: fadeUp 0.5s 0.3s ease both;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .hero {
+    padding: 36px 20px 72px;
+  }
+  .heroTitle {
+    font-size: 19px;
+  }
+  .card {
+    padding: 22px 18px 26px;
+  }
+}
