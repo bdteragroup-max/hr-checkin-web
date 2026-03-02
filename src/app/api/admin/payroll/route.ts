@@ -11,13 +11,13 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const month = parseInt(searchParams.get("month") || new Date().getMonth().toString());
+    const month = parseInt(searchParams.get("month") || (new Date().getMonth() + 1).toString());
     const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
 
     // Cycle: 26th of prev month to 25th of current month
-    // If month = 1 (Feb), prev month = 0 (Jan). So Jan 26 - Feb 25
-    const startDate = new Date(year, month - 1, 26, 0, 0, 0);
-    const endDate = new Date(year, month, 25, 23, 59, 59);
+    // Example: If month = 3 (March), cycle = Feb 26 - March 25
+    const startDate = new Date(year, month - 2, 26, 0, 0, 0);
+    const endDate = new Date(year, month - 1, 25, 23, 59, 59);
 
     try {
         // 1. Fetch all active employees
@@ -309,16 +309,22 @@ export async function GET(request: Request) {
             empTravelClaims.forEach((tc: any) => {
                 let rate = 0;
                 if (tc.claim_type === "upcountry") {
-                    rate = 250; // All positions
+                    rate = 250;
                 } else {
-                    // Local Off-Site (Tiered)
                     const pos = emp.job_positions?.title || "";
                     if (pos.includes("ผู้จัดการ") || pos.includes("Manager")) rate = 350;
                     else if (pos.includes("วิศว") || pos.includes("Engineer")) rate = 250;
                     else if (pos.includes("หัวหน้า") || pos.includes("Supervisor") || pos.includes("ขับรถ") || pos.toLowerCase().includes("driver")) rate = 200;
-                    else rate = 150; // General Staff
+                    else rate = 150;
                 }
-                travel_site_allowance += rate;
+
+                // Calculate days: (end_date - date) + 1
+                const start = new Date(tc.date);
+                const end = tc.end_date ? new Date(tc.end_date) : start;
+                const diffTime = Math.abs(end.getTime() - start.getTime());
+                const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                travel_site_allowance += rate * days;
                 travel_accommodation += Number(tc.accommodation_amount);
             });
 

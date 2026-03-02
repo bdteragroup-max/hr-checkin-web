@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import styles from "../page.module.css";
+import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import AlertModal, { AlertState } from "@/components/AlertModal";
@@ -26,6 +26,7 @@ export default function AdminTravelClaimsPage() {
     }, []);
 
     async function fetchClaims() {
+        setLoading(true);
         try {
             const r = await fetch("/api/admin/travel-claims");
             const data = await r.json();
@@ -87,13 +88,14 @@ export default function AdminTravelClaimsPage() {
     const pendingCount = claims.filter(c => c.status === "pending_admin").length;
 
     function getStatusBadge(status: string) {
-        if (status === "approved") return `${styles.badge} ${styles.approved}`;
-        if (status === "rejected") return `${styles.badge} ${styles.rejected}`;
-        return `${styles.badge} ${styles.pending}`;
+        if (status === "approved") return `${styles.statusBadge} ${styles.status_approved}`;
+        if (status === "rejected") return `${styles.statusBadge} ${styles.status_rejected}`;
+        if (status === "pending_supervisor") return `${styles.statusBadge} ${styles.status_pending}`;
+        return `${styles.statusBadge} ${styles.status_pending_admin || styles.status_pending}`;
     }
 
     return (
-        <div className={styles.content}>
+        <div className={styles.wrap}>
             <AlertModal
                 alert={alert}
                 onClose={closeAlert}
@@ -101,136 +103,171 @@ export default function AdminTravelClaimsPage() {
                 inputPlaceholder="ระบุหมายเหตุ (ถ้ามี)..."
                 confirmText={pendingAction ? "ยืนยัน" : "ตกลง"}
             />
-            <div className={styles.pageHeader}>
+
+            {/* ── Header ── */}
+            <div className={styles.header}>
                 <div>
-                    <h1 className={styles.pageTitle}>อนุมัติเบี้ยเลี้ยง & ที่พัก</h1>
-                    <div className={styles.pageSubtitle}>ตรวจสอบและอนุมัติรายการเบิกจ่ายค่าเดินทางและที่พัก</div>
+                    <h1 className={styles.h1}>อนุมัติเบี้ยเลี้ยง & ที่พัก</h1>
+                    <div className={styles.sub}>ตรวจสอบและอนุมัติรายการเบิกจ่ายค่าเดินทางและที่พัก</div>
                 </div>
             </div>
 
+            {/* ── Filter Bar ── */}
             <div className={styles.filterBar}>
                 <div className={styles.filterGroup}>
-                    <div className={styles.filterLabel}>STATUS</div>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <label className={styles.filterLabel}>STATUS</label>
+                    <select
+                        className={styles.select}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
                         <option value="all">ทุกสถานะ</option>
                         <option value="pending_admin">รออนุมัติ (HR)</option>
-                        <option value="pending">รออนุมัติ (หัวหน้า)</option>
+                        <option value="pending_supervisor">รออนุมัติ (หัวหน้า)</option>
                         <option value="approved">อนุมัติแล้ว</option>
                         <option value="rejected">ไม่อนุมัติ</option>
                     </select>
                 </div>
-                <div className={styles.filterGroup}>
-                    <div className={styles.filterLabel}>SEARCH</div>
+                <div className={styles.filterGroup} style={{ flex: 1, minWidth: 250 }}>
+                    <label className={styles.filterLabel}>SEARCH</label>
                     <input
+                        className={styles.input}
                         type="text"
-                        placeholder="ชื่อ, รหัสพนักงาน, สถานที่"
+                        placeholder="ชื่อ, รหัสพนักงาน, สถานที่..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className={styles.btnPrimary} onClick={fetchClaims} disabled={loading}>
-                    {loading ? "กำลังโหลด..." : "Refresh"}
+                <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading}>
+                    {loading ? <div className={styles.spinner} style={{ width: 14, height: 14, borderWidth: 2 }} /> : "↻ Refresh"}
                 </button>
             </div>
 
-            <div className={styles.tableWrap}>
+            {/* ── Table Card ── */}
+            <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle}>
-                        รายการเบิกจ่าย {pendingCount > 0 && <span className={styles.pendingCountBadge}>{pendingCount}</span>}
+                        📂 รายการเบิกจ่าย
+                        {pendingCount > 0 && (
+                            <span style={{
+                                background: "var(--red)",
+                                color: "white",
+                                padding: "1px 7px",
+                                borderRadius: 10,
+                                fontSize: 10,
+                                fontWeight: 800
+                            }}>
+                                {pendingCount} PENDING
+                            </span>
+                        )}
                     </div>
                     <span className={styles.rowCount}>{filteredClaims.length} รายการ</span>
                 </div>
 
                 <div className={styles.tableScroll}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>พนักงาน</th>
-                                <th>วันที่</th>
-                                <th>ประเภท / สถานที่</th>
-                                <th>รายละเอียดที่พัก</th>
-                                <th>หลักฐาน</th>
-                                <th>สถานะ</th>
-                                <th>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredClaims.length === 0 && !loading ? (
+                    {loading ? (
+                        <div className={styles.loader}>
+                            <div className={styles.spinner} />
+                            กำลังโหลดข้อมูล...
+                        </div>
+                    ) : (
+                        <table className={styles.table}>
+                            <thead>
                                 <tr>
-                                    <td colSpan={7} className={styles.emptyState}>ไม่พบรายการเบิกจ่าย</td>
+                                    <th>พนักงาน</th>
+                                    <th>วันที่</th>
+                                    <th>ประเภท / สถานที่</th>
+                                    <th>รายละเอียดที่พัก</th>
+                                    <th>หลักฐาน</th>
+                                    <th>สถานะ</th>
+                                    <th style={{ textAlign: "right" }}>จัดการ</th>
                                 </tr>
-                            ) : (
-                                filteredClaims.map((c: any) => (
-                                    <tr key={c.id}>
-                                        <td>
-                                            <div className={styles.empName}>{c.employee?.name}</div>
-                                            <div className={styles.empId}>{c.emp_id}</div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.monoText}>
-                                                {format(new Date(c.date), "d MMM yy", { locale: th })}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.badge} style={{ background: '#f5f3ff', color: '#6d28d9', borderColor: '#ddd6fe', marginBottom: 4 }}>
-                                                {c.claim_type}
-                                            </div>
-                                            <div style={{ fontSize: 13, fontWeight: 500 }}>{c.site_name}</div>
-                                            {c.supervisor_approved_at && (
-                                                <div style={{ fontSize: 11, color: "var(--ok)", marginTop: 4 }}>
-                                                    ✓ หัวหน้าอนุมัติแล้ว: {c.supervisor_remark || "-"}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {c.is_overnight ? (
-                                                <div>
-                                                    <div style={{ color: "var(--ot)", fontWeight: 700, fontSize: 12 }}>ค้างคืน</div>
-                                                    <div className={styles.empName}>฿{Number(c.accommodation_amount).toLocaleString()}</div>
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-                                                        {c.is_supervisor_shared && <span className={styles.badge} style={{ fontSize: 9, padding: '1px 6px' }}>พักกับหัวหน้า</span>}
-                                                        {c.has_pre_approval && <span className={styles.badge} style={{ fontSize: 9, padding: '1px 6px', background: '#ecfdf5', color: '#047857' }}>อนุมัติล่วงหน้า</span>}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <span style={{ color: 'var(--text5)' }}>-</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                <a href={c.report_url} target="_blank" className={styles.btnExcelSm} style={{ textDecoration: 'none', fontSize: 11, height: 26 }}>รายงาน</a>
-                                                {c.accommodation_receipt_url && (
-                                                    <a href={c.accommodation_receipt_url} target="_blank" className={styles.btnPdfSm} style={{ textDecoration: 'none', fontSize: 11, height: 26 }}>ใบเสร็จ</a>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={getStatusBadge(c.status)}>
-                                                {c.status === "pending_admin" ? "รอ HR" :
-                                                    c.status === "pending" ? "รอหัวหน้างาน" :
-                                                        c.status === "approved" ? "อนุมัติแล้ว" : "ไม่อนุมัติ"}
-                                            </span>
-                                            {c.approved_by && (
-                                                <div style={{ fontSize: 10, color: "var(--text5)", marginTop: 4 }}>
-                                                    โดย {c.approved_by}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {c.status === "pending_admin" ? (
-                                                <div style={{ display: "flex", gap: 6 }}>
-                                                    <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove}>✓</button>
-                                                    <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject}>✕</button>
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: 11, color: 'var(--text5)' }}>เรียบร้อยแล้ว</span>
-                                            )}
+                            </thead>
+                            <tbody>
+                                {filteredClaims.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} style={{ textAlign: "center", padding: 60, color: "var(--text4)" }}>
+                                            ไม่พบรายการเบิกจ่าย
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    filteredClaims.map((c: any) => (
+                                        <tr key={c.id}>
+                                            <td>
+                                                <div className={styles.empName}>{c.employee?.name}</div>
+                                                <div className={styles.empId}>{c.emp_id}</div>
+                                            </td>
+                                            <td className={styles.tdDate}>
+                                                <div className={styles.dateWrap}>
+                                                    <span className={styles.dateText}>{format(new Date(c.date), 'dd/MM/yyyy')}</span>
+                                                    {c.end_date && format(new Date(c.end_date), 'dd/MM/yyyy') !== format(new Date(c.date), 'dd/MM/yyyy') && (
+                                                        <>
+                                                            <span className={styles.dateSeparator}>-</span>
+                                                            <span className={styles.dateText}>{format(new Date(c.end_date), 'dd/MM/yyyy')}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.typeTag}>{c.claim_type}</div>
+                                                <div style={{ fontSize: 13, fontWeight: 500, marginTop: 4 }}>{c.site_name}</div>
+                                                {c.supervisor_approved_at && (
+                                                    <div style={{ fontSize: 11, color: "var(--ok)", marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                        หัวหน้าอนุมัติแล้ว: {c.supervisor_remark || "-"}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {c.is_overnight ? (
+                                                    <div>
+                                                        <div style={{ color: "var(--late)", fontWeight: 800, fontSize: 10, textTransform: "uppercase", marginBottom: 2 }}>ค้างคืน</div>
+                                                        <div style={{ fontWeight: 700, fontSize: 14 }}>฿{Number(c.accommodation_amount).toLocaleString()}</div>
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                                                            {c.is_supervisor_shared && <span className={styles.miniBadge}>พักกับหัวหน้า</span>}
+                                                            {c.has_pre_approval && <span className={styles.miniBadge} style={{ background: 'var(--ok-bg)', color: 'var(--ok)', borderColor: 'var(--ok-bdr)' }}>อนุมัติล่วงหน้า</span>}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text5)' }}>—</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                                                    <a href={c.report_url} target="_blank" className={styles.link}>📄 รายงานผล</a>
+                                                    {c.accommodation_receipt_url && (
+                                                        <a href={c.accommodation_receipt_url} target="_blank" className={styles.link} style={{ color: "var(--ot)" }}>🧾 ใบเสร็จที่พัก</a>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={getStatusBadge(c.status)}>
+                                                    {c.status === "pending_admin" ? "รอ HR" :
+                                                        c.status === "pending_supervisor" ? "รอหัวหน้า" :
+                                                            c.status === "approved" ? "อนุมัติแล้ว" : "ไม่อนุมัติ"}
+                                                </span>
+                                                {c.approved_by && (
+                                                    <div style={{ fontSize: 10, color: "var(--text4)", marginTop: 5 }}>
+                                                        โดย {c.approved_by}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td style={{ textAlign: "right" }}>
+                                                {c.status === "pending_admin" ? (
+                                                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                                        <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove} title="อนุมัติ">✓</button>
+                                                        <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject} title="ปฏิเสธ">✕</button>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ fontSize: 11, color: 'var(--text5)', fontWeight: 500 }}>ดำเนินการแล้ว</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>

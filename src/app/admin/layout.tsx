@@ -104,6 +104,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className={styles.navIcon}>🏢</span>โครงสร้างองค์กร
                             </Link>
 
+                            {/* ✅ Branches menu */}
+                            <Link
+                                href="/admin/branches"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/branches") ? styles.active : ""}`}
+                            >
+                                <span className={styles.navIcon}>📍</span>สาขา (Branches)
+                            </Link>
+
                             {/* ✅ Projects menu */}
                             <Link
                                 href="/admin?tab=projects"

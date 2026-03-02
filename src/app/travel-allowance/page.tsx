@@ -13,6 +13,7 @@ export default function TravelAllowancePage() {
 
     // Form states
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [claimType, setClaimType] = useState("local");
     const [siteName, setSiteName] = useState("");
     const [isOvernight, setIsOvernight] = useState(false);
@@ -38,9 +39,10 @@ export default function TravelAllowancePage() {
         }
     }
 
-    async function uploadFile(file: File) {
+    async function uploadFile(file: File, prefix: string) {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("prefix", prefix);
         const r = await fetch("/api/upload", { method: "POST", body: formData });
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || "Upload failed");
@@ -58,16 +60,21 @@ export default function TravelAllowancePage() {
             return setMsg({ text: "กรุณาแนบใบเสร็จค่าที่พักสำหรับการค้างคืน", type: "bad" });
         }
 
+        if (isOvernight && endDate < date) {
+            return setMsg({ text: "วันที่เดินทางกลับต้องไม่ก่อนวันที่เริ่มต้น", type: "bad" });
+        }
+
         setIsSubmitting(true);
         try {
-            const reportUrl = await uploadFile(reportFile);
+            const reportUrl = await uploadFile(reportFile, "report");
             let receiptUrl = null;
             if (receiptFile) {
-                receiptUrl = await uploadFile(receiptFile);
+                receiptUrl = await uploadFile(receiptFile, "receipt");
             }
 
             const body = {
                 date,
+                end_date: isOvernight ? endDate : date,
                 claim_type: claimType,
                 site_name: siteName,
                 is_overnight: isOvernight,
@@ -148,11 +155,22 @@ export default function TravelAllowancePage() {
                         </div>
 
                         <div className={styles.formGroup}>
-                            <div className={`${styles.checkboxGroup} ${isOvernight ? styles.checkboxGroupWhite : ""}`} onClick={() => setIsOvernight(!isOvernight)}>
+                            <div className={`${styles.checkboxGroup} ${isOvernight ? styles.checkboxGroupWhite : ""}`} onClick={() => {
+                                const newVal = !isOvernight;
+                                setIsOvernight(newVal);
+                                if (newVal) setEndDate(date);
+                            }}>
                                 <input type="checkbox" className={styles.checkbox} checked={isOvernight} readOnly />
                                 <span className={styles.checkboxLabel}>เป็นการค้างคืน (Overnight)</span>
                             </div>
                         </div>
+
+                        {isOvernight && (
+                            <div className={styles.formGroup} style={{ animation: "fadeIn 0.3s ease" }}>
+                                <label className={styles.label}>วันที่เดินทางกลับ (Return Date)</label>
+                                <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} required />
+                            </div>
+                        )}
 
                         {isOvernight && (
                             <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeIn 0.3s ease" }}>

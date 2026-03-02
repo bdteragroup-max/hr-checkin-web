@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const {
             date,
+            end_date,
             claim_type,
             site_name,
             is_overnight,
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ ok: false, error: "Accommodation receipt is required for overnight stays" }, { status: 400 });
         }
 
+        // Rule: Accommodation limit is 600 unless shared with supervisor or pre-approved
+        const amount = Number(accommodation_amount) || 0;
+        if (is_overnight && amount > 600 && !is_supervisor_shared && !has_pre_approval) {
+            return NextResponse.json({ ok: false, error: "Accommodation amount cannot exceed 600 THB unless shared with supervisor or pre-approved" }, { status: 400 });
+        }
+
         // Get employee's current supervisor
         const emp = await prisma.employees.findUnique({
             where: { emp_id: user.emp_id },
@@ -67,6 +74,7 @@ export async function POST(request: Request) {
             data: {
                 emp_id: user.emp_id,
                 date: new Date(date),
+                end_date: end_date ? new Date(end_date) : new Date(date),
                 claim_type,
                 site_name,
                 is_overnight: !!is_overnight,
@@ -77,7 +85,7 @@ export async function POST(request: Request) {
                 is_supervisor_shared: !!is_supervisor_shared,
                 status: "pending_supervisor",
                 supervisor_id: emp?.supervisor_id
-            }
+            } as any
         });
 
         return NextResponse.json({ ok: true, data: claim });

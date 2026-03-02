@@ -4,11 +4,20 @@ import React, { useState, useEffect } from "react";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import AlertModal, { AlertState } from "@/components/AlertModal";
 
 export default function TeamTravelClaimsPage() {
     const [loading, setLoading] = useState(true);
     const [claims, setClaims] = useState<any[]>([]);
     const [msg, setMsg] = useState({ text: "", type: "" });
+
+    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
+    const [pendingAction, setPendingAction] = useState<{ id: string, status: string } | null>(null);
+
+    const closeAlert = () => {
+        setAlert(p => ({ ...p, visible: false }));
+        setPendingAction(null);
+    };
 
     useEffect(() => {
         fetchClaims();
@@ -27,16 +36,20 @@ export default function TeamTravelClaimsPage() {
         }
     }
 
-    async function handleAction(id: string, status: string) {
-        let remark = "";
-        if (status === "rejected") {
-            const promptReason = window.prompt("ระบุเหตุผลที่ไม่อนุมัติ (ถ้ามี):");
-            if (promptReason === null) return;
-            remark = promptReason;
-        } else {
-            if (!window.confirm("ยืนยันการอนุมัติรายการนี้?")) return;
-        }
+    async function handleActionClick(id: string, status: string) {
+        setPendingAction({ id, status });
+        setAlert({
+            visible: true,
+            message: `ยืนยันการ${status === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'} รายการนี้?`,
+            type: "ok"
+        });
+    }
 
+    async function executeAction(remark: string) {
+        if (!pendingAction) return;
+        const { id, status } = pendingAction;
+
+        setLoading(true);
         try {
             const r = await fetch("/api/team/travel-claims", {
                 method: "POST",
@@ -52,11 +65,20 @@ export default function TeamTravelClaimsPage() {
             }
         } catch (e: any) {
             setMsg({ text: e.message, type: "bad" });
+        } finally {
+            closeAlert();
         }
     }
 
     return (
         <div className={styles.page}>
+            <AlertModal
+                alert={alert}
+                onClose={closeAlert}
+                onConfirmInput={pendingAction ? executeAction : undefined}
+                inputPlaceholder="ระบุหมายเหตุ/เหตุผล (ถ้ามี)..."
+                confirmText={pendingAction ? "ยืนยัน" : "ตกลง"}
+            />
             <div className={styles.wrap}>
                 {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
@@ -101,7 +123,12 @@ export default function TeamTravelClaimsPage() {
 
                                     <div className={styles.kv}>
                                         <span className={styles.kvKey}>วันที่:</span>
-                                        <span className={styles.kvValBold}>{format(new Date(c.date), "d MMM yyyy", { locale: th })}</span>
+                                        <span className={styles.kvValBold}>
+                                            {format(new Date(c.date), "d MMM yyyy", { locale: th })}
+                                            {c.end_date && format(new Date(c.end_date), "d MMM yyyy", { locale: th }) !== format(new Date(c.date), "d MMM yyyy", { locale: th }) && (
+                                                <> - {format(new Date(c.end_date), "d MMM yyyy", { locale: th })}</>
+                                            )}
+                                        </span>
 
                                         <span className={styles.kvKey}>สถานที่:</span>
                                         <span className={styles.kvVal}>{c.site_name}</span>
@@ -134,10 +161,10 @@ export default function TeamTravelClaimsPage() {
 
                                     {c.status === "pending_supervisor" && (
                                         <div className={styles.actions}>
-                                            <button onClick={() => handleAction(c.id, "approved")} className={styles.btnApprove}>
+                                            <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove}>
                                                 ✅ อนุมัติ
                                             </button>
-                                            <button onClick={() => handleAction(c.id, "rejected")} className={styles.btnReject}>
+                                            <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject}>
                                                 ✕ ไม่อนุมัติ
                                             </button>
                                         </div>
