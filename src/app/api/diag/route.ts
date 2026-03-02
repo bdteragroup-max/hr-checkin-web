@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
     const checks = {
@@ -10,11 +11,17 @@ export async function GET() {
         NODE_ENV: process.env.NODE_ENV,
     };
 
-    const allOk = Object.values(checks).every(v => v !== false && v !== undefined);
+    const { data: bucketData, error: bucketError } = await (supabase.storage as any).getBucket("uploads").catch(() => ({ data: null, error: { message: "NOT_ACCESSIBLE" } }));
+
+    const allOk = Object.values(checks).every(v => v !== false && v !== undefined) && !bucketError;
 
     return NextResponse.json({
         ok: allOk,
         checks,
-        message: allOk ? "All environment variables are detected!" : "Some environment variables are MISSING. Check your Vercel settings.",
+        storage: {
+            bucketFound: !!bucketData,
+            error: bucketError?.message || "NONE",
+        },
+        message: allOk ? "All environment variables are detected and Storage is accessible!" : "Check logs for details.",
     });
 }

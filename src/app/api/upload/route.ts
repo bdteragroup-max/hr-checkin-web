@@ -27,13 +27,16 @@ export async function POST(req: Request) {
     }
 
     // parse formData
+    console.log("[UPLOAD DEBUG] Starting upload process...");
     const form = await req.formData();
     const file = form.get("file");
     const prefix = String(form.get("prefix") || "").trim();
 
     if (!file || !(file instanceof File)) {
+        console.error("[UPLOAD ERROR] No file found in form data");
         return NextResponse.json({ error: "FILE_REQUIRED" }, { status: 400 });
     }
+    console.log("[UPLOAD DEBUG] File received:", file.name, "Type:", file.type, "Size:", file.size);
 
     // validate type/size
     const allowed = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
@@ -66,6 +69,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Upload to Supabase Storage
+    console.log("[UPLOAD DEBUG] Uploading to Supabase bucket 'uploads' at path:", filePath);
     const { data, error } = await supabase.storage
         .from("uploads")
         .upload(filePath, buffer, {
@@ -74,9 +78,10 @@ export async function POST(req: Request) {
         });
 
     if (error) {
-        console.error("Supabase upload error:", error);
+        console.error("[UPLOAD ERROR] Supabase upload failed:", error);
         return NextResponse.json({ error: "UPLOAD_FAILED", details: error.message }, { status: 500 });
     }
+    console.log("[UPLOAD DEBUG] Supabase upload success!");
 
     // Get Public URL
     const { data: { publicUrl } } = supabase.storage
