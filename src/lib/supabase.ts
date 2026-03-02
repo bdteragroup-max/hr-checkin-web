@@ -1,12 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+let client: any = null;
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    if (process.env.NODE_ENV === "production") {
-        console.warn("[SUPABASE] Credentials missing. If this is a build, it's expected. If this is runtime, uploads will fail.");
+// Use a Proxy to delay calling createClient until the 'supabase' object is actually accessed.
+// This prevents build-time crashes when NEXT_PUBLIC_SUPABASE_URL is missing.
+export const supabase = new Proxy({} as any, {
+    get(target, prop) {
+        if (!client) {
+            const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+            const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+            client = createClient(url, key);
+        }
+        return client[prop];
     }
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+});
