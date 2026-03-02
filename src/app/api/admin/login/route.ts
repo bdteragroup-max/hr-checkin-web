@@ -21,7 +21,10 @@ export async function POST(req: Request) {
     }
 
     const pepper = process.env.ADMIN_PEPPER;
-    if (!pepper) return NextResponse.json({ error: "SERVER_MISCONFIG" }, { status: 500 });
+    if (!pepper) {
+        console.error("[AUTH ERROR] ADMIN_PEPPER is not set in environment variables");
+        return NextResponse.json({ error: "SERVER_MISCONFIG" }, { status: 500 });
+    }
 
     const ip = getIp(req);
 
@@ -67,7 +70,7 @@ export async function POST(req: Request) {
     res.cookies.set("admin_token", token, {
         httpOnly: true,
         sameSite: "lax",
-        secure: false, // For testing localhost and cross-domain if HTTP
+        secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: 60 * 60 * 12, // 12 ชม.
     });
