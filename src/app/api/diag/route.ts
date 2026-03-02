@@ -23,12 +23,16 @@ export async function GET() {
             readError = { message: e.message };
         }
 
-        // 2. WRITE TEST (Upload a tiny dummy file)
+        // 2. WRITE TEST (Upload a tiny dummy image file to bypass MIME check)
         let writeOk = false;
         let writeError: any = null;
-        const testPath = `.diag-test-${Date.now()}.txt`;
+        const testPath = `.diag-test-${Date.now()}.jpg`;
         try {
-            const { data, error } = await supabase.storage.from("uploads").upload(testPath, "diag test", { contentType: "text/plain" });
+            // A tiny valid 1x1 pixel JPEG if possible, but just a buffer with image/jpeg type usually satisfies Supabase if it's not inspecting content deeply
+            const { data, error } = await supabase.storage.from("uploads").upload(testPath, Buffer.from("diag-test"), {
+                contentType: "image/jpeg",
+                upsert: true
+            });
             if (error) {
                 writeError = error;
             } else {
