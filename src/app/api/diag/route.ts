@@ -12,32 +12,46 @@ export async function GET() {
             NODE_ENV: process.env.NODE_ENV,
         };
 
-        // 1. Try to list files in the 'uploads' bucket instead of listing all buckets
-        // This is a much better test of the object policies
+        // 1. READ TEST
         let files: any[] = [];
-        let storageError: any = null;
-
+        let readError: any = null;
         try {
             const res = await supabase.storage.from("uploads").list("", { limit: 1 });
             files = res.data || [];
-            storageError = res.error;
+            readError = res.error;
         } catch (e: any) {
-            storageError = { message: e.message || "Native crash in bucket.list()" };
+            readError = { message: e.message };
         }
 
-        const connectionWorking = !storageError;
+        // 2. WRITE TEST (Upload a tiny dummy file)
+        let writeOk = false;
+        let writeError: any = null;
+        const testPath = `.diag-test-${Date.now()}.txt`;
+        try {
+            const { data, error } = await supabase.storage.from("uploads").upload(testPath, "diag test", { contentType: "text/plain" });
+            if (error) {
+                writeError = error;
+            } else {
+                writeOk = true;
+                // Cleanup
+                await supabase.storage.from("uploads").remove([testPath]);
+            }
+        } catch (e: any) {
+            writeError = { message: e.message };
+        }
 
         return NextResponse.json({
-            ok: connectionWorking,
+            ok: writeOk && !readError,
             checks,
             storage: {
-                connected: connectionWorking,
-                canListObjects: !!files,
-                error: storageError?.message || "NONE",
+                readAccess: !readError,
+                writeAccess: writeOk,
+                readError: readError?.message || "NONE",
+                writeError: writeError?.message || "NONE",
             },
             timestamp: new Date().toISOString(),
-            message: connectionWorking ? "Storage connection is SUCCESSFUL!" : "Storage connection error detected.",
-            action: !connectionWorking ? "Check if policies allow 'SELECT' for Everyone/Anon on the 'uploads' bucket." : "You can now try uploading files on the website!"
+            message: writeOk ? "Storage WRITE Test SUCCESSFUL!" : "Storage WRITE Test FAILED.",
+            action: !writeOk ? "Check if policies allow 'INSERT' for Everyone/Anon on the 'uploads' bucket." : "Connection is perfect. Issue might be file parsing."
         });
     } catch (globalError: any) {
         return NextResponse.json({
