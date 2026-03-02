@@ -12,31 +12,32 @@ export async function GET() {
             NODE_ENV: process.env.NODE_ENV,
         };
 
-        // 1. Check if we can even talk to Supabase
-        let buckets: any[] = [];
-        let listError: any = null;
+        // 1. Try to list files in the 'uploads' bucket instead of listing all buckets
+        // This is a much better test of the object policies
+        let files: any[] = [];
+        let storageError: any = null;
 
         try {
-            const res = await supabase.storage.listBuckets();
-            buckets = res.data || [];
-            listError = res.error;
+            const res = await supabase.storage.from("uploads").list("", { limit: 1 });
+            files = res.data || [];
+            storageError = res.error;
         } catch (e: any) {
-            listError = { message: e.message || "Native crash in listBuckets" };
+            storageError = { message: e.message || "Native crash in bucket.list()" };
         }
 
-        const bucketNames = buckets.map(b => b.name);
-        const uploadsExists = bucketNames.includes("uploads");
+        const connectionWorking = !storageError;
 
         return NextResponse.json({
-            ok: uploadsExists,
+            ok: connectionWorking,
             checks,
             storage: {
-                availableBuckets: bucketNames,
-                uploadsExists,
-                listError: listError?.message || "NONE",
+                connected: connectionWorking,
+                canListObjects: !!files,
+                error: storageError?.message || "NONE",
             },
             timestamp: new Date().toISOString(),
-            help: !uploadsExists ? "Bucket 'uploads' not found. Ensure it is created and Public in Supabase." : "Storage is connected!"
+            message: connectionWorking ? "Storage connection is SUCCESSFUL!" : "Storage connection error detected.",
+            action: !connectionWorking ? "Check if policies allow 'SELECT' for Everyone/Anon on the 'uploads' bucket." : "You can now try uploading files on the website!"
         });
     } catch (globalError: any) {
         return NextResponse.json({
