@@ -6,8 +6,8 @@ export async function GET() {
         DATABASE_URL: !!process.env.DATABASE_URL,
         JWT_SECRET: !!process.env.JWT_SECRET,
         ADMIN_PEPPER: !!process.env.ADMIN_PEPPER,
-        SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 15)}...` : false,
+        SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? `${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 10)}...` : false,
         NODE_ENV: process.env.NODE_ENV,
     };
 
