@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
+import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
 type PayrollResult = {
     emp_id: string;
@@ -38,6 +39,13 @@ type PayrollResult = {
 
     total_ot_hours: number;
     ot_amount: number;
+    social_security: number;
+    student_loan: number;
+    other_deductions: number;
+    other_benefits: number;
+    base_salary_original: number;
+    is_salary_overridden: boolean;
+    gross_pay: number;
     net_pay: number;
     bank_name: string;
     bank_account_no: string;
@@ -50,6 +58,95 @@ export default function PayrollPage() {
     const [data, setData] = useState<PayrollResult[]>([]);
     const [cycle, setCycle] = useState<{ start: string; end: string } | null>(null);
     const [loading, setLoading] = useState(true);
+    
+    // Edit Modal State
+    const [showModal, setShowModal] = useState(false);
+    const [editingEmp, setEditingEmp] = useState<PayrollResult | null>(null);
+    const [editForm, setEditForm] = useState({
+        override_salary: "",
+        normal_1_5x_hours_override: "",
+        holiday_1_x_hours_override: "",
+        holiday_3_x_hours_override: "",
+        diligence_allowance_override: "",
+        meal_allowance_override: "",
+        travel_allowance_override: "",
+        accommodation_allowance_override: "",
+        phone_allowance_override: "",
+        position_allowance_override: "",
+        travel_site_allowance_override: "",
+        travel_accommodation_override: "",
+        social_security: "",
+        student_loan: "",
+        other_deductions: "",
+        other_benefits: ""
+    });
+    const [saving, setSaving] = useState(false);
+
+    const openEditModal = (emp: PayrollResult) => {
+        setEditingEmp(emp);
+        setEditForm({
+            override_salary: emp.is_salary_overridden ? String(emp.base_salary) : "",
+            normal_1_5x_hours_override: String(emp.normal_1_5x_hours || ""),
+            holiday_1_x_hours_override: String(emp.holiday_1x_hours || ""),
+            holiday_3_x_hours_override: String(emp.holiday_3x_hours || ""),
+            diligence_allowance_override: String(emp.diligence_allowance || ""),
+            meal_allowance_override: String(emp.meal_allowance || ""),
+            travel_allowance_override: String(emp.travel_allowance || ""),
+            accommodation_allowance_override: String(emp.accommodation_allowance || ""),
+            phone_allowance_override: String(emp.telephone_allowance || ""),
+            position_allowance_override: String(emp.position_allowance || ""),
+            travel_site_allowance_override: String(emp.travel_site_allowance || ""),
+            travel_accommodation_override: String(emp.travel_accommodation || ""),
+            social_security: String(emp.social_security || 0),
+            student_loan: String(emp.student_loan || 0),
+            other_deductions: String(emp.other_deductions || 0),
+            other_benefits: String(emp.other_benefits || 0)
+        });
+        setShowModal(true);
+    };
+
+    const saveAdjustments = async () => {
+        if (!editingEmp) return;
+        setSaving(true);
+        try {
+            const payload = {
+                emp_id: editingEmp.emp_id,
+                cycle_month: month,
+                cycle_year: year,
+                override_salary: editForm.override_salary,
+                normal_1_5x_hours_override: editForm.normal_1_5x_hours_override,
+                holiday_1_x_hours_override: editForm.holiday_1_x_hours_override,
+                holiday_3_x_hours_override: editForm.holiday_3_x_hours_override,
+                diligence_allowance_override: editForm.diligence_allowance_override,
+                meal_allowance_override: editForm.meal_allowance_override,
+                travel_allowance_override: editForm.travel_allowance_override,
+                accommodation_allowance_override: editForm.accommodation_allowance_override,
+                phone_allowance_override: editForm.phone_allowance_override,
+                position_allowance_override: editForm.position_allowance_override,
+                travel_site_allowance_override: editForm.travel_site_allowance_override,
+                travel_accommodation_override: editForm.travel_accommodation_override,
+                social_security: editForm.social_security,
+                student_loan: editForm.student_loan,
+                other_deductions: editForm.other_deductions,
+                other_benefits: editForm.other_benefits
+            };
+            const res = await fetch("/api/admin/payroll/adjustments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                setShowModal(false);
+                loadData(); 
+            } else {
+                alert("Failed to save adjustments");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error saving");
+        }
+        setSaving(false);
+    };
 
     async function loadData() {
         setLoading(true);
@@ -106,7 +203,7 @@ export default function PayrollPage() {
                             <tr>
                                 <th>พนักงาน (ID)</th>
                                 <th>ตำแหน่ง & แผนก</th>
-                                <th className={styles.thRight}>เงินเดือน (฿)</th>
+                                <th className={styles.thRight} title="หากมีการปรับฐานเงินเดือนรอบนี้ จะแสดงเป็นสีส้ม">เงินเดือน (฿)</th>
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>เงินประจำตำแหน่ง</th>
                                 <th>เงื่อนไข OT</th>
                                 <th className={styles.thRight} style={{ minWidth: 120 }}>OT ปกติ 1.5x (ชม)</th>
@@ -123,8 +220,14 @@ export default function PayrollPage() {
                                     <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัสอายุงาน</th>
                                 )}
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>OT+วันหยุด</th>
-                                <th className={styles.thRight}>รวมสุทธิ (฿)</th>
+                                <th className={styles.thRight} style={{ minWidth: 100 }}>รายได้อื่นๆ</th>
+                                <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>หัก กยศ.</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>หักอื่นๆ</th>
+                                <th className={styles.thRight}>รวมรับจริง (฿)</th>
                                 <th>บัญชีรับเงิน</th>
+                                <th>จัดการ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -151,7 +254,11 @@ export default function PayrollPage() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className={styles.tdRight}>{formatB(p.base_salary)}</td>
+                                    <td className={styles.tdRight}>
+                                        <div style={{ color: p.is_salary_overridden ? "var(--orange)" : "inherit", fontWeight: p.is_salary_overridden ? 600 : "normal" }} title={p.is_salary_overridden ? `ปรับฐานเงินเดือนสำหรับรอบนี้ (ฐานเดิม: ${formatB(p.base_salary_original)})` : ""}>
+                                            {formatB(p.base_salary)}
+                                        </div>
+                                    </td>
                                     <td className={styles.tdRight}>
                                         <span style={{ fontWeight: 600, color: p.position_allowance > 0 ? "var(--purple)" : "inherit" }}>
                                             {p.position_allowance > 0 ? formatB(p.position_allowance) : "-"}
@@ -238,16 +345,169 @@ export default function PayrollPage() {
                                         {formatB(p.ot_amount + (p.holiday_allowance || 0))}
                                     </td>
                                     <td className={styles.tdRight}>
-                                        <span style={{ fontWeight: 800, fontSize: 15, color: "var(--ink)" }}>{formatB(p.net_pay)}</span>
+                                        <span style={{ fontWeight: 600, color: p.other_benefits > 0 ? "var(--ok)" : "inherit" }}>
+                                            {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <div style={{ fontWeight: 500 }}>{formatB(p.gross_pay)}</div>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.social_security > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.social_security > 0 ? "-" + formatB(p.social_security) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.student_loan > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.student_loan > 0 ? "-" + formatB(p.student_loan) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.other_deductions > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.other_deductions > 0 ? "-" + formatB(p.other_deductions) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <div style={{ fontWeight: 600, color: "var(--purple)", fontSize: 16 }}>
+                                            {formatB(p.net_pay)}
+                                        </div>
                                     </td>
                                     <td style={{ whiteSpace: "nowrap" }}>
-                                        <span style={{ fontSize: 13, fontWeight: 600 }}>{p.bank_name}</span> <span style={{ fontSize: 12, color: "var(--text3)" }}>{p.bank_account_no}</span>
+                                        <div style={{ fontSize: 13, fontWeight: 600 }}>{p.bank_name}</div>
+                                        <div style={{ fontSize: 12, color: "var(--text3)" }}>{p.bank_account_no}</div>
+                                    </td>
+                                    <td>
+                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => openEditModal(p)}>
+                                            <PencilSquareIcon width={14} /> จัดการ
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+
+                {showModal && editingEmp && (
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modalContent} style={{ maxWidth: "800px", width: "95%" }}>
+                            <div className={styles.modalHeader}>
+                                <h2>ปรับแก้ข้อมูลเงินเดือน (รอบเดือน {month}/{year})</h2>
+                                <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "var(--text4)" }}>
+                                    พนักงาน: <span style={{ color: "var(--text1)", fontWeight: 700 }}>{editingEmp.name}</span>
+                                </p>
+                            </div>
+
+                            <div className={styles.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                                {/* Section: Salary & OT */}
+                                <div style={{ marginBottom: 24 }}>
+                                    <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <BanknotesIcon width={18} /> รายได้หลัก และ OT (ชั่วโมง)
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ฐานเงินเดือนรอบนี้</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.override_salary} onChange={e => setEditForm({...editForm, override_salary: e.target.value})} placeholder={formatB(editingEmp.base_salary_original)} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>OT ปกติ 1.5x (ชม.)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.normal_1_5x_hours_override} onChange={e => setEditForm({...editForm, normal_1_5x_hours_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ทำงานวันหยุด 1x (ชม.)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.holiday_1_x_hours_override} onChange={e => setEditForm({...editForm, holiday_1_x_hours_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>OT วันหยุด 3x (ชม.)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.holiday_3_x_hours_override} onChange={e => setEditForm({...editForm, holiday_3_x_hours_override: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr style={{ border: '0', borderTop: '1px solid var(--line)', marginBottom: 24 }} />
+
+                                {/* Section: Allowances */}
+                                <div style={{ marginBottom: 24 }}>
+                                    <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <PlusCircleIcon width={18} /> ค่าตอบแทน และสวัสดิการ
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>เบี้ยขยัน</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.diligence_allowance_override} onChange={e => setEditForm({...editForm, diligence_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าอาหาร</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.meal_allowance_override} onChange={e => setEditForm({...editForm, meal_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าเดินทาง</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_allowance_override} onChange={e => setEditForm({...editForm, travel_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าที่พัก (สวัสดิการ)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.accommodation_allowance_override} onChange={e => setEditForm({...editForm, accommodation_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าโทรศัพท์</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.phone_allowance_override} onChange={e => setEditForm({...editForm, phone_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>เงินประจำตำแหน่ง</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.position_allowance_override} onChange={e => setEditForm({...editForm, position_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>เบี้ยเลี้ยง Off-Site</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_site_allowance_override} onChange={e => setEditForm({...editForm, travel_site_allowance_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าที่พัก (Claim)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_accommodation_override} onChange={e => setEditForm({...editForm, travel_accommodation_override: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>รายได้อื่นๆ</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.other_benefits} onChange={e => setEditForm({...editForm, other_benefits: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr style={{ border: '0', borderTop: '1px solid var(--line)', marginBottom: 24 }} />
+
+                                {/* Section: Deductions */}
+                                <div>
+                                    <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <MinusCircleIcon width={18} /> รายการหักเงิน
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ประกันสังคม</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.social_security} onChange={e => setEditForm({...editForm, social_security: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>กยศ.</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.student_loan} onChange={e => setEditForm({...editForm, student_loan: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>หักอื่นๆ</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.other_deductions} onChange={e => setEditForm({...editForm, other_deductions: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div></div>
+
+                            <div className={styles.modalFooter}>
+                                <button className={styles.btnSecondary} onClick={() => setShowModal(false)} disabled={saving}>
+                                    ยกเลิก
+                                </button>
+                                <button className={styles.btnPrimary} onClick={saveAdjustments} disabled={saving}>
+                                    {saving ? "กำลังบันทึก..." : (
+                                        <>
+                                            <CheckCircleIcon width={18} /> ยืนยันปรับแก้
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

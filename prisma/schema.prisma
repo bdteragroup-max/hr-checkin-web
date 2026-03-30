@@ -110,10 +110,11 @@ model employees {
   departments             departments?        @relation(fields: [department_id], references: [id], onUpdate: NoAction)
   job_positions           job_positions?      @relation(fields: [job_position_id], references: [id], onUpdate: NoAction)
   supervisor              employees?          @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
-  subordinates            employees[]         @relation("EmployeeToSupervisor")
-  branches                branches?           @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
-  ot_requests             ot_requests[]       @relation("EmployeeToOtRequests")
+  subordinates            employees[]            @relation("EmployeeToSupervisor")
+  branches                branches?              @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
+  ot_requests             ot_requests[]          @relation("EmployeeToOtRequests")
   travel_claims           travel_claims[]
+  monthly_payroll_data    monthly_payroll_data[]
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -289,4 +290,40 @@ model travel_claims {
   created_at                DateTime  @default(now()) @db.Timestamptz(6)
   remark                    String?
   employee                  employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+}
+
+model monthly_payroll_data {
+  id               Int      @id @default(autoincrement())
+  emp_id           String   @db.VarChar(20)
+  cycle_month      Int
+  cycle_year       Int
+  override_salary  Decimal? @db.Decimal(10, 2)
+  
+  // OT Overrides
+  normal_1_5x_hours_override   Decimal? @db.Decimal(10, 2)
+  holiday_1_x_hours_override   Decimal? @db.Decimal(10, 2)
+  holiday_3_x_hours_override   Decimal? @db.Decimal(10, 2)
+  
+  // Allowance Overrides
+  diligence_allowance_override Decimal? @db.Decimal(10, 2)
+  meal_allowance_override      Decimal? @db.Decimal(10, 2)
+  travel_allowance_override    Decimal? @db.Decimal(10, 2)
+  accommodation_allowance_override Decimal? @db.Decimal(10, 2)
+  phone_allowance_override     Decimal? @db.Decimal(10, 2)
+  position_allowance_override  Decimal? @db.Decimal(10, 2)
+  travel_site_allowance_override Decimal? @db.Decimal(10, 2)
+  travel_accommodation_override Decimal? @db.Decimal(10, 2)
+  
+  // Adjustments
+  social_security  Decimal? @db.Decimal(10, 2) @default(0)
+  student_loan     Decimal? @db.Decimal(10, 2) @default(0)
+  other_deductions Decimal? @db.Decimal(10, 2) @default(0)
+  other_benefits   Decimal? @db.Decimal(10, 2) @default(0)
+  
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  employee         employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@unique([emp_id, cycle_month, cycle_year], map: "idx_monthly_payroll_unique")
 }
