@@ -2,6 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
+import { 
+    ClockIcon, 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    InformationCircleIcon, 
+    ExclamationTriangleIcon,
+    PaperClipIcon,
+    ArrowPathIcon,
+    TrashIcon,
+    PaperAirplaneIcon,
+    CalendarIcon
+} from "@heroicons/react/24/solid";
+import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/utils/time";
 
 /* ── Types ── */
 type LeaveType = {
@@ -28,9 +41,8 @@ function isTypingTarget(el: Element | null) {
 
 function fmtDateTimeTH(d: string) {
     try {
-        return new Date(d).toLocaleString("th-TH", {
-            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-        });
+        const dateObj = new Date(d);
+        return `${dateObj.toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" })} ${formatTime24h(dateObj)}`;
     } catch { return d; }
 }
 
@@ -41,19 +53,20 @@ function fmtDuration(days: number, minutes: number) {
 
 /* ── Status Badge ── */
 function StatusBadge({ status }: { status: string }) {
-    const map: Record<string, { label: string; icon: string }> = {
-        pending: { label: "รออนุมัติ", icon: "🕒" },
-        pending_supervisor: { label: "รอหัวหน้าอนุมัติ", icon: "🕒" },
-        pending_hr: { label: "รอ HR อนุมัติ", icon: "🕒" },
-        approved: { label: "อนุมัติแล้ว", icon: "✓" },
-        rejected: { label: "ไม่อนุมัติ", icon: "✕" },
+    const map: Record<string, { label: string; icon: any; color: string }> = {
+        pending: { label: "รออนุมัติ", icon: ClockIcon, color: "var(--orange-500)" },
+        pending_supervisor: { label: "รอหัวหน้าอนุมัติ", icon: ClockIcon, color: "var(--orange-500)" },
+        pending_hr: { label: "รอ HR อนุมัติ", icon: ClockIcon, color: "var(--orange-500)" },
+        approved: { label: "อนุมัติแล้ว", icon: CheckCircleIcon, color: "var(--green-600)" },
+        rejected: { label: "ไม่อนุมัติ", icon: XCircleIcon, color: "var(--red-600)" },
     };
-    const info = map[status] ?? { label: status, icon: "ℹ️" };
+    const info = map[status] ?? { label: status, icon: InformationCircleIcon, color: "var(--blue-500)" };
     const isPending = status.startsWith('pending');
     const badgeClass = isPending ? styles.statusBadgePending : status === 'approved' ? styles.statusBadgeApproved : status === 'rejected' ? styles.statusBadgeRejected : '';
+    const Icon = info.icon;
     return (
         <span className={`${styles.statusBadge} ${badgeClass}`} role="status" aria-label={info.label}>
-            <span className={styles.statusIcon} aria-hidden>{info.icon}</span>
+            <Icon width={14} className={styles.statusIcon} aria-hidden />
             <span className={styles.statusLabel}>{info.label}</span>
         </span>
     );
@@ -76,7 +89,7 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -104,8 +117,18 @@ export default function LeavePage() {
     const [uploading, setUploading] = useState(false);
 
     const [leaveTypeId, setLeaveTypeId] = useState("");
-    const [startAt, setStartAt] = useState("");
-    const [endAt, setEndAt] = useState("");
+    
+    // Sub-states for 24h Time Picker
+    const [startDate, setStartDate] = useState("");
+    const [startHour, setStartHour] = useState("08");
+    const [startMin, setStartMin] = useState("00");
+    const [endDate, setEndDate] = useState("");
+    const [endHour, setEndHour] = useState("17");
+    const [endMin, setEndMin] = useState("00");
+
+    const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00` : "", [startDate, startHour, startMin]);
+    const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00` : "", [endDate, endHour, endMin]);
+    
     const [reason, setReason] = useState("");
     const [attachmentUrl, setAttachmentUrl] = useState("");
     const [fileName, setFileName] = useState("");
@@ -119,39 +142,18 @@ export default function LeavePage() {
     const requireAttachment = useMemo(() => selectedType?.id === "sick", [selectedType]);
 
     const canSubmit = useMemo(() => {
-        if (!leaveTypeId || !startAt || !endAt || loading || uploading) return false;
+        if (!leaveTypeId || !startDate || !endDate || loading || uploading) return false;
         return true;
-    }, [leaveTypeId, startAt, endAt, loading, uploading]);
+    }, [leaveTypeId, startDate, endDate, loading, uploading]);
 
-    const currentMinDatetime = useMemo(() => {
+    const currentMinDate = useMemo(() => {
         if (!selectedType) return "";
         const notice = selectedType.advance_notice || 0;
         if (notice === 0) return "";
         const d = new Date();
         d.setDate(d.getDate() + notice);
-        d.setHours(0, 0, 0, 0);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const dt = String(d.getDate()).padStart(2, "0");
-        return `${y}-${m}-${dt}T00:00`;
+        return d.toISOString().split('T')[0];
     }, [selectedType]);
-
-    useEffect(() => {
-        if (!startAt && !endAt && selectedType) {
-            const notice = selectedType.advance_notice || 0;
-            // Default to at least the required notice constraint + 1 day to be safe, or tomorrow if none
-            const targetDays = notice === 0 ? 1 : notice + 1;
-            const d = new Date();
-            d.setDate(d.getDate() + targetDays);
-
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const dt = String(d.getDate()).padStart(2, "0");
-
-            setStartAt(`${y}-${m}-${dt}T08:00`);
-            setEndAt(`${y}-${m}-${dt}T17:00`);
-        }
-    }, [startAt, endAt, selectedType]);
 
     function showAlert(message: string, type: "error" | "ok" = "error") {
         setAlert({ visible: true, message, type });
@@ -230,12 +232,13 @@ export default function LeavePage() {
                 ADVANCE_NOTICE_REQUIRED: `ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${data?.required_days} วัน`,
                 EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${data?.remaining || 0} วัน (ขอลา ${data?.requested || 0} วัน)`,
                 ANNUAL_EXCEED_ENTITLEMENT_SINGLE: `ลาพักร้อนครั้งนี้เกินสิทธิ์ (สิทธิ์ต่อครั้ง ${data.entitlement_days} วัน)`,
+                PROBATION_PERSONAL_NOT_ALLOWED: "พนักงานทดลองงานยังไม่ได้รับสิทธิ์ลากิจ หรือ ลากรณีฉุกเฉิน",
             };
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
             return;
         }
 
-        setStartAt(""); setEndAt(""); setReason("");
+        setStartDate(""); setEndDate(""); setReason("");
         setAttachmentUrl(""); setFileName("");
         if (fileRef.current) fileRef.current.value = "";
         await load();
@@ -272,6 +275,28 @@ export default function LeavePage() {
                     </div>
                 </div>
 
+                {/* ── SUMMARY DASHBOARD ── */}
+                <div className={styles.quotaBar}>
+                    {types.filter(t => ["annual", "sick", "personal"].includes(t.id)).map(t => {
+                        const remaining = Math.max(0, (t.quota || 0) - (t.used || 0));
+                        const isWarning = remaining <= 1 && (t.quota || 0) > 0;
+                        const isNoQuota = (t.quota || 0) === 0;
+
+                        // Unified label for Personal/Emergency
+                        const displayName = t.id === 'personal' ? 'ลากิจ / ฉุกเฉิน' : t.name;
+
+                        return (
+                            <div key={t.id} className={styles.quotaItem}>
+                                <div className={styles.quotaLabel}>{displayName}</div>
+                                <div className={`${styles.quotaVal} ${isNoQuota ? styles.quotaValBad : isWarning ? styles.quotaValWarn : styles.quotaValOk}`}>
+                                    {remaining} <span style={{ fontSize: 12, fontWeight: 500 }}>วัน</span>
+                                </div>
+                                <div className={styles.quotaSub}>ใช้แล้ว {t.used || 0} / {t.quota || 0}</div>
+                            </div>
+                        );
+                    })}
+                </div>
+
                 {/* ── FORM CARD ── */}
                 <div className={styles.card}>
                     <div className={styles.cardTitle}>แบบฟอร์มยื่นใบลา</div>
@@ -288,6 +313,11 @@ export default function LeavePage() {
                             {selectedType?.id === 'annual' && (
                                 <div className={styles.smallNote} style={{ color: 'var(--red)', fontWeight: 600 }}>
                                     * ต้องลาล่วงหน้า 30 วัน และลาเป็นวันเต็มเท่านั้น
+                                </div>
+                            )}
+                            {(selectedType?.id === 'personal' || selectedType?.id === 'emergency') && selectedType?.quota === 0 && (
+                                <div className={styles.smallNote} style={{ color: 'var(--red)', fontWeight: 600 }}>
+                                    * พนักงานช่วงทดลองงานยังไม่ได้รับสิทธิ์ลากิจ/ฉุกเฉิน กรุณาเลือก "ลาไม่รับค่าจ้าง" แทน
                                 </div>
                             )}
                             {selectedType?.quota !== null && selectedType?.quota !== undefined ? (
@@ -310,15 +340,48 @@ export default function LeavePage() {
                             ) : null}
                         </div>
 
-                        {/* Date range */}
-                        <div className={styles.row2}>
-                            <div>
-                                <label className={styles.label}>เริ่มลา</label>
-                                <input className={styles.input} type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} min={currentMinDatetime} />
+                        {/* Date range - Compact Layout */}
+                        <div>
+                            <div className={styles.timePickerContainer}>
+                                <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
+                                    <label className={styles.label}>วัน/เวลา เริ่มต้น *</label>
+                                    <input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} min={currentMinDate} />
+                                </div>
+                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                    <label className={styles.label}>ชั่วโมง</label>
+                                    <select className={styles.select} value={startHour} onChange={e => setStartHour(e.target.value)}>
+                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                    </select>
+                                </div>
+                                <span className={styles.timeSeparator}>:</span>
+                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                    <label className={styles.label}>นาที</label>
+                                    <select className={styles.select} value={startMin} onChange={e => setStartMin(e.target.value)}>
+                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
                             </div>
-                            <div>
-                                <label className={styles.label}>สิ้นสุด</label>
-                                <input className={styles.input} type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} min={startAt || currentMinDatetime} />
+                        </div>
+
+                        <div>
+                            <div className={styles.timePickerContainer}>
+                                <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
+                                    <label className={styles.label}>วัน/เวลา สิ้นสุด *</label>
+                                    <input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate || currentMinDate} />
+                                </div>
+                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                    <label className={styles.label}>ชั่วโมง</label>
+                                    <select className={styles.select} value={endHour} onChange={e => setEndHour(e.target.value)}>
+                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                    </select>
+                                </div>
+                                <span className={styles.timeSeparator}>:</span>
+                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                    <label className={styles.label}>นาที</label>
+                                    <select className={styles.select} value={endMin} onChange={e => setEndMin(e.target.value)}>
+                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -350,11 +413,11 @@ export default function LeavePage() {
                                     <div className={styles.fileName}>{fileName}</div>
                                     {attachmentUrl && (
                                         <a className={styles.fileLink} href={attachmentUrl} target="_blank" rel="noreferrer">
-                                            เปิดเอกสาร
+                                            <PaperClipIcon width={14} style={{ marginRight: 4 }} /> เปิดเอกสาร
                                         </a>
                                     )}
                                     <button type="button" className={styles.btnRemoveFile} onClick={removeFile} disabled={uploading}>
-                                        ✕ ลบไฟล์
+                                        <TrashIcon width={14} /> ลบไฟล์
                                     </button>
                                 </div>
                             ) : null}
@@ -363,7 +426,10 @@ export default function LeavePage() {
                         {/* Actions */}
                         <div className={styles.btnRowSingle}>
                             <button className={styles.btnPrimaryFull} disabled={!canSubmit} onClick={submit}>
-                                {loading ? "กำลังส่ง..." : (<><span className={styles.btnIcon}></span> ส่งคำขอลา</>)}
+                                {loading 
+                                    ? <ArrowPathIcon width={20} className="animate-spin" /> 
+                                    : <><PaperAirplaneIcon width={20} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ส่งคำขอลา</>
+                                }
                             </button>
                         </div>
 

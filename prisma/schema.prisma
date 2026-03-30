@@ -68,6 +68,7 @@ model ot_requests {
   created_at     DateTime  @default(now()) @db.Timestamptz(6)
   updated_at     DateTime  @default(now()) @db.Timestamptz(6)
   approved_hours Decimal?  @db.Decimal(5, 2)
+  supervisor_remark String? @db.Text
   employee       employees @relation("EmployeeToOtRequests", fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([emp_id, date_for])

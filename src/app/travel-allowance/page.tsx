@@ -4,6 +4,19 @@ import React, { useState, useEffect } from "react";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import { 
+    DocumentTextIcon, 
+    ClipboardDocumentCheckIcon, 
+    CheckCircleIcon, 
+    ArrowPathIcon,
+    ExclamationTriangleIcon,
+    XCircleIcon,
+    ClockIcon,
+    UserGroupIcon,
+    ShieldCheckIcon,
+    MapPinIcon,
+    CalendarIcon
+} from "@heroicons/react/24/outline";
 
 export default function TravelAllowancePage() {
     const [loading, setLoading] = useState(true);
@@ -127,7 +140,8 @@ export default function TravelAllowancePage() {
                 </div>
 
                 {msg.text && (
-                    <div className={msg.type === "ok" ? styles.msgOk : styles.msgBad}>
+                    <div className={msg.type === "ok" ? styles.msgOk : styles.msgBad} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {msg.type === "ok" ? <CheckCircleIcon width={20} /> : <ExclamationTriangleIcon width={20} />}
                         {msg.text}
                     </div>
                 )}
@@ -195,9 +209,9 @@ export default function TravelAllowancePage() {
                                             accept="image/*,.pdf"
                                             onChange={e => setReceiptFile(e.target.files?.[0] || null)}
                                         />
-                                        <div className={styles.uploadIcon}>📄</div>
-                                        <div className={`${styles.fileHint} ${receiptFile ? styles.fileHintSuccess : ''}`}>
-                                            {receiptFile ? `✅ ${receiptFile.name}` : "คลิกหรือวางใบเสร็จที่นี่"}
+                                        <div className={styles.uploadIcon}><DocumentTextIcon width={24} /></div>
+                                        <div className={`${styles.fileHint} ${receiptFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            {receiptFile ? <><CheckCircleIcon width={18} /> {receiptFile.name}</> : "คลิกหรือวางใบเสร็จที่นี่"}
                                         </div>
                                     </div>
                                 </div>
@@ -220,15 +234,15 @@ export default function TravelAllowancePage() {
                                     accept="image/*,.pdf"
                                     onChange={e => setReportFile(e.target.files?.[0] || null)}
                                 />
-                                <div className={styles.uploadIcon}>📋</div>
-                                <div className={`${styles.fileHint} ${reportFile ? styles.fileHintSuccess : ''}`}>
-                                    {reportFile ? `✅ ${reportFile.name}` : "คลิกหรือวางรายงานที่นี่"}
+                                <div className={styles.uploadIcon}><ClipboardDocumentCheckIcon width={24} /></div>
+                                <div className={`${styles.fileHint} ${reportFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {reportFile ? <><CheckCircleIcon width={18} /> {reportFile.name}</> : "คลิกหรือวางรายงานที่นี่"}
                                 </div>
                             </div>
                         </div>
 
-                        <button type="submit" className={styles.btnPrimary} style={{ marginTop: 10 }} disabled={isSubmitting}>
-                            {isSubmitting ? "กำลังส่งคำขอ..." : "ส่งคำขอเบิก"}
+                        <button type="submit" className={styles.btnPrimary} style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={isSubmitting}>
+                            {isSubmitting ? <><ArrowPathIcon width={18} className="animate-spin" /> กำลังส่งคำขอ...</> : "ส่งคำขอเบิก"}
                         </button>
                     </div>
                 </form>
@@ -244,17 +258,19 @@ export default function TravelAllowancePage() {
                                 <div key={h.id} className={styles.historyCard}>
                                     <div className={styles.historyInfo}>
                                         <div className={styles.historyDate}>
+                                            <CalendarIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
                                             {format(new Date(h.date), "d MMM yyyy", { locale: th })}
                                         </div>
                                         <div className={styles.historySite}>
+                                            <MapPinIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
                                             {h.site_name} · <span style={{ textTransform: 'uppercase' }}>{h.claim_type}</span>
                                         </div>
                                     </div>
-                                    <div className={`${styles.statusBadge} ${styles["status_" + h.status]}`}>
-                                        {h.status === "pending_supervisor" ? "รอหัวหน้า" :
-                                            h.status === "pending_admin" ? "รอ Admin" :
-                                                h.status === "approved" ? "อนุมัติแล้ว" :
-                                                    h.status === "rejected" ? "ปฏิเสธ" : h.status}
+                                    <div className={`${styles.statusBadge} ${styles["status_" + h.status]}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        {h.status === "pending_supervisor" ? <><UserGroupIcon width={14} /> รอหัวหน้า</> :
+                                            h.status === "pending_admin" ? <><ShieldCheckIcon width={14} /> รอ Admin</> :
+                                                h.status === "approved" ? <><CheckCircleIcon width={14} /> อนุมัติแล้ว</> :
+                                                    h.status === "rejected" ? <><XCircleIcon width={14} /> ปฏิเสธ</> : h.status}
                                     </div>
                                 </div>
                             ))}

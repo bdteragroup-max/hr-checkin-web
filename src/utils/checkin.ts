@@ -112,20 +112,20 @@ export function calcLateOT(type: CheckType): LateInfo {
         if (diffMin <= 0)
             return {
                 status: "ontime",
-                label: "✅ ตรงเวลา",
+                label: "ตรงเวลา",
                 detail: "เช็คอินก่อนเวลา",
                 min: 0,
             };
         if (diffMin <= 5)
             return {
                 status: "ontime",
-                label: "✅ ตรงเวลา",
+                label: "ตรงเวลา",
                 detail: `เช็คอินภายใน ${diffMin} นาที`,
                 min: diffMin,
             };
         return {
             status: "late",
-            label: `⏰ สาย ${diffMin} นาที`,
+            label: `สาย ${diffMin} นาที`,
             detail: `กำหนด ${pad(WORK_START_H)}:${pad(WORK_START_M)} — เช็คอิน ${pad(h)}:${pad(m)}`,
             min: diffMin,
         };
@@ -135,20 +135,20 @@ export function calcLateOT(type: CheckType): LateInfo {
         if (diffMin >= OT_THRESHOLD_MIN)
             return {
                 status: "ot",
-                label: `🔥 OT ${diffMin} นาที`,
+                label: `OT ${diffMin} นาที`,
                 detail: `เลิกงาน ${pad(WORK_END_H)}:${pad(WORK_END_M)} — ออก ${pad(h)}:${pad(m)}`,
                 min: diffMin,
             };
         if (diffMin < 0)
             return {
                 status: "early",
-                label: "✅ ออกก่อนเวลา",
+                label: "ออกก่อนเวลา",
                 detail: `ออกก่อนเวลา ${Math.abs(diffMin)} นาที`,
                 min: Math.abs(diffMin),
             };
         return {
             status: "ontime",
-            label: "✅ ออกงานตรงเวลา",
+            label: "ออกงานตรงเวลา",
             detail: `ออกงาน ${pad(h)}:${pad(m)}`,
             min: 0,
         };
@@ -247,7 +247,7 @@ export function checkGpsInBranch(
             reason: `อยู่นอกพื้นที่ (${Math.round(distance)}m > ${branch.radiusM}m)`,
             distance,
         };
-    return { pass: true, reason: "ผ่าน ✅", distance };
+    return { pass: true, reason: "ผ่าน", distance };
 }
 
 export function getCurrentPosition(
@@ -363,7 +363,7 @@ export function captureWithWatermark(
     const f2 = Math.round(18 * sc);
     const f3 = Math.round(14 * sc);
     const typeColor = type === "Check-in" ? "#4ade80" : "#fb923c";
-    const typeLabel = type === "Check-in" ? "▶ CHECK-IN" : "■ CHECK-OUT";
+    const typeLabel = type === "Check-in" ? "CHECK-IN" : "CHECK-OUT";
     const lateColor =
         lateInfo.status === "late"
             ? "#fb923c"

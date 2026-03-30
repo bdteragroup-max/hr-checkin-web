@@ -5,7 +5,18 @@ import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import AlertModal, { AlertState } from "@/components/AlertModal";
-import { FolderOpenIcon, DocumentTextIcon, ReceiptRefundIcon } from "@heroicons/react/24/outline";
+import { 
+    FolderOpenIcon, 
+    DocumentTextIcon, 
+    ReceiptRefundIcon, 
+    ArrowPathIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    CheckIcon,
+    ClockIcon,
+    UserGroupIcon,
+    ShieldCheckIcon
+} from "@heroicons/react/24/outline";
 
 export default function AdminTravelClaimsPage() {
     const [loading, setLoading] = useState(true);
@@ -139,8 +150,8 @@ export default function AdminTravelClaimsPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading}>
-                    {loading ? <div className={styles.spinner} style={{ width: 14, height: 14, borderWidth: 2 }} /> : "↻ Refresh"}
+                <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> Refresh
                 </button>
             </div>
 
@@ -214,7 +225,7 @@ export default function AdminTravelClaimsPage() {
                                                 <div style={{ fontSize: 13, fontWeight: 500, marginTop: 4 }}>{c.site_name}</div>
                                                 {c.supervisor_approved_at && (
                                                     <div style={{ fontSize: 11, color: "var(--ok)", marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                        <CheckIcon width={12} strokeWidth={3} />
                                                         หัวหน้าอนุมัติแล้ว: {c.supervisor_remark || "-"}
                                                     </div>
                                                 )}
@@ -242,10 +253,10 @@ export default function AdminTravelClaimsPage() {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span className={getStatusBadge(c.status)}>
-                                                    {c.status === "pending_admin" ? "รอ HR" :
-                                                        c.status === "pending_supervisor" ? "รอหัวหน้า" :
-                                                            c.status === "approved" ? "อนุมัติแล้ว" : "ไม่อนุมัติ"}
+                                                <span className={getStatusBadge(c.status)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    {c.status === "pending_admin" ? <><ShieldCheckIcon width={14} /> รอ HR</> :
+                                                        c.status === "pending_supervisor" ? <><UserGroupIcon width={14} /> รอหัวหน้า</> :
+                                                            c.status === "approved" ? <><CheckCircleIcon width={14} /> อนุมัติแล้ว</> : <><XCircleIcon width={14} /> ไม่อนุมัติ</>}
                                                 </span>
                                                 {c.approved_by && (
                                                     <div style={{ fontSize: 10, color: "var(--text4)", marginTop: 5 }}>
@@ -256,8 +267,8 @@ export default function AdminTravelClaimsPage() {
                                             <td style={{ textAlign: "right" }}>
                                                 {c.status === "pending_admin" ? (
                                                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                                        <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove} title="อนุมัติ">✓</button>
-                                                        <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject} title="ปฏิเสธ">✕</button>
+                                                        <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove} title="อนุมัติ"><CheckIcon width={16} /></button>
+                                                        <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject} title="ปฏิเสธ"><XCircleIcon width={16} /></button>
                                                     </div>
                                                 ) : (
                                                     <span style={{ fontSize: 11, color: 'var(--text5)', fontWeight: 500 }}>ดำเนินการแล้ว</span>

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import styles from "../page.module.css";
-import { format } from "date-fns";
-import { th } from "date-fns/locale";
+import localStyles from "./page.module.css";
+import { formatTime24h, formatDateThai } from "@/utils/time";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import { CheckCircleIcon, XCircleIcon, PencilSquareIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 type OtRequest = {
     id: number;
@@ -17,6 +18,7 @@ type OtRequest = {
     reason: string;
     status: "pending" | "approved" | "rejected";
     supervisor_name: string | null;
+    supervisor_remark: string | null;
     employee: { name: string; departments: { name: string } | null };
 };
 
@@ -28,6 +30,16 @@ export default function AdminOtPage() {
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
     const closeAlert = () => setAlert(p => ({ ...p, visible: false }));
+
+    // Modal State
+    const [showModal, setShowModal] = useState(false);
+    const [selectedReq, setSelectedReq] = useState<OtRequest | null>(null);
+    const [modalData, setModalData] = useState({ 
+        status: "approved" as "approved" | "rejected", 
+        hours: "", 
+        remark: "" 
+    });
+    const [saving, setSaving] = useState(false);
 
     async function loadRequests() {
         setLoading(true);
@@ -47,33 +59,43 @@ export default function AdminOtPage() {
         loadRequests();
     }, []);
 
-    async function handleAction(id: number, status: "approved" | "rejected") {
-        let remark = "";
-        let approved_hours = undefined;
+    function openAdjustment(req: OtRequest) {
+        setSelectedReq(req);
+        setModalData({
+            status: req.status === "rejected" ? "rejected" : "approved",
+            hours: String(req.approved_hours || req.total_hours),
+            remark: req.supervisor_remark || ""
+        });
+        setShowModal(true);
+    }
 
-        if (status === "approved") {
-            const hoursStr = prompt("จำนวนชั่วโมงที่อนุมัติ:", "1");
-            if (hoursStr === null) return;
-            approved_hours = Number(hoursStr);
-            if (isNaN(approved_hours) || approved_hours <= 0) {
-                setAlert({ visible: true, message: "กรุณาระบุจำนวนชั่วโมงให้ถูกต้อง", type: "error" });
-                return;
-            }
-        } else {
-            remark = prompt("เหตุผลที่ไม่อนุมัติ (ถ้ามี):") || "";
-            if (remark === null) return;
+    async function submitAdjustment() {
+        if (!selectedReq) return;
+        
+        const { status, hours, remark } = modalData;
+        const approved_hours = status === "approved" ? Number(hours) : undefined;
+
+        if (status === "approved" && (isNaN(Number(hours)) || Number(hours) <= 0)) {
+            setAlert({ visible: true, message: "กรุณาระบุจำนวนชั่วโมงที่ถูกต้อง", type: "error" });
+            return;
         }
 
-        setLoading(true);
+        setSaving(true);
         try {
             const res = await fetch("/api/admin/ot", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, status, approved_hours, remark })
+                body: JSON.stringify({ 
+                    id: selectedReq.id, 
+                    status, 
+                    approved_hours, 
+                    remark 
+                })
             });
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: `ดำเนินการ${status === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'}เรียบร้อยแล้ว`, type: "ok" });
+                setAlert({ visible: true, message: `บันทึกรายการเรียบร้อยแล้ว`, type: "ok" });
+                setShowModal(false);
                 loadRequests();
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
@@ -81,7 +103,7 @@ export default function AdminOtPage() {
         } catch (e: any) {
             setAlert({ visible: true, message: e.message, type: "error" });
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     }
 
@@ -179,13 +201,13 @@ export default function AdminOtPage() {
                                         </td>
                                         <td>
                                             <div className={styles.monoText}>
-                                                {format(new Date(req.date_for), "d MMM yyyy", { locale: th })}
+                                                {formatDateThai(req.date_for)}
                                             </div>
                                         </td>
                                         <td>
-                                            <span style={{ fontWeight: 600 }}>{format(new Date(req.start_time), "HH:mm")}</span>
+                                            <span style={{ fontWeight: 600 }}>{formatTime24h(req.start_time)}</span>
                                             {" - "}
-                                            <span style={{ fontWeight: 600 }}>{format(new Date(req.end_time), "HH:mm")}</span>
+                                            <span style={{ fontWeight: 600 }}>{formatTime24h(req.end_time)}</span>
                                         </td>
                                         <td style={{ textAlign: "center" }}>
                                             <span className={`${styles.badge} ${styles.ot}`}>{req.total_hours} ชม.</span>
@@ -199,6 +221,11 @@ export default function AdminOtPage() {
                                             <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>
                                                 {req.supervisor_name || "ไม่มีข้อมูลหัวหน้า"}
                                             </div>
+                                            {req.supervisor_remark && (
+                                                <div style={{ fontSize: 11, color: "var(--ot)", marginTop: 4, fontStyle: 'italic' }}>
+                                                    Admin: {req.supervisor_remark}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ maxWidth: 300 }}>
                                             <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.4 }}>{req.reason}</div>
@@ -211,11 +238,13 @@ export default function AdminOtPage() {
                                         <td>
                                             {req.status === "pending" ? (
                                                 <div style={{ display: "flex", gap: 6 }}>
-                                                    <button onClick={() => handleAction(req.id, "approved")} className={styles.btnApprove} title="อนุมัติ">✓</button>
-                                                    <button onClick={() => handleAction(req.id, "rejected")} className={styles.btnReject} title="ไม่อนุมัติ">✕</button>
+                                                    <button onClick={() => openAdjustment(req)} className={localStyles.btnApprove} title="อนุมัติ/จัดการ">จัดการคำขอ</button>
                                                 </div>
                                             ) : (
-                                                <span style={{ fontSize: 11, color: "var(--text5)" }}>ดำเนินการแล้ว</span>
+                                                <button onClick={() => openAdjustment(req)} className={localStyles.btnEdit} title="แก้ไขผลการพิจารณา">
+                                                    <PencilSquareIcon width={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                                    แก้ไขผลลัพธ์
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -225,6 +254,69 @@ export default function AdminOtPage() {
                     </table>
                 </div>
             </div>
+
+            {showModal && selectedReq && (
+                <div className={localStyles.modalOverlay}>
+                    <div className={localStyles.modalContent}>
+                        <div className={localStyles.modalHeader}>
+                            <h2>จัดการคำขอ OT</h2>
+                        </div>
+                        <div className={localStyles.modalBody}>
+                            <div className={localStyles.inputField}>
+                                <label className={localStyles.inputLabel}>สถานะการตัดสินใจ</label>
+                                <div className={localStyles.statusOptions}>
+                                    <div 
+                                        className={`${localStyles.statusOption} ${localStyles.approved} ${modalData.status === "approved" ? localStyles.active : ""}`}
+                                        onClick={() => setModalData({...modalData, status: "approved"})}
+                                    >
+                                        <CheckCircleIcon width={18} /> อนุมัติ
+                                    </div>
+                                    <div 
+                                        className={`${localStyles.statusOption} ${localStyles.rejected} ${modalData.status === "rejected" ? localStyles.active : ""}`}
+                                        onClick={() => setModalData({...modalData, status: "rejected"})}
+                                    >
+                                        <XCircleIcon width={18} /> ไม่อนุมัติ
+                                    </div>
+                                </div>
+                            </div>
+
+                            {modalData.status === "approved" && (
+                                <div className={localStyles.inputField}>
+                                    <label className={localStyles.inputLabel}>จำนวนชั่วโมงที่อนุมัติ (Requested: {selectedReq.total_hours})</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input 
+                                            className={localStyles.inputElement} 
+                                            type="number" 
+                                            step="0.5"
+                                            value={modalData.hours} 
+                                            onChange={e => setModalData({...modalData, hours: e.target.value})}
+                                        />
+                                        <ClockIcon width={18} style={{ position: 'absolute', right: 12, top: 11, color: 'var(--text4)' }} />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className={localStyles.inputField}>
+                                <label className={localStyles.inputLabel}>บันทึก / ความเห็นของแอดมิน</label>
+                                <textarea 
+                                    className={`${localStyles.inputElement} ${localStyles.textAreaElement}`}
+                                    placeholder="ระบุเหตุผลหรือข้อความเพิ่มเติม..."
+                                    value={modalData.remark}
+                                    onChange={e => setModalData({...modalData, remark: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div className={localStyles.modalFooter}>
+                            <button className={localStyles.btnCancel} onClick={() => setShowModal(false)} disabled={saving}>
+                                ยกเลิก
+                            </button>
+                            <button className={localStyles.btnConfirm} onClick={submitAdjustment} disabled={saving}>
+                                {saving ? "กำลังบันทึก..." : "ยืนยันการตั้งค่า"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

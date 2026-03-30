@@ -323,9 +323,21 @@ export async function GET(request: Request) {
 
             const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance;
             
-            const social_security = Number(adj?.social_security || 0);
             const student_loan = Number(adj?.student_loan || 0);
             const unpaid_absenteeism = Number(adj?.unpaid_absenteeism || 0);
+            
+            // --- 5. SOCIAL SECURITY (SSO) FORMULA ---
+            let social_security = 0;
+            if (adj?.social_security !== null && adj?.social_security !== undefined) {
+                social_security = Number(adj.social_security);
+            } else {
+                const ssoBase = Math.max(0, baseSalary - unpaid_absenteeism);
+                if (ssoBase > 1650) {
+                    const cappedBase = Math.min(17500, ssoBase);
+                    social_security = Math.round(cappedBase * 0.05);
+                }
+            }
+
             const tax = Number(adj?.tax || 0);
             const commissions = Number(adj?.commissions || 0);
             const bonus = Number(adj?.bonus || 0);

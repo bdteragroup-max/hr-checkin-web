@@ -9,8 +9,13 @@ import {
     HandRaisedIcon, GiftIcon, PencilSquareIcon, CheckCircleIcon, 
     XCircleIcon, ClockIcon, SunIcon, ClipboardDocumentListIcon, 
     InboxIcon, MagnifyingGlassIcon, Cog6ToothIcon, DocumentTextIcon, 
-    CalendarDaysIcon, CameraIcon, BanknotesIcon, ExclamationTriangleIcon 
+    CalendarDaysIcon, CameraIcon, BanknotesIcon, ExclamationTriangleIcon,
+    UserPlusIcon, CakeIcon, ChevronRightIcon, PlayIcon, StopIcon,
+    ArrowDownTrayIcon, TrashIcon, ArrowPathIcon, InboxStackIcon,
+    ChevronLeftIcon, CalendarIcon, XMarkIcon, PlusIcon, CheckIcon,
+    UserIcon
 } from "@heroicons/react/24/outline";
+import { formatTime24h, formatTimeFull24h, formatDateThai } from "@/utils/time";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -133,9 +138,7 @@ const TH_WEEKDAYS = ["อาทิตย์", "จันทร์", "อัง�
 
 function fmtThai(d: Date | string | null | undefined) {
     if (!d) return "-";
-    const date = typeof d === "string" ? new Date(d) : d;
-    if (isNaN(date.getTime())) return "-";
-    return `${date.getDate()} ${TH_MONTHS[date.getMonth()]} ${date.getFullYear() + 543}`;
+    return formatDateThai(d);
 }
 
 const DEFAULT_LEAVE_TYPES = [
@@ -150,12 +153,7 @@ const DEFAULT_LEAVE_TYPES = [
    HELPERS
 ══════════════════════════════════════════════ */
 function formatTime(ts: string) {
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return "-";
-    const h = String(d.getHours()).padStart(2, "0");
-    const m = String(d.getMinutes()).padStart(2, "0");
-    const s = String(d.getSeconds()).padStart(2, "0");
-    return `${h}:${m}:${s}`;
+    return formatTimeFull24h(ts); // Using full time for logs (HH:mm:ss)
 }
 
 function badgeClass(status: string) {
@@ -265,7 +263,7 @@ function AdminPageInner() {
         setShiftEnd(draftEnd);
         setGraceMin(draftGrace);
         setShowSettings(false);
-        showToast("✅ บันทึกการตั้งค่าแล้ว");
+        showToast("บันทึกการตั้งค่าแล้ว");
     }
     function closeSettings() {
         setShowSettings(false);
@@ -399,7 +397,7 @@ function AdminPageInner() {
                 body: JSON.stringify({ id, status }),
             });
             if (r.ok) {
-                showToast(status === "approved" ? "✅ อนุมัติแล้ว" : "❌ ปฏิเสธแล้ว", status === "approved" ? "ok" : "bad");
+                showToast(status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธแล้ว", status === "approved" ? "ok" : "bad");
                 loadLeave();
             } else showToast("เกิดข้อผิดพลาด", "bad");
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
@@ -427,7 +425,7 @@ function AdminPageInner() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ date: holidayDate, name: holidayName.trim() }),
             });
-            if (r.ok) { showToast("✅ เพิ่มวันหยุดแล้ว"); setHolidayDate(""); setHolidayName(""); loadHolidays(); }
+            if (r.ok) { showToast("เพิ่มวันหยุดแล้ว"); setHolidayDate(""); setHolidayName(""); loadHolidays(); }
             else showToast("เกิดข้อผิดพลาด", "bad");
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
@@ -440,7 +438,7 @@ function AdminPageInner() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ date }),
             });
-            if (r.ok) { showToast("🗑 ลบแล้ว"); loadHolidays(); }
+            if (r.ok) { showToast("ลบแล้ว"); loadHolidays(); }
             else showToast("เกิดข้อผิดพลาด", "bad");
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
@@ -469,7 +467,7 @@ function AdminPageInner() {
                 body: JSON.stringify(projectForm),
             });
             if (r.ok) {
-                showToast(`✅ ${isEdit ? "แก้ไข" : "เพิ่ม"}โครงการสำเร็จ`);
+                showToast(`${isEdit ? "แก้ไข" : "เพิ่ม"}โครงการสำเร็จ`);
                 setShowProjectModal(false);
                 loadProjects();
             } else {
@@ -482,7 +480,7 @@ function AdminPageInner() {
         if (!confirm(`ยืนยันการลบโครงการนี้?`)) return;
         try {
             const r = await fetch(`/api/projects?id=${id}`, { method: "DELETE" });
-            if (r.ok) { showToast("🗑 ลบแล้ว"); loadProjects(); }
+            if (r.ok) { showToast("ลบแล้ว"); loadProjects(); }
             else showToast("เกิดข้อผิดพลาด", "bad");
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
@@ -534,11 +532,11 @@ function AdminPageInner() {
     /*  EXPORT                             */
     /* ─────────────────────────────────── */
     async function exportData(endpoint: string, params: Record<string, string>) {
-        showToast("⏳ กำลังสร้างไฟล์...");
+        showToast("กำลังสร้างไฟล์...");
         try {
             const p = new URLSearchParams(params);
             window.location.href = `/api/admin/export/${endpoint}?${p.toString()}`;
-            setTimeout(() => showToast("✅ ดาวน์โหลดเริ่มแล้ว"), 1500);
+            setTimeout(() => showToast("ดาวน์โหลดเริ่มแล้ว"), 1500);
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
 
@@ -603,11 +601,11 @@ function AdminPageInner() {
     }
 
     async function exportEmpData(emp_id: string, name: string, format: "excel" | "pdf") {
-        showToast(`⏳ กำลังสร้าง ${format.toUpperCase()}...`);
+        showToast(`กำลังสร้าง ${format.toUpperCase()}...`);
         try {
             const p = new URLSearchParams({ emp_id, month: reportMonth, format });
             window.open(`/api/admin/export/employee?${p.toString()}`, "_blank");
-            setTimeout(() => showToast(`✅ Export ${name} สำเร็จ`), 1500);
+            setTimeout(() => showToast(`Export ${name} สำเร็จ`), 1500);
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
 
@@ -630,7 +628,7 @@ function AdminPageInner() {
                     <div className={styles.notifTray}>
                         {notifs.arrivals.map(a => (
                             <div key={a.emp_id} className={styles.notifItem}>
-                                <span className={styles.notifIcon}>👋</span>
+                                <span className={styles.notifIcon}><UserPlusIcon width={20} /></span>
                                 <div className={styles.notifText}>
                                     <b>{a.name}</b> จะเริ่มงานในวันที่ {fmtThai(a.hire_date)}
                                 </div>
@@ -638,7 +636,7 @@ function AdminPageInner() {
                         ))}
                         {notifs.birthdays.map(b => (
                             <div key={b.emp_id} className={styles.notifItem}>
-                                <span className={styles.notifIcon}>🎂</span>
+                                <span className={styles.notifIcon}><CakeIcon width={20} /></span>
                                 <div className={styles.notifText}>
                                     วันนี้เป็นวันเกิดของ <b>{b.name}</b> อย่าลืมมอบสวัสดิการ!
                                 </div>
@@ -650,7 +648,7 @@ function AdminPageInner() {
                                 <div className={styles.notifText}>
                                     มีคำขอสวัสดิการวันเกิด <b>{notifs.pendingClaimsCount} รายการ</b> ที่รอการตรวจสอบ
                                 </div>
-                                <span className={styles.notifArrow}>›</span>
+                                <span className={styles.notifArrow}><ChevronRightIcon width={16} /></span>
                             </Link>
                         )}
                     </div>
@@ -694,8 +692,9 @@ function AdminPageInner() {
                                         <td><span className={styles.monoText}>{r.emp_id}</span></td>
                                         <td>{r.name}</td>
                                         <td>
-                                            <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`}>
-                                                {r.type === "Project-In" ? "▶ เข้า (โครงการ)" : r.type === "Project-Out" ? "■ ออก (โครงการ)" : r.type === "Check-in" ? "▶ เข้า" : "■ ออก"}
+                                            <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                {r.type?.includes("In") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
+                                                {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Check-in" ? "เข้า" : "ออก"}
                                             </span>
                                         </td>
                                         <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
@@ -767,8 +766,8 @@ function AdminPageInner() {
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>&nbsp;</span>
                         <div style={{ display: "flex", gap: 6 }}>
-                            <button className={styles.btnExcelSm} onClick={() => exportData("excel", { date: filterDate, branch: filterBranch })}>⬇ Excel</button>
-                            <button className={styles.btnPdfSm} onClick={() => exportData("pdf", { date: filterDate, branch: filterBranch })}>⬇ PDF</button>
+                            <button className={styles.btnExcelSm} onClick={() => exportData("excel", { date: filterDate, branch: filterBranch })}><ArrowDownTrayIcon width={14} /> Excel</button>
+                            <button className={styles.btnPdfSm} onClick={() => exportData("pdf", { date: filterDate, branch: filterBranch })}><DocumentTextIcon width={14} /> PDF</button>
                         </div>
                     </div>
                 </div>
@@ -798,8 +797,9 @@ function AdminPageInner() {
                                                 <div className={styles.empName}>{r.name}</div>
                                             </td>
                                             <td style={{ whiteSpace: "nowrap" }}>
-                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`}>
-                                                    {r.type === "Project-In" ? "▶ เข้า (โครงการ)" : r.type === "Project-Out" ? "■ ออก (โครงการ)" : r.type === "Check-in" ? "▶ เข้า" : "■ ออก"}
+                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    {r.type?.includes("In") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
+                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Check-in" ? "เข้า" : "ออก"}
                                                 </span>
                                             </td>
                                             <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
@@ -820,7 +820,7 @@ function AdminPageInner() {
                                     ))}
                                     {!attLoading && pagedRows.length === 0 && (
                                         <tr><td colSpan={9}>
-                                            <div className={styles.emptyState}><span className={styles.emptyIcon}>📭</span>ไม่มีข้อมูล</div>
+                                            <div className={styles.emptyState}><span className={styles.emptyIcon}><InboxStackIcon width={32} /></span>ไม่มีข้อมูล</div>
                                         </td></tr>
                                     )}
                                 </tbody>
@@ -834,7 +834,7 @@ function AdminPageInner() {
                                 แสดง {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredRows.length)}–{Math.min(currentPage * PAGE_SIZE, filteredRows.length)} จาก {filteredRows.length}
                             </span>
                             <div className={styles.pageButtons}>
-                                <button className={styles.pageBtn} disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>‹</button>
+                                <button className={styles.pageBtn} disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeftIcon width={16} /></button>
                                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                                     const p = Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i;
                                     return (
@@ -842,7 +842,7 @@ function AdminPageInner() {
                                             onClick={() => setCurrentPage(p)}>{p}</button>
                                     );
                                 })}
-                                <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>›</button>
+                                <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRightIcon width={16} /></button>
                             </div>
                         </div>
                     )}
@@ -887,7 +887,7 @@ function AdminPageInner() {
                                     <span className={`${styles.badge} ${styles.leave}`}>{r.leaveType}</span>
                                 </div>
                                 <div className={styles.leavePendingMeta}>
-                                    📅 {r.startDate} → {r.endDate} · {r.days} วัน · {r.reason || "—"}
+                                    <CalendarIcon width={14} /> {r.startDate} → {r.endDate} · {r.days} วัน · {r.reason || "—"}
                                 </div>
                                 <div className={styles.leaveApproveButtons}>
                                     <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} style={{ display: "flex", alignItems: "center", gap: 6 }}><CheckCircleIcon width={16} /> อนุมัติ</button>
@@ -943,7 +943,7 @@ function AdminPageInner() {
                     <input type="text" placeholder="ชื่อวันหยุด เช่น วันสงกรานต์"
                         value={holidayName} onChange={e => setHolidayName(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && addHoliday()} />
-                    <button className={styles.btnAdd} onClick={addHoliday}>+ เพิ่ม</button>
+                    <button className={styles.btnAdd} onClick={addHoliday} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><PlusIcon width={16} /> เพิ่ม</button>
                 </div>
                 {sorted.length === 0 ? (
                     <div className={styles.emptyState}><span className={styles.emptyIcon}><CalendarDaysIcon width={32} /></span>ยังไม่มีวันหยุด</div>
@@ -951,7 +951,7 @@ function AdminPageInner() {
                     <div key={h.date} className={styles.holidayItem}>
                         <span className={styles.holidayDate} style={{ display: "flex", alignItems: "center", gap: 4 }}><CalendarDaysIcon width={16} /> {h.date}</span>
                         <span className={styles.holidayName}>{h.name}</span>
-                        <button className={styles.btnDelete} onClick={() => deleteHoliday(h.date)} title="ลบ">✕</button>
+                        <button className={styles.btnDelete} onClick={() => deleteHoliday(h.date)} title="ลบ"><XMarkIcon width={16} /></button>
                     </div>
                 ))}
             </div>
@@ -994,11 +994,11 @@ function AdminPageInner() {
 
                     <div style={{ display: "flex", gap: 8 }}>
                         <button style={{ padding: "8px 16px", background: "white", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }} onClick={() => exportData("monthly-excel", { month: reportMonth, branch: reportBranch })} >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <ArrowDownTrayIcon width={16} />
                             Excel
                         </button>
                         <button style={{ padding: "8px 16px", background: "white", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }} onClick={() => exportData("monthly-pdf", { month: reportMonth, branch: reportBranch })} >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <DocumentTextIcon width={16} />
                             PDF
                         </button>
                     </div>
@@ -1047,7 +1047,7 @@ function AdminPageInner() {
                                                     <td style={{ padding: "16px", color: "#111827" }}>{e.lateMins > 0 ? e.lateMins : "-"}</td>
                                                     <td style={{ padding: "16px", textAlign: "right" }}>
                                                         <button style={{ background: "none", border: "none", cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", fontWeight: 500 }} onClick={() => toggleEmpDetail(e)}>
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                            <UserIcon width={16} />
                                                             ดู
                                                         </button>
                                                     </td>
@@ -1084,8 +1084,8 @@ function AdminPageInner() {
                                                                             </div>
                                                                             {empDetailsCache[e.emp_id].dailyRows.length > 0 && (
                                                                                 <div className={styles.dropdownExportBox}>
-                                                                                    <button className={styles.btnExcelSm} onClick={() => exportEmpData(e.emp_id, e.name, "excel")} style={{ width: "100%", justifyContent: "center" }}>⬇ โหลด Excel</button>
-                                                                                    <button className={styles.btnPdfSm} onClick={() => exportEmpData(e.emp_id, e.name, "pdf")} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>⬇ โหลด PDF</button>
+                                                                                    <button className={styles.btnExcelSm} onClick={() => exportEmpData(e.emp_id, e.name, "excel")} style={{ width: "100%", justifyContent: "center" }}><ArrowDownTrayIcon width={14} /> โหลด Excel</button>
+                                                                                    <button className={styles.btnPdfSm} onClick={() => exportEmpData(e.emp_id, e.name, "pdf")} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}><DocumentTextIcon width={14} /> โหลด PDF</button>
                                                                                 </div>
                                                                             )}
                                                                         </div>
@@ -1166,14 +1166,14 @@ function AdminPageInner() {
                         setProjectForm({ id: 0, code: "", name: "", address: "", is_active: true, status: "CURRENT", contact: "", phone: "", lat: null, lng: null, radius_m: 200 });
                         setShowProjectModal(true);
                     }}>
-                        <span>+</span> เพิ่มลูกค้า
+                        <PlusIcon width={16} /> เพิ่มลูกค้า
                     </button>
                 </div>
 
                 <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <div style={{ position: "absolute", left: 14, top: 10, color: "#9ca3af" }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <MagnifyingGlassIcon width={18} />
                         </div>
                         <input type="text" placeholder="ค้นหาชื่อหรือรหัส..."
                             style={{ width: "100%", padding: "10px 16px 10px 40px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", outline: "none", fontSize: 14 }}
@@ -1236,7 +1236,7 @@ function AdminPageInner() {
                                                         setProjectForm(p);
                                                         setShowProjectModal(true);
                                                     }}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                                        <PencilSquareIcon width={18} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -1257,7 +1257,7 @@ function AdminPageInner() {
                                     {projectForm.id ? <PencilSquareIcon width={24} /> : <GiftIcon width={24} />}
                                     {projectForm.id ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}
                                 </span>
-                                <button className={styles.modalClose} onClick={() => setShowProjectModal(false)}>✕</button>
+                                <button className={styles.modalClose} onClick={() => setShowProjectModal(false)}><XMarkIcon width={24} /></button>
 
                                 <div style={{ padding: "0 4px" }}>
                                     <div className={styles.settingsFieldGrid} style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -1315,8 +1315,11 @@ function AdminPageInner() {
                                         fontSize: "14.5px",
                                         fontWeight: 600,
                                         cursor: "pointer",
-                                        boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)"
-                                    }} onClick={saveProject}>✓ บันทึกข้อมูล</button>
+                                        boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6
+                                    }} onClick={saveProject}><CheckIcon width={18} /> บันทึกข้อมูล</button>
                                 </div>
                             </div>
                         </div>
@@ -1358,7 +1361,7 @@ function AdminPageInner() {
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
                             <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><CameraIcon width={20} /> ภาพประกอบการเช็คอิน</span>
-                            <button className={styles.modalClose} onClick={() => setPhotoModal(null)}>✕</button>
+                            <button className={styles.modalClose} onClick={() => setPhotoModal(null)}><XMarkIcon width={24} /></button>
                         </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={photoModal.url} alt="check-in" className={styles.modalPhoto} />
@@ -1382,7 +1385,7 @@ function AdminPageInner() {
                                 <div className={styles.settingsModalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><Cog6ToothIcon width={24} /> ตั้งค่าระบบ</div>
                                 <div className={styles.settingsModalSub}>TERA GROUP · HR Admin</div>
                             </div>
-                            <button className={styles.modalClose} onClick={closeSettings}>✕</button>
+                            <button className={styles.modalClose} onClick={closeSettings}><XMarkIcon width={24} /></button>
                         </div>
 
                         <div className={styles.settingsBody}>
@@ -1444,7 +1447,7 @@ function AdminPageInner() {
 
                                         <div className={styles.settingsActions}>
                                             <button className={styles.btnSettingsCancel} onClick={closeSettings}>ยกเลิก</button>
-                                            <button className={styles.btnSettingsSave} onClick={saveSettings}>✓ บันทึก</button>
+                                            <button className={styles.btnSettingsSave} onClick={saveSettings} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CheckIcon width={18} /> บันทึก</button>
                                         </div>
                                     </div>
                                 )}
@@ -1489,8 +1492,9 @@ function AdminPageInner() {
                                                 if (reportBranch) p.append("branch", reportBranch);
                                                 window.location.href = `/api/admin/payroll?${p.toString()}`;
                                             }}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                         >
-                                            ⬇ ดาวน์โหลด Payroll CSV
+                                            <ArrowDownTrayIcon width={18} /> ดาวน์โหลด Payroll CSV
                                         </button>
                                     </div>
                                 )}
@@ -1502,7 +1506,10 @@ function AdminPageInner() {
 
             {/* ── TOAST ── */}
             {toast && (
-                <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>
+                <div className={`${styles.toast} ${styles[toast.type]}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {toast.type === 'ok' ? <CheckCircleIcon width={20} /> : <ExclamationTriangleIcon width={20} />}
+                    {toast.msg}
+                </div>
             )}
         </div>
     );

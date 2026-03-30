@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
 import { UsersIcon, MagnifyingGlassIcon, LightBulbIcon, PlusIcon, PencilSquareIcon, ExclamationTriangleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import SearchableSelect from "@/components/SearchableSelect";
+import { formatDateThai } from "@/utils/time";
 
 /* ── Types ──────────────────────────────────────────────────── */
 type Branch = { id: string; name: string };
@@ -428,7 +429,7 @@ export default function AdminEmployeesPage() {
                                                     {x.gender ? (genderLabel[x.gender as keyof typeof genderLabel] ?? x.gender) : "—"}
                                                 </td>
                                                 <td style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 12 }}>
-                                                    {x.hire_date ? String(x.hire_date).slice(0, 10) : "—"}
+                                                    {x.hire_date ? formatDateThai(x.hire_date) : "—"}
                                                 </td>
                                                 <td style={{ fontSize: 13, color: "var(--text-2)" }}>
                                                     {x.departments?.name ? (

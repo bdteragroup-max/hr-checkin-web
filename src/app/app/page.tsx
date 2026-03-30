@@ -4,6 +4,23 @@ import Image from "next/image";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
+import { 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    ClockIcon, 
+    FireIcon, 
+    ArrowRightStartOnRectangleIcon,
+    ExclamationTriangleIcon,
+    SparklesIcon,
+    CakeIcon,
+    ArrowPathIcon,
+    MapPinIcon,
+    CameraIcon,
+    PhotoIcon,
+    QrCodeIcon,
+    CheckIcon
+} from "@heroicons/react/24/solid";
+import { formatDateThai, formatTime24h, formatTimeFull24h } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    CONFIG — เวลาเริ่ม/เลิกงาน (24h)
@@ -39,7 +56,10 @@ interface LateInfo { status: "ontime" | "late" | "early" | "ot"; label: string; 
 function pad(n: number) { return String(n).padStart(2, "0") }
 
 function formatLocal(ts: string) {
-    try { return new Date(ts).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }); } catch { return ts; }
+    try { 
+        const d = new Date(ts);
+        return `${d.toLocaleDateString("th-TH")} ${formatTime24h(d)}`;
+    } catch { return ts; }
 }
 
 function getThaiTime() {
@@ -53,15 +73,15 @@ function calcLateOT(type: "Check-in" | "Check-out"): LateInfo {
     if (type === "Check-in") {
         const startMin = WORK_START_H * 60 + WORK_START_M;
         const diff = totalMin - startMin;
-        if (diff <= 5) return { status: "ontime", label: "✅ ตรงเวลา", detail: diff <= 0 ? "เช็คอินก่อนเวลา" : `ภายใน ${diff} นาที` };
-        return { status: "late", label: `⏰ สาย ${diff} นาที`, detail: `กำหนด ${pad(WORK_START_H)}:${pad(WORK_START_M)} — เช็คอิน ${pad(h)}:${pad(m)}` };
+        if (diff <= 5) return { status: "ontime", label: "ตรงเวลา", detail: diff <= 0 ? "เช็คอินก่อนเวลา" : `ภายใน ${diff} นาที` };
+        return { status: "late", label: `สาย ${diff} นาที`, detail: `กำหนด ${pad(WORK_START_H)}:${pad(WORK_START_M)} — เช็คอิน ${pad(h)}:${pad(m)}` };
     } else {
         const endMin = WORK_END_H * 60 + WORK_END_M;
         const diff = totalMin - endMin;
-        if (diff >= OT_THRESHOLD_MIN) return { status: "ot", label: `🔥 OT ${diff} นาที`, detail: `เลิกงาน ${pad(WORK_END_H)}:${pad(WORK_END_M)} — ออก ${pad(h)}:${pad(m)}` };
+        if (diff >= OT_THRESHOLD_MIN) return { status: "ot", label: `OT ${diff} นาที`, detail: `เลิกงาน ${pad(WORK_END_H)}:${pad(WORK_END_M)} — ออก ${pad(h)}:${pad(m)}` };
         return {
             status: diff < 0 ? "early" : "ontime",
-            label: diff < 0 ? `🏃 ออกก่อนเวลา ${Math.abs(diff)} นาที` : "✅ ออกงานตรงเวลา",
+            label: diff < 0 ? `ออกก่อนเวลา ${Math.abs(diff)} นาที` : "ออกงานตรงเวลา",
             detail: diff < 0 ? `ออกก่อนเวลา ${Math.abs(diff)} นาที` : `ออกงาน ${pad(h)}:${pad(m)}`
         };
     }
@@ -89,7 +109,7 @@ function StepIndicator({ step }: { step: number }) {
             {steps.map((s, i) => (
                 <div key={s.n} className={styles.stepGroup}>
                     <div className={`${styles.stepItem} ${step > s.n ? styles.stepDone : step === s.n ? styles.stepActive : ""}`}>
-                        <div className={styles.stepCircle}>{step > s.n ? "✓" : s.n}</div>
+                        <div className={styles.stepCircle}>{step > s.n ? <CheckIcon width={16} /> : s.n}</div>
                         <div className={styles.stepLabel}>{s.label}</div>
                     </div>
                     {i < steps.length - 1 && (
@@ -120,7 +140,7 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: () => void
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -148,8 +168,8 @@ function TimeCard({ lateInfo }: { lateInfo?: LateInfo | null }) {
     useEffect(() => {
         function update() {
             const now = getThaiTime();
-            setTimeStr(now.toLocaleTimeString("th-TH", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-            setDateStr(now.toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" }));
+            setTimeStr(formatTimeFull24h(now));
+            setDateStr(formatDateThai(now));
         }
         update();
         const id = setInterval(update, 1000);
@@ -161,7 +181,7 @@ function TimeCard({ lateInfo }: { lateInfo?: LateInfo | null }) {
     return (
         <div className={styles.card} style={{ textAlign: "center", padding: "28px 20px" }}>
             <div style={{ color: "var(--text3)", fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <ClockIcon width={16} />
                 วัน{dateStr}
             </div>
             <div style={{ fontSize: 48, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--text)", letterSpacing: "2px", lineHeight: 1 }}>
@@ -184,8 +204,10 @@ function TimeCard({ lateInfo }: { lateInfo?: LateInfo | null }) {
 ────────────────────────────────────────── */
 function LateBadge({ info }: { info: LateInfo }) {
     const cls = info.status === "late" ? styles.badgeLate : info.status === "ot" ? styles.badgeOt : styles.badgeOntime;
+    const Icon = info.status === "late" ? ClockIcon : info.status === "ot" ? FireIcon : info.status === "early" ? ArrowRightStartOnRectangleIcon : CheckCircleIcon;
     return (
         <div className={`${styles.timeBadge} ${cls}`}>
+            <Icon width={16} style={{ marginRight: 6 }} />
             <span>{info.label}</span>
             <span className={styles.timeBadgeDetail}>{info.detail}</span>
         </div>
@@ -220,11 +242,11 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
             {inItem && outItem && (
                 <div className={styles.workSummary}>
                     <div className={styles.workStat}>
-                        <div className={styles.wsVal}>{new Date(inItem.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" })}</div>
+                        <div className={styles.wsVal}>{formatTime24h(inItem.timestamp)}</div>
                         <div className={styles.wsLabel}>เวลาเข้า</div>
                     </div>
                     <div className={styles.workStat}>
-                        <div className={styles.wsVal}>{new Date(outItem.timestamp).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" })}</div>
+                        <div className={styles.wsVal}>{formatTime24h(outItem.timestamp)}</div>
                         <div className={styles.wsLabel}>เวลาออก</div>
                     </div>
                     <div className={styles.workStat}>
@@ -244,7 +266,7 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
                         return (
                             <div key={String(x.id)} className={styles.historyItem}>
                                 <div className={`${styles.historyIcon} ${isIn ? styles.historyIconIn : styles.historyIconOut}`}>
-                                    {isIn ? "▶" : "■"}
+                                    {isIn ? <ArrowRightStartOnRectangleIcon width={14} /> : <CheckCircleIcon width={14} />}
                                 </div>
                                 <div className={styles.historyInfo}>
                                     <div className={styles.historyType}>{isIn ? "เช็คอิน" : "เช็คเอาท์"}</div>
@@ -285,7 +307,7 @@ export default function AppPage() {
     const [today, setToday] = useState<TodayItem[]>([]);
     const [todayKey, setTodayKey] = useState("");
     const [step, setStep] = useState(1);
-    const [statusMsg, setStatusMsg] = useState("⏳ กำลังโหลด...");
+    const [statusMsg, setStatusMsg] = useState<React.ReactNode>(<span><ArrowPathIcon width={14} className="animate-spin" style={{ display: 'inline', marginRight: 6 }} />กำลังโหลด...</span>);
     const [statusType, setStatusType] = useState<"ok" | "bad" | "warn">("warn");
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error" });
@@ -324,7 +346,7 @@ export default function AppPage() {
     }
 
     /* ── Status ── */
-    function setStatus(msg: string, t: "ok" | "bad" | "warn") { setStatusMsg(msg); setStatusType(t); }
+    function setStatus(msg: React.ReactNode, t: "ok" | "bad" | "warn") { setStatusMsg(msg); setStatusType(t); }
 
     /* ── Late badge update ── */
     useEffect(() => {
@@ -350,8 +372,7 @@ export default function AppPage() {
 
             await refreshToday();
             await fetchWarnings();
-            await fetchBirthdays();
-            setStatus("✅ พร้อมใช้งาน", "ok");
+            setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
         })();
     }, []);
 
@@ -386,19 +407,19 @@ export default function AppPage() {
     /* ── GPS ── */
     async function readGPS() {
         setGpsLoading(true);
-        setStatus("⏳ กำลังอ่าน GPS...", "warn");
+        setStatus(<span><ArrowPathIcon width={14} className="animate-spin" style={{ display: 'inline', marginRight: 6 }} />กำลังอ่าน GPS...</span>, "warn");
         const branch = selectedBranchObj;
 
         return new Promise<GpsState>((resolve) => {
             if (!navigator.geolocation) {
                 const state = { ok: false, lat: null, lon: null, accuracy: null, distance: null, pass: false, reason: "อุปกรณ์ไม่รองรับ GPS" };
-                setGps(state); setGpsLoading(false); setStatus("❌ ไม่รองรับ GPS", "bad"); resolve(state); return;
+                setGps(state); setGpsLoading(false); setStatus(<span><XCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />ไม่รองรับ GPS</span>, "bad"); resolve(state); return;
             }
             navigator.geolocation.getCurrentPosition(
                 pos => {
                     const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
                     let dist: number | null = null;
-                    let pass = true, reason = "ผ่าน ✅";
+                    let pass = true, reason = "ผ่าน";
                     if (branch?.centerLat && branch?.centerLon) {
                         dist = haversineMeters(lat, lon, branch.centerLat, branch.centerLon);
                         if (acc > (branch.radiusM || 200)) { pass = false; reason = `ความแม่นยำต่ำ (±${Math.round(acc)}m)`; }
@@ -407,7 +428,12 @@ export default function AppPage() {
                     const state = { ok: true, lat, lon, accuracy: acc, distance: dist, pass, reason };
                     setGps(state);
                     setGpsLoading(false);
-                    setStatus(pass ? "✅ GPS ผ่าน — ไปขั้นตอนถ่ายรูปได้" : `❌ GPS ไม่ผ่าน — ${reason}`, pass ? "ok" : "bad");
+                    setStatus(
+                        pass ? 
+                        <span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />GPS ผ่าน — ไปขั้นตอนถ่ายรูปได้</span> : 
+                        <span><XCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />GPS ไม่ผ่าน — {reason}</span>, 
+                        pass ? "ok" : "bad"
+                    );
                     resolve(state);
                 },
                 err => {
@@ -418,7 +444,7 @@ export default function AppPage() {
                         state.ok = true;
                     }
                     setGps(state); setGpsLoading(false);
-                    setStatus(state.pass ? "✅ ข้าม GPS (Localhost)" : "❌ อ่าน GPS ไม่ได้ — กรุณาอนุญาต Location", state.pass ? "ok" : "bad");
+                    setStatus(state.pass ? <span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />ข้าม GPS (Localhost)</span> : <span><XCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />อ่าน GPS ไม่ได้ — กรุณาอนุญาต Location</span>, state.pass ? "ok" : "bad");
                     resolve(state);
                 },
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -439,9 +465,9 @@ export default function AppPage() {
             if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play(); }
             setFacingMode(facing);
             setCameraReady(true);
-            setStatus(`✅ กล้อง${facing === "environment" ? "หลัง" : "หน้า"}พร้อม — กด ถ่ายรูป`, "ok");
+            setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />กล้อง{facing === "environment" ? "หลัง" : "หน้า"}พร้อม — กด ถ่ายรูป</span>, "ok");
         } catch {
-            setStatus("❌ เปิดกล้องไม่ได้ — กรุณาอนุญาตกล้อง", "bad");
+            setStatus(<span><XCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />เปิดกล้องไม่ได้ — กรุณาอนุญาตกล้อง</span>, "bad");
         }
     }
 
@@ -471,7 +497,7 @@ export default function AppPage() {
         const branchName = branches.find(b => b.id === selectedBranch)?.name ?? "—";
         const now = new Date();
         const dateStr = now.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Bangkok" });
-        const timeStr = now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Bangkok", hour12: false });
+        const timeStr = formatTimeFull24h(now);
         const lateInfoNow = calcLateOT(type);
         const gpsStr = gps.lat ? `${gps.lat.toFixed(5)}, ${gps.lon!.toFixed(5)}` : "—";
 
@@ -518,7 +544,7 @@ export default function AppPage() {
         const typeColor = currentType === "Check-in" ? "#4ade80" : "#fb923c";
         ctx.fillStyle = typeColor;
         ctx.font = `800 ${f2}px 'Segoe UI',Arial`;
-        ctx.fillText(currentType === "Check-in" ? "▶ CHECK-IN" : "■ CHECK-OUT", w - lPad, rBase + rH);
+        ctx.fillText(currentType === "Check-in" ? "CHECK-IN" : "CHECK-OUT", w - lPad, rBase + rH);
 
         ctx.textAlign = "left";
         ctx.fillStyle = "rgba(217,48,37,0.7)";
@@ -561,7 +587,7 @@ export default function AppPage() {
             setPreview(dataUrl);
             stopCamera();
             setStep(4);
-            setStatus("✅ ถ่ายแล้ว — เลือก เช็คอิน หรือ เช็คเอาท์", "ok");
+            setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />ถ่ายแล้ว — เลือก เช็คอิน หรือ เช็คเอาท์</span>, "ok");
         }
     }
 
@@ -580,7 +606,7 @@ export default function AppPage() {
         if (!preview) { showAlert("กรุณาถ่ายรูปก่อน"); return; }
 
         setIsSubmitting(true);
-        setStatus("⏳ กำลังบันทึก...", "warn");
+        setStatus(<span><ArrowPathIcon width={14} className="animate-spin" style={{ display: 'inline', marginRight: 6 }} />กำลังบันทึก...</span>, "warn");
 
         const lateInfoNow = calcLateOT(targetType);
 
@@ -628,12 +654,12 @@ export default function AppPage() {
             };
             const errMsg = errMap[data?.error] || data?.error || "เกิดข้อผิดพลาด";
             showAlert(errMsg);
-            setStatus(`❌ ${errMsg}`, "bad");
+            setStatus(<span><XCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />{errMsg}</span>, "bad");
             return;
         }
 
         showAlert(`${targetType === "Check-in" ? "เช็คอิน" : "เช็คเอาท์"} สำเร็จ!`, "ok");
-        setStatus("✅ บันทึกสำเร็จ", "ok");
+        setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />บันทึกสำเร็จ</span>, "ok");
         await refreshToday();
         setPreview(null);
         setStep(1);
@@ -706,9 +732,9 @@ export default function AppPage() {
                     {/* ── BIRTHDAY BANNER ── */}
                     {birthdays.length > 0 && (
                         <div className={styles.birthdayBanner}>
-                            <div className={styles.birthdayIcon}>🎉</div>
+                            <div className={styles.birthdayIcon}><SparklesIcon width={24} /></div>
                             <div className={styles.birthdayContent}>
-                                <div className={styles.birthdayTitle}>สุขสันต์วันเกิด! 🎂</div>
+                                <div className={styles.birthdayTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>สุขสันต์วันเกิด! <CakeIcon width={20} /></div>
                                 <div className={styles.birthdayNames}>
                                     วันนี้เป็นวันเกิดของคุณ: {birthdays.map(b => b.name).join(", ")}
                                 </div>
@@ -762,10 +788,7 @@ export default function AppPage() {
                                     <div className={styles.empIdWrap}>
                                         <input className={styles.input} value={empId} onChange={e => setEmpId(e.target.value)} placeholder="TERA-001" />
                                         <button className={styles.qrBtn} onClick={openQR} title="สแกน QR">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                                                <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="4" height="4" /><rect x="19" y="19" width="2" height="2" />
-                                            </svg>
+                                            <QrCodeIcon width={18} />
                                         </button>
                                     </div>
                                 </div>

@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import styles from "./AlertModal.module.css";
+import { 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    ExclamationTriangleIcon,
+    InformationCircleIcon
+} from "@heroicons/react/24/solid";
 
 export interface AlertState {
     visible: boolean;
@@ -55,7 +61,7 @@ export default function AlertModal({
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isConfirm ? "ยืนยันการดำเนินการ" : (isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ")}

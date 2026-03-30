@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import Image from "next/image";
+import { 
+    CakeIcon, 
+    ExclamationTriangleIcon, 
+    CheckCircleIcon, 
+    CloudArrowUpIcon, 
+    ArrowPathIcon,
+    ClockIcon,
+    CalendarDaysIcon,
+    BanknotesIcon,
+    XCircleIcon
+} from "@heroicons/react/24/outline";
 
 type Claim = {
     id: string;
@@ -113,13 +124,13 @@ export default function BirthdayPage() {
                 throw new Error(map[cRes.error] || cRes.error);
             }
 
-            setMsg({ text: "✅ ส่งคำขอสำเร็จ! กรุณารอฝ่ายบุคคลอนุมัติ", type: 'ok' });
+            setMsg({ text: "ส่งคำขอสำเร็จ! กรุณารอฝ่ายบุคคลอนุมัติ", type: 'ok' });
             setTransferSlipFile(null);
             setCelebrationPhotoFile(null);
             setMealAmount("");
             load();
         } catch (e: any) {
-            setMsg({ text: "❌ " + (e.message || "เกิดข้อผิดพลาด"), type: 'bad' });
+            setMsg({ text: e.message || "เกิดข้อผิดพลาด", type: 'bad' });
         } finally {
             setUploading(false);
         }
@@ -144,13 +155,13 @@ export default function BirthdayPage() {
                     <div className={styles.cardTitle}>รายละเอียดการขอรับสวัสดิการ</div>
 
                     {!birthDate ? (
-                        <div className={styles.alertWarn}>
-                            ⚠️ ยังไม่ได้ระบุวันเกิดในระบบ กรุณาติดต่อฝ่ายบุคคลเพื่อแก้ไขข้อมูล
+                        <div className={styles.alertWarn} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <ExclamationTriangleIcon width={20} /> ยังไม่ได้ระบุวันเกิดในระบบ กรุณาติดต่อฝ่ายบุคคลเพื่อแก้ไขข้อมูล
                         </div>
                     ) : (
                         <>
                             <div className={styles.bdayInfoBar}>
-                                <div className={styles.bdayIcon}>🎂</div>
+                                <div className={styles.bdayIcon}><CakeIcon width={24} /></div>
                                 <div className={styles.bdayText}>ยินดีด้วย! เดือนนี้เป็นเดือนเกิดของคุณ</div>
                             </div>
 
@@ -176,8 +187,8 @@ export default function BirthdayPage() {
                                                 accept="image/*"
                                                 onChange={e => setTransferSlipFile(e.target.files?.[0] || null)}
                                             />
-                                            <div className={`${styles.fileHint} ${transferSlipFile ? styles.fileHintSuccess : ''}`}>
-                                                {transferSlipFile ? `✅ ${transferSlipFile.name}` : "📂 คลิกหรือลากไฟล์สลิปมาวางที่นี่"}
+                                            <div className={`${styles.fileHint} ${transferSlipFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                {transferSlipFile ? <><CheckCircleIcon width={18} /> {transferSlipFile.name}</> : <><CloudArrowUpIcon width={18} /> คลิกหรือลากไฟล์สลิปมาวางที่นี่</>}
                                             </div>
                                         </div>
                                     </div>
@@ -191,14 +202,15 @@ export default function BirthdayPage() {
                                                 accept="image/*"
                                                 onChange={e => setCelebrationPhotoFile(e.target.files?.[0] || null)}
                                             />
-                                            <div className={`${styles.fileHint} ${celebrationPhotoFile ? styles.fileHintSuccess : ''}`}>
-                                                {celebrationPhotoFile ? `✅ ${celebrationPhotoFile.name}` : "📂 คลิกหรือลากรูปภาพมาวางที่นี่"}
+                                            <div className={`${styles.fileHint} ${celebrationPhotoFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                {celebrationPhotoFile ? <><CheckCircleIcon width={18} /> {celebrationPhotoFile.name}</> : <><CloudArrowUpIcon width={18} /> คลิกหรือลากรูปภาพมาวางที่นี่</>}
                                             </div>
                                         </div>
                                     </div>
 
                                     {msg && (
-                                        <div className={msg.type === 'ok' ? styles.msgOk : styles.msgBad}>
+                                        <div className={msg.type === 'ok' ? styles.msgOk : styles.msgBad} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            {msg.type === 'ok' ? <CheckCircleIcon width={20} /> : <XCircleIcon width={20} />}
                                             {msg.text}
                                         </div>
                                     )}
@@ -207,21 +219,22 @@ export default function BirthdayPage() {
                                         className={styles.btnPrimary}
                                         onClick={submitClaim}
                                         disabled={uploading}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                     >
-                                        {uploading ? "กำลังบันทึกข้อมูล..." : "ยืนยันส่งคำขอ"}
+                                        {uploading ? <><ArrowPathIcon width={18} className="animate-spin" /> กำลังบันทึกข้อมูล...</> : "ยืนยันส่งคำขอ"}
                                     </button>
                                 </div>
                             ) : (
                                 <div className={styles.waitBox}>
                                     {isBirthdayMonth ? (
                                         <>
-                                            <div className={styles.waitIcon}>⏳</div>
+                                            <div className={styles.waitIcon}><ClockIcon width={32} /></div>
                                             <div className={styles.waitTitle}>อดใจรออีกนิด!</div>
                                             <div>กรุณาส่งคำขอในวันเกิดของคุณ ({birthDate.getDate()} {new Intl.DateTimeFormat('th-TH', { month: 'long' }).format(birthDate)})</div>
                                         </>
                                     ) : (
                                         <>
-                                            <div className={styles.waitIcon}>📅</div>
+                                            <div className={styles.waitIcon}><CalendarDaysIcon width={32} /></div>
                                             <div className={styles.waitTitle}>ยังไม่ถึงเวลา</div>
                                             <div>ขณะนี้ยังไม่ถึงช่วงเวลาขอรับสวัสดิการวันเกิดของคุณ</div>
                                         </>

@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import styles from "../page.module.css";
-import { DocumentTextIcon, ArrowDownTrayIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { 
+    DocumentTextIcon, 
+    ArrowDownTrayIcon, 
+    FunnelIcon,
+    ArrowPathIcon,
+    CheckCircleIcon,
+    XCircleIcon
+} from "@heroicons/react/24/outline";
 
 interface RecordSummary {
     emp_id: string;
@@ -94,7 +101,7 @@ export default function RecordsPage() {
     }, [startMonth, endMonth]);
 
     function exportFile(type: "pdf" | "excel") {
-        showToast("⏳ กำลังเตรียมไฟล์...");
+        showToast("กำลังเตรียมไฟล์...");
         const p = new URLSearchParams({ start_month: startMonth, end_month: endMonth });
         window.location.href = `/api/admin/export/records_${type}?${p.toString()}`;
     }
@@ -102,7 +109,8 @@ export default function RecordsPage() {
     return (
         <div className={styles.content}>
             {toast && (
-                <div className={`${styles.toast} ${toast.type === "bad" ? styles.toastError : ""}`}>
+                <div className={`${styles.toast} ${toast.type === "bad" ? styles.toastError : ""}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {toast.type === "ok" ? <CheckCircleIcon width={18} /> : <XCircleIcon width={18} />}
                     {toast.msg}
                 </div>
             )}

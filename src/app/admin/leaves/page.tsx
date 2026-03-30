@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import styles from "../page.module.css"; // ✅ ใช้ CSS admin ใหญ่
 import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, InboxIcon } from "@heroicons/react/24/outline";
+import { formatTime24h, formatDateThai } from "@/utils/time";
 
 type LeaveRow = {
     id: string;
@@ -33,9 +34,11 @@ function todayISO_BKK() {
 }
 
 function fmtDate(d: string) {
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return d;
-    return dt.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
+    return formatDateThai(d);
+}
+
+function fmtDateTime(d: string) {
+    return `${formatDateThai(d)} ${formatTime24h(d)}`;
 }
 
 function badgeClass(status: string) {
@@ -276,7 +279,7 @@ export default function AdminLeavesPage() {
                                                     <div className={styles.monoText} style={{ marginTop: 6 }}>{r.emp_id}</div>
                                                 </td>
                                                 <td>{r.leave_type || "-"}</td>
-                                                <td style={{ fontSize: 13 }}>{fmtDate(r.start_date)} - {fmtDate(r.end_date)}</td>
+                                                <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_date)} - {fmtDateTime(r.end_date)}</td>
                                                 <td style={{ textAlign: "center" }}>{days} วัน</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
@@ -325,7 +328,7 @@ export default function AdminLeavesPage() {
                                             <td>{r.name || "-"}</td>
                                             <td>{r.leave_type || "-"}</td>
                                             <td style={{ fontSize: 12 }}>
-                                                {fmtDate(r.start_date)} – {fmtDate(r.end_date)}
+                                                {fmtDateTime(r.start_date)} – {fmtDateTime(r.end_date)}
                                                 {r.days ? <><br />({r.days} วัน)</> : ""}
                                             </td>
                                             <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 520 }}>

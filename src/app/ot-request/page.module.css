@@ -584,3 +584,36 @@
 .alertBtn:active {
   transform: translateY(0);
 }
+
+/* ══════════════════════════════════════
+   COMPACT DATE-TIME ROW (Redesigned)
+   ══════════════════════════════════════ */
+.timePickerContainer {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.dtBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dateBlock {
+  flex: 1;
+}
+
+.timeBlock {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.timeSeparator {
+  align-self: flex-end;
+  font-weight: 700;
+  color: var(--text3);
+  padding-bottom: 14px;
+  font-size: 18px;
+}

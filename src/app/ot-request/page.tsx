@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
+import { 
+    ExclamationTriangleIcon, 
+    CheckCircleIcon, 
+    ClockIcon, 
+    CalendarIcon, 
+    PencilSquareIcon,
+    TrashIcon,
+    ArrowPathIcon,
+    XCircleIcon,
+    InformationCircleIcon
+} from "@heroicons/react/24/outline";
+import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/utils/time";
 
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
@@ -21,7 +33,7 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={48} /> : <CheckCircleIcon width={48} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -41,8 +53,10 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
 
 export default function EmployeeOtPage() {
     const [dateFor, setDateFor] = useState("");
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
+    const [startHour, setStartHour] = useState("17");
+    const [startMin, setStartMin] = useState("30");
+    const [endHour, setEndHour] = useState("20");
+    const [endMin, setEndMin] = useState("00");
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState<AlertModal>({ visible: false, message: "", type: "error" });
@@ -98,13 +112,13 @@ export default function EmployeeOtPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
-        if (!dateFor || !startTime || !endTime) {
-            showAlert("กรุณากรอกข้อมูล วันที่และเวลา ให้ครบถ้วน", "error");
+        if (!dateFor) {
+            showAlert("กรุณากรอกวันที่ให้ครบถ้วน", "error");
             return;
         }
 
-        const startDT = new Date(`${dateFor}T${startTime}:00`);
-        const endDT = new Date(`${dateFor}T${endTime}:00`);
+        const startDT = new Date(`${dateFor}T${startHour}:${startMin}:00`);
+        const endDT = new Date(`${dateFor}T${endHour}:${endMin}:00`);
 
         if (endDT <= startDT) {
             showAlert("เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น", "error");
@@ -130,8 +144,6 @@ export default function EmployeeOtPage() {
             if (res.ok) {
                 showAlert("ส่งคำขออนุมัติ OT สำเร็จ!", "ok");
                 setDateFor("");
-                setStartTime("");
-                setEndTime("");
                 setReason("");
                 loadHistory(); // refresh history
             } else {
@@ -166,37 +178,53 @@ export default function EmployeeOtPage() {
                         </div>
 
                         <form onSubmit={handleSubmit} className={styles.form}>
+                            {/* Compact OT Date-Time Layout */}
                             <div>
-                                <label className={styles.label}>วันที่ขอ OT / วันหยุด *</label>
-                                <input
-                                    type="date"
-                                    className={styles.input}
-                                    value={dateFor}
-                                    onChange={e => setDateFor(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className={styles.row2}>
-                                <div>
-                                    <label className={styles.label}>เวลาเริ่มต้น *</label>
-                                    <input
-                                        type="time"
-                                        className={styles.input}
-                                        value={startTime}
-                                        onChange={e => setStartTime(e.target.value)}
-                                        required
-                                    />
+                                <div className={styles.timePickerContainer}>
+                                    <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
+                                        <label className={styles.label}>วันที่ขอ OT / วันหยุด *</label>
+                                        <input
+                                            type="date"
+                                            className={styles.input}
+                                            value={dateFor}
+                                            onChange={e => setDateFor(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                        <label className={styles.label}>เวลาเริ่ม</label>
+                                        <select className={styles.select || styles.input} value={startHour} onChange={e => setStartHour(e.target.value)}>
+                                            {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                        </select>
+                                    </div>
+                                    <span className={styles.timeSeparator}>:</span>
+                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                        <label className={styles.label}>นาที</label>
+                                        <select className={styles.select || styles.input} value={startMin} onChange={e => setStartMin(e.target.value)}>
+                                            {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className={styles.label}>เวลาสิ้นสุด *</label>
-                                    <input
-                                        type="time"
-                                        className={styles.input}
-                                        value={endTime}
-                                        onChange={e => setEndTime(e.target.value)}
-                                        required
-                                    />
+
+                                <div className={styles.timePickerContainer} style={{ marginTop: 12 }}>
+                                    {/* Spacer to align End Time with Start Time */}
+                                    <div className={`${styles.dtBlock} ${styles.dateBlock}`} style={{ visibility: 'hidden' }}>
+                                        <label className={styles.label}>Spacer</label>
+                                        <div className={styles.input} />
+                                    </div>
+                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                        <label className={styles.label}>สิ้นสุด</label>
+                                        <select className={styles.select || styles.input} value={endHour} onChange={e => setEndHour(e.target.value)}>
+                                            {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                        </select>
+                                    </div>
+                                    <span className={styles.timeSeparator}>:</span>
+                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                        <label className={styles.label}>นาที</label>
+                                        <select className={styles.select || styles.input} value={endMin} onChange={e => setEndMin(e.target.value)}>
+                                            {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -215,8 +243,9 @@ export default function EmployeeOtPage() {
                                 type="submit"
                                 className={styles.submitBtn}
                                 disabled={loading}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             >
-                                {loading ? "กำลังส่งข้อมูล..." : "ส่งคำขออนุมัติ"}
+                                {loading ? <><ArrowPathIcon width={18} className="animate-spin" /> กำลังส่งข้อมูล...</> : "ส่งคำขออนุมัติ"}
                             </button>
                         </form>
                     </div>
@@ -233,25 +262,28 @@ export default function EmployeeOtPage() {
                                     <div key={item.id} className={styles.historyItem}>
                                         <div>
                                             <div className={styles.historyDate}>
+                                                <CalendarIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
                                                 {new Date(item.date_for).toLocaleDateString("th-TH", { day: '2-digit', month: 'short', year: 'numeric' })}
                                             </div>
                                             <div className={styles.historyTime}>
-                                                {new Date(item.start_time).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} - {new Date(item.end_time).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
+                                                <ClockIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
+                                                {formatTime24h(item.start_time)} - {formatTime24h(item.end_time)}
                                                 <span className={styles.historyHours}>{item.total_hours} ชม.</span>
                                             </div>
-                                            <div className={styles.historyReason}>เหตุผล: {item.reason}</div>
+                                            <div className={styles.historyReason}><InformationCircleIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />เหตุผล: {item.reason}</div>
                                         </div>
                                         <div className={styles.historyRight}>
-                                            {item.status === "pending" && <span className={styles.statusBadgePending}>รอพิจารณา</span>}
-                                            {item.status === "approved" && <span className={styles.statusBadgeApproved}>อนุมัติแล้ว</span>}
-                                            {item.status === "rejected" && <span className={styles.statusBadgeRejected}>ไม่อนุมัติ</span>}
+                                            {item.status === "pending" && <span className={styles.statusBadgePending} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon width={14} /> รอพิจารณา</span>}
+                                            {item.status === "approved" && <span className={styles.statusBadgeApproved} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon width={14} /> อนุมัติแล้ว</span>}
+                                            {item.status === "rejected" && <span className={styles.statusBadgeRejected} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircleIcon width={14} /> ไม่อนุมัติ</span>}
                                             
                                             {item.status === "pending" && (
                                                 <button 
                                                     onClick={() => handleDelete(item.id)}
                                                     className={styles.btnCancel}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}
                                                 >
-                                                    ยกเลิกคำขอ
+                                                    <TrashIcon width={14} /> ยกเลิกคำขอ
                                                 </button>
                                             )}
                                         </div>

@@ -4,17 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, type ReactNode } from "react";
 import styles from "./layout.module.css";
+import {
+    ClockIcon,
+    BuildingOfficeIcon,
+    ClipboardDocumentListIcon,
+    TruckIcon,
+    FireIcon,
+    CakeIcon,
+    LockClosedIcon,
+    ClipboardDocumentCheckIcon,
+    UserGroupIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    CalendarDaysIcon
+} from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
-    { id: "checkin", href: "/app", icon: "⏱", label: "เช็คอิน", sub: "Check-in" },
-    { id: "project-checkin", href: "/project-checkin", icon: "🏢", label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
-    { id: "leave", href: "/leave", icon: "📝", label: "ลางาน", sub: "Leave" },
-    { id: "travel", href: "/travel-allowance", icon: "🚗", label: "เบี้ยเลี้ยง", sub: "Travel" },
-    { id: "ot", href: "/ot-request", icon: "⏰", label: "ขอ OT", sub: "OT Request" },
-    { id: "birthday", href: "/birthday-benefit", icon: "🎂", label: "รางวัลวันเกิด", sub: "Birthday" },
+    { id: "checkin", href: "/app", icon: ClockIcon, label: "เช็คอิน", sub: "Check-in" },
+    { id: "project-checkin", href: "/project-checkin", icon: BuildingOfficeIcon, label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
+    { id: "leave", href: "/leave", icon: ClipboardDocumentListIcon, label: "ลางาน", sub: "Leave" },
+    { id: "travel", href: "/travel-allowance", icon: TruckIcon, label: "เบี้ยเลี้ยง", sub: "Travel" },
+    { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },
+    { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
-const NAV_BOTTOM = [{ href: "/", icon: "🔐", label: "ล็อกอิน", sub: "Login" }];
+const NAV_BOTTOM = [{ href: "/", icon: LockClosedIcon, label: "ออกจากระบบ", sub: "Logout" }];
 
 export default function AppShell({ children }: { children: ReactNode }) {
     const [collapsed, setCollapsed] = useState(false);
@@ -53,9 +67,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     });
 
     if (isSupervisor) {
-        navMain.push({ id: "team-leaves", href: "/team-leaves", icon: "📋", label: "อนุมัติลา", sub: "Team Leaves" });
-        navMain.push({ id: "team-ot", href: "/team-ot", icon: "🕒", label: "อนุมัติ OT", sub: "Team OT" });
-        navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: "🚜", label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
+        navMain.push({ id: "team-leaves", href: "/team-leaves", icon: ClipboardDocumentCheckIcon, label: "อนุมัติลา", sub: "Team Leaves" });
+        navMain.push({ id: "team-ot", href: "/team-ot", icon: CalendarDaysIcon, label: "อนุมัติ OT", sub: "Team OT" });
+        navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
     }
 
     // ✅ ไม่แสดง Sidebar ในหน้า Login และหน้า Admin ทั้งหมด
@@ -95,7 +109,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                                     style={{ animationDelay: `${i * 0.05}s` }}
                                 >
                                     {active && <span className={styles.activeBg} />}
-                                    <span className={styles.navIcon}>{item.icon}</span>
+                                    <span className={styles.navIcon}><item.icon width={22} /></span>
                                     <span className={styles.navText}>
                                         <span className={styles.navLabel}>{item.label}</span>
                                         <span className={styles.navSub}>{item.sub}</span>
@@ -121,7 +135,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                                 className={`${styles.navItem} ${active ? styles.navActive : ""}`}
                             >
                                 {active && <span className={styles.activeBg} />}
-                                <span className={styles.navIcon}>{item.icon}</span>
+                                <span className={styles.navIcon}><item.icon width={22} /></span>
                                 <span className={styles.navText}>
                                     <span className={styles.navLabel}>{item.label}</span>
                                     <span className={styles.navSub}>{item.sub}</span>
@@ -136,7 +150,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     onClick={() => setCollapsed((c) => !c)}
                     aria-label="Toggle sidebar"
                 >
-                    <span className={styles.collapseBtnIcon}>{collapsed ? "›" : "‹"}</span>
+                    <span className={styles.collapseBtnIcon}>{collapsed ? <ChevronRightIcon width={20} /> : <ChevronLeftIcon width={20} />}</span>
                 </button>
             </aside>
 
@@ -154,7 +168,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                             className={`${styles.mobileItem} ${active ? styles.mobileActive : ""}`}
                         >
                             {active && <span className={styles.mobilePip} />}
-                            <span className={styles.mobileIcon}>{item.icon}</span>
+                            <span className={styles.mobileIcon}><item.icon width={24} /></span>
                             <span className={styles.mobileLabel}>{item.label}</span>
                         </Link>
                     );

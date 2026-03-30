@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
 
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -58,12 +57,13 @@ export async function POST(request: Request) {
 
         const updateData: any = {
             status,
-            supervisor_remark: remark, // Admin can reuse this field or we can add admin_remark
+            supervisor_remark: remark,
             updated_at: new Date()
         };
 
         if (status === "approved" && approved_hours !== undefined) {
             updateData.approved_hours = Number(approved_hours);
+            updateData.approved_at = new Date();
         }
 
         const updated = await prisma.ot_requests.update({
@@ -73,6 +73,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ ok: true, data: updated });
     } catch (e: any) {
+        console.error("OT Update Error:", e);
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
     }
 }

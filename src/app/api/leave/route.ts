@@ -21,6 +21,7 @@ const LEAVE_TYPES: LeaveTypeDef[] = [
     { id: "annual", name: "ลาพักร้อน", gender: "ANY", note: "เริ่ม 6 วัน/ปี ปรับตามอายุงาน", advance_notice: 30 },
     { id: "sick", name: "ลาป่วย", gender: "ANY", note: "ลาป่วย > 2 วันทำงาน ต้องแนบเอกสาร", advance_notice: 0 },
     { id: "personal", name: "ลากิจ", gender: "ANY", advance_notice: 3 },
+    { id: "emergency", name: "ลากรณีฉุกเฉิน", gender: "ANY", advance_notice: 0 },
     { id: "unpaid", name: "ลาไม่รับค่าจ้าง", gender: "ANY", advance_notice: 0 },
 
     { id: "maternity", name: "ลาคลอด", gender: "F", max_days: 120, advance_notice: 30 },
@@ -82,7 +83,7 @@ function calcMinutes(startAt: Date, endAt: Date) {
     return Math.max(0, Math.floor(ms / 60000));
 }
 
-export async function calculateEntitlements(empId: string, hireDate: Date | null) {
+export async function calculateEntitlements(empId: string, hireDate: Date | null, isOnTrial: boolean = false) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
@@ -110,13 +111,29 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
             quotas['annual'] = match.days;
         }
     } else {
-        // Less than 1 year or no hire date = 0 annual leave
         quotas['annual'] = 0;
     }
+
+    // Rule: Employees on trial cannot take Personal/Emergency Leave
+    if (isOnTrial) {
+        quotas['personal'] = 0;
+        quotas['emergency'] = 0;
+    }
+
+    const personalQuota = quotas['personal'] ?? 0;
 
     // Other Leave Types (Standard Rule)
     for (const ent of definedEntitlements) {
         if (ent.leave_type_id === 'annual') continue;
+        if (ent.leave_type_id === 'personal') {
+            if (years >= ent.min_years) {
+                if (!('personal' in quotas)) {
+                    quotas['personal'] = isOnTrial ? 0 : ent.days;
+                    quotas['emergency'] = isOnTrial ? 0 : ent.days;
+                }
+            }
+            continue;
+        }
         if (years >= ent.min_years) {
             if (!(ent.leave_type_id in quotas)) {
                 quotas[ent.leave_type_id] = ent.days;
@@ -143,6 +160,11 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
         used[req.leave_type_id] = (used[req.leave_type_id] || 0) + req.days;
     }
 
+    // Combine used days for Personal and Emergency
+    const combinedUsed = (used['personal'] || 0) + (used['emergency'] || 0);
+    used['personal'] = combinedUsed;
+    used['emergency'] = combinedUsed;
+
     return { quotas, used };
 }
 
@@ -159,11 +181,11 @@ export async function GET() {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true },
+        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
-    const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date);
+    const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
 
     // ส่ง types ที่ “ใช้ได้” ตามเพศ
     const types = LEAVE_TYPES
@@ -230,9 +252,14 @@ export async function POST(req: Request) {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true },
+        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
+
+    // Rule: Check probation for Leave of Absence (personal/emergency)
+    if ((leave_type_id === "personal" || leave_type_id === "emergency") && emp.is_on_trial) {
+        return NextResponse.json({ error: "PROBATION_PERSONAL_NOT_ALLOWED" }, { status: 403 });
+    }
 
     // Enforce advance notice based on Thailand timezone calendar day difference
     if (def.advance_notice && def.advance_notice > 0) {
@@ -296,7 +323,7 @@ export async function POST(req: Request) {
 
     // Quota validation
     if (["annual", "personal", "sick"].includes(leave_type_id)) {
-        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date);
+        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
 
         // If there is an entitlement definition for this type
         if (leave_type_id in quotas) {

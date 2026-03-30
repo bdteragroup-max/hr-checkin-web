@@ -4,6 +4,18 @@ import Image from "next/image";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
+import { 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    ExclamationTriangleIcon, 
+    CameraIcon, 
+    MapPinIcon, 
+    ArrowPathIcon,
+    ArrowRightStartOnRectangleIcon,
+    StopIcon,
+    PlusIcon
+} from "@heroicons/react/24/solid";
+import { formatTime24h, formatTimeFull24h } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    CONFIG 
@@ -51,9 +63,7 @@ interface GpsState { ok: boolean; lat: number | null; lon: number | null; accura
 ────────────────────────────────────────── */
 function pad(n: number) { return String(n).padStart(2, "0") }
 function formatLocalTimeOnly(ts: string) {
-    try {
-        return new Date(ts).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
-    } catch { return ts; }
+    return formatTime24h(ts);
 }
 function getThaiTime() {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
@@ -75,7 +85,7 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: () => void
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -96,7 +106,7 @@ function TimeCard() {
     useEffect(() => {
         function update() {
             const now = getThaiTime();
-            setTimeStr(now.toLocaleTimeString("th-TH", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+            setTimeStr(formatTimeFull24h(now));
             const d = now.toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
             setDateStr(`วัน${d.split("วัน")[1]}`); // Ensure nice format like วันพฤหัสบดีที่ 26 กุมภาพันธ์ 2569
         }
@@ -324,7 +334,7 @@ export default function ProjectCheckinPage() {
         }
 
         const dStr = getThaiTime().toLocaleDateString("th-TH");
-        const tStr = getThaiTime().toLocaleTimeString("th-TH") + " น.";
+        const tStr = formatTimeFull24h(getThaiTime()) + " น.";
 
         const bH = Math.round(h * 0.22), bY = h - bH;
         ctx.fillStyle = "rgba(0,0,0,0.85)";
@@ -549,7 +559,7 @@ export default function ProjectCheckinPage() {
                                                 }
                                             }}
                                         >
-                                            📸 ถ่ายรูป
+                                            <CameraIcon width={20} /> ถ่ายรูป
                                         </button>
                                     )}
                                 </div>
@@ -569,18 +579,20 @@ export default function ProjectCheckinPage() {
 
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
                                 <button
-                                    style={{ background: "#22c55e", color: "white", fontWeight: 700, fontSize: 18, border: "none", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6 }}
+                                    style={{ background: "#22c55e", color: "white", fontWeight: 700, fontSize: 18, border: "none", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                     onClick={() => doSubmitCheckin("Project-In")}
                                     disabled={!preview || isSubmitting}
                                 >
-                                    {isSubmitting ? "..." : "บันทึกเข้า (IN)"}
+                                    {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <ArrowRightStartOnRectangleIcon width={20} />}
+                                    บันทึกเข้า (IN)
                                 </button>
                                 <button
-                                    style={{ background: "white", color: "#ef4444", fontWeight: 700, fontSize: 18, border: "2px solid #ef4444", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6 }}
+                                    style={{ background: "white", color: "#ef4444", fontWeight: 700, fontSize: 18, border: "2px solid #ef4444", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                     onClick={() => doSubmitCheckin("Project-Out")}
                                     disabled={!preview || isSubmitting}
                                 >
-                                    {isSubmitting ? "..." : "บันทึกออก (OUT)"}
+                                    {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <StopIcon width={20} />}
+                                    บันทึกออก (OUT)
                                 </button>
                             </div>
 
@@ -677,8 +689,8 @@ export default function ProjectCheckinPage() {
                             </div>
 
                             <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "flex-start", gap: 8, fontSize: 14, color: "#6b7280", marginTop: 32, marginBottom: 24, textAlign: "left", lineHeight: 1.5 }}>
-                                <span style={{ color: "#ef4444", fontSize: 18, marginTop: -2 }}>📍</span>
-                                <span>พิกัด GPS จะใช้ตำแหน่งปัจจุบันของคุณ · สถานะ: ลูกค้าใหม่ · รหัสจะถูก<br />สร้างอัตโนมัติ</span>
+                                <MapPinIcon width={18} style={{ color: "#ef4444", marginTop: 2 }} />
+                                <span>พิกัด GPS จะใช้ตำแหน่งปัจจุบันของคุณ · สถานะ: ลูกค้าใหม่ · รหัสจะถูกสร้างอัตโนมัติ</span>
                             </div>
 
                             <button style={{ width: "100%", padding: "16px", borderRadius: 8, border: "none", background: "#ef4444", fontWeight: 700, color: "white", fontSize: 18, cursor: isSavingCus ? "default" : "pointer", opacity: isSavingCus ? 0.7 : 1 }} onClick={handleAddCustomer} disabled={isSavingCus}>

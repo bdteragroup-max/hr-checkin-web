@@ -3,6 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import styles from "../leave/page.module.css";
 import Link from "next/link";
+import { formatTime24h, formatDateThai } from "@/utils/time";
+import { 
+    CheckCircleIcon, 
+    ExclamationTriangleIcon, 
+    ArrowPathIcon, 
+    PaperClipIcon, 
+    HandThumbUpIcon, 
+    HandThumbDownIcon,
+    ClockIcon,
+    CalendarIcon,
+    UserIcon
+} from "@heroicons/react/24/outline";
 
 type TeamLeaveItem = {
     id: string;
@@ -20,11 +32,7 @@ type TeamLeaveItem = {
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
 function fmtDateTimeTH(d: string) {
-    try {
-        return new Date(d).toLocaleString("th-TH", {
-            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-        });
-    } catch { return d; }
+    return `${formatDateThai(d)} ${formatTime24h(d)}`;
 }
 
 function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: () => void }) {
@@ -43,7 +51,7 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={48} /> : <CheckCircleIcon width={48} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -143,8 +151,8 @@ export default function TeamLeavesPage() {
                 <div className={styles.card}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                         <div className={styles.cardTitle} style={{ margin: 0 }}>รออนุมัติ ({list.length})</div>
-                        <button onClick={load} disabled={loading} style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 600 }}>
-                            ↻ รีเฟรช
+                        <button onClick={load} disabled={loading} style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <ArrowPathIcon width={18} className={loading ? "animate-spin" : ""} /> รีเฟรช
                         </button>
                     </div>
 
@@ -178,8 +186,8 @@ export default function TeamLeavesPage() {
 
                                     {x.attachment_url && (
                                         <div style={{ marginBottom: 16 }}>
-                                            <a href={x.attachment_url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "var(--blue)", textDecoration: "underline", display: "inline-block", background: "var(--surface-2)", padding: "4px 10px", borderRadius: 6 }}>
-                                                📎 ดูเอกสารแนบ
+                                            <a href={x.attachment_url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "var(--blue)", textDecoration: "underline", display: "inline-flex", alignItems: 'center', gap: 6, background: "var(--surface-2)", padding: "4px 10px", borderRadius: 6 }}>
+                                                <PaperClipIcon width={14} /> ดูเอกสารแนบ
                                             </a>
                                         </div>
                                     )}
@@ -188,16 +196,16 @@ export default function TeamLeavesPage() {
                                         <button
                                             onClick={() => handleAction(x.id, "approve")}
                                             disabled={actionLoading}
-                                            style={{ flex: 1, padding: "10px 0", background: "var(--ok)", color: "white", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer" }}
+                                            style={{ flex: 1, padding: "10px 0", background: "var(--ok)", color: "white", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                         >
-                                            ✅ อนุมัติ
+                                            <HandThumbUpIcon width={18} /> อนุมัติ
                                         </button>
                                         <button
                                             onClick={() => handleAction(x.id, "reject")}
                                             disabled={actionLoading}
-                                            style={{ flex: 1, padding: "10px 0", background: "white", border: "1px solid var(--red-hover)", color: "var(--red)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer" }}
+                                            style={{ flex: 1, padding: "10px 0", background: "white", border: "1px solid var(--red-hover)", color: "var(--red)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                                         >
-                                            ✕ ไม่อนุมัติ
+                                            <HandThumbDownIcon width={18} /> ไม่อนุมัติ
                                         </button>
                                     </div>
                                 </div>

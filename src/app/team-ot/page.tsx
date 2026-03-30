@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
-import { format } from "date-fns";
-import { th } from "date-fns/locale";
+import { formatTime24h, formatDateThai } from "@/utils/time";
+import { 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    ArrowPathIcon, 
+    ExclamationTriangleIcon,
+    UserIcon,
+    ClockIcon,
+    HandThumbUpIcon,
+    HandThumbDownIcon
+} from "@heroicons/react/24/solid";
 
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
@@ -23,7 +32,7 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
         <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
-                    {isErr ? "⚠" : "✓"}
+                    {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
                 </div>
                 <div className={`${styles.alertTitle} ${isErr ? styles.alertTitleErr : styles.alertTitleOk}`}>
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
@@ -133,7 +142,7 @@ export default function TeamOtPage() {
                     <div className={styles.cardHeader}>
                         <div className={styles.cardTitle}>รออนุมัติ ({pending.length})</div>
                         <button className={styles.btnRefresh} onClick={loadData} disabled={loading}>
-                            ↻ รีเฟรช
+                            <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} style={{ marginRight: 6 }} /> รีเฟรช
                         </button>
                     </div>
 
@@ -144,9 +153,9 @@ export default function TeamOtPage() {
                     ) : (
                         <div className={styles.itemList}>
                             {pending.map((req) => {
-                                const dateLabel = format(new Date(req.date_for), "d MMM yyyy", { locale: th });
-                                const startL = format(new Date(req.start_time), "HH:mm");
-                                const endL = format(new Date(req.end_time), "HH:mm");
+                                const dateLabel = formatDateThai(req.date_for);
+                                const startL = formatTime24h(req.start_time);
+                                const endL = formatTime24h(req.end_time);
                                 const dHours = Number(req.total_hours);
                                 const curVal = editHours[req.id] !== undefined ? editHours[req.id] : dHours;
 
@@ -191,13 +200,13 @@ export default function TeamOtPage() {
                                                 className={styles.btnApprove}
                                                 onClick={() => handleUpdateStatus(req.id, "approved", dHours)}
                                             >
-                                                ✅ อนุมัติ
+                                                <HandThumbUpIcon width={18} style={{ marginRight: 6 }} /> อนุมัติ
                                             </button>
                                             <button
                                                 className={styles.btnReject}
                                                 onClick={() => handleUpdateStatus(req.id, "rejected", dHours)}
                                             >
-                                                ✕ ไม่อนุมัติ
+                                                <HandThumbDownIcon width={18} style={{ marginRight: 6 }} /> ไม่อนุมัติ
                                             </button>
                                         </div>
                                     </div>
@@ -216,9 +225,9 @@ export default function TeamOtPage() {
 
                         <div className={styles.itemList}>
                             {history.map((req) => {
-                                const dateLabel = format(new Date(req.date_for), "d MMM yyyy", { locale: th });
-                                const startL = format(new Date(req.start_time), "HH:mm");
-                                const endL = format(new Date(req.end_time), "HH:mm");
+                                const dateLabel = formatDateThai(req.date_for);
+                                const startL = formatTime24h(req.start_time);
+                                const endL = formatTime24h(req.end_time);
                                 return (
                                     <div key={req.id} className={styles.histCard}>
                                         <div className={styles.histHead}>
