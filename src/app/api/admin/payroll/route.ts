@@ -281,7 +281,7 @@ export async function GET(request: Request) {
 
             telephone_allowance = adj?.phone_allowance_override !== null && adj?.phone_allowance_override !== undefined
                 ? Number(adj.phone_allowance_override)
-                : (empWarnings.length === 0 && emp.has_telephone_allowance ? (Number(emp.telephone_allowance) || 300) : 0);
+                : (empWarnings.length === 0 && emp.has_telephone_allowance ? 300 : 0);
 
             if (adj?.travel_site_allowance_override !== null && adj?.travel_site_allowance_override !== undefined) {
                 travel_site_allowance = Number(adj.travel_site_allowance_override);
