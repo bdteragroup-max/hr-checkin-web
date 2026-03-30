@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
+import { UsersIcon, MagnifyingGlassIcon, LightBulbIcon, PlusIcon, PencilSquareIcon, ExclamationTriangleIcon, TrashIcon } from "@heroicons/react/24/outline";
+import SearchableSelect from "@/components/SearchableSelect";
 
 /* ── Types ──────────────────────────────────────────────────── */
 type Branch = { id: string; name: string };
@@ -25,6 +27,10 @@ type Emp = {
     is_on_trial: boolean;
     has_telephone_allowance: boolean;
     position_allowance?: number | null;
+    national_id_card?: string | null;
+    address?: string | null;
+    bank_account_no?: string | null;
+    bank_name?: string | null;
 };
 
 type EditDraft = {
@@ -43,6 +49,10 @@ type EditDraft = {
     is_on_trial: boolean;
     has_telephone_allowance: boolean;
     position_allowance: string;
+    national_id_card: string;
+    address: string;
+    bank_account_no: string;
+    bank_name: string;
 };
 
 type Department = { id: number; name: string };
@@ -57,6 +67,8 @@ export default function AdminEmployeesPage() {
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    const [newEmpId, setNewEmpId] = useState<string | null>(null);
 
     /* search / filter */
     const [search, setSearch] = useState("");
@@ -79,6 +91,10 @@ export default function AdminEmployeesPage() {
     const [isOnTrial, setIsOnTrial] = useState(false);
     const [hasTelephoneAllowance, setHasTelephoneAllowance] = useState(false);
     const [positionAllowance, setPositionAllowance] = useState("");
+    const [nationalIdCard, setNationalIdCard] = useState("");
+    const [address, setAddress] = useState("");
+    const [bankAccountNo, setBankAccountNo] = useState("");
+    const [bankName, setBankName] = useState("");
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -158,6 +174,10 @@ export default function AdminEmployeesPage() {
                     is_on_trial: isOnTrial,
                     has_telephone_allowance: hasTelephoneAllowance,
                     position_allowance: positionAllowance ? Number(positionAllowance) : 0,
+                    national_id_card: nationalIdCard.trim() || null,
+                    address: address.trim() || null,
+                    bank_account_no: bankAccountNo.trim() || null,
+                    bank_name: bankName.trim() || null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -172,11 +192,15 @@ export default function AdminEmployeesPage() {
                 return setMsg(map[t?.error] || t?.error || "CREATE_FAILED");
             }
             showToast(`✅ เพิ่ม ${name.trim()} แล้ว`);
+            setNewEmpId(empId.trim());
+            setTimeout(() => setNewEmpId(null), 3000);
+            
             setEmpId(""); setName(""); setBranchId(""); setPin("");
             setIsActive(true); setGender("M"); setHireDate(""); setBirthDate(""); setPhoneNumber("");
             setDepartmentId(0); setPositionId(0); setBaseSalary(""); setSupervisorId("");
             setIsOnTrial(false); setHasTelephoneAllowance(false);
             setPositionAllowance("");
+            setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
             setCreateModalOpen(false);
             await load();
         } finally { setSaving(false); }
@@ -206,6 +230,10 @@ export default function AdminEmployeesPage() {
                     is_on_trial: editDraft.is_on_trial,
                     has_telephone_allowance: editDraft.has_telephone_allowance,
                     position_allowance: editDraft.position_allowance ? Number(editDraft.position_allowance) : 0,
+                    national_id_card: editDraft.national_id_card.trim() || null,
+                    address: editDraft.address.trim() || null,
+                    bank_account_no: editDraft.bank_account_no.trim() || null,
+                    bank_name: editDraft.bank_name.trim() || null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -331,8 +359,8 @@ export default function AdminEmployeesPage() {
 
                         {/* Table header bar */}
                         <div className={styles.tableHeader}>
-                            <div className={styles.tableHeaderTitle}>
-                                👥 รายการพนักงาน
+                            <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <UsersIcon width={20} />  รายการพนักงาน
                             </div>
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                 <span className={styles.rowCount}>{activeCnt} Active</span>
@@ -347,7 +375,7 @@ export default function AdminEmployeesPage() {
                         }}>
                             <input
                                 className={styles.input}
-                                placeholder="🔍 ค้นหา รหัส / ชื่อ"
+                                placeholder="ค้นหา รหัส / ชื่อ"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 style={{ flex: 1, marginBottom: 0 }}
@@ -392,7 +420,7 @@ export default function AdminEmployeesPage() {
                                     </thead>
                                     <tbody>
                                         {filtered.map((x) => (
-                                            <tr key={x.emp_id} style={{ opacity: x.is_active ? 1 : 0.55 }}>
+                                            <tr key={x.emp_id} className={x.emp_id === newEmpId ? styles.highlightRed : undefined} style={{ opacity: x.is_active ? 1 : 0.55 }}>
                                                 <td><span className={styles.empId}>{x.emp_id}</span></td>
                                                 <td style={{ fontWeight: 600, color: "var(--text)" }}>{x.name}</td>
                                                 <td style={{ color: "var(--text-3)", fontSize: 12 }}>{branchName(x.branch_id)}</td>
@@ -462,6 +490,10 @@ export default function AdminEmployeesPage() {
                                                                     is_on_trial: x.is_on_trial,
                                                                     has_telephone_allowance: x.has_telephone_allowance,
                                                                     position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                                                                    national_id_card: x.national_id_card || "",
+                                                                    address: x.address || "",
+                                                                    bank_account_no: x.bank_account_no || "",
+                                                                    bank_name: x.bank_name || "",
                                                                 });
                                                             }}
                                                         >
@@ -498,7 +530,7 @@ export default function AdminEmployeesPage() {
                                             <tr>
                                                 <td colSpan={7}>
                                                     <div className={styles.empty}>
-                                                        <span className={styles.emptyIcon}>👥</span>
+                                                        <span className={styles.emptyIcon}><UsersIcon width={32} /></span>
                                                         ไม่พบข้อมูลตามเงื่อนไข
                                                     </div>
                                                 </td>
@@ -517,7 +549,7 @@ export default function AdminEmployeesPage() {
                             color: "var(--text-4)",
                             background: "var(--surface-2)",
                         }}>
-                            💡 กรณีลาออก แนะนำให้กดปุ่ม <b>Active</b> เพื่อเปลี่ยนเป็น Inactive แทนการลบ เพื่อเก็บประวัติการทำงาน
+                            <LightBulbIcon width={14} style={{ display: "inline-block", verticalAlign: "text-bottom" }} /> กรณีลาออก แนะนำให้กดปุ่ม <b>Active</b> เพื่อเปลี่ยนเป็น Inactive แทนการลบ เพื่อเก็บประวัติการทำงาน
                         </div>
                     </div>
                 </div>
@@ -529,10 +561,10 @@ export default function AdminEmployeesPage() {
             {createModalOpen && (
                 <div className={styles.modalOverlay}
                     onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}>
-                    <div className={styles.modal}>
+                    <div className={styles.modal} style={{ maxWidth: 700 }}>
 
                         <div className={styles.modalHeader}>
-                            <span className={styles.modalTitle}>➕ สร้างพนักงานใหม่</span>
+                            <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><PlusIcon width={20} /> สร้างพนักงานใหม่</span>
                             <button className={styles.modalClose} onClick={() => setCreateModalOpen(false)}>✕</button>
                         </div>
 
@@ -557,6 +589,27 @@ export default function AdminEmployeesPage() {
                                 <option value="F">หญิง (F)</option>
                                 <option value="O">อื่นๆ (O)</option>
                             </select>
+
+                            <label className={styles.lbl}>เลขบัตรประจำตัวประชาชน</label>
+                            <input className={styles.input} placeholder="1-xxxx-xxxxx-xx-x"
+                                value={nationalIdCard} onChange={(e) => setNationalIdCard(e.target.value)} />
+
+                            <label className={styles.lbl}>ที่อยู่</label>
+                            <textarea className={styles.input} placeholder="ที่อยู่ปัจจุบัน"
+                                value={address} onChange={(e) => setAddress(e.target.value)} style={{ minHeight: 60 }} />
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <div>
+                                    <label className={styles.lbl}>ธนาคาร</label>
+                                    <input className={styles.input} placeholder="เช่น กสิกรไทย"
+                                        value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className={styles.lbl}>เลขบัญชีธนาคาร</label>
+                                    <input className={styles.input} placeholder="000-0-00000-0"
+                                        value={bankAccountNo} onChange={(e) => setBankAccountNo(e.target.value)} />
+                                </div>
+                            </div>
 
                             <label className={styles.lbl}>วันที่เริ่มงาน</label>
                             <input type="date" className={styles.input}
@@ -589,10 +642,13 @@ export default function AdminEmployeesPage() {
                             </div>
 
                             <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
-                            <select className={styles.input} value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)}>
-                                <option value="">— ไม่มี / ไม่ระบุ —</option>
-                                {list.map((e) => <option key={e.emp_id} value={e.emp_id}>{e.name} ({e.emp_id})</option>)}
-                            </select>
+                            <SearchableSelect 
+                                className={styles.input} 
+                                value={supervisorId} 
+                                onChange={(val) => setSupervisorId(val)}
+                                options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                                placeholder="— ไม่มี / ไม่ระบุ —"
+                            />
 
                             <label className={styles.lbl} style={{ marginTop: 10 }}>เงินเดือนฐาน (Base Salary) (THB)</label>
                             <input type="number" className={styles.input} placeholder="0.00"
@@ -631,7 +687,7 @@ export default function AdminEmployeesPage() {
                         <div className={styles.modalActions}>
                             <button className={styles.btnCancel} onClick={() => setCreateModalOpen(false)}>ยกเลิก</button>
                             <button className={styles.btnSave} onClick={create} disabled={saving}>
-                                {saving ? "กำลังบันทึก..." : "➕ ดำเนินการสร้างพนักงาน"}
+                                {saving ? "กำลังบันทึก..." : <><PlusIcon width={16} style={{ display: "inline-block", verticalAlign: "text-bottom" }} /> ดำเนินการสร้างพนักงาน</>}
                             </button>
                         </div>
 
@@ -645,10 +701,10 @@ export default function AdminEmployeesPage() {
             {editDraft && (
                 <div className={styles.modalOverlay}
                     onClick={(e) => { if (e.target === e.currentTarget) setEditDraft(null); }}>
-                    <div className={styles.modal}>
+                    <div className={styles.modal} style={{ maxWidth: 700 }}>
 
                         <div className={styles.modalHeader}>
-                            <span className={styles.modalTitle}>✏️ แก้ไขข้อมูลพนักงาน</span>
+                            <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><PencilSquareIcon width={20} /> แก้ไขข้อมูลพนักงาน</span>
                             <button className={styles.modalClose} onClick={() => setEditDraft(null)}>✕</button>
                         </div>
 
@@ -692,6 +748,28 @@ export default function AdminEmployeesPage() {
                             </div>
                         </div>
 
+
+                        <label className={styles.lbl}>เลขบัตรประจำตัวประชาชน</label>
+                        <input className={styles.input} placeholder="1-xxxx-xxxxx-xx-x"
+                            value={editDraft.national_id_card} onChange={(e) => setEditDraft((d) => d && ({ ...d, national_id_card: e.target.value }))} />
+
+                        <label className={styles.lbl}>ที่อยู่</label>
+                        <textarea className={styles.input} placeholder="ที่อยู่ปัจจุบัน" style={{ minHeight: 60 }}
+                            value={editDraft.address} onChange={(e) => setEditDraft((d) => d && ({ ...d, address: e.target.value }))} />
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            <div>
+                                <label className={styles.lbl}>ธนาคาร</label>
+                                <input className={styles.input} placeholder="เช่น กสิกรไทย"
+                                    value={editDraft.bank_name} onChange={(e) => setEditDraft((d) => d && ({ ...d, bank_name: e.target.value }))} />
+                            </div>
+                            <div>
+                                <label className={styles.lbl}>เลขบัญชีธนาคาร</label>
+                                <input className={styles.input} placeholder="000-0-00000-0"
+                                    value={editDraft.bank_account_no} onChange={(e) => setEditDraft((d) => d && ({ ...d, bank_account_no: e.target.value }))} />
+                            </div>
+                        </div>
+
                         {/* Hire date */}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                             <div>
@@ -729,12 +807,13 @@ export default function AdminEmployeesPage() {
                         </div>
 
                         <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
-                        <select className={styles.input} value={editDraft.supervisor_id} onChange={(e) => setEditDraft((d) => d && ({ ...d, supervisor_id: e.target.value }))}>
-                            <option value="">— ไม่มี / ไม่ระบุ —</option>
-                            {list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => (
-                                <option key={e.emp_id} value={e.emp_id}>{e.name} ({e.emp_id})</option>
-                            ))}
-                        </select>
+                        <SearchableSelect 
+                            className={styles.input} 
+                            value={editDraft.supervisor_id} 
+                            onChange={(val) => setEditDraft((d) => d && ({ ...d, supervisor_id: val }))}
+                            options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                            placeholder="— ไม่มี / ไม่ระบุ —"
+                        />
 
                         <label className={styles.lbl} style={{ marginTop: 10 }}>เงินเดือนฐาน (Base Salary) (THB)</label>
                         <input type="number" className={styles.input} placeholder="0.00" value={editDraft.base_salary}
@@ -805,15 +884,15 @@ export default function AdminEmployeesPage() {
             {warningTarget && (
                 <div className={styles.modalOverlay}
                     onClick={(e) => { if (e.target === e.currentTarget) setWarningTarget(null); }}>
-                    <div className={styles.modal}>
+                    <div className={styles.modal} style={{ maxWidth: 700 }}>
                         <div className={styles.modalHeader}>
-                            <span className={styles.modalTitle} style={{ color: "var(--red)" }}>⚠️ รายการใบเตือน: {warningTarget.name}</span>
+                            <span className={styles.modalTitle} style={{ color: "var(--red)", display: "flex", alignItems: "center", gap: 6 }}><ExclamationTriangleIcon width={20} /> รายการใบเตือน: {warningTarget.name}</span>
                             <button className={styles.modalClose} onClick={() => setWarningTarget(null)}>✕</button>
                         </div>
 
                         <div style={{ padding: "0 20px 20px" }}>
                             <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--red)", marginBottom: 8 }}>➕ เพิ่มใบเตือนใหม่</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--red)", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><PlusIcon width={14} /> เพิ่มใบเตือนใหม่</div>
                                 <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 8 }}>
                                     <input type="date" className={styles.input} value={newWarningDate} onChange={e => setNewWarningDate(e.target.value)} />
                                     <input placeholder="สาเหตุ / รายละเอียด" className={styles.input} value={newWarningReason} onChange={e => setNewWarningReason(e.target.value)} />
@@ -834,7 +913,7 @@ export default function AdminEmployeesPage() {
                                             <div style={{ fontSize: 12, fontWeight: 700 }}>{new Date(w.date).toLocaleDateString("th-TH")}</div>
                                             <div style={{ fontSize: 13 }}>{w.reason}</div>
                                         </div>
-                                        <button onClick={() => deleteWarning(w.id)} style={{ padding: 4, background: "none", border: "none", color: "var(--red)", cursor: "pointer" }}>🗑️</button>
+                                        <button onClick={() => deleteWarning(w.id)} style={{ padding: 4, background: "none", border: "none", color: "var(--red)", cursor: "pointer" }}><TrashIcon width={16} /></button>
                                     </div>
                                 ))}
                             </div>

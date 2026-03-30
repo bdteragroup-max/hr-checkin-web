@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
 import { Prisma } from "@prisma/client";
 
+
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 function lateLabel(late_status: string | null, late_min: number | null) {

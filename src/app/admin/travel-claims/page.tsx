@@ -5,6 +5,7 @@ import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import { FolderOpenIcon, DocumentTextIcon, ReceiptRefundIcon } from "@heroicons/react/24/outline";
 
 export default function AdminTravelClaimsPage() {
     const [loading, setLoading] = useState(true);
@@ -146,8 +147,8 @@ export default function AdminTravelClaimsPage() {
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
-                    <div className={styles.tableHeaderTitle}>
-                        📂 รายการเบิกจ่าย
+                    <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <FolderOpenIcon width={20} /> รายการเบิกจ่าย
                         {pendingCount > 0 && (
                             <span style={{
                                 background: "var(--red)",
@@ -234,9 +235,9 @@ export default function AdminTravelClaimsPage() {
                                             </td>
                                             <td>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                                    <a href={c.report_url} target="_blank" className={styles.link}>📄 รายงานผล</a>
+                                                    <a href={c.report_url} target="_blank" className={styles.link} style={{ display: "flex", alignItems: "center", gap: 4 }}><DocumentTextIcon width={14} /> รายงานผล</a>
                                                     {c.accommodation_receipt_url && (
-                                                        <a href={c.accommodation_receipt_url} target="_blank" className={styles.link} style={{ color: "var(--ot)" }}>🧾 ใบเสร็จที่พัก</a>
+                                                        <a href={c.accommodation_receipt_url} target="_blank" className={styles.link} style={{ color: "var(--ot)", display: "flex", alignItems: "center", gap: 4 }}><ReceiptRefundIcon width={14} /> ใบเสร็จที่พัก</a>
                                                     )}
                                                 </div>
                                             </td>

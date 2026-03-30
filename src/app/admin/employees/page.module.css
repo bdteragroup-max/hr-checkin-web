@@ -879,6 +879,16 @@ input:disabled + .slider {
   }
 }
 
+/* NEW HIGHLIGHT CLASS */
+.highlightRed td {
+  animation: highlightRedAnim 3s ease-out;
+}
+
+@keyframes highlightRedAnim {
+  0% { background-color: rgba(239, 68, 68, 0.3); }
+  100% { background-color: transparent; }
+}
+
 /* ─── Responsive ──────────────────────────────────────────── */
 @media (max-width: 1150px) {
   /* removed grid specific override since it's now flex column */

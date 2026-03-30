@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./holiday.module.css";
+import { CalendarDaysIcon, PlusIcon, CakeIcon } from "@heroicons/react/24/outline";
 
 type HolidayRow = {
     date: string;       // ISO จาก API
@@ -234,7 +235,7 @@ export default function AdminHolidayPage() {
             {/* Cards */}
             <div className={styles.grid}>
                 <div className={styles.card}>
-                    <div className={styles.cardTitle}>📌 สรุปวันหยุด (ปี {year})</div>
+                    <div className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><CalendarDaysIcon width={20} /> สรุปวันหยุด (ปี {year})</div>
                     <div className={styles.kpiRow}>
                         <div className={styles.kpiBox}>
                             <div className={styles.kpiLabel}>จำนวนวันหยุด</div>
@@ -249,7 +250,7 @@ export default function AdminHolidayPage() {
                 </div>
 
                 <div className={styles.card}>
-                    <div className={styles.cardTitle}>➕ เพิ่มวันหยุด</div>
+                    <div className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><PlusIcon width={20} /> เพิ่มวันหยุด</div>
                     <div className={styles.formRow}>
                         <input className={styles.input} type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
                         <input
@@ -303,7 +304,7 @@ export default function AdminHolidayPage() {
                                                     </div>
                                                     {holiday ? <div className={styles.holidayBadge}>{holiday.name}</div> : null}
                                                     {dt && bdayMap.get(`${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`)?.map(name => (
-                                                        <div key={name} className={styles.bdayBadge}>🎂 {name}</div>
+                                                        <div key={name} className={styles.bdayBadge} style={{ display: "flex", alignItems: "center", gap: 4 }}><CakeIcon width={12} /> {name}</div>
                                                     ))}
                                                 </div>
                                             ) : null}

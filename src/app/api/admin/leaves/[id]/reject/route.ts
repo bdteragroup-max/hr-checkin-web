@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
 
+
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 function jsonSafe<T>(v: T): any {

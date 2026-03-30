@@ -6,6 +6,9 @@ import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
 import path from "path";
 
+
+export const dynamic = "force-dynamic";
+
 export const runtime = "nodejs";
 
 function ymd(d: Date) {

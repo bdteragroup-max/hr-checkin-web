@@ -4,12 +4,19 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
+import { 
+    ChartBarIcon, ClipboardDocumentListIcon, UsersIcon, 
+    BuildingOfficeIcon, MapPinIcon, BriefcaseIcon, 
+    SunIcon, ClockIcon, GiftIcon, TruckIcon, 
+    CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
+    ArrowRightOnRectangleIcon
+} from "@heroicons/react/24/outline";
 
-type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "report" | "projects";
+type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "projects";
 
 function getTabFromSearch(searchParams: ReturnType<typeof useSearchParams>): TabKey {
     const t = (searchParams.get("tab") || "dashboard").toLowerCase();
-    if (t === "attendance" || t === "leave" || t === "holiday" || t === "report" || t === "projects") return t as TabKey;
+    if (t === "attendance" || t === "leave" || t === "holiday" || t === "projects") return t as TabKey;
     return "dashboard";
 }
 
@@ -57,7 +64,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className={styles.topbarRight}>
                     <span className={styles.topbarDate}>{todayLabel}</span>
                     <button className={styles.btnLogout} onClick={logout}>
-                        🚪 ออกจากระบบ
+                        <ArrowRightOnRectangleIcon className={styles.navIcon} style={{ width: 16, height: 16, marginRight: 4 }} /> ออกจากระบบ
                     </button>
                 </div>
             </div>
@@ -75,7 +82,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 className={`${styles.navItem} ${inAdminHome && activeTab === "dashboard" ? styles.active : ""
                                     }`}
                             >
-                                <span className={styles.navIcon}>📊</span>Dashboard
+                                <span className={styles.navIcon}><ChartBarIcon width={20} /></span>Dashboard
                             </Link>
 
                             <Link
@@ -83,7 +90,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 className={`${styles.navItem} ${inAdminHome && activeTab === "attendance" ? styles.active : ""
                                     }`}
                             >
-                                <span className={styles.navIcon}>📋</span>การเข้างาน
+                                <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>การเข้างาน
                             </Link>
 
                             <div className={styles.navSection}>จัดการ</div>
@@ -93,7 +100,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/employees"
                                 className={`${styles.navItem} ${isEmployeesActive ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>👥</span>Employees
+                                <span className={styles.navIcon}><UsersIcon width={20} /></span>Employees
                             </Link>
 
                             {/* ✅ Organization menu */}
@@ -101,7 +108,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/organization"
                                 className={`${styles.navItem} ${isOrganizationActive ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>🏢</span>โครงสร้างองค์กร
+                                <span className={styles.navIcon}><BuildingOfficeIcon width={20} /></span>โครงสร้างองค์กร
                             </Link>
 
                             {/* ✅ Branches menu */}
@@ -109,7 +116,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/branches"
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/branches") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>📍</span>สาขา (Branches)
+                                <span className={styles.navIcon}><MapPinIcon width={20} /></span>สาขา (Branches)
                             </Link>
 
                             {/* ✅ Projects menu */}
@@ -117,7 +124,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin?tab=projects"
                                 className={`${styles.navItem} ${inAdminHome && activeTab === "projects" ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>🏗️</span>โครงการ / ลูกค้า
+                                <span className={styles.navIcon}><BriefcaseIcon width={20} /></span>โครงการ / ลูกค้า
                             </Link>
 
                             {/* ✅ Leave -> link to /admin/leaves */}
@@ -125,7 +132,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/leaves"
                                 className={`${styles.navItem} ${isLeavesActive ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>🏖️</span>การลา
+                                <span className={styles.navIcon}><SunIcon width={20} /></span>การลา
                             </Link>
 
                             {/* ✅ OT Requests -> link to /admin/ot */}
@@ -133,7 +140,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/ot"
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/ot") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>⏱️</span>คำขอ OT
+                                <span className={styles.navIcon}><ClockIcon width={20} /></span>คำขอ OT
                             </Link>
 
                             {/* ✅ Birthday Claims */}
@@ -141,7 +148,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/birthday-claims"
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/birthday-claims") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>🎂</span>สวัสดิการวันเกิด
+                                <span className={styles.navIcon}><GiftIcon width={20} /></span>สวัสดิการวันเกิด
                             </Link>
 
                             {/* ✅ Travel & Off-Site Claims */}
@@ -149,7 +156,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/travel-claims"
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>🚕</span>ค่าเดินทาง / ที่พัก
+                                <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
                             </Link>
 
                             {/* ✅ Holiday -> link to /admin/holiday */}
@@ -157,7 +164,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/holiday"
                                 className={`${styles.navItem} ${isHolidayActive ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>📅</span>วันหยุด
+                                <span className={styles.navIcon}><CalendarIcon width={20} /></span>วันหยุด
                             </Link>
 
                             <div className={styles.navSection}>รายงาน</div>
@@ -167,15 +174,17 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 href="/admin/payroll"
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/payroll") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>💰</span>ระบบเงินเดือน
+                                <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ระบบเงินเดือน
                             </Link>
+                            {/* ✅ Historical Records */}
                             <Link
-                                href="/admin?tab=report"
-                                className={`${styles.navItem} ${inAdminHome && activeTab === "report" ? styles.active : ""
-                                    }`}
+                                href="/admin/records"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/records") ? styles.active : ""}`}
                             >
-                                <span className={styles.navIcon}>📈</span>สรุปรายเดือน
+                                <span className={styles.navIcon}><PresentationChartLineIcon width={20} /></span>สถิติย้อนหลัง
                             </Link>
+
+                            
                         </nav>
                     </div>
                 </aside>

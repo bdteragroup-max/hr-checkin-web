@@ -22,6 +22,10 @@ type CreateEmployeeBody = {
     is_on_trial?: boolean;
     has_telephone_allowance?: boolean;
     position_allowance?: number | null;
+    national_id_card?: string | null;
+    address?: string | null;
+    bank_name?: string | null;
+    bank_account_no?: string | null;
 };
 
 type PatchEmployeeBody = {
@@ -42,6 +46,10 @@ type PatchEmployeeBody = {
     is_on_trial?: boolean;
     has_telephone_allowance?: boolean;
     position_allowance?: number | null;
+    national_id_card?: string | null;
+    address?: string | null;
+    bank_name?: string | null;
+    bank_account_no?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -97,6 +105,10 @@ export async function GET(req: Request) {
                 is_on_trial: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
+                national_id_card: true,
+                address: true,
+                bank_name: true,
+                bank_account_no: true,
             },
         });
 
@@ -161,6 +173,10 @@ export async function POST(req: Request) {
                 is_on_trial: body.is_on_trial ?? false,
                 has_telephone_allowance: body.has_telephone_allowance ?? false,
                 position_allowance: body.position_allowance != null ? Number(body.position_allowance) : 0,
+                national_id_card: body.national_id_card ? clean(body.national_id_card) : null,
+                address: body.address ? clean(body.address) : null,
+                bank_name: body.bank_name ? clean(body.bank_name) : null,
+                bank_account_no: body.bank_account_no ? clean(body.bank_account_no) : null,
             },
             select: {
                 emp_id: true,
@@ -179,6 +195,10 @@ export async function POST(req: Request) {
                 is_on_trial: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
+                national_id_card: true,
+                address: true,
+                bank_name: true,
+                bank_account_no: true,
             },
         });
 
@@ -267,6 +287,19 @@ export async function PATCH(req: Request) {
             data.position_allowance = body.position_allowance != null ? Number(body.position_allowance) : 0;
         }
 
+        if (body.national_id_card !== undefined) {
+            data.national_id_card = body.national_id_card ? clean(body.national_id_card) : null;
+        }
+        if (body.address !== undefined) {
+            data.address = body.address ? clean(body.address) : null;
+        }
+        if (body.bank_name !== undefined) {
+            data.bank_name = body.bank_name ? clean(body.bank_name) : null;
+        }
+        if (body.bank_account_no !== undefined) {
+            data.bank_account_no = body.bank_account_no ? clean(body.bank_account_no) : null;
+        }
+
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้
         if (body.pin !== undefined) {
             const pin = clean(body.pin);
@@ -296,6 +329,10 @@ export async function PATCH(req: Request) {
                 is_on_trial: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
+                national_id_card: true,
+                address: true,
+                bank_name: true,
+                bank_account_no: true,
             },
         });
 

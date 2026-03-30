@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import { DocumentTextIcon, PencilSquareIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 interface Branch {
     id: string;
@@ -18,6 +19,8 @@ export default function AdminBranchesPage() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [search, setSearch] = useState("");
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
+
+    const [newBranchId, setNewBranchId] = useState<string | null>(null);
 
     // Form Modal
     const [showModal, setShowModal] = useState(false);
@@ -133,6 +136,10 @@ export default function AdminBranchesPage() {
             if (data.ok) {
                 setShowModal(false);
                 setAlert({ visible: true, message: "บันทึกข้อมูลเรียบร้อยแล้ว", type: "ok" });
+                if (!form.isEdit) {
+                    setNewBranchId(form.id.toUpperCase());
+                    setTimeout(() => setNewBranchId(null), 3000);
+                }
                 fetchBranches();
             } else {
                 setAlert({ visible: true, message: data.error || "บันทึกไม่สำเร็จ", type: "error" });
@@ -177,7 +184,9 @@ export default function AdminBranchesPage() {
 
             <main className={styles.card}>
                 <div className={styles.cardHeader}>
-                    <h2 className={styles.cardTitle}>📜 รายชื่อสาขาทั้งหมด</h2>
+                    <h2 className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <DocumentTextIcon width={20} /> รายชื่อสาขาทั้งหมด
+                    </h2>
                     <span className={styles.badgeOk}>{filtered.length} รายการ</span>
                 </div>
 
@@ -200,7 +209,7 @@ export default function AdminBranchesPage() {
                                 {filtered.length === 0 ? (
                                     <tr><td colSpan={6} className={styles.empty}>ไม่พบข้อมูลสาขา</td></tr>
                                 ) : filtered.map(b => (
-                                    <tr key={b.id}>
+                                    <tr key={b.id} className={b.id === newBranchId ? styles.highlightRed : undefined}>
                                         <td><span className={styles.mono}>{b.id}</span></td>
                                         <td><span className={styles.bold}>{b.name}</span></td>
                                         <td>
@@ -227,7 +236,13 @@ export default function AdminBranchesPage() {
             {showModal && (
                 <div className={styles.modalOverlay} onClick={e => e.target === e.currentTarget && setShowModal(false)}>
                     <div className={styles.modal}>
-                        <h2 className={styles.modalTitle}>{form.isEdit ? "✏️ แก้ไขสาขา" : "✨ เพิ่มสาขาใหม่"}</h2>
+                        <h2 className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            {form.isEdit ? (
+                                <><PencilSquareIcon width={24} /> แก้ไขสาขา</>
+                            ) : (
+                                <><SparklesIcon width={24} /> เพิ่มสาขาใหม่</>
+                            )}
+                        </h2>
 
                         <div className={styles.formGroup}>
                             <label>รหัสสาขา (ID)</label>

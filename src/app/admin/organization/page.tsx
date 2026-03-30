@@ -24,6 +24,9 @@ export default function OrganizationPage() {
     const [positions, setPositions] = useState<JobPosition[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [newDeptId, setNewDeptId] = useState<number | null>(null);
+    const [newPosId, setNewPosId] = useState<number | null>(null);
+
     // Modals state
     const [deptModal, setDeptModal] = useState({ open: false, isEdit: false, id: 0, name: "" });
     const [posModal, setPosModal] = useState({ open: false, isEdit: false, id: 0, department_id: 0, title: "", is_ot_eligible: true });
@@ -56,7 +59,12 @@ export default function OrganizationPage() {
 
         const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
         if (res.ok) {
+            const data = await res.json();
             setDeptModal({ open: false, isEdit: false, id: 0, name: "" });
+            if (!deptModal.isEdit && data.item?.id) {
+                setNewDeptId(data.item.id);
+                setTimeout(() => setNewDeptId(null), 3000);
+            }
             loadData();
         } else {
             const err = await res.json();
@@ -89,7 +97,12 @@ export default function OrganizationPage() {
 
         const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body });
         if (res.ok) {
+            const data = await res.json();
             setPosModal({ open: false, isEdit: false, id: 0, department_id: 0, title: "", is_ot_eligible: true });
+            if (!posModal.isEdit && data.item?.id) {
+                setNewPosId(data.item.id);
+                setTimeout(() => setNewPosId(null), 3000);
+            }
             loadData();
         } else {
             const err = await res.json();
@@ -144,7 +157,7 @@ export default function OrganizationPage() {
                                     <tr><td colSpan={3} className={styles.empty}>ไม่มีข้อมูลแผนก</td></tr>
                                 )}
                                 {departments.map(d => (
-                                    <tr key={d.id}>
+                                    <tr key={d.id} className={d.id === newDeptId ? styles.highlightRed : undefined}>
                                         <td className={styles.bold}>{d.name}</td>
                                         <td>{d._count.job_positions} ตำแหน่ง</td>
                                         <td className={styles.tdRight}>
@@ -201,7 +214,7 @@ export default function OrganizationPage() {
                                     <tr><td colSpan={4} className={styles.empty}>ไม่มีข้อมูลตำแหน่งงาน</td></tr>
                                 )}
                                 {positions.map(p => (
-                                    <tr key={p.id}>
+                                    <tr key={p.id} className={p.id === newPosId ? styles.highlightRed : undefined}>
                                         <td className={styles.bold}>{p.title}</td>
                                         <td>{p.departments.name}</td>
                                         <td>

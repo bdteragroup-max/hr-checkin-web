@@ -5,6 +5,12 @@ import Link from "next/link";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
+import { 
+    HandRaisedIcon, GiftIcon, PencilSquareIcon, CheckCircleIcon, 
+    XCircleIcon, ClockIcon, SunIcon, ClipboardDocumentListIcon, 
+    InboxIcon, MagnifyingGlassIcon, Cog6ToothIcon, DocumentTextIcon, 
+    CalendarDaysIcon, CameraIcon, BanknotesIcon, ExclamationTriangleIcon 
+} from "@heroicons/react/24/outline";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -114,7 +120,7 @@ interface Project {
     created_at: string;
 }
 
-type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "report" | "projects";
+type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "projects";
 
 const PAGE_SIZE = 25;
 
@@ -163,7 +169,7 @@ function badgeClass(status: string) {
 
 function tabFromQuery(t: string | null): TabKey {
     const v = (t || "dashboard").toLowerCase();
-    if (v === "attendance" || v === "leave" || v === "holiday" || v === "report" || v === "projects") return v as TabKey;
+    if (v === "attendance" || v === "leave" || v === "holiday" || v === "projects") return v as TabKey;
     return "dashboard";
 }
 
@@ -305,7 +311,7 @@ function AdminPageInner() {
         if (activeTab === "attendance") loadAttendance();
         if (activeTab === "leave") loadLeave();
         if (activeTab === "holiday") loadHolidays();
-        if (activeTab === "report") loadReport();
+        // if (activeTab === "report") loadReport();
         if (activeTab === "projects") loadProjects();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
@@ -518,7 +524,7 @@ function AdminPageInner() {
 
     // Ensure report reloads when month/branch/hideResigned change while on report tab
     useEffect(() => {
-        if (activeTab !== "report") return;
+        if ((activeTab as string) !== "report") return;
         // call with current computed reportMonth to keep behavior consistent
         loadReport(reportMonth, reportBranch, hideResigned);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -640,7 +646,7 @@ function AdminPageInner() {
                         ))}
                         {notifs.pendingClaimsCount > 0 && (
                             <Link href="/admin/birthday-claims" className={styles.notifItemLink}>
-                                <span className={styles.notifIcon}>✍️</span>
+                                <span className={styles.notifIcon}><PencilSquareIcon width={20} /></span>
                                 <div className={styles.notifText}>
                                     มีคำขอสวัสดิการวันเกิด <b>{notifs.pendingClaimsCount} รายการ</b> ที่รอการตรวจสอบ
                                 </div>
@@ -652,11 +658,11 @@ function AdminPageInner() {
 
                 <div className={styles.statsGrid}>
                     {([
-                        { color: "green", icon: "✅", val: dash?.present, label: "มาทำงานวันนี้" },
-                        { color: "red", icon: "❌", val: dash?.absent, label: "ขาดงาน" },
-                        { color: "orange", icon: "⏰", val: dash?.late, label: "มาสาย" },
-                        { color: "blue", icon: "🏖️", val: dash?.onLeave, label: "ลาวันนี้" },
-                    ] as { color: string; icon: string; val: number | undefined; label: string }[]).map(s => (
+                        { color: "green", icon: <CheckCircleIcon width={24} />, val: dash?.present, label: "มาทำงานวันนี้" },
+                        { color: "red", icon: <XCircleIcon width={24} />, val: dash?.absent, label: "ขาดงาน" },
+                        { color: "orange", icon: <ClockIcon width={24} />, val: dash?.late, label: "มาสาย" },
+                        { color: "blue", icon: <SunIcon width={24} />, val: dash?.onLeave, label: "ลาวันนี้" },
+                    ] as { color: string; icon: React.ReactNode; val: number | undefined; label: string }[]).map(s => (
                         <div key={s.label} className={`${styles.statCard} ${styles[s.color as keyof typeof styles]}`}>
                             <div className={styles.statTop}>
                                 <div className={styles.statVal}>{s.val ?? "—"}</div>
@@ -669,14 +675,14 @@ function AdminPageInner() {
 
                 <div className={styles.tableWrap}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.tableHeaderTitle}>📋 กิจกรรมล่าสุดวันนี้</div>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><ClipboardDocumentListIcon width={20} /> กิจกรรมล่าสุดวันนี้</div>
                         <span className={styles.rowCount}>{todayLabel}</span>
                     </div>
                     <div className={styles.tableScroll}>
                         {!dash ? (
                             <div className={styles.loader}><div className={styles.spinner} />กำลังโหลด...</div>
                         ) : dash.recent.length === 0 ? (
-                            <div className={styles.emptyState}><span className={styles.emptyIcon}>📭</span>ยังไม่มีข้อมูลวันนี้</div>
+                            <div className={styles.emptyState}><span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีข้อมูลวันนี้</div>
                         ) : (
                             <table className={styles.table}>
                                 <thead><tr>
@@ -725,8 +731,11 @@ function AdminPageInner() {
                 <div className={styles.filterBar}>
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>ค้นหา</span>
-                        <input type="text" placeholder="🔍 ชื่อ / รหัส"
-                            value={filterSearch} onChange={e => { setFilterSearch(e.target.value); setCurrentPage(1); }} />
+                        <div style={{ position: "relative" }}>
+                            <MagnifyingGlassIcon width={16} style={{ position: "absolute", left: 8, top: 10, color: "var(--text4)" }} />
+                            <input type="text" placeholder="ชื่อ / รหัส" style={{ paddingLeft: 30 }}
+                                value={filterSearch} onChange={e => { setFilterSearch(e.target.value); setCurrentPage(1); }} />
+                        </div>
                     </div>
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>วันที่</span>
@@ -751,8 +760,8 @@ function AdminPageInner() {
                     </div>
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>&nbsp;</span>
-                        <button className={styles.btnPrimary} onClick={loadAttendance} disabled={attLoading}>
-                            {attLoading ? <><span className={styles.spinner} style={{ width: 14, height: 14 }} />โหลด...</> : "🔍 ค้นหา"}
+                        <button className={styles.btnPrimary} onClick={loadAttendance} disabled={attLoading} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {attLoading ? <><span className={styles.spinner} style={{ width: 14, height: 14 }} />โหลด...</> : <><MagnifyingGlassIcon width={16} /> ค้นหา</>}
                         </button>
                     </div>
                     <div className={styles.filterGroup}>
@@ -768,7 +777,7 @@ function AdminPageInner() {
 
                 <div className={styles.tableWrap}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.tableHeaderTitle}>📋 บันทึกการเข้า–ออกงาน</div>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><ClipboardDocumentListIcon width={20} /> บันทึกการเข้า–ออกงาน</div>
                         <span className={styles.rowCount}>{filteredRows.length} รายการ</span>
                     </div>
                     <div className={styles.tableScroll}>
@@ -848,7 +857,7 @@ function AdminPageInner() {
             <>
                 <div className={styles.leaveGrid}>
                     <div className={styles.leaveCard}>
-                        <div className={styles.leaveCardTitle}>⚙️ ประเภทการลา &amp; โควต้า/ปี</div>
+                        <div className={styles.leaveCardTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><Cog6ToothIcon width={20} /> ประเภทการลา &amp; โควต้า/ปี</div>
                         <div className={styles.leaveTypeList}>
                             {DEFAULT_LEAVE_TYPES.map(t => (
                                 <div key={t.id} className={styles.leaveTypeItem}>
@@ -861,8 +870,8 @@ function AdminPageInner() {
                     </div>
 
                     <div className={styles.leaveCard}>
-                        <div className={styles.leaveCardTitle}>
-                            ⏳ รออนุมัติ
+                        <div className={styles.leaveCardTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <ClockIcon width={20} /> รออนุมัติ
                             <span className={styles.pendingCountBadge}>{pendingLeave.length}</span>
                         </div>
                         {leaveLoading ? (
@@ -881,8 +890,8 @@ function AdminPageInner() {
                                     📅 {r.startDate} → {r.endDate} · {r.days} วัน · {r.reason || "—"}
                                 </div>
                                 <div className={styles.leaveApproveButtons}>
-                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")}>✅ อนุมัติ</button>
-                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")}>❌ ไม่อนุมัติ</button>
+                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} style={{ display: "flex", alignItems: "center", gap: 6 }}><CheckCircleIcon width={16} /> อนุมัติ</button>
+                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")} style={{ display: "flex", alignItems: "center", gap: 6 }}><XCircleIcon width={16} /> ไม่อนุมัติ</button>
                                 </div>
                             </div>
                         ))}
@@ -891,12 +900,12 @@ function AdminPageInner() {
 
                 <div className={styles.tableWrap}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.tableHeaderTitle}>📜 ประวัติการลาทั้งหมด</div>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><DocumentTextIcon width={20} /> ประวัติการลาทั้งหมด</div>
                         <span className={styles.rowCount}>{historyRows.length} รายการ</span>
                     </div>
                     <div className={styles.tableScroll}>
                         {historyRows.length === 0 ? (
-                            <div className={styles.emptyState}><span className={styles.emptyIcon}>📭</span>ยังไม่มีประวัติการลา</div>
+                            <div className={styles.emptyState}><span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีประวัติการลา</div>
                         ) : (
                             <table className={styles.table}>
                                 <thead><tr>
@@ -928,7 +937,7 @@ function AdminPageInner() {
         const sorted = [...holidays].sort((a, b) => a.date.localeCompare(b.date));
         return (
             <div className={styles.card}>
-                <div className={styles.cardTitle}>📅 จัดการวันหยุดประจำปี</div>
+                <div className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><CalendarDaysIcon width={24} /> จัดการวันหยุดประจำปี</div>
                 <div className={styles.holidayAddRow}>
                     <input type="date" value={holidayDate} onChange={e => setHolidayDate(e.target.value)} />
                     <input type="text" placeholder="ชื่อวันหยุด เช่น วันสงกรานต์"
@@ -937,10 +946,10 @@ function AdminPageInner() {
                     <button className={styles.btnAdd} onClick={addHoliday}>+ เพิ่ม</button>
                 </div>
                 {sorted.length === 0 ? (
-                    <div className={styles.emptyState}><span className={styles.emptyIcon}>📅</span>ยังไม่มีวันหยุด</div>
+                    <div className={styles.emptyState}><span className={styles.emptyIcon}><CalendarDaysIcon width={32} /></span>ยังไม่มีวันหยุด</div>
                 ) : sorted.map(h => (
                     <div key={h.date} className={styles.holidayItem}>
-                        <span className={styles.holidayDate}>📅 {h.date}</span>
+                        <span className={styles.holidayDate} style={{ display: "flex", alignItems: "center", gap: 4 }}><CalendarDaysIcon width={16} /> {h.date}</span>
                         <span className={styles.holidayName}>{h.name}</span>
                         <button className={styles.btnDelete} onClick={() => deleteHoliday(h.date)} title="ลบ">✕</button>
                     </div>
@@ -1245,8 +1254,8 @@ function AdminPageInner() {
                         <div className={styles.modal} style={{ maxWidth: 550 }}>
                             <div className={styles.modalHeader}>
                                 <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <span style={{ fontSize: "20px" }}>{projectForm.id ? "✏️" : "✨"}</span>
-                                    {projectForm.id ? "แก้ไขข้อมูลโครงการ" : "เพิ่มโครงการเวฟใหม่"}
+                                    {projectForm.id ? <PencilSquareIcon width={24} /> : <GiftIcon width={24} />}
+                                    {projectForm.id ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}
                                 </span>
                                 <button className={styles.modalClose} onClick={() => setShowProjectModal(false)}>✕</button>
 
@@ -1322,7 +1331,7 @@ function AdminPageInner() {
         attendance: "การเข้างาน",
         leave: "การลา",
         holiday: "วันหยุด",
-        report: "สรุปรายเดือน",
+        
         projects: "โครงการ / ลูกค้า",
     };
 
@@ -1341,7 +1350,6 @@ function AdminPageInner() {
             {activeTab === "attendance" && renderAttendance()}
             {activeTab === "leave" && renderLeave()}
             {activeTab === "holiday" && renderHoliday()}
-            {activeTab === "report" && renderReport()}
             {activeTab === "projects" && renderProjects()}
 
             {/* ── PHOTO MODAL ── */}
@@ -1349,7 +1357,7 @@ function AdminPageInner() {
                 <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setPhotoModal(null); }}>
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
-                            <span className={styles.modalTitle}>📷 ภาพประกอบการเช็คอิน</span>
+                            <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><CameraIcon width={20} /> ภาพประกอบการเช็คอิน</span>
                             <button className={styles.modalClose} onClick={() => setPhotoModal(null)}>✕</button>
                         </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1371,7 +1379,7 @@ function AdminPageInner() {
                     <div className={styles.settingsModal}>
                         <div className={styles.settingsModalHeader}>
                             <div>
-                                <div className={styles.settingsModalTitle}>⚙️ ตั้งค่าระบบ</div>
+                                <div className={styles.settingsModalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><Cog6ToothIcon width={24} /> ตั้งค่าระบบ</div>
                                 <div className={styles.settingsModalSub}>TERA GROUP · HR Admin</div>
                             </div>
                             <button className={styles.modalClose} onClick={closeSettings}>✕</button>
@@ -1382,22 +1390,22 @@ function AdminPageInner() {
                                 <div className={styles.settingsNavSection}>ทั่วไป</div>
                                 <button
                                     className={`${styles.settingsNavItem} ${settingsTab === "shift" ? styles.settingsNavActive : ""}`}
-                                    onClick={() => setSettingsTab("shift")}
+                                    onClick={() => setSettingsTab("shift")} style={{ display: "flex", alignItems: "center", gap: 6 }}
                                 >
-                                    <span>🕘</span> เวลางาน
+                                    <ClockIcon width={18} /> เวลางาน
                                 </button>
                                 <button
                                     className={`${styles.settingsNavItem} ${settingsTab === "payroll" ? styles.settingsNavActive : ""}`}
-                                    onClick={() => setSettingsTab("payroll")}
+                                    onClick={() => setSettingsTab("payroll")} style={{ display: "flex", alignItems: "center", gap: 6 }}
                                 >
-                                    <span>💰</span> Payroll
+                                    <BanknotesIcon width={18} /> Payroll
                                 </button>
                             </div>
 
                             <div className={styles.settingsContent}>
                                 {settingsTab === "shift" && (
                                     <div className={styles.settingsSection}>
-                                        <div className={styles.settingsSectionTitle}>🕘 ตั้งค่าเวลางาน</div>
+                                        <div className={styles.settingsSectionTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><ClockIcon width={20} /> ตั้งค่าเวลางาน</div>
                                         <div className={styles.settingsSectionDesc}>
                                             กำหนดเวลาเข้า-ออกงานและเวลาผ่อนผัน ใช้สำหรับคำนวณ Payroll CSV
                                         </div>
@@ -1443,7 +1451,7 @@ function AdminPageInner() {
 
                                 {settingsTab === "payroll" && (
                                     <div className={styles.settingsSection}>
-                                        <div className={styles.settingsSectionTitle}>💰 ดาวน์โหลด Payroll</div>
+                                        <div className={styles.settingsSectionTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><BanknotesIcon width={20} /> ดาวน์โหลด Payroll</div>
                                         <div className={styles.settingsSectionDesc}>
                                             ดาวน์โหลด Payroll CSV โดยใช้ค่าเวลางานที่บันทึกไว้
                                         </div>
@@ -1464,8 +1472,8 @@ function AdminPageInner() {
                                         </div>
 
                                         {!reportMonth && (
-                                            <div className={styles.settingsWarn}>
-                                                ⚠️ กรุณาเลือกเดือนในหน้า "สรุปรายเดือน" ก่อนดาวน์โหลด
+                                            <div className={styles.settingsWarn} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                <ExclamationTriangleIcon width={18} style={{ color: "#f59e0b" }} /> กรุณาเลือกเดือนในหน้า "สรุปรายเดือน" ก่อนดาวน์โหลด
                                             </div>
                                         )}
 

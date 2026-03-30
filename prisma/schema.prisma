@@ -98,6 +98,8 @@ model employees {
   otp_code                String?             @db.VarChar(6)
   otp_expires_at          DateTime?           @db.Timestamptz(6)
   supervisor_id           String?             @db.VarChar(20)
+  national_id_card        String?             @db.VarChar(20)
+  address                 String?             @db.Text
   bank_account_no         String?             @db.VarChar(50)
   bank_name               String?             @db.VarChar(100)
   is_on_trial             Boolean             @default(false)

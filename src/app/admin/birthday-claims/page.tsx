@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import styles from "../page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import { DocumentTextIcon, CameraIcon } from "@heroicons/react/24/outline";
 
 type Claim = {
     id: string;
@@ -181,12 +182,12 @@ export default function AdminBirthdayClaimsPage() {
                                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                                 {c.transfer_slip_url && (
                                                     <a href={c.transfer_slip_url} target="_blank" rel="noreferrer" className={styles.btnExcelSm} style={{ textDecoration: 'none', fontSize: 11, height: 26, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                                        📄 ใบเสร็จค่าอาหาร
+                                                        <DocumentTextIcon width={14} /> ใบเสร็จค่าอาหาร
                                                     </a>
                                                 )}
                                                 {c.celebration_photo_url && (
                                                     <a href={c.celebration_photo_url} target="_blank" rel="noreferrer" className={styles.btnPdfSm} style={{ textDecoration: 'none', fontSize: 11, height: 26, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                                        📸 รูปภาพฉลอง
+                                                        <CameraIcon width={14} /> รูปภาพฉลอง
                                                     </a>
                                                 )}
                                                 {!c.transfer_slip_url && !c.celebration_photo_url && (

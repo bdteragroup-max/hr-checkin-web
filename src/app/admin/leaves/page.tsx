@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "../page.module.css"; // ✅ ใช้ CSS admin ใหญ่
+import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, InboxIcon } from "@heroicons/react/24/outline";
 
 type LeaveRow = {
     id: string;
@@ -235,7 +236,7 @@ export default function AdminLeavesPage() {
                     </button>
                 </div>
 
-                {err ? <div className={styles.errorMsg}>⚠️ {err}</div> : null}
+                {err ? <div className={styles.errorMsg} style={{ display: "flex", alignItems: "center", gap: 6 }}><ExclamationTriangleIcon width={18} /> {err}</div> : null}
 
                 {/* ✅ หน้ารวม (Summary) */}
                 <div className={styles.leaveGrid} style={{ marginBottom: 16 }}>
@@ -279,8 +280,8 @@ export default function AdminLeavesPage() {
                                                 <td style={{ textAlign: "center" }}>{days} วัน</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
-                                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} style={{ marginRight: 8 }}>✅ อนุมัติ</button>
-                                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")}>❌ ไม่อนุมัติ</button>
+                                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} style={{ marginRight: 8, display: "inline-flex", alignItems: "center", gap: 4 }}><CheckCircleIcon width={16} /> อนุมัติ</button>
+                                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><XCircleIcon width={16} /> ไม่อนุมัติ</button>
                                                 </td>
                                             </tr>
                                         );
@@ -294,14 +295,14 @@ export default function AdminLeavesPage() {
                 {/* ✅ TABLE HISTORY (เพิ่มคอลัมน์เหตุผลอยู่แล้ว) */}
                 <div className={styles.tableWrap}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.tableHeaderTitle}>📜 ประวัติการลาทั้งหมด</div>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><DocumentTextIcon width={20} /> ประวัติการลาทั้งหมด</div>
                         <span className={styles.rowCount}>{historyRows.length} รายการ</span>
                     </div>
 
                     <div className={styles.tableScroll}>
                         {historyRows.length === 0 && !leaveLoading ? (
                             <div className={styles.emptyState}>
-                                <span className={styles.emptyIcon}>📭</span>ยังไม่มีประวัติการลา
+                                <span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีประวัติการลา
                             </div>
                         ) : (
                             <table className={styles.table}>

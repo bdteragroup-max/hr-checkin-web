@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 
+
+export const dynamic = "force-dynamic";
+
 function requireAdmin(token?: string) {
     if (!token) return null;
     try {
