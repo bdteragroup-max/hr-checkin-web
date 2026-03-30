@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model admins {
   id            Int        @id @default(autoincrement())
   username      String     @unique @db.VarChar(50)
@@ -18,8 +17,6 @@ model admins {
   sessions      sessions[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model branches {
   id         String      @id @db.VarChar(10)
   name       String      @db.VarChar(100)
@@ -31,8 +28,6 @@ model branches {
   employees  employees[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model checkins {
   id           BigInt   @id @default(autoincrement())
   timestamp    DateTime @default(now()) @db.Timestamptz(6)
@@ -79,7 +74,6 @@ model ot_requests {
   @@index([status])
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model employees {
   emp_id                  String              @id @db.VarChar(20)
   name                    String              @db.VarChar(100)
@@ -119,15 +113,12 @@ model employees {
   @@index([is_active], map: "idx_employees_active")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model holidays {
   date       DateTime @id @db.Date
   name       String   @db.VarChar(100)
   created_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model leave_requests {
   id                     String    @id @db.VarChar(30)
   timestamp              DateTime  @default(now()) @db.Timestamptz(6)
@@ -154,7 +145,6 @@ model leave_requests {
   @@index([emp_id, start_at, end_at], map: "idx_leave_emp_time")
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model sessions {
   id         Int      @id @default(autoincrement())
   user_id    Int
@@ -220,7 +210,6 @@ model job_positions {
   @@index([department_id])
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model projects {
   id          Int      @id @default(autoincrement())
   code        String?  @db.VarChar(50)
@@ -293,16 +282,16 @@ model travel_claims {
 }
 
 model monthly_payroll_data {
-  id               Int      @id @default(autoincrement())
-  emp_id           String   @db.VarChar(20)
-  cycle_month      Int
-  cycle_year       Int
-  override_salary  Decimal? @db.Decimal(10, 2)
+  id                         Int      @id @default(autoincrement())
+  emp_id                     String   @db.VarChar(20)
+  cycle_month                Int
+  cycle_year                 Int
+  override_salary            Decimal? @db.Decimal(10, 2)
   
   // OT Overrides
-  normal_1_5x_hours_override   Decimal? @db.Decimal(10, 2)
-  holiday_1_x_hours_override   Decimal? @db.Decimal(10, 2)
-  holiday_3_x_hours_override   Decimal? @db.Decimal(10, 2)
+  normal_1_5x_hours_override Decimal? @db.Decimal(10, 2)
+  holiday_1_x_hours_override Decimal? @db.Decimal(10, 2)
+  holiday_3_x_hours_override Decimal? @db.Decimal(10, 2)
   
   // Allowance Overrides
   diligence_allowance_override Decimal? @db.Decimal(10, 2)
@@ -317,6 +306,10 @@ model monthly_payroll_data {
   // Adjustments
   social_security  Decimal? @db.Decimal(10, 2) @default(0)
   student_loan     Decimal? @db.Decimal(10, 2) @default(0)
+  unpaid_absenteeism Decimal? @db.Decimal(10, 2) @default(0)
+  tax              Decimal? @db.Decimal(10, 2) @default(0)
+  commissions      Decimal? @db.Decimal(10, 2) @default(0)
+  bonus            Decimal? @db.Decimal(10, 2) @default(0)
   other_deductions Decimal? @db.Decimal(10, 2) @default(0)
   other_benefits   Decimal? @db.Decimal(10, 2) @default(0)
   

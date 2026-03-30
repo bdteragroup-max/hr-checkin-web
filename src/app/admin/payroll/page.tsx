@@ -41,6 +41,10 @@ type PayrollResult = {
     ot_amount: number;
     social_security: number;
     student_loan: number;
+    unpaid_absenteeism: number;
+    tax: number;
+    commissions: number;
+    bonus: number;
     other_deductions: number;
     other_benefits: number;
     base_salary_original: number;
@@ -77,6 +81,10 @@ export default function PayrollPage() {
         travel_accommodation_override: "",
         social_security: "",
         student_loan: "",
+        unpaid_absenteeism: "",
+        tax: "",
+        commissions: "",
+        bonus: "",
         other_deductions: "",
         other_benefits: ""
     });
@@ -99,6 +107,10 @@ export default function PayrollPage() {
             travel_accommodation_override: String(emp.travel_accommodation || ""),
             social_security: String(emp.social_security || 0),
             student_loan: String(emp.student_loan || 0),
+            unpaid_absenteeism: String(emp.unpaid_absenteeism || 0),
+            tax: String(emp.tax || 0),
+            commissions: String(emp.commissions || 0),
+            bonus: String(emp.bonus || 0),
             other_deductions: String(emp.other_deductions || 0),
             other_benefits: String(emp.other_benefits || 0)
         });
@@ -127,6 +139,10 @@ export default function PayrollPage() {
                 travel_accommodation_override: editForm.travel_accommodation_override,
                 social_security: editForm.social_security,
                 student_loan: editForm.student_loan,
+                unpaid_absenteeism: editForm.unpaid_absenteeism,
+                tax: editForm.tax,
+                commissions: editForm.commissions,
+                bonus: editForm.bonus,
                 other_deductions: editForm.other_deductions,
                 other_benefits: editForm.other_benefits
             };
@@ -220,10 +236,14 @@ export default function PayrollPage() {
                                     <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัสอายุงาน</th>
                                 )}
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>OT+วันหยุด</th>
+                                <th className={styles.thRight} style={{ minWidth: 100 }}>คอมมิชชั่น</th>
+                                <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัส</th>
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รายได้อื่นๆ</th>
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หัก กยศ.</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>ขาดงาน</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>ภาษี</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักอื่นๆ</th>
                                 <th className={styles.thRight}>รวมรับจริง (฿)</th>
                                 <th>บัญชีรับเงิน</th>
@@ -345,6 +365,16 @@ export default function PayrollPage() {
                                         {formatB(p.ot_amount + (p.holiday_allowance || 0))}
                                     </td>
                                     <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.commissions > 0 ? "var(--ok)" : "inherit" }}>
+                                            {p.commissions > 0 ? formatB(p.commissions) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.bonus > 0 ? "var(--ok)" : "inherit" }}>
+                                            {p.bonus > 0 ? formatB(p.bonus) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
                                         <span style={{ fontWeight: 600, color: p.other_benefits > 0 ? "var(--ok)" : "inherit" }}>
                                             {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
                                         </span>
@@ -360,6 +390,16 @@ export default function PayrollPage() {
                                     <td className={styles.tdRight}>
                                         <span style={{ fontWeight: 600, color: p.student_loan > 0 ? "var(--red)" : "inherit" }}>
                                             {p.student_loan > 0 ? "-" + formatB(p.student_loan) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.unpaid_absenteeism > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.unpaid_absenteeism > 0 ? "-" + formatB(p.unpaid_absenteeism) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.tax > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.tax > 0 ? "-" + formatB(p.tax) : "-"}
                                         </span>
                                     </td>
                                     <td className={styles.tdRight}>
@@ -464,6 +504,14 @@ export default function PayrollPage() {
                                             <input className={styles.inputElement} type="number" value={editForm.travel_accommodation_override} onChange={e => setEditForm({...editForm, travel_accommodation_override: e.target.value})} />
                                         </div>
                                         <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ค่าคอมมิชชั่น</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.commissions} onChange={e => setEditForm({...editForm, commissions: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>โบนัส</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.bonus} onChange={e => setEditForm({...editForm, bonus: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>รายได้อื่นๆ</label>
                                             <input className={styles.inputElement} type="number" value={editForm.other_benefits} onChange={e => setEditForm({...editForm, other_benefits: e.target.value})} />
                                         </div>
@@ -485,6 +533,14 @@ export default function PayrollPage() {
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>กยศ.</label>
                                             <input className={styles.inputElement} type="number" value={editForm.student_loan} onChange={e => setEditForm({...editForm, student_loan: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ขาดงาน (หัก)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.unpaid_absenteeism} onChange={e => setEditForm({...editForm, unpaid_absenteeism: e.target.value})} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ภาษี (หัก)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.tax} onChange={e => setEditForm({...editForm, tax: e.target.value})} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>หักอื่นๆ</label>

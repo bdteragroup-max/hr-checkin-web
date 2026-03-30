@@ -325,11 +325,15 @@ export async function GET(request: Request) {
             
             const social_security = Number(adj?.social_security || 0);
             const student_loan = Number(adj?.student_loan || 0);
+            const unpaid_absenteeism = Number(adj?.unpaid_absenteeism || 0);
+            const tax = Number(adj?.tax || 0);
+            const commissions = Number(adj?.commissions || 0);
+            const bonus = Number(adj?.bonus || 0);
             const other_deductions = Number(adj?.other_deductions || 0);
             const other_benefits = Number(adj?.other_benefits || 0);
             
-            const grossPay = netPayCalculated + other_benefits;
-            const finalNetPay = grossPay - social_security - student_loan - other_deductions;
+            const grossPay = netPayCalculated + commissions + bonus + other_benefits;
+            const finalNetPay = grossPay - social_security - student_loan - other_deductions - unpaid_absenteeism - tax;
 
             return {
                 emp_id: emp.emp_id,
@@ -369,6 +373,10 @@ export async function GET(request: Request) {
                 ot_amount: totalOtAmount,
                 social_security,
                 student_loan,
+                unpaid_absenteeism,
+                tax,
+                commissions,
+                bonus,
                 other_deductions,
                 other_benefits,
                 gross_pay: grossPay,
