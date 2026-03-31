@@ -489,6 +489,7 @@ export default function ProjectCheckinPage() {
                                                 onClick={() => selectCustomer(p)}>
                                                 <div style={{ fontWeight: 600, color: "#1f2937", fontSize: 15 }}>{p.name}</div>
                                                 <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>{p.code || ""} {p.contact ? ` · ${p.contact}` : ""}</div>
+                                                {p.address && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center" }}><MapPinIcon width={12} style={{ marginRight: 4, flexShrink: 0 }} /> {p.address}</div>}
                                             </div>
                                         ))}
                                         {filteredProjects.length === 0 && searchQ && (
