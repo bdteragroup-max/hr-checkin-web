@@ -77,9 +77,9 @@ export default function AdminBranchesPage() {
         setForm({
             id: b.id,
             name: b.name,
-            center_lat: Number(b.center_lat),
-            center_lon: Number(b.center_lon),
-            radius_m: b.radius_m,
+            center_lat: Number(b.center_lat || 0),
+            center_lon: Number(b.center_lon || 0),
+            radius_m: Number(b.radius_m || 0),
             isEdit: true
         });
         setShowModal(true);
@@ -212,8 +212,10 @@ export default function AdminBranchesPage() {
                                     <tr key={b.id} className={b.id === newBranchId ? styles.highlightRed : undefined}>
                                         <td><span className={styles.mono}>{b.id}</span></td>
                                         <td><span className={styles.bold}>{b.name}</span></td>
-                                        <td>
-                                            <div style={{ fontSize: 12 }}>{Number(b.center_lat).toFixed(6)}, {Number(b.center_lon).toFixed(6)}</div>
+                                         <td>
+                                            <div style={{ fontSize: 12 }}>
+                                                {Number(b.center_lat || 0).toFixed(6)}, {Number(b.center_lon || 0).toFixed(6)}
+                                            </div>
                                         </td>
                                         <td>{b.radius_m} ม.</td>
                                         <td>{b._count?.employees || 0} คน</td>
@@ -272,7 +274,10 @@ export default function AdminBranchesPage() {
                                     type="number" step="any"
                                     className={styles.input}
                                     value={form.center_lat}
-                                    onChange={e => setForm({ ...form, center_lat: parseFloat(e.target.value) })}
+                                    onChange={e => {
+                                        const v = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                                        setForm({ ...form, center_lat: isNaN(v) ? 0 : v });
+                                    }}
                                 />
                             </div>
                             <div className={styles.formGroup}>
@@ -281,7 +286,10 @@ export default function AdminBranchesPage() {
                                     type="number" step="any"
                                     className={styles.input}
                                     value={form.center_lon}
-                                    onChange={e => setForm({ ...form, center_lon: parseFloat(e.target.value) })}
+                                    onChange={e => {
+                                        const v = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                                        setForm({ ...form, center_lon: isNaN(v) ? 0 : v });
+                                    }}
                                 />
                             </div>
                         </div>
@@ -292,7 +300,10 @@ export default function AdminBranchesPage() {
                                 type="number"
                                 className={styles.input}
                                 value={form.radius_m}
-                                onChange={e => setForm({ ...form, radius_m: parseInt(e.target.value) })}
+                                onChange={e => {
+                                    const v = e.target.value === "" ? 0 : parseInt(e.target.value);
+                                    setForm({ ...form, radius_m: isNaN(v) ? 0 : v });
+                                }}
                             />
                         </div>
 

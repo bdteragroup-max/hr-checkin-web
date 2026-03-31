@@ -131,19 +131,20 @@ export async function POST(req: Request) {
     if (!branch)
         return NextResponse.json({ error: "INVALID_BRANCH" }, { status: 400 });
 
-    const distance = getDistanceMeters(
-        lat,
-        lon,
-        Number(branch.center_lat),
-        Number(branch.center_lon)
-    );
+    const bLat = Number(branch.center_lat);
+    const bLon = Number(branch.center_lon);
+    const bRad = branch.radius_m;
 
-    if (distance > branch.radius_m) {
+    // 🔥 If branch coords + radius are 0, it means "No Fence Setup" -> Skip Radius Check
+    const isUnmapped = bLat === 0 && bLon === 0 && bRad === 0;
+    const distance = isUnmapped ? 0 : getDistanceMeters(lat, lon, bLat, bLon);
+
+    if (!isUnmapped && distance > bRad) {
         return NextResponse.json(
             {
                 error: "OUT_OF_RADIUS",
                 distance: Math.round(distance),
-                radius_m: branch.radius_m,
+                radius_m: bRad,
             },
             { status: 403 }
         );

@@ -153,6 +153,8 @@ export default function ProjectCheckinPage() {
 
     // Camera
     const [cameraReady, setCameraReady] = useState(false);
+    const [isCameraStarting, setIsCameraStarting] = useState(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
     const [preview, setPreview] = useState<string | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -296,14 +298,40 @@ export default function ProjectCheckinPage() {
     async function startCamera(facing: "user" | "environment" = "user") {
         stopCamera();
         setPreview(null);
+        setIsCameraStarting(true);
+        setCameraError(null);
+        setCameraReady(false);
+
         try {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+            // More flexible constraints to support wider range of devices
+            const constraints = {
+                video: {
+                    facingMode: facing,
+                    width: { ideal: 1280, min: 640 },
+                    height: { ideal: 720, min: 480 }
+                },
+                audio: false
+            };
+
+            const s = await navigator.mediaDevices.getUserMedia(constraints);
             streamRef.current = s;
-            if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play(); }
+            if (videoRef.current) {
+                videoRef.current.srcObject = s;
+                // Wait for play to confirm it started
+                await videoRef.current.play();
+            }
             setFacingMode(facing);
-            setCameraReady(true);
-        } catch {
-            showAlert("ไม่สามารถเปิดกล้องได้");
+        } catch (err: any) {
+            console.error("Camera error:", err);
+            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                setCameraError("ถูกปฏิเสธการเข้าถึงกล้อง กรุณาอนุญาตในตั้งค่าบราวเซอร์");
+            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                setCameraError("ไม่พบอุปกรณ์กล้องบนเครื่องนี้");
+            } else {
+                setCameraError("ไม่สามารถเปิดกล้องได้ (ข้อผิดพลาด: " + err.name + ")");
+            }
+        } finally {
+            setIsCameraStarting(false);
         }
     }
 
@@ -544,11 +572,32 @@ export default function ProjectCheckinPage() {
                             )}
 
                             <div style={{ position: "relative", marginBottom: 16 }}>
-                                <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "black", minHeight: 240 }}>
-                                    <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", display: "block" }} onLoadedMetadata={() => setCameraReady(true)} />
+                                <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "black", minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", display: cameraReady ? "block" : "none" }} onLoadedMetadata={() => setCameraReady(true)} />
                                     <canvas ref={canvasRef} style={{ display: "none" }} />
                                     <canvas ref={rawCanvasRef} style={{ display: "none" }} />
-                                    {!preview && (
+
+                                    {isCameraStarting && (
+                                        <div style={{ color: "white", textAlign: "center", position: "absolute" }}>
+                                            <div style={{ width: 40, height: 40, border: "3px solid rgba(255,255,255,0.2)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }}></div>
+                                            <div style={{ fontSize: 14 }}>กำลังเรียกใช้กล้อง...</div>
+                                        </div>
+                                    )}
+
+                                    {cameraError && (
+                                        <div style={{ color: "#fca5a5", textAlign: "center", padding: 20, position: "absolute" }}>
+                                            <XCircleIcon width={40} style={{ margin: "0 auto 12px" }} />
+                                            <div style={{ fontSize: 14, fontWeight: 500 }}>{cameraError}</div>
+                                            <button 
+                                                onClick={() => startCamera(facingMode)}
+                                                style={{ marginTop: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "white", padding: "6px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
+                                            >
+                                                ลองใหม่อีกครั้ง
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {cameraReady && !preview && !isCameraStarting && (
                                         <button
                                             style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "white", color: "black", padding: "12px 24px", borderRadius: 24, border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", gap: 6, zIndex: 10 }}
                                             onClick={() => {
@@ -561,6 +610,12 @@ export default function ProjectCheckinPage() {
                                         >
                                             <CameraIcon width={20} /> ถ่ายรูป
                                         </button>
+                                    )}
+
+                                    {!cameraReady && !isCameraStarting && !cameraError && (
+                                        <div style={{ color: "#6b7280", fontSize: 13, textAlign: "center" }}>
+                                            {selectedCustomer ? "กรุณากด 'เปิดกล้อง' เพื่อถ่ายรูป" : "เลือกโปรเจกต์ก่อนขี้นตอนถัดไป"}
+                                        </div>
                                     )}
                                 </div>
 
