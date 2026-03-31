@@ -74,11 +74,9 @@
   content: "";
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(
-    circle,
-    rgba(217, 48, 37, 0.045) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle,
+      rgba(217, 48, 37, 0.045) 1px,
+      transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   z-index: 0;
@@ -245,6 +243,7 @@
     opacity: 0;
     transform: translateY(14px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -361,6 +360,7 @@
 .empIdWrap {
   position: relative;
 }
+
 .empIdWrap .input {
   padding-right: 46px;
 }
@@ -387,6 +387,7 @@
   background: var(--red-dim);
   border-color: var(--red-border);
 }
+
 .qrBtn svg {
   color: var(--text3);
 }
@@ -464,11 +465,13 @@
   border-color: var(--ok-bdr);
   color: var(--ok);
 }
+
 .badgeLate {
   background: var(--late-bg);
   border-color: var(--late-bdr);
   color: var(--late);
 }
+
 .badgeOt {
   background: var(--ot-bg);
   border-color: var(--ot-bdr);
@@ -523,11 +526,13 @@
   border-color: var(--ok-bdr);
   color: var(--ok);
 }
+
 .status_bad {
   background: var(--bad-bg);
   border-color: var(--bad-bdr);
   color: var(--bad);
 }
+
 .status_warn {
   background: var(--warn-bg);
   border-color: var(--warn-bdr);
@@ -567,11 +572,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    transparent 55%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      transparent 55%);
   pointer-events: none;
 }
 
@@ -699,6 +702,7 @@
 .pulseInactive {
   background: var(--text4);
 }
+
 .pulseError {
   background: var(--bad);
   box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
@@ -708,9 +712,11 @@
   0% {
     box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5);
   }
+
   70% {
     box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
   }
@@ -765,11 +771,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    rgba(217, 48, 37, 0.04) 0%,
-    transparent 18%
-  );
+  background: linear-gradient(to bottom,
+      rgba(217, 48, 37, 0.04) 0%,
+      transparent 18%);
 }
 
 .camCorner {
@@ -787,18 +791,21 @@
   border-top-width: 2px;
   border-left-width: 2px;
 }
+
 .tr {
   top: 10px;
   right: 10px;
   border-top-width: 2px;
   border-right-width: 2px;
 }
+
 .bl {
   bottom: 10px;
   left: 10px;
   border-bottom-width: 2px;
   border-left-width: 2px;
 }
+
 .br {
   bottom: 10px;
   right: 10px;
@@ -894,6 +901,7 @@
   background: #dcfce7;
   color: var(--ok);
 }
+
 .historyIconOut {
   background: #fef3c7;
   color: var(--warn);
@@ -931,11 +939,13 @@
   color: var(--ok);
   border: 1px solid var(--ok-bdr);
 }
+
 .tagLate {
   background: var(--late-bg);
   color: var(--late);
   border: 1px solid var(--late-bdr);
 }
+
 .tagOt {
   background: var(--ot-bg);
   color: var(--ot);
@@ -968,6 +978,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1042,6 +1053,7 @@
   0% {
     top: 20px;
   }
+
   100% {
     top: calc(100% - 22px);
   }
@@ -1094,6 +1106,7 @@
 .toastError {
   border-left-color: var(--red);
 }
+
 .toastOk {
   border-left-color: var(--ok);
 }
@@ -1116,6 +1129,7 @@
   color: var(--red);
   border: 1.5px solid var(--red-border);
 }
+
 .toastOk .toastIcon {
   background: var(--ok-bg);
   color: var(--ok);
@@ -1179,6 +1193,7 @@
 .toastError .toastProgress {
   background: linear-gradient(90deg, var(--red-dark), var(--red-light));
 }
+
 .toastOk .toastProgress {
   background: linear-gradient(90deg, #15803d, var(--ok));
 }
@@ -1187,6 +1202,7 @@
   from {
     transform: scaleX(1);
   }
+
   to {
     transform: scaleX(0);
   }
@@ -1197,12 +1213,15 @@
   .row {
     grid-template-columns: 1fr;
   }
+
   .camActions {
     grid-template-columns: 1fr 1fr;
   }
+
   .camActions .btnPrimary {
     grid-column: 1 / -1;
   }
+
   .pageTitleH1 {
     font-size: 22px;
   }
@@ -1242,6 +1261,7 @@
     opacity: 0;
     transform: scale(0.88);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1283,6 +1303,7 @@
 .alertTitleErr {
   color: var(--bad);
 }
+
 .alertTitleOk {
   color: var(--ok);
 }
@@ -1314,11 +1335,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    transparent 55%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      transparent 55%);
   pointer-events: none;
 }
 

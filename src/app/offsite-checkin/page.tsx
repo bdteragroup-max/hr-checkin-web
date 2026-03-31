@@ -3,14 +3,15 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
-import { 
-    CheckCircleIcon, 
-    XCircleIcon, 
-    ExclamationTriangleIcon, 
-    CameraIcon, 
+import {
+    CheckCircleIcon,
+    XCircleIcon,
+    ExclamationTriangleIcon,
+    CameraIcon,
     ArrowPathIcon,
     ArrowRightStartOnRectangleIcon,
-    StopIcon
+    StopIcon,
+    ClockIcon
 } from "@heroicons/react/24/solid";
 import { formatTimeFull24h } from "@/utils/time";
 
@@ -178,7 +179,7 @@ export default function OffsiteCheckinPage() {
         if (!_loc.trim()) {
             return showAlert("กรุณาระบุสถานที่ปฏิบัติงาน (จำเป็น)");
         }
-        
+
         stopCamera();
         setPreview(null);
         setIsCameraStarting(true);
@@ -260,8 +261,8 @@ export default function OffsiteCheckinPage() {
         ctx.font = `${Math.round(18 * w / 1280)}px Arial`;
 
         let currentDuration = "";
-        const matchIn = today.filter(x => x.type.startsWith("Offsite")).find(c => 
-            c.type === "Offsite-In" && 
+        const matchIn = today.filter(x => x.type.startsWith("Offsite")).find(c =>
+            c.type === "Offsite-In" &&
             (c.remark?.split(" | ")[0] || "") === locationName.trim()
         );
         if (matchIn && currentType === "Offsite-Out") {
@@ -362,7 +363,7 @@ export default function OffsiteCheckinPage() {
                             onChange={e => setLocationName(e.target.value)}
                             disabled={!!preview} // Lock input once photo is taken
                         />
-                         {!locationName.trim() && (
+                        {!locationName.trim() && (
                             <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
                                 * จำเป็นต้องกรอกสถานที่ก่อนเช็คอิน
                             </div>
@@ -377,15 +378,15 @@ export default function OffsiteCheckinPage() {
                             <CameraIcon width={18} /> ถ่ายรูปยืนยันตัวตน
                         </div>
                         {locationName.trim() && (() => {
-                            const matchIn = checkinsToday.find(c => 
-                                c.type === "Offsite-In" && 
+                            const matchIn = checkinsToday.find(c =>
+                                c.type === "Offsite-In" &&
                                 (c.remark?.split(" | ")[0] || "") === locationName.trim()
                             );
                             if (matchIn) {
                                 const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
                                 const hrs = Math.floor(mins / 60);
                                 const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>⏱ อยู่มาแล้ว {dur}</span>;
+                                return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> อยู่มาแล้ว {dur}</span>;
                             }
                             return null;
                         })()}
@@ -404,7 +405,7 @@ export default function OffsiteCheckinPage() {
 
                     <div style={{ position: "relative", marginBottom: 16, marginTop: cameraReady || isCameraStarting || cameraError ? 0 : 16 }}>
                         <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "black", minHeight: cameraReady || isCameraStarting || cameraError || preview ? 240 : 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s" }}>
-                            
+
                             <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", display: cameraReady ? "block" : "none" }} onLoadedMetadata={() => setCameraReady(true)} />
                             <canvas ref={canvasRef} style={{ display: "none" }} />
                             <canvas ref={rawCanvasRef} style={{ display: "none" }} />
@@ -420,7 +421,7 @@ export default function OffsiteCheckinPage() {
                                 <div style={{ color: "#fca5a5", textAlign: "center", padding: 20, position: "absolute" }}>
                                     <XCircleIcon width={40} style={{ margin: "0 auto 12px" }} />
                                     <div style={{ fontSize: 14, fontWeight: 500 }}>{cameraError}</div>
-                                    <button 
+                                    <button
                                         onClick={() => startCamera(facingMode)}
                                         style={{ marginTop: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "white", padding: "6px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
                                     >
@@ -444,7 +445,7 @@ export default function OffsiteCheckinPage() {
                                 </button>
                             )}
 
-                             {preview && (
+                            {preview && (
                                 <div style={{ position: "absolute", inset: 0, width: "100%", background: "black", zIndex: 5 }}>
                                     <img src={preview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                                     <button
@@ -461,7 +462,7 @@ export default function OffsiteCheckinPage() {
                         </div>
                     </div>
 
-                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
                         <button
                             style={{ background: "#22c55e", color: "white", fontWeight: 700, fontSize: 18, border: "none", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             onClick={() => doSubmitCheckin("Offsite-In")}
@@ -471,30 +472,30 @@ export default function OffsiteCheckinPage() {
                             บันทึกเข้า (IN)
                         </button>
                         {(() => {
-                             const locClean = locationName.trim();
-                             const matchOut = checkinsToday.find(c => 
-                                 c.type === "Offsite-Out" && 
-                                 (c.remark?.split(" | ")[0] || "") === locClean &&
-                                 new Date(c.timestamp) > new Date(checkinsToday.find(i => i.type === "Offsite-In" && (i.remark?.split(" | ")[0] || "") === locClean)?.timestamp || 0)
-                             );
-                             const isDone = !!matchOut;
+                            const locClean = locationName.trim();
+                            const matchOut = checkinsToday.find(c =>
+                                c.type === "Offsite-Out" &&
+                                (c.remark?.split(" | ")[0] || "") === locClean &&
+                                new Date(c.timestamp) > new Date(checkinsToday.find(i => i.type === "Offsite-In" && (i.remark?.split(" | ")[0] || "") === locClean)?.timestamp || 0)
+                            );
+                            const isDone = !!matchOut;
 
                             return (
                                 <button
-                                    style={{ 
-                                        background: isDone ? "#f3f4f6" : "white", 
-                                        color: isDone ? "#9ca3af" : "#ef4444", 
-                                        fontWeight: 700, 
-                                        fontSize: 18, 
-                                        border: isDone ? "2px solid #e5e7eb" : "2px solid #ef4444", 
-                                        borderRadius: 12, 
-                                        padding: "18px", 
-                                        cursor: (preview && !isSubmitting && !isDone) ? "pointer" : "not-allowed", 
-                                        opacity: (preview && !isSubmitting && !isDone) ? 1 : 0.6, 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center', 
-                                        gap: 8 
+                                    style={{
+                                        background: isDone ? "#f3f4f6" : "white",
+                                        color: isDone ? "#9ca3af" : "#ef4444",
+                                        fontWeight: 700,
+                                        fontSize: 18,
+                                        border: isDone ? "2px solid #e5e7eb" : "2px solid #ef4444",
+                                        borderRadius: 12,
+                                        padding: "18px",
+                                        cursor: (preview && !isSubmitting && !isDone) ? "pointer" : "not-allowed",
+                                        opacity: (preview && !isSubmitting && !isDone) ? 1 : 0.6,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 8
                                     }}
                                     onClick={() => !isDone && doSubmitCheckin("Offsite-Out")}
                                     disabled={!preview || isSubmitting || isDone}
@@ -503,7 +504,7 @@ export default function OffsiteCheckinPage() {
                                     {isDone ? "บันทึกออกแล้ว" : "บันทึกออก (OUT)"}
                                 </button>
                             );
-                         })()}
+                        })()}
                     </div>
                 </div>
 
@@ -525,9 +526,9 @@ export default function OffsiteCheckinPage() {
                                 let hasOut = false;
                                 if (isIn) {
                                     const xLoc = x.remark?.split(" | ")[0] || "";
-                                    hasOut = checkinsToday.some((other, idx) => 
-                                        idx > i && 
-                                        other.type === "Offsite-Out" && 
+                                    hasOut = checkinsToday.some((other, idx) =>
+                                        idx > i &&
+                                        other.type === "Offsite-Out" &&
                                         (other.remark?.split(" | ")[0] || "") === xLoc
                                     );
                                 }
@@ -538,7 +539,7 @@ export default function OffsiteCheckinPage() {
                                     const mins = Math.floor((new Date().getTime() - new Date(x.timestamp || new Date()).getTime()) / 60000);
                                     const hrs = Math.floor(mins / 60);
                                     const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                    durationInfo = <div style={{ fontSize: 12, color: "#10b981", marginTop: 6, fontWeight: 600 }}>⏱ อยู่มาแล้ว: {dur}</div>;
+                                    durationInfo = <div style={{ fontSize: 12, color: "#10b981", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> อยู่มาแล้ว: {dur}</div>;
                                 }
 
                                 if (!isIn) {
@@ -553,36 +554,36 @@ export default function OffsiteCheckinPage() {
                                         const mins = Math.floor((new Date(x.timestamp).getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
                                         const hrs = Math.floor(mins / 60);
                                         const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600 }}>⏱ เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
+                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
                                     }
                                 }
 
                                 return (
-                                    <div 
-                                        key={x.id} 
-                                        style={{ 
-                                            display: "flex", 
-                                            alignItems: "center", 
-                                            gap: 12, 
-                                            border: "1px solid #e5e7eb", 
-                                            padding: "14px", 
-                                            borderRadius: 10, 
-                                            cursor: (isIn && !hasOut) ? "pointer" : "default", 
-                                            transition: "background 0.2s", 
+                                    <div
+                                        key={x.id}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 12,
+                                            border: "1px solid #e5e7eb",
+                                            padding: "14px",
+                                            borderRadius: 10,
+                                            cursor: (isIn && !hasOut) ? "pointer" : "default",
+                                            transition: "background 0.2s",
                                             background: (isIn && !hasOut) ? "#f8fafc" : "white",
                                             opacity: (isIn && hasOut) ? 0.7 : 1
                                         }}
                                         onClick={() => {
-                                             if (isIn && !hasOut) {
-                                                 const loc = x.remark?.split(" | ")[0] || "";
-                                                 setLocationName(loc);
-                                                 window.scrollTo({ top: 0, behavior: "smooth" });
-                                                 startCamera("user", loc);
-                                             }
-                                         }}
-                                         title={isIn ? (hasOut ? "บันทึกออกแล้ว" : "คลิกเพื่อถ่ายรูปบันทึกออก (OUT)") : undefined}
-                                         onMouseEnter={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f1f5f9")}
-                                         onMouseLeave={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f8fafc")}
+                                            if (isIn && !hasOut) {
+                                                const loc = x.remark?.split(" | ")[0] || "";
+                                                setLocationName(loc);
+                                                window.scrollTo({ top: 0, behavior: "smooth" });
+                                                startCamera("user", loc);
+                                            }
+                                        }}
+                                        title={isIn ? (hasOut ? "บันทึกออกแล้ว" : "คลิกเพื่อถ่ายรูปบันทึกออก (OUT)") : undefined}
+                                        onMouseEnter={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f1f5f9")}
+                                        onMouseLeave={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f8fafc")}
                                     >
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600, fontSize: 15, color: "#111827" }}>

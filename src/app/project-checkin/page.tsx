@@ -13,7 +13,8 @@ import {
     ArrowPathIcon,
     ArrowRightStartOnRectangleIcon,
     StopIcon,
-    PlusIcon
+    PlusIcon,
+    ClockIcon
 } from "@heroicons/react/24/solid";
 import { formatTime24h, formatTimeFull24h } from "@/utils/time";
 
@@ -584,7 +585,7 @@ export default function ProjectCheckinPage() {
                                         const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
                                         const hrs = Math.floor(mins / 60);
                                         const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                        return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>⏱ อยู่มาแล้ว {dur}</span>;
+                                        return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> อยู่มาแล้ว {dur}</span>;
                                     }
                                     return null;
                                 })()}
@@ -756,7 +757,7 @@ export default function ProjectCheckinPage() {
                                     const mins = Math.floor((new Date().getTime() - new Date(x.timestamp || new Date()).getTime()) / 60000);
                                     const hrs = Math.floor(mins / 60);
                                     const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                    durationInfo = <div style={{ fontSize: 12, color: "#10b981", marginTop: 6, fontWeight: 600 }}>⏱ อยู่มาแล้ว: {dur}</div>;
+                                    durationInfo = <div style={{ fontSize: 12, color: "#10b981", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> อยู่มาแล้ว: {dur}</div>;
                                 }
                                 if (!isIn) {
                                     // For OUT, find the matching IN that happened BEFORE it (j < i)
@@ -769,7 +770,7 @@ export default function ProjectCheckinPage() {
                                         const mins = Math.floor((new Date(x.timestamp).getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
                                         const hrs = Math.floor(mins / 60);
                                         const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600 }}>⏱ เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
+                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
                                     }
                                 }
 

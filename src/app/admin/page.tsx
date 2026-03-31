@@ -13,7 +13,7 @@ import {
     UserPlusIcon, CakeIcon, ChevronRightIcon, PlayIcon, StopIcon,
     ArrowDownTrayIcon, TrashIcon, ArrowPathIcon, InboxStackIcon,
     ChevronLeftIcon, CalendarIcon, XMarkIcon, PlusIcon, CheckIcon,
-    UserIcon
+    UserIcon, MapPinIcon
 } from "@heroicons/react/24/outline";
 import { formatTime24h, formatTimeFull24h, formatDateThai } from "@/utils/time";
 
@@ -35,6 +35,8 @@ interface CheckItem {
     remark?: string | null;
     late_status?: "ontime" | "late" | "ot" | string;
     late_label?: string;
+    lat?: number | null;
+    lon?: number | null;
 }
 
 interface DashboardData {
@@ -182,6 +184,12 @@ function AdminPageInner() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "bad" } | null>(null);
     const [photoModal, setPhotoModal] = useState<PhotoModal | null>(null);
+    const [mapModal, setMapModal] = useState<{
+        isOpen: boolean;
+        lat: number;
+        lon: number;
+        title: string;
+    }>({ isOpen: false, lat: 0, lon: 0, title: "" });
 
     /* ── Dashboard ── */
     const [dash, setDash] = useState<DashboardData | null>(null);
@@ -621,6 +629,51 @@ function AdminPageInner() {
        RENDER TABS (ใช้ของเดิมคุณ)
     ══════════════════════════════════════════════ */
 
+    function renderMapModal() {
+        if (!mapModal.isOpen) return null;
+        // Use standard Google Maps Embed URL (output=embed)
+        const mapUrl = `https://www.google.com/maps?q=${mapModal.lat},${mapModal.lon}&z=15&output=embed`;
+
+        return (
+            <div className={styles.mapModalOverlay} onClick={() => setMapModal({ ...mapModal, isOpen: false })}>
+                <div className={styles.mapModal} onClick={e => e.stopPropagation()}>
+                    <div className={styles.mapModalHeader}>
+                        <div className={styles.mapModalTitle}>
+                            <MapPinIcon width={20} />
+                            <span>{mapModal.title}</span>
+                        </div>
+                        <button className={styles.mapModalClose} onClick={() => setMapModal({ ...mapModal, isOpen: false })}>
+                            <XMarkIcon width={20} />
+                        </button>
+                    </div>
+                    <div className={styles.mapContent}>
+                        <iframe 
+                            className={styles.mapFrame}
+                            src={mapUrl}
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                        />
+                    </div>
+                    <div className={styles.mapModalFooter}>
+                        <div className={styles.mapCoordText}>
+                            GPS: {mapModal.lat.toFixed(6)}, {mapModal.lon.toFixed(6)}
+                        </div>
+                        <a 
+                            href={`https://www.google.com/maps?q=${mapModal.lat},${mapModal.lon}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.btnPrimary}
+                            style={{ height: 32, fontSize: 11, padding: "0 12px" }}
+                        >
+                            เปิดใน Google Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     function renderDashboard() {
         return (
             <>
@@ -699,11 +752,21 @@ function AdminPageInner() {
                                         </td>
                                         <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
                                         <td>
-                                            <div>{r.branch_name}</div>
-                                            {(r.project_name || r.remark) && (
-                                                <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>
+                                            <div style={{ fontWeight: 500 }}>{r.branch_name}</div>
+                                            {(r.project_name || r.remark || (r.lat && r.lon)) && (
+                                                <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                     {r.project_name && <span><b>Prj:</b> {r.project_name} </span>}
                                                     {r.remark && <span><b>Note:</b> {r.remark}</span>}
+                                                    {r.lat != null && r.lon != null && !isNaN(Number(r.lat)) && !isNaN(Number(r.lon)) && (
+                                                        <div 
+                                                            className={styles.gpsBadge} 
+                                                            onClick={() => setMapModal({ isOpen: true, lat: Number(r.lat), lon: Number(r.lon), title: `${r.name} - ${r.branch_name}` })}
+                                                            title="คลิกเพื่อดูแผนที่"
+                                                        >
+                                                            <MapPinIcon width={14} />
+                                                            <span>{Number(r.lat).toFixed(5)}, {Number(r.lon).toFixed(5)}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
@@ -804,9 +867,23 @@ function AdminPageInner() {
                                             </td>
                                             <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
                                             <td style={{ whiteSpace: "nowrap" }}>
-                                                <span>{r.branch_name}</span>
-                                                {r.project_name && <span style={{ color: "var(--text4)", marginLeft: 6 }}>• Prj: {r.project_name}</span>}
-                                                {r.remark && <span style={{ color: "var(--text4)", marginLeft: 6 }}>• Note: {r.remark}</span>}
+                                                <div style={{ fontWeight: 500 }}>{r.branch_name}</div>
+                                                {(r.project_name || r.remark || (r.lat && r.lon)) && (
+                                                    <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                        {r.project_name && <span>• <b>Prj:</b> {r.project_name}</span>}
+                                                        {r.remark && <span>• <b>Note:</b> {r.remark}</span>}
+                                                        {r.lat != null && r.lon != null && !isNaN(Number(r.lat)) && !isNaN(Number(r.lon)) && (
+                                                            <div 
+                                                                className={styles.gpsBadge} 
+                                                                onClick={() => setMapModal({ isOpen: true, lat: Number(r.lat), lon: Number(r.lon), title: `${r.name} - ${r.branch_name}` })}
+                                                                title="คลิกเพื่อดูแผนที่"
+                                                            >
+                                                                <MapPinIcon width={14} />
+                                                                <span>{Number(r.lat).toFixed(5)}, {Number(r.lon).toFixed(5)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td><span className={styles.monoText}>{r.distance != null ? r.distance : "—"}</span></td>
                                             <td>{r.late_status && <span className={badgeClass(r.late_status)}>{r.late_label || r.late_status}</span>}</td>
@@ -1503,6 +1580,9 @@ function AdminPageInner() {
                     </div>
                 </div>
             )}
+
+            {/* ── MODALS ── */}
+            {renderMapModal()}
 
             {/* ── TOAST ── */}
             {toast && (

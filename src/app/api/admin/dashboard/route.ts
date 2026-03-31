@@ -22,11 +22,13 @@ function lateLabel(late_status: string | null, late_min: number | null) {
 
 
 // ✅ แปลง BigInt ให้เป็น string แบบ recursive (กันพังทุกเคส)
-function jsonSafe<T>(v: T): any {
+function jsonSafe(v: any): any {
     if (typeof v === "bigint") return v.toString();
     if (v instanceof Date) return v.toISOString();
     if (Array.isArray(v)) return v.map(jsonSafe);
     if (v && typeof v === "object") {
+        // Special case for Prisma Decimal (Decimal.js)
+        if (typeof v.toNumber === "function") return v.toNumber();
         const out: any = {};
         for (const [k, val] of Object.entries(v as any)) out[k] = jsonSafe(val);
         return out;
@@ -72,6 +74,8 @@ export async function GET(req: Request) {
                 remark: true,
                 late_status: true,
                 late_min: true,
+                lat: true,
+                lon: true,
             },
         });
 
@@ -98,24 +102,31 @@ export async function GET(req: Request) {
             },
             select: { emp_id: true },
         });
-        const onLeaveSet = new Set(onLeaveRows.map((x) => x.emp_id));
-        const onLeave = onLeaveSet.size;
+        const onLeave = new Set(onLeaveRows.map((r) => r.emp_id)).size;
 
-        const absent = Math.max(activeEmpIds.length - present - onLeave, 0);
+        const absent = activeEmpIds.length - present - onLeave;
 
-        const recent = recentRows.map((r) => ({
-            ...r,
-            late_label: lateLabel(r.late_status, r.late_min),
-        }));
+        // 3) Notifications/Birthdays logic (optional here or separate)
+        // ...
 
-        // ✅ ส่งออกแบบ safe กัน BigInt พัง
         return NextResponse.json(
-            jsonSafe({ present, absent, late, onLeave, recent })
+            jsonSafe({
+                ok: true,
+                present,
+                absent: Math.max(0, absent),
+                late,
+                onLeave,
+                recent: recentRows.map((r) => ({
+                    ...r,
+                    late_label: lateLabel(r.late_status, r.late_min),
+                })),
+            })
         );
-    } catch (e) {
-        console.error("dashboard error:", e); // ✅ ช่วยไล่ปัญหาในอนาคต
-        const msg = e instanceof Error ? e.message : "ERROR";
-        const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : 500;
-        return NextResponse.json({ error: msg }, { status });
+    } catch (error: any) {
+        console.error("Dashboard API Error:", error);
+        return NextResponse.json(
+            { ok: false, error: error.message || "INTERNAL_ERROR" },
+            { status: 500 }
+        );
     }
 }

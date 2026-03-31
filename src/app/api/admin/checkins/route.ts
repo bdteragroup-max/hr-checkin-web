@@ -18,11 +18,13 @@ function lateLabel(late_status: string | null, late_min: number | null) {
 }
 
 // ✅ แปลง BigInt/Date ให้ JSON ปลอดภัย (กัน 500 จาก serialize)
-function jsonSafe<T>(v: T): any {
+function jsonSafe(v: any): any {
     if (typeof v === "bigint") return v.toString();
     if (v instanceof Date) return v.toISOString();
     if (Array.isArray(v)) return v.map(jsonSafe);
     if (v && typeof v === "object") {
+        // Special case for Prisma Decimal (Decimal.js)
+        if (typeof v.toNumber === "function") return v.toNumber();
         const out: any = {};
         for (const [k, val] of Object.entries(v as any)) out[k] = jsonSafe(val);
         return out;
@@ -32,12 +34,11 @@ function jsonSafe<T>(v: T): any {
 
 export async function GET(req: Request) {
     try {
-        // ✅ ต้อง await
         await requireAdmin();
 
         const url = new URL(req.url);
         const date = url.searchParams.get("date") || "";     // YYYY-MM-DD
-        const branchParam = url.searchParams.get("branch") || ""; // อาจเป็น id หรือชื่อสาขา
+        const branchParam = url.searchParams.get("branch") || ""; // id หรือชื่อสาขา
 
         // ✅ active employees only
         const activeEmpIds = (
@@ -57,25 +58,15 @@ export async function GET(req: Request) {
         }
 
         // filter branch:
-        // - UI บางทีส่ง branch_id แต่ checkins เก็บ branch_name
-        // - เพื่อกันพัง ให้รองรับทั้งส่ง "ชื่อ" มาเลย หรือส่ง "id" มา
         if (branchParam) {
-            // default: ถือว่าเป็นชื่อก่อน (ไม่ต้อง query branches ก็ใช้ได้เลย)
             let branchName = branchParam;
-
-            // ถ้าเป็น id จริง ๆ และหาเจอค่อย map เป็น name
-            // (ถ้า schema branches.id เป็น String จะทำงานได้เลย)
-            // (ถ้าไม่เจอ ก็ยังใช้ branchParam เป็นชื่อได้)
             try {
                 const b = await prisma.branches.findUnique({
                     where: { id: branchParam as any },
                     select: { name: true },
                 });
                 if (b?.name) branchName = b.name;
-            } catch {
-                // ignore: ถ้า id type ไม่ตรง/หาไม่ได้ ก็ใช้ branchParam เป็นชื่อสาขาแทน
-            }
-
+            } catch { }
             where.branch_name = branchName;
         }
 
@@ -96,39 +87,25 @@ export async function GET(req: Request) {
                 remark: true,
                 late_status: true,
                 late_min: true,
+                lat: true,
+                lon: true,
             },
         });
 
-        const list = rows.map((r) => ({
-            ...r,
-            late_label: lateLabel(r.late_status, r.late_min),
-        }));
-
-        return NextResponse.json(jsonSafe({ ok: true, list }));
+        return NextResponse.json(
+            jsonSafe({
+                ok: true,
+                list: rows.map((r) => ({
+                    ...r,
+                    late_label: lateLabel(r.late_status, r.late_min),
+                })),
+            })
+        );
     } catch (e: any) {
-        // ✅ ดัก Prisma ให้เห็นสาเหตุจริงใน response
-        let msg = e instanceof Error ? e.message : "ERROR";
-        let detail: any = undefined;
-
-        if (e instanceof Prisma.PrismaClientKnownRequestError) {
-            detail = { prisma: "KnownRequestError", code: e.code, meta: e.meta };
-            msg = `PRISMA_${e.code}`;
-        } else if (e instanceof Prisma.PrismaClientValidationError) {
-            detail = { prisma: "ValidationError" };
-            msg = "PRISMA_VALIDATION_ERROR";
-        } else if (e instanceof Prisma.PrismaClientInitializationError) {
-            detail = { prisma: "InitializationError" };
-            msg = "PRISMA_INIT_ERROR";
-        }
-
-        console.error("checkins error:", e);
-
-        const status =
-            msg === "UNAUTHORIZED" ? 401 :
-                msg === "FORBIDDEN" ? 403 :
-                    500;
-
-        // ✅ ส่ง detail ออกไปให้ดูใน Network → Response (แก้จบได้เร็ว)
-        return NextResponse.json(jsonSafe({ ok: false, error: msg, detail }), { status });
+        console.error("Checkins API Error:", e);
+        return NextResponse.json(
+            { ok: false, error: "FAILED", details: e.message },
+            { status: 500 }
+        );
     }
 }

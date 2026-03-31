@@ -4,10 +4,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
-import { 
-    ChartBarIcon, ClipboardDocumentListIcon, UsersIcon, 
-    BuildingOfficeIcon, MapPinIcon, BriefcaseIcon, 
-    SunIcon, ClockIcon, GiftIcon, TruckIcon, 
+import {
+    ChartBarIcon, ClipboardDocumentListIcon, UsersIcon,
+    BuildingOfficeIcon, MapPinIcon, BriefcaseIcon,
+    SunIcon, ClockIcon, GiftIcon, TruckIcon,
     CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
     ArrowRightOnRectangleIcon
 } from "@heroicons/react/24/outline";
@@ -184,7 +184,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className={styles.navIcon}><PresentationChartLineIcon width={20} /></span>สถิติย้อนหลัง
                             </Link>
 
-                            
+
                         </nav>
                     </div>
                 </aside>
