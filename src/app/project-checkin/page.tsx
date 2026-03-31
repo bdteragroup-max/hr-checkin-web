@@ -378,7 +378,20 @@ export default function ProjectCheckinPage() {
 
         ctx.fillStyle = "#aaa";
         ctx.font = `${Math.round(18 * w / 1280)}px Arial`;
-        ctx.fillText(`Cus: ${selectedCustomer?.name || "—"}`, 30, bY + 65);
+        
+        // Auto-calculate duration watermark
+        let currentDuration = "";
+        const matchIn = today.filter(x => x.type.startsWith("Project") || x.type === "Check-in").find(c => 
+            (c.type === "Project-In" || c.type === "Check-in") && 
+            c.project_name === selectedCustomer?.name
+        );
+        if (matchIn && currentType === "Project-Out") {
+            const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
+            const hrs = Math.floor(mins / 60);
+            currentDuration = hrs > 0 ? ` (อยู่ ${hrs} ชม. ${mins % 60} นาที)` : ` (อยู่ ${mins} นาที)`;
+        }
+
+        ctx.fillText(`Cus: ${selectedCustomer?.name || "—"}${currentDuration}`, 30, bY + 65);
 
         ctx.font = `${Math.round(14 * w / 1280)}px Arial`;
         ctx.fillText(`GPS: ${gps.lat?.toFixed(5)}, ${gps.lon?.toFixed(5)} (±${Math.round(gps.accuracy || 0)}m)`, 30, bY + 95);
@@ -557,9 +570,24 @@ export default function ProjectCheckinPage() {
                         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
 
 
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                ถ่ายรูปยืนยันตัวตน
+                            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                    ถ่ายรูปยืนยันตัวตน
+                                </div>
+                                {selectedCustomer && (() => {
+                                    const matchIn = projectCheckinsToday.find(c => 
+                                        (c.type === "Project-In" || c.type === "Check-in") && 
+                                        c.project_name === selectedCustomer.name
+                                    );
+                                    if (matchIn) {
+                                        const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
+                                        const hrs = Math.floor(mins / 60);
+                                        const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
+                                        return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>⏱ อยู่มาแล้ว {dur}</span>;
+                                    }
+                                    return null;
+                                })()}
                             </div>
 
                             {!cameraReady && (
@@ -642,14 +670,40 @@ export default function ProjectCheckinPage() {
                                     {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <ArrowRightStartOnRectangleIcon width={20} />}
                                     บันทึกเข้า (IN)
                                 </button>
-                                <button
-                                    style={{ background: "white", color: "#ef4444", fontWeight: 700, fontSize: 18, border: "2px solid #ef4444", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                                    onClick={() => doSubmitCheckin("Project-Out")}
-                                    disabled={!preview || isSubmitting}
-                                >
-                                    {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <StopIcon width={20} />}
-                                    บันทึกออก (OUT)
-                                </button>
+                                {(() => {
+                                    const matchOut = projectCheckinsToday.find(c => 
+                                        (c.type === "Project-Out" || c.type === "Check-out") && 
+                                        c.project_name === selectedCustomer.name &&
+                                        // Find if this OUT is the most recent activity (after the latest IN)
+                                        new Date(c.timestamp) > new Date(projectCheckinsToday.find(i => (i.type === "Project-In" || i.type === "Check-in") && i.project_name === selectedCustomer.name)?.timestamp || 0)
+                                    );
+                                    const isDone = !!matchOut;
+
+                                    return (
+                                        <button
+                                            style={{ 
+                                                background: isDone ? "#f3f4f6" : "white", 
+                                                color: isDone ? "#9ca3af" : "#ef4444", 
+                                                fontWeight: 700, 
+                                                fontSize: 18, 
+                                                border: isDone ? "2px solid #e5e7eb" : "2px solid #ef4444", 
+                                                borderRadius: 12, 
+                                                padding: "18px", 
+                                                cursor: (preview && !isSubmitting && !isDone) ? "pointer" : "not-allowed", 
+                                                opacity: (preview && !isSubmitting && !isDone) ? 1 : 0.6, 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                gap: 8 
+                                            }}
+                                            onClick={() => !isDone && doSubmitCheckin("Project-Out")}
+                                            disabled={!preview || isSubmitting || isDone}
+                                        >
+                                            {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <StopIcon width={20} />}
+                                            {isDone ? "บันทึกออกแล้ว" : "บันทึกออก (OUT)"}
+                                        </button>
+                                    );
+                                })()}
                             </div>
 
                             <div style={{ padding: "12px", background: "#f9fafb", borderRadius: 8, fontSize: 13, color: "#6b7280", display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -685,8 +739,71 @@ export default function ProjectCheckinPage() {
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {projectCheckinsToday.map((x, i) => {
                                 const isIn = x.type === "Project-In" || x.type === "Check-in";
+
+                                // Check if this IN already has a corresponding OUT
+                                let hasOut = false;
+                                if (isIn) {
+                                    hasOut = projectCheckinsToday.some((other, idx) => 
+                                        idx > i && 
+                                        (other.type === "Project-Out" || other.type === "Check-out") && 
+                                        other.project_name === x.project_name
+                                    );
+                                }
+                                
+                                let durationInfo = null;
+                                if (isIn && !hasOut) {
+                                    // Calculate 'Stayed so far'
+                                    const mins = Math.floor((new Date().getTime() - new Date(x.timestamp || new Date()).getTime()) / 60000);
+                                    const hrs = Math.floor(mins / 60);
+                                    const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
+                                    durationInfo = <div style={{ fontSize: 12, color: "#10b981", marginTop: 6, fontWeight: 600 }}>⏱ อยู่มาแล้ว: {dur}</div>;
+                                }
+                                if (!isIn) {
+                                    // For OUT, find the matching IN that happened BEFORE it (j < i)
+                                    const matchIn = [...projectCheckinsToday].slice(0, i).reverse().find((prev) => 
+                                        (prev.type === "Project-In" || prev.type === "Check-in") &&
+                                        prev.project_name === x.project_name
+                                    );
+                                    if (matchIn) {
+                                        const inTime = formatLocalTimeOnly(matchIn.timestamp);
+                                        const mins = Math.floor((new Date(x.timestamp).getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
+                                        const hrs = Math.floor(mins / 60);
+                                        const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
+                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600 }}>⏱ เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
+                                    }
+                                }
+
                                 return (
-                                    <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 12, border: "1px solid #e5e7eb", padding: "14px", borderRadius: 10 }}>
+                                    <div 
+                                        key={x.id} 
+                                        style={{ 
+                                            display: "flex", 
+                                            alignItems: "center", 
+                                            gap: 12, 
+                                            border: "1px solid #e5e7eb", 
+                                            padding: "14px", 
+                                            borderRadius: 10, 
+                                            cursor: (isIn && !hasOut) ? "pointer" : "default", 
+                                            transition: "background 0.2s", 
+                                            background: (isIn && !hasOut) ? "#f8fafc" : "white",
+                                            opacity: (isIn && hasOut) ? 0.7 : 1
+                                        }}
+                                        onClick={() => {
+                                            if (isIn && !hasOut) {
+                                                const p = projects.find(proj => proj.name === x.project_name);
+                                                if (p) {
+                                                    setSelectedCustomer(p);
+                                                    setSearchQ("");
+                                                    setShowDropdown(false);
+                                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                                    startCamera();
+                                                }
+                                            }
+                                        }}
+                                        title={isIn ? (hasOut ? "บันทึกออกแล้ว" : "คลิกเพื่อถ่ายรูปบันทึกออก (OUT)") : undefined}
+                                        onMouseEnter={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f1f5f9")}
+                                        onMouseLeave={(e) => isIn && !hasOut && (e.currentTarget.style.background = "#f8fafc")}
+                                    >
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600, fontSize: 15, color: "#111827" }}>{i + 1}. ลูกค้า: {x.project_name || "—"}</div>
                                             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
@@ -696,6 +813,7 @@ export default function ProjectCheckinPage() {
                                                     {isIn ? "IN" : "OUT"}
                                                 </span>
                                             </div>
+                                            {durationInfo}
                                         </div>
                                         <div style={{ color: isIn ? "#10b981" : "#f59e0b" }}>
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
