@@ -8,8 +8,16 @@ import {
     FunnelIcon,
     ArrowPathIcon,
     CheckCircleIcon,
-    XCircleIcon
+    XCircleIcon,
+    UserIcon,
+    Bars3CenterLeftIcon
 } from "@heroicons/react/24/outline";
+
+interface Employee {
+    emp_id: string;
+    name: string;
+}
+
 
 interface RecordSummary {
     emp_id: string;
@@ -47,8 +55,20 @@ export default function RecordsPage() {
     const [endMonth, setEndMonth] = useState(() => formatMonth(currentYear, currentMonth));
 
     const [data, setData] = useState<RecordSummary[]>([]);
+    const [details, setDetails] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: "ok" | "bad" } | null>(null);
+
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [filterEmpId, setFilterEmpId] = useState("all");
+
+    useEffect(() => {
+        fetch("/api/admin/employees")
+            .then(r => r.json())
+            .then(json => {
+                if (json.ok) setEmployees(json.list || []);
+            });
+    }, []);
 
     function showToast(msg: string, type: "ok" | "bad" = "ok") {
         setToast({ msg, type });
@@ -84,10 +104,13 @@ export default function RecordsPage() {
         try {
             const res = await fetch(`/api/admin/records?start_month=${startMonth}&end_month=${endMonth}`);
             const json = await res.json();
-            if (json.ok) {
-                setData(json.summary || []);
-            } else {
-                showToast(json.error || "Failed to load records", "bad");
+            if (json.ok) setData(json.summary || []);
+            else showToast(json.error || "Failed to load records", "bad");
+
+            if (filterEmpId !== "all") {
+                const resDet = await fetch(`/api/admin/records/details?emp_id=${filterEmpId}&start_month=${startMonth}&end_month=${endMonth}`);
+                const jsonDet = await resDet.json();
+                if (jsonDet.ok) setDetails(jsonDet.details || []);
             }
         } catch (e) {
             showToast("Network error", "bad");
@@ -98,11 +121,12 @@ export default function RecordsPage() {
 
     useEffect(() => {
         loadData();
-    }, [startMonth, endMonth]);
+    }, [startMonth, endMonth, filterEmpId]);
 
     function exportFile(type: "pdf" | "excel") {
         showToast("กำลังเตรียมไฟล์...");
         const p = new URLSearchParams({ start_month: startMonth, end_month: endMonth });
+        if (filterEmpId !== "all") p.set("emp_id", filterEmpId);
         window.location.href = `/api/admin/export/records_${type}?${p.toString()}`;
     }
 
@@ -169,6 +193,26 @@ export default function RecordsPage() {
                             />
                         </>
                     )}
+
+                    <div style={{ width: "1px", height: "24px", background: "var(--border)", margin: "0 8px" }} />
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <UserIcon width={18} style={{ color: "var(--text3)" }} />
+                        <span style={{ fontWeight: 500 }}>พนักงาน:</span>
+                    </div>
+                    
+                    <select 
+                        className={styles.input} 
+                        style={{ width: "220px" }}
+                        value={filterEmpId}
+                        onChange={(e) => setFilterEmpId(e.target.value)}
+                    >
+                        <option value="all">ทุกคน (สรุปภาพรวม)</option>
+                        {employees.map(e => (
+                            <option key={e.emp_id} value={e.emp_id}>{e.emp_id} - {e.name}</option>
+                        ))}
+                    </select>
+
                 </div>
             </div>
 
@@ -235,6 +279,70 @@ export default function RecordsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Detailed Table (Shown only when individual is selected) */}
+            {filterEmpId !== "all" && (
+                <div className={styles.card} style={{ overflow: "hidden", padding: 0, marginTop: 20 }}>
+                    <div className={styles.tableHeader}>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Bars3CenterLeftIcon width={20} /> รายละเอียดการลงเวลาแบบรายวัน
+                        </div>
+                    </div>
+                    {loading ? (
+                        <div style={{ padding: 40, textAlign: "center", color: "var(--text3)" }}>กำลังโหลดรายวัน...</div>
+                    ) : (
+                        <div className={styles.tableContainer}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ padding: "16px 20px" }}>วันที่</th>
+                                        <th style={{ padding: "16px 20px" }}>เวลาเข้า</th>
+                                        <th style={{ padding: "16px 20px" }}>สถานที่เข้า</th>
+                                        <th style={{ padding: "16px 20px" }}>เวลาออก</th>
+                                        <th style={{ padding: "16px 20px" }}>สถานที่ออก</th>
+                                        <th style={{ padding: "16px 20px" }}>สาย (นาที)</th>
+                                        <th style={{ padding: "16px 20px" }}>สถานะของวัน</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {details.map((d, i) => (
+                                        <tr key={i} style={{ background: d.is_weekend || d.status.includes("วันหยุด") || d.status.includes("หยุดพิเศษ") ? "#f9fafb" : "white" }}>
+                                            <td style={{ padding: "14px 20px" }}>{d.date}</td>
+                                            <td style={{ padding: "14px 20px", fontWeight: 500 }}>{d.in_time || "-"}</td>
+                                            <td style={{ padding: "14px 20px", color: "var(--text3)", fontSize: 13, maxWidth: 180 }}>{d.in_loc || "-"}</td>
+                                            <td style={{ padding: "14px 20px", fontWeight: 500 }}>{d.out_time || "-"}</td>
+                                            <td style={{ padding: "14px 20px", color: "var(--text3)", fontSize: 13, maxWidth: 180 }}>{d.out_loc || "-"}</td>
+                                            <td style={{ padding: "14px 20px", color: d.late_mins > 0 ? "var(--orange)" : "inherit" }}>
+                                                {d.late_mins > 0 ? d.late_mins : "-"}
+                                            </td>
+                                            <td style={{ padding: "14px 20px" }}>
+                                                <span style={{
+                                                    padding: "4px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600,
+                                                    background: d.status === "มาทำงาน" ? "#dcfce7" :
+                                                               d.status === "มาสาย" ? "#ffedd5" :
+                                                               d.status === "ขาด" ? "#fee2e2" :
+                                                               d.status === "ลา" ? "#dbeafe" : "#f3f4f6",
+                                                    color: d.status === "มาทำงาน" ? "#16a34a" :
+                                                           d.status === "มาสาย" ? "#ea580c" :
+                                                           d.status === "ขาด" ? "#ef4444" :
+                                                           d.status === "ลา" ? "#2563eb" : "#4b5563"
+                                                }}>
+                                                    {d.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {details.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} style={{ padding: 30, textAlign: "center", color: "var(--text5)" }}>ไม่มีรายละเอียดในรอบเวลานี้</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

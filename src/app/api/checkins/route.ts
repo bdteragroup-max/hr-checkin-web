@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 import { calcLateOT } from "@/utils/checkin";
 
-type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out";
+type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out";
 
 function dateKeyLocalISO(): string {
     const d = new Date();
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     const customer_id = body?.customer_id ? Number(body.customer_id) : null;
     const remark = body?.remark ? String(body.remark).trim() : null;
 
-    if (!["Check-in", "Check-out", "Project-In", "Project-Out"].includes(type))
+    if (!["Check-in", "Check-out", "Project-In", "Project-Out", "Offsite-In", "Offsite-Out"].includes(type))
         return NextResponse.json({ error: "INVALID_TYPE" }, { status: 400 });
 
     if (!branch_id)
@@ -137,9 +137,12 @@ export async function POST(req: Request) {
 
     // 🔥 If branch coords + radius are 0, it means "No Fence Setup" -> Skip Radius Check
     const isUnmapped = bLat === 0 && bLon === 0 && bRad === 0;
-    const distance = isUnmapped ? 0 : getDistanceMeters(lat, lon, bLat, bLon);
+    const isOffsite = type.startsWith("Offsite");
+    
+    // Bypass radius check for Unmapped Branches OR Offsite Check-ins
+    const distance = (isUnmapped || isOffsite) ? 0 : getDistanceMeters(lat, lon, bLat, bLon);
 
-    if (!isUnmapped && distance > bRad) {
+    if (!(isUnmapped || isOffsite) && distance > bRad) {
         return NextResponse.json(
             {
                 error: "OUT_OF_RADIUS",
@@ -152,11 +155,14 @@ export async function POST(req: Request) {
 
     const date_key = new Date(dateKeyLocalISO());
     const time_key = new Date();
-    const lateInfo = type.startsWith("Project") ? { status: null, min: null, label: null } : calcLateOT(type as "Check-in" | "Check-out");
+    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") ? { status: null, min: null, label: null } : calcLateOT(type as "Check-in" | "Check-out");
 
     // ❗ กัน Check-out ก่อน Check-in
-    if (type === "Check-out" || type === "Project-Out") {
-        const inType = type === "Project-Out" ? "Project-In" : "Check-in";
+    if (type === "Check-out" || type === "Project-Out" || type === "Offsite-Out") {
+        let inType = "Check-in";
+        if (type === "Project-Out") inType = "Project-In";
+        else if (type === "Offsite-Out") inType = "Offsite-In";
+
         const hasIn = await prisma.checkins.findFirst({
             where: {
                 emp_id: auth.emp.emp_id,

@@ -96,7 +96,7 @@ export async function GET(req: Request) {
             if (!stats[r.emp_id]) continue;
             const d = new Date(r.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
 
-            if (r.type === "Check-in" || r.type === "Project-In") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 stats[r.emp_id].present_dates.add(d);
                 if (r.late_status === "late") {
                     stats[r.emp_id].late_count += 1;
@@ -130,7 +130,8 @@ export async function GET(req: Request) {
 
         return NextResponse.json({ ok: true, start_date: start, end_date: end, summary });
 
-    } catch (e) {
-        return NextResponse.json({ ok: false, error: "ERROR" }, { status: 500 });
+    } catch (e: any) {
+        console.error("ADMIN_RECORDS_ERROR:", e);
+        return NextResponse.json({ ok: false, error: "ERROR", msg: e.message, stack: e.stack }, { status: 500 });
     }
 }

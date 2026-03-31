@@ -16,12 +16,14 @@ import {
     UserGroupIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
-    CalendarDaysIcon
+    CalendarDaysIcon,
+    GlobeAltIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
     { id: "checkin", href: "/app", icon: ClockIcon, label: "เช็คอิน", sub: "Check-in" },
     { id: "project-checkin", href: "/project-checkin", icon: BuildingOfficeIcon, label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
+    { id: "offsite-checkin", href: "/offsite-checkin", icon: GlobeAltIcon, label: "เช็คอินนอกสถานที่", sub: "Offsite Check-in" },
     { id: "leave", href: "/leave", icon: ClipboardDocumentListIcon, label: "ลางาน", sub: "Leave" },
     { id: "travel", href: "/travel-allowance", icon: TruckIcon, label: "เบี้ยเลี้ยง", sub: "Travel" },
     { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },

@@ -694,7 +694,7 @@ function AdminPageInner() {
                                         <td>
                                             <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 {r.type?.includes("In") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
-                                                {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Check-in" ? "เข้า" : "ออก"}
+                                                {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : "ออก"}
                                             </span>
                                         </td>
                                         <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
@@ -799,7 +799,7 @@ function AdminPageInner() {
                                             <td style={{ whiteSpace: "nowrap" }}>
                                                 <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     {r.type?.includes("In") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
-                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Check-in" ? "เข้า" : "ออก"}
+                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : "ออก"}
                                                 </span>
                                             </td>
                                             <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
