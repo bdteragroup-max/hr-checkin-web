@@ -32,6 +32,7 @@ type Emp = {
     address?: string | null;
     bank_account_no?: string | null;
     bank_name?: string | null;
+    salary_type?: string | null;
 };
 
 type EditDraft = {
@@ -54,6 +55,7 @@ type EditDraft = {
     address: string;
     bank_account_no: string;
     bank_name: string;
+    salary_type: string;
 };
 
 type Department = { id: number; name: string };
@@ -74,6 +76,7 @@ export default function AdminEmployeesPage() {
     /* search / filter */
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("all");
+    const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
 
     /* create form */
     const [empId, setEmpId] = useState("");
@@ -96,6 +99,7 @@ export default function AdminEmployeesPage() {
     const [address, setAddress] = useState("");
     const [bankAccountNo, setBankAccountNo] = useState("");
     const [bankName, setBankName] = useState("");
+    const [salaryType, setSalaryType] = useState<"monthly" | "daily">("monthly");
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -179,6 +183,7 @@ export default function AdminEmployeesPage() {
                     address: address.trim() || null,
                     bank_account_no: bankAccountNo.trim() || null,
                     bank_name: bankName.trim() || null,
+                    salary_type: salaryType,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -202,6 +207,7 @@ export default function AdminEmployeesPage() {
             setIsOnTrial(false); setHasTelephoneAllowance(false);
             setPositionAllowance("");
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
+            setSalaryType("monthly");
             setCreateModalOpen(false);
             await load();
         } finally { setSaving(false); }
@@ -235,6 +241,7 @@ export default function AdminEmployeesPage() {
                     address: editDraft.address.trim() || null,
                     bank_account_no: editDraft.bank_account_no.trim() || null,
                     bank_name: editDraft.bank_name.trim() || null,
+                    salary_type: editDraft.salary_type,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -322,7 +329,10 @@ export default function AdminEmployeesPage() {
             statusFilter === "all" ? true :
                 statusFilter === "active" ? x.is_active :
                     !x.is_active;
-        return matchQ && matchS;
+        const matchT =
+            typeFilter === "all" ? true :
+                x.salary_type === typeFilter;
+        return matchQ && matchS && matchT;
     }), [list, search, statusFilter]);
 
     /* ─────────────────────────────────────────────────────────
@@ -391,6 +401,16 @@ export default function AdminEmployeesPage() {
                                 <option value="active">Active เท่านั้น</option>
                                 <option value="inactive">Inactive เท่านั้น</option>
                             </select>
+                            <select
+                                className={styles.input}
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value as any)}
+                                style={{ width: 140 }}
+                            >
+                                <option value="all">ทุกประเภท</option>
+                                <option value="monthly">รายเดือน</option>
+                                <option value="daily">รายวัน (Intern)</option>
+                            </select>
                             <button className={styles.btnRefresh} onClick={load} disabled={loading}>
                                 ↻
                             </button>
@@ -450,7 +470,10 @@ export default function AdminEmployeesPage() {
                                                 </td>
                                                 <td style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 13 }}>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                        <div>{x.base_salary ? `฿${Number(x.base_salary).toLocaleString()}` : "—"}</div>
+                                                        <div style={{ fontWeight: 700, color: x.salary_type === "daily" ? "var(--purple)" : "inherit" }}>
+                                                            {x.base_salary ? `฿${Number(x.base_salary).toLocaleString()}` : "—"}
+                                                            {x.salary_type === "daily" && <span style={{ fontSize: 10, fontWeight: "normal", marginLeft: 4 }}>/ วัน</span>}
+                                                        </div>
                                                         {x.position_allowance && Number(x.position_allowance) > 0 && (
                                                             <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Allowance: ฿{Number(x.position_allowance).toLocaleString()}</div>
                                                         )}
@@ -495,6 +518,7 @@ export default function AdminEmployeesPage() {
                                                                     address: x.address || "",
                                                                     bank_account_no: x.bank_account_no || "",
                                                                     bank_name: x.bank_name || "",
+                                                                    salary_type: x.salary_type || "monthly",
                                                                 });
                                                             }}
                                                         >
@@ -651,7 +675,19 @@ export default function AdminEmployeesPage() {
                                 placeholder="— ไม่มี / ไม่ระบุ —"
                             />
 
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>เงินเดือนฐาน (Base Salary) (THB)</label>
+                            <label className={styles.lbl} style={{ marginTop: 10 }}>ประเภทเงินเดือน (Salary Type)</label>
+                            <select className={styles.input} value={salaryType} onChange={(e) => {
+                                const val = e.target.value as "monthly" | "daily";
+                                setSalaryType(val);
+                                if (val === "daily" && (!baseSalary || baseSalary === "0")) {
+                                    setBaseSalary("300");
+                                }
+                            }}>
+                                <option value="monthly">รายเดือน (Monthly)</option>
+                                <option value="daily">รายวัน / Intern (Daily Rate)</option>
+                            </select>
+
+                            <label className={styles.lbl} style={{ marginTop: 10 }}>{salaryType === "daily" ? "ค่าแรงรายวัน (Daily Rate) (THB)" : "เงินเดือนฐาน (Base Salary) (THB)"}</label>
                             <input type="number" className={styles.input} placeholder="0.00"
                                 value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} />
 
@@ -807,7 +843,24 @@ export default function AdminEmployeesPage() {
                             </div>
                         </div>
 
-                        <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                            <div>
+                                <label className={styles.lbl}>ประเภทเงินเดือน</label>
+                                <select className={styles.input} value={editDraft.salary_type}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, salary_type: e.target.value }))}>
+                                    <option value="monthly">รายเดือน</option>
+                                    <option value="daily">รายวัน (Intern)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={styles.lbl}>{editDraft.salary_type === "daily" ? "ค่าแรงรายวัน (THB)" : "เงินเดือน (THB)"}</label>
+                                <input type="number" className={styles.input}
+                                    value={editDraft.base_salary}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, base_salary: e.target.value }))} />
+                            </div>
+                        </div>
+
+                        <label className={styles.lbl} style={{ marginTop: 10 }}>เบอร์โทรศัพท์มือถือ</label>
                         <SearchableSelect 
                             className={styles.input} 
                             value={editDraft.supervisor_id} 

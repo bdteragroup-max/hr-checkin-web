@@ -46,11 +46,6 @@ function fmtDateTimeTH(d: string) {
     } catch { return d; }
 }
 
-function fmtDuration(days: number, minutes: number) {
-    const h = Math.floor(minutes / 60), m = minutes % 60;
-    return `${days} วันทำงาน • ${h}ชม ${m}นาที`;
-}
-
 /* ── Status Badge ── */
 function StatusBadge({ status }: { status: string }) {
     const map: Record<string, { label: string; icon: any; color: string }> = {
@@ -115,10 +110,8 @@ export default function LeavePage() {
     const [list, setList] = useState<LeaveItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-
     const [leaveTypeId, setLeaveTypeId] = useState("");
     
-    // Sub-states for 24h Time Picker
     const [startDate, setStartDate] = useState("");
     const [startHour, setStartHour] = useState("08");
     const [startMin, setStartMin] = useState("00");
@@ -204,7 +197,6 @@ export default function LeavePage() {
     async function submit() {
         if (!canSubmit) return;
         setLoading(true);
-
         const r = await fetch("/api/leave", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -215,10 +207,8 @@ export default function LeavePage() {
                 attachment_url: attachmentUrl || null,
             }),
         });
-
         const data = await r.json().catch(() => ({}));
         setLoading(false);
-
         if (!r.ok) {
             const errMap: Record<string, string> = {
                 OVERLAP_LEAVE: "ช่วงเวลาลาซ้อนกับใบลาที่มีอยู่แล้ว",
@@ -231,13 +221,10 @@ export default function LeavePage() {
                 ANNUAL_FULL_DAYS_ONLY: "ลาพักร้อนต้องลาเป็นวันเต็มเท่านั้น (08:00 - 17:00)",
                 ADVANCE_NOTICE_REQUIRED: `ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${data?.required_days} วัน`,
                 EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${data?.remaining || 0} วัน (ขอลา ${data?.requested || 0} วัน)`,
-                ANNUAL_EXCEED_ENTITLEMENT_SINGLE: `ลาพักร้อนครั้งนี้เกินสิทธิ์ (สิทธิ์ต่อครั้ง ${data.entitlement_days} วัน)`,
-                PROBATION_PERSONAL_NOT_ALLOWED: "พนักงานทดลองงานยังไม่ได้รับสิทธิ์ลากิจ หรือ ลากรณีฉุกเฉิน",
             };
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
             return;
         }
-
         setStartDate(""); setEndDate(""); setReason("");
         setAttachmentUrl(""); setFileName("");
         if (fileRef.current) fileRef.current.value = "";
@@ -255,43 +242,37 @@ export default function LeavePage() {
         }
         window.addEventListener("keydown", onKeyDown, { passive: false });
         return () => window.removeEventListener("keydown", onKeyDown);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canSubmit, leaveTypeId, startAt, endAt, reason, attachmentUrl]);
+    }, [canSubmit, startAt, endAt, reason, attachmentUrl]);
 
-    /* ──────────────────────────────────────────
-       RENDER
-    ────────────────────────────────────────── */
     return (
         <div className={styles.page}>
             <div className={styles.wrap}>
-                {/* ── HERO TITLE ── */}
+                {/* ── HERO ── */}
                 <div className={styles.hero}>
                     <h1 className={styles.heroH1}>ระบบลางาน</h1>
                     <div className={styles.heroMeta}>
                         <div className={styles.heroMetaItem}>
                             <div className={styles.heroMetaDot} />
-                            ทำรายการลาและประวัติ
+                            ทำรายการลาและตรวจสอบประวัติ
                         </div>
                     </div>
                 </div>
 
-                {/* ── SUMMARY DASHBOARD ── */}
+                {/* ── QUOTA ── */}
                 <div className={styles.quotaBar}>
                     {types.filter(t => ["annual", "sick", "personal"].includes(t.id)).map(t => {
                         const remaining = Math.max(0, (t.quota || 0) - (t.used || 0));
                         const isWarning = remaining <= 1 && (t.quota || 0) > 0;
                         const isNoQuota = (t.quota || 0) === 0;
-
-                        // Unified label for Personal/Emergency
                         const displayName = t.id === 'personal' ? 'ลากิจ / ฉุกเฉิน' : t.name;
 
                         return (
                             <div key={t.id} className={styles.quotaItem}>
                                 <div className={styles.quotaLabel}>{displayName}</div>
                                 <div className={`${styles.quotaVal} ${isNoQuota ? styles.quotaValBad : isWarning ? styles.quotaValWarn : styles.quotaValOk}`}>
-                                    {remaining} <span style={{ fontSize: 12, fontWeight: 500 }}>วัน</span>
+                                    {remaining} <span style={{ fontSize: 13, opacity: 0.8 }}>วัน</span>
                                 </div>
-                                <div className={styles.quotaSub}>ใช้แล้ว {t.used || 0} / {t.quota || 0}</div>
+                                <div className={styles.quotaSub}>ใช้ไป {t.used || 0} / {t.quota || 0}</div>
                             </div>
                         );
                     })}
@@ -299,28 +280,28 @@ export default function LeavePage() {
 
                 {/* ── FORM CARD ── */}
                 <div className={styles.card}>
-                    <div className={styles.cardTitle}>แบบฟอร์มยื่นใบลา</div>
+                    <div className={styles.cardTitle}>
+                        <div className={styles.dot} />
+                        แบบฟอร์มยื่นใบลา
+                    </div>
 
                     <div className={styles.form}>
-
-                        {/* Leave type */}
-                        <div>
-                            <label className={styles.label}>ประเภทลา</label>
+                        {/* Leave Type selection */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label className={styles.label}>ประเภทการลา</label>
                             <select className={styles.select} value={leaveTypeId} onChange={e => setLeaveTypeId(e.target.value)}>
                                 {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
-                            {selectedType?.note ? <div className={styles.smallNote}>{selectedType.note}</div> : null}
+                            
+                            {selectedType?.note && <div className={styles.smallNote}>{selectedType.note}</div>}
+                            
                             {selectedType?.id === 'annual' && (
-                                <div className={styles.smallNote} style={{ color: 'var(--red)', fontWeight: 600 }}>
+                                <div className={`${styles.smallNote} ${styles.smallNoteWarn}`}>
                                     * ต้องลาล่วงหน้า 30 วัน และลาเป็นวันเต็มเท่านั้น
                                 </div>
                             )}
-                            {(selectedType?.id === 'personal' || selectedType?.id === 'emergency') && selectedType?.quota === 0 && (
-                                <div className={styles.smallNote} style={{ color: 'var(--red)', fontWeight: 600 }}>
-                                    * พนักงานช่วงทดลองงานยังไม่ได้รับสิทธิ์ลากิจ/ฉุกเฉิน กรุณาเลือก "ลาไม่รับค่าจ้าง" แทน
-                                </div>
-                            )}
-                            {selectedType?.quota !== null && selectedType?.quota !== undefined ? (
+
+                            {selectedType?.quota !== null && selectedType?.quota !== undefined && (
                                 <div className={styles.quotaBox}>
                                     <div className={styles.quotaRow}>
                                         <span className={styles.quotaLabel}>สิทธิ์ทั้งหมด</span>
@@ -330,76 +311,79 @@ export default function LeavePage() {
                                         <span className={styles.quotaLabel}>ใช้ไปแล้ว</span>
                                         <span className={styles.quotaVal}>{selectedType.used} วัน</span>
                                     </div>
-                                    <div className={styles.quotaRow} style={{ borderTop: "1px solid var(--gray-200)", paddingTop: 6, marginTop: 4 }}>
-                                        <span className={styles.quotaLabel} style={{ fontWeight: 600, color: "var(--text)" }}>คงเหลือ</span>
-                                        <span className={styles.quotaVal} style={{ fontWeight: 600, color: "var(--red)" }}>
+                                    <div className={styles.quotaRow} style={{ borderTop: "1px solid var(--gray-200)", paddingTop: 8, marginTop: 6 }}>
+                                        <span className={styles.quotaLabel} style={{ fontWeight: 600, color: "var(--text)" }}>คงเหลือสุทธิ</span>
+                                        <span className={styles.quotaVal} style={{ fontWeight: 700, color: "var(--red)", fontSize: 16 }}>
                                             {Math.max(0, selectedType.quota - (selectedType.used || 0))} วัน
                                         </span>
                                     </div>
                                 </div>
-                            ) : null}
+                            )}
                         </div>
 
-                        {/* Date range - Compact Layout */}
-                        <div>
-                            <div className={styles.timePickerContainer}>
-                                <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
-                                    <label className={styles.label}>วัน/เวลา เริ่มต้น *</label>
-                                    <input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} min={currentMinDate} />
+                        {/* Date and time layer (STAYS LAYERED) */}
+                        <div className={styles.cardSection}>
+                            <div className={styles.dateTimeLayerRow}>
+                                {/* Start Picker Container (All on one line) */}
+                                <div className={styles.timePickerContainer}>
+                                    <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
+                                        <label className={styles.label}>เริ่มต้นการลา *</label>
+                                        <input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} min={currentMinDate} />
+                                    </div>
+                                    <div className={styles.timeBlockWrap}>
+                                        <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                            <label className={styles.label}>ชม.</label>
+                                            <select className={styles.select} value={startHour} onChange={e => setStartHour(e.target.value)}>
+                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                            </select>
+                                        </div>
+                                        <span className={styles.timeSeparator}>:</span>
+                                        <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                            <label className={styles.label}>นาที</label>
+                                            <select className={styles.select} value={startMin} onChange={e => setStartMin(e.target.value)}>
+                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                    <label className={styles.label}>ชั่วโมง</label>
-                                    <select className={styles.select} value={startHour} onChange={e => setStartHour(e.target.value)}>
-                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                    </select>
-                                </div>
-                                <span className={styles.timeSeparator}>:</span>
-                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                    <label className={styles.label}>นาที</label>
-                                    <select className={styles.select} value={startMin} onChange={e => setStartMin(e.target.value)}>
-                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
+
+                                {/* End Picker Container (All on one line) */}
+                                <div className={styles.timePickerContainer}>
+                                    <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
+                                        <label className={styles.label}>สิ้นสุดการลา *</label>
+                                        <input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate || currentMinDate} />
+                                    </div>
+                                    <div className={styles.timeBlockWrap}>
+                                        <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                            <label className={styles.label}>ชม.</label>
+                                            <select className={styles.select} value={endHour} onChange={e => setEndHour(e.target.value)}>
+                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                            </select>
+                                        </div>
+                                        <span className={styles.timeSeparator}>:</span>
+                                        <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
+                                            <label className={styles.label}>นาที</label>
+                                            <select className={styles.select} value={endMin} onChange={e => setEndMin(e.target.value)}>
+                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <div className={styles.timePickerContainer}>
-                                <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
-                                    <label className={styles.label}>วัน/เวลา สิ้นสุด *</label>
-                                    <input className={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate || currentMinDate} />
-                                </div>
-                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                    <label className={styles.label}>ชั่วโมง</label>
-                                    <select className={styles.select} value={endHour} onChange={e => setEndHour(e.target.value)}>
-                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                    </select>
-                                </div>
-                                <span className={styles.timeSeparator}>:</span>
-                                <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                    <label className={styles.label}>นาที</label>
-                                    <select className={styles.select} value={endMin} onChange={e => setEndMin(e.target.value)}>
-                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
-                                </div>
-                            </div>
+                        {/* Reason & Action */}
+                        <div style={{ marginBottom: 16, marginTop: 16 }}>
+                            <label className={styles.label}>เหตุผลการลา (ถ้ามี)</label>
+                            <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุรายละเอียดที่จำเป็น..." />
                         </div>
 
-                        {/* Reason */}
-                        <div>
-                            <label className={styles.label}>เหตุผล (ถ้ามี)</label>
-                            <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุเหตุผลการลา..." />
-                        </div>
-
-                        {/* Upload */}
                         <div className={styles.uploadBox}>
                             <div className={styles.uploadHeader}>
                                 <div>
-                                    <div className={styles.uploadTitle}>เอกสารแนบ (ถ้ามี)</div>
+                                    <div className={styles.uploadTitle}>เอกสารแนบ</div>
                                     <div className={styles.uploadSub}>
-                                        {requireAttachment
-                                            ? "ลาป่วยเกิน 2 วันทำงาน ระบบจะบังคับแนบเอกสาร"
-                                            : "แนบเอกสารได้ตามต้องการ · JPG, PNG, PDF"}
+                                        {requireAttachment ? "บังคับแนบเอกสาร (ลาเกิน 2 วัน)" : "JPG, PNG, PDF (ถ้ามี)"}
                                     </div>
                                 </div>
                                 <button className={styles.btnOutline} onClick={() => fileRef.current?.click()} disabled={uploading} type="button">
@@ -408,56 +392,48 @@ export default function LeavePage() {
                             </div>
                             <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display: "none" }}
                                 onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} />
-                            {fileName ? (
+                            {fileName && (
                                 <div className={styles.filePreviewRow}>
                                     <div className={styles.fileName}>{fileName}</div>
-                                    {attachmentUrl && (
-                                        <a className={styles.fileLink} href={attachmentUrl} target="_blank" rel="noreferrer">
-                                            <PaperClipIcon width={14} style={{ marginRight: 4 }} /> เปิดเอกสาร
-                                        </a>
-                                    )}
                                     <button type="button" className={styles.btnRemoveFile} onClick={removeFile} disabled={uploading}>
-                                        <TrashIcon width={14} /> ลบไฟล์
+                                        <TrashIcon width={14} /> ลบ
                                     </button>
                                 </div>
-                            ) : null}
+                            )}
                         </div>
 
-                        {/* Actions */}
-                        <div className={styles.btnRowSingle}>
-                            <button className={styles.btnPrimaryFull} disabled={!canSubmit} onClick={submit}>
-                                {loading 
-                                    ? <ArrowPathIcon width={20} className="animate-spin" /> 
-                                    : <><PaperAirplaneIcon width={20} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ส่งคำขอลา</>
-                                }
-                            </button>
-                        </div>
-
+                        <button className={styles.btnPrimaryFull} disabled={!canSubmit || loading} onClick={submit}>
+                            {loading ? <ArrowPathIcon width={20} className="animate-spin" /> : 
+                            <><PaperAirplaneIcon width={18} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ยืนยันการส่งใบลา</>}
+                        </button>
                     </div>
                 </div>
 
-                {/* ── LIST CARD ── */}
+                {/* ── HISTORY CARD ── */}
                 <div className={styles.card}>
-                    <div className={styles.cardTitle}>รายการใบลา</div>
+                    <div className={styles.cardTitle}>
+                        <div className={styles.dot} style={{ background: 'var(--text3)' }} />
+                        ประวัติการลา
+                    </div>
                     {list.length === 0 ? (
-                        <div className={styles.emptyState}>ยังไม่มีประวัติการลางานของคุณ</div>
+                        <div className={styles.emptyState}>ยังไม่มีประวัติ</div>
                     ) : (
                         <div className={styles.historyTable}>
-                            <div className={styles.historyHeader}>
-                                <div className={styles.colType}>ประเภท</div>
-                                <div className={styles.colDate}>วันที่</div>
-                                <div className={styles.colDays}>จำนวน</div>
-                                <div className={styles.colStatus}>สถานะ</div>
-                            </div>
                             {list.map(x => (
-                                <div key={x.id} className={styles.historyRow} data-status={x.status}>
-                                    <div className={styles.colType}>{x.leave_type}</div>
-                                    <div className={styles.colDate}>
-                                        <span className={styles.dateStart}>{fmtDateTimeTH(x.start_at)}</span>
-                                        <span className={styles.dateEnd}>{fmtDateTimeTH(x.end_at)}</span>
+                                <div key={x.id} className={`${styles.historyRow} ${x.status.startsWith('pending') ? styles.historyRowPending : x.status === 'approved' ? styles.historyRowApproved : styles.historyRowRejected}`} data-status={x.status}>
+                                    <div className={styles.historyRowTop}>
+                                        <div className={styles.colType}>{x.leave_type}</div>
+                                        <StatusBadge status={x.status} />
                                     </div>
-                                    <div className={styles.colDays}>{x.days} วัน</div>
-                                    <div className={styles.colStatus}><StatusBadge status={x.status} /></div>
+                                    <div className={styles.historyRowMid}>
+                                        <CalendarIcon width={14} style={{ color: 'var(--text4)' }} />
+                                        <div className={styles.colDate}>
+                                            {fmtDateTimeTH(x.start_at)}
+                                        </div>
+                                    </div>
+                                    <div className={styles.historyRowBot}>
+                                        <div className={styles.colDays}>{x.days} วันทำงาน</div>
+                                    </div>
                                 </div>
                             ))}
                         </div>

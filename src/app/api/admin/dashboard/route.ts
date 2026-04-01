@@ -53,7 +53,16 @@ export async function GET(req: Request) {
         });
         const activeEmpIds = activeEmployees.map((e) => e.emp_id);
 
-        // 2) today's checkins for active only
+        // 2) Fetch ALL check-ins for this day to calculate accurate counters
+        const allDayCheckins = await prisma.checkins.findMany({
+            where: {
+                emp_id: { in: activeEmpIds },
+                timestamp: { gte: dayStart, lte: dayEnd },
+            },
+            select: { emp_id: true, type: true, late_status: true },
+        });
+
+        // 3) recentRows for the UI feed only (limit 40)
         const recentRows = await prisma.checkins.findMany({
             where: {
                 emp_id: { in: activeEmpIds },
@@ -79,13 +88,14 @@ export async function GET(req: Request) {
             },
         });
 
+        // 4) Calculate Stats from allDayCheckins (not truncated recentRows)
         const presentSet = new Set(
-            recentRows.filter((r) => r.type === "Check-in").map((r) => r.emp_id)
+            allDayCheckins.filter((r) => ["Check-in", "Project-In", "Offsite-In"].includes(r.type)).map((r) => r.emp_id)
         );
         const present = presentSet.size;
 
         const lateSet = new Set(
-            recentRows
+            allDayCheckins
                 .filter((r) => r.type === "Check-in" && r.late_status === "late")
                 .map((r) => r.emp_id)
         );

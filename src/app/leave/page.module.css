@@ -10,7 +10,8 @@
   --red: #d93025;
   --red-dark: #b71c1c;
   --red-light: #ef5350;
-  --red-dim: rgba(217, 48, 37, 0.08); /* Updated dim */
+  --red-dim: rgba(217, 48, 37, 0.08);
+  /* Updated dim */
   --red-border: rgba(217, 48, 37, 0.22);
   --orange: #e8450a;
 
@@ -47,10 +48,13 @@
   --ot-bdr: #ddd6fe;
 
   --shadow-sm:
-    0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05); /* Match App */
+    0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+  /* Match App */
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
-  --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28); /* Match App */
-  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.18); /* Match App */
+  --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+  /* Match App */
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.18);
+  /* Match App */
 
   --radius: 16px;
   --radius-sm: 10px;
@@ -79,11 +83,9 @@
   content: "";
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(
-    circle,
-    rgba(217, 48, 37, 0.045) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle,
+      rgba(217, 48, 37, 0.045) 1px,
+      transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   z-index: 0;
@@ -202,8 +204,21 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--red), var(--orange), transparent);
+  height: 4px;
+  background: var(--red);
+  opacity: 0.8;
+}
+
+.quotaItem::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent 60%, var(--gray-50) 100%);
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .quotaVal {
@@ -251,28 +266,49 @@
    CARD
 ══════════════════════════════════════ */
 .card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
   border-radius: 20px;
-  padding: 28px 26px 32px;
-  margin-bottom: 20px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.04),
-    0 1px 4px rgba(0, 0, 0, 0.02);
+  padding: 28px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
   animation: slideUp 0.35s ease both;
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.06),
-    0 2px 8px rgba(0, 0, 0, 0.03);
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* New Layered Section */
+.cardSection {
+  background: var(--gray-50);
+  border: 1.5px solid var(--gray-100);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
+  position: relative;
+}
+
+.dateTimeLayerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardSectionLast {
+  margin-bottom: 0;
 }
 
 .card::before {
@@ -291,6 +327,7 @@
     opacity: 0;
     transform: translateY(14px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -302,7 +339,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px; /* Matched to App */
+  margin-bottom: 14px;
+  /* Matched to App */
 }
 
 .cardTitle {
@@ -496,6 +534,7 @@
   font-size: 13px;
   margin-bottom: 4px;
 }
+
 .quotaRow:last-child {
   margin-bottom: 0;
 }
@@ -515,6 +554,7 @@
   grid-template-columns: 1fr;
   gap: 16px;
 }
+
 @media (min-width: 480px) {
   .row2 {
     grid-template-columns: 1fr 1fr;
@@ -703,6 +743,7 @@
   white-space: pre-line;
   transition: all 0.25s;
 }
+
 .statusOk {
   background: var(--ok-bg);
   border-color: var(--ok-bdr);
@@ -921,11 +962,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    transparent 55%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      transparent 55%);
   pointer-events: none;
 }
 
@@ -1229,6 +1268,7 @@
   from {
     transform: scaleX(1);
   }
+
   to {
     transform: scaleX(0);
   }
@@ -1461,108 +1501,107 @@
 
 /* ── History Table (compact) ── */
 .historyTable {
-  width: 100%;
-  border-radius: var(--radius-sm);
-  /* allow badge shadows to show outside rounded corners */
-  overflow: visible;
-  border: 1px solid var(--gray-200);
-  background: var(--white);
-}
-.historyHeader {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  padding: 10px 14px;
-  background: var(--gray-50);
-  font-weight: 700;
-  color: var(--text3);
-  font-size: 12px;
-  border-bottom: 1px solid var(--gray-200);
-  align-items: center;
-  flex-wrap: nowrap;
 }
+
 .historyRow {
   display: flex;
-  gap: 12px;
-  padding: 10px 14px; /* tightened padding to help fit single-line */
+  flex-direction: column;
+  padding: 14px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.historyRow:hover {
+  border-color: var(--gray-300);
+  transform: translateX(4px);
+  box-shadow: var(--shadow);
+}
+
+.historyRowPending {
+  border-left: 4px solid var(--orange);
+}
+
+.historyRowApproved {
+  border-left: 4px solid var(--ok);
+}
+
+.historyRowRejected {
+  border-left: 4px solid var(--bad);
+}
+
+.historyRowTop {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
-  flex-wrap: nowrap;
-  position: relative;
 }
-.historyRow:last-child {
-  border-bottom: none;
+
+.historyRowMid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text3);
 }
-.historyRow[data-status="approved"] {
-  background: var(--white);
+
+.historyRowBot {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.historyRow[data-status="pending"] {
-  background: var(--white);
-}
-.historyRow[data-status="rejected"] {
-  background: #fff7f7;
-}
+
 .colType {
   font-weight: 700;
   color: var(--text);
-  flex: 0 0 24%;
-  min-width: 100px;
+  font-size: 14px;
 }
+
 .colDate {
-  color: var(--text3);
-  font-size: 12px;
-  flex: 1 1 40%;
-  min-width: 140px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
 }
 
-/* Stack start/end dates in rows; keep header single-line */
-.historyRow .colDate {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  white-space: normal;
-  overflow: visible;
-}
-.historyHeader .colDate {
-  /* header stays single-line */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dateStart {
-  display: block;
-}
-.dateEnd {
-  display: block;
-  font-size: 11px;
-  color: var(--text3);
-}
 .colDays {
-  text-align: center;
-  color: var(--text2);
-  font-weight: 600;
-  flex: 0 0 72px;
-}
-.colStatus {
-  text-align: center;
-  flex: 0 0 100px;
+  background: var(--gray-50);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
-.item [data-status="pending"] {
+.colStatus {
+  display: none; /* Hide colStatus in the new mobile-first vertical history rows */
+}
+
+.emptyState {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text4);
+  font-size: 14px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--gray-300);
+}
+
+/* Item detail status overrides if needed */
+.itemPending {
   background: var(--warn-bg);
   border-color: var(--warn-bdr);
   color: var(--warn);
 }
-
-.item [data-status="approved"] {
+.itemApproved {
   background: var(--ok-bg);
   border-color: var(--ok-bdr);
   color: var(--ok);
 }
-
-.item [data-status="rejected"] {
+.itemRejected {
   background: var(--bad-bg);
   border-color: var(--bad-bdr);
   color: var(--bad);
@@ -1586,6 +1625,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1695,9 +1735,11 @@
   0% {
     box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5);
   }
+
   70% {
     box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
   }
@@ -1707,12 +1749,10 @@
    SKELETON LOADER
 ══════════════════════════════════════ */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--gray-100) 25%,
-    var(--gray-200) 50%,
-    var(--gray-100) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--gray-100) 25%,
+      var(--gray-200) 50%,
+      var(--gray-100) 75%);
   background-size: 200% 100%;
   border-radius: var(--radius-xs);
   animation: shimmer 1.4s infinite;
@@ -1722,6 +1762,7 @@
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -1805,9 +1846,11 @@
   .historyHeader {
     display: none;
   }
+
   .historyTable {
     border: none;
   }
+
   .historyRow {
     display: grid;
     grid-template-columns: 1fr;
@@ -1817,10 +1860,12 @@
     border-radius: 12px;
     background: var(--white);
   }
-  .historyRow + .historyRow {
+
+  .historyRow+.historyRow {
     margin-top: 10px;
     border-top: none;
   }
+
   .colType::before {
     content: "ประเภท";
     display: block;
@@ -1828,6 +1873,7 @@
     color: var(--text3);
     margin-bottom: 4px;
   }
+
   .colDate::before {
     content: "วันที่";
     display: block;
@@ -1835,6 +1881,7 @@
     color: var(--text3);
     margin-bottom: 4px;
   }
+
   .colDays::before {
     content: "จำนวน";
     display: block;
@@ -1842,6 +1889,7 @@
     color: var(--text3);
     margin-bottom: 4px;
   }
+
   .colStatus::before {
     content: "สถานะ";
     display: block;
@@ -1849,6 +1897,7 @@
     color: var(--text3);
     margin-bottom: 4px;
   }
+
   .colType,
   .colDate,
   .colDays,
@@ -1905,6 +1954,7 @@
     opacity: 0;
     transform: scale(0.88);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1946,6 +1996,7 @@
 .alertTitleErr {
   color: var(--bad);
 }
+
 .alertTitleOk {
   color: var(--ok);
 }
@@ -1977,11 +2028,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    transparent 55%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      transparent 55%);
   pointer-events: none;
 }
 
@@ -2018,9 +2067,16 @@
    ══════════════════════════════════════ */
 .timePickerContainer {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-end;
   width: 100%;
+  flex-wrap: wrap; /* Fallback for very small containers */
+}
+
+.timeBlockWrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .dtBlock {
@@ -2031,10 +2087,11 @@
 
 .dateBlock {
   flex: 1;
+  min-width: 140px;
 }
 
 .timeBlock {
-  width: 80px;
+  width: 72px;
   flex-shrink: 0;
 }
 
@@ -2042,6 +2099,44 @@
   align-self: flex-end;
   font-weight: 700;
   color: var(--text3);
-  padding-bottom: 14px;
+  padding-bottom: 12px;
   font-size: 18px;
+}
+
+@media (max-width: 480px) {
+  .timePickerContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .dateBlock {
+    width: 100%;
+  }
+
+  /* Create a side-by-side row for Hour/Minute on mobile */
+  .timeBlockWrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+  }
+  
+  .timeBlock {
+    flex: 1;
+    width: 0; /* Ensures equal distribution */
+  }
+
+  .timeSeparator {
+    padding-bottom: 14px;
+    margin: 0 -2px;
+  }
+
+  .heroH1 {
+    font-size: 28px;
+  }
+
+  .card {
+    padding: 24px 20px;
+  }
 }

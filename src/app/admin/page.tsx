@@ -5,10 +5,10 @@ import Link from "next/link";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
-import { 
-    HandRaisedIcon, GiftIcon, PencilSquareIcon, CheckCircleIcon, 
-    XCircleIcon, ClockIcon, SunIcon, ClipboardDocumentListIcon, 
-    InboxIcon, MagnifyingGlassIcon, Cog6ToothIcon, DocumentTextIcon, 
+import {
+    HandRaisedIcon, GiftIcon, PencilSquareIcon, CheckCircleIcon,
+    XCircleIcon, ClockIcon, SunIcon, ClipboardDocumentListIcon,
+    InboxIcon, MagnifyingGlassIcon, Cog6ToothIcon, DocumentTextIcon,
     CalendarDaysIcon, CameraIcon, BanknotesIcon, ExclamationTriangleIcon,
     UserPlusIcon, CakeIcon, ChevronRightIcon, PlayIcon, StopIcon,
     ArrowDownTrayIcon, TrashIcon, ArrowPathIcon, InboxStackIcon,
@@ -352,8 +352,9 @@ function AdminPageInner() {
         const p = new URLSearchParams();
         if (filterDate) p.append("date", filterDate);
         if (filterBranch) p.append("branch", filterBranch);
+        if (filterStatus) p.append("status", filterStatus);
         return p.toString();
-    }, [filterDate, filterBranch]);
+    }, [filterDate, filterBranch, filterStatus]);
 
     async function loadAttendance() {
         setAttLoading(true); setAttMsg("");
@@ -371,7 +372,9 @@ function AdminPageInner() {
         const q = filterSearch.toLowerCase();
         return allRows.filter(r => {
             const matchQ = !q || r.emp_id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
-            const matchSt = !filterStatus || r.late_status === filterStatus;
+            // If the user selected 'absent', it should ONLY show rows that are actually missing (r.type === 'ขาดงาน')
+            // This prevents all standard check-ins from rendering when the UI state updates before pressing 'Search'.
+            const matchSt = !filterStatus || (filterStatus === "absent" ? (r.type === "ขาดงาน" || r.late_status === "absent") : r.late_status === filterStatus);
             return matchQ && matchSt;
         });
     }, [allRows, filterSearch, filterStatus]);
@@ -647,7 +650,7 @@ function AdminPageInner() {
                         </button>
                     </div>
                     <div className={styles.mapContent}>
-                        <iframe 
+                        <iframe
                             className={styles.mapFrame}
                             src={mapUrl}
                             allowFullScreen
@@ -659,7 +662,7 @@ function AdminPageInner() {
                         <div className={styles.mapCoordText}>
                             GPS: {mapModal.lat.toFixed(6)}, {mapModal.lon.toFixed(6)}
                         </div>
-                        <a 
+                        <a
                             href={`https://www.google.com/maps?q=${mapModal.lat},${mapModal.lon}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -758,8 +761,8 @@ function AdminPageInner() {
                                                     {r.project_name && <span><b>Prj:</b> {r.project_name} </span>}
                                                     {r.remark && <span><b>Note:</b> {r.remark}</span>}
                                                     {r.lat != null && r.lon != null && !isNaN(Number(r.lat)) && !isNaN(Number(r.lon)) && (
-                                                        <div 
-                                                            className={styles.gpsBadge} 
+                                                        <div
+                                                            className={styles.gpsBadge}
                                                             onClick={() => setMapModal({ isOpen: true, lat: Number(r.lat), lon: Number(r.lon), title: `${r.name} - ${r.branch_name}` })}
                                                             title="คลิกเพื่อดูแผนที่"
                                                         >
@@ -818,6 +821,7 @@ function AdminPageInner() {
                             <option value="late">สาย</option>
                             <option value="early">ออกก่อนเวลา</option>
                             <option value="ot">OT</option>
+                            <option value="absent">ขาดงาน (ยังไม่เช็คอิน)</option>
                         </select>
                     </div>
                     <div className={styles.filterGroup}>
@@ -829,8 +833,8 @@ function AdminPageInner() {
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>&nbsp;</span>
                         <div style={{ display: "flex", gap: 6 }}>
-                            <button className={styles.btnExcelSm} onClick={() => exportData("excel", { date: filterDate, branch: filterBranch })}><ArrowDownTrayIcon width={14} /> Excel</button>
-                            <button className={styles.btnPdfSm} onClick={() => exportData("pdf", { date: filterDate, branch: filterBranch })}><DocumentTextIcon width={14} /> PDF</button>
+                            <button className={styles.btnExcelSm} onClick={() => exportData("excel", { date: filterDate, branch: filterBranch, status: filterStatus })}><ArrowDownTrayIcon width={14} /> Excel</button>
+                            <button className={styles.btnPdfSm} onClick={() => exportData("pdf", { date: filterDate, branch: filterBranch, status: filterStatus })}><DocumentTextIcon width={14} /> PDF</button>
                         </div>
                     </div>
                 </div>
@@ -860,12 +864,12 @@ function AdminPageInner() {
                                                 <div className={styles.empName}>{r.name}</div>
                                             </td>
                                             <td style={{ whiteSpace: "nowrap" }}>
-                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    {r.type?.includes("In") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
-                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : "ออก"}
+                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : r.type === "ขาดงาน" ? styles.absent : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    {r.type?.includes("In") ? <PlayIcon width={12} /> : r.type === "ขาดงาน" ? <XCircleIcon width={12} /> : <StopIcon width={12} />}
+                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : r.type === "ขาดงาน" ? "ขาดงาน" : "ออก"}
                                                 </span>
                                             </td>
-                                            <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
+                                            <td><span className={styles.monoText}>{r.type === "ขาดงาน" ? "—" : formatTime(r.timestamp)}</span></td>
                                             <td style={{ whiteSpace: "nowrap" }}>
                                                 <div style={{ fontWeight: 500 }}>{r.branch_name}</div>
                                                 {(r.project_name || r.remark || (r.lat && r.lon)) && (
@@ -873,8 +877,8 @@ function AdminPageInner() {
                                                         {r.project_name && <span>• <b>Prj:</b> {r.project_name}</span>}
                                                         {r.remark && <span>• <b>Note:</b> {r.remark}</span>}
                                                         {r.lat != null && r.lon != null && !isNaN(Number(r.lat)) && !isNaN(Number(r.lon)) && (
-                                                            <div 
-                                                                className={styles.gpsBadge} 
+                                                            <div
+                                                                className={styles.gpsBadge}
                                                                 onClick={() => setMapModal({ isOpen: true, lat: Number(r.lat), lon: Number(r.lon), title: `${r.name} - ${r.branch_name}` })}
                                                                 title="คลิกเพื่อดูแผนที่"
                                                             >
@@ -1411,7 +1415,7 @@ function AdminPageInner() {
         attendance: "การเข้างาน",
         leave: "การลา",
         holiday: "วันหยุด",
-        
+
         projects: "โครงการ / ลูกค้า",
     };
 

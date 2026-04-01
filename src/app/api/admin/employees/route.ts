@@ -26,6 +26,7 @@ type CreateEmployeeBody = {
     address?: string | null;
     bank_name?: string | null;
     bank_account_no?: string | null;
+    salary_type?: string | null;
 };
 
 type PatchEmployeeBody = {
@@ -50,6 +51,7 @@ type PatchEmployeeBody = {
     address?: string | null;
     bank_name?: string | null;
     bank_account_no?: string | null;
+    salary_type?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -177,6 +179,7 @@ export async function POST(req: Request) {
                 address: body.address ? clean(body.address) : null,
                 bank_name: body.bank_name ? clean(body.bank_name) : null,
                 bank_account_no: body.bank_account_no ? clean(body.bank_account_no) : null,
+                salary_type: body.salary_type || "monthly",
             },
             select: {
                 emp_id: true,
@@ -298,6 +301,9 @@ export async function PATCH(req: Request) {
         }
         if (body.bank_account_no !== undefined) {
             data.bank_account_no = body.bank_account_no ? clean(body.bank_account_no) : null;
+        }
+        if (body.salary_type !== undefined) {
+            data.salary_type = body.salary_type || "monthly";
         }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้

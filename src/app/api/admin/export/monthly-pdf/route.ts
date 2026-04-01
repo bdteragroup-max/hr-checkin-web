@@ -112,7 +112,7 @@ export async function GET(req: Request) {
 
             if (!dailyPairs[r.emp_id][d]) dailyPairs[r.emp_id][d] = {};
 
-            if (r.type === "Check-in") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 presentDaysSetByEmp[r.emp_id]?.add(d);
                 if (r.late_status === "late") lateTimesByEmp[r.emp_id] = (lateTimesByEmp[r.emp_id] || 0) + 1;
 
@@ -120,7 +120,7 @@ export async function GET(req: Request) {
                 if (!currentIn || r.timestamp.getTime() < currentIn.getTime()) {
                     dailyPairs[r.emp_id][d].in = r.timestamp;
                 }
-            } else if (r.type === "Check-out") {
+            } else if (r.type === "Check-out" || r.type === "Project-Out" || r.type === "Offsite-Out") {
                 if (r.late_status === "ot" && r.late_min) {
                     otMinByEmp[r.emp_id] += r.late_min;
                 }
@@ -177,21 +177,21 @@ export async function GET(req: Request) {
         const fontBold = fontBoldBytes ? await pdf.embedFont(fontBoldBytes, { subset: true }) : fontRegular;
 
         let page = pdf.addPage([595.28, 841.89]); // A4
-        let y = 800;
+        let yPos = 800;
 
         const draw = (text: string, size = 12, bold = false) => {
-            if (y < 60) {
+            if (yPos < 60) {
                 page = pdf.addPage([595.28, 841.89]);
-                y = 780;
+                yPos = 780;
             }
-            page.drawText(text, { x: 50, y, size, font: bold ? fontBold : fontRegular });
-            y -= size + 6;
+            page.drawText(text, { x: 50, y: yPos, size, font: bold ? fontBold : fontRegular });
+            yPos -= size + 6;
         };
 
         draw(`Global Monthly Export: ${month}${branchId ? " (Branch: " + branchId + ")" : ""}`, 18, true);
         draw(`Total Working Days: ${workDays}`, 12);
 
-        y -= 10;
+        yPos -= 10;
 
         for (const e of employees) {
             draw(`-------------------------------------------------------------------------`, 10);

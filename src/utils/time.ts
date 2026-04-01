@@ -49,6 +49,6 @@ export function formatDateThai(date: Date | string | null): string {
 export const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 
 /**
- * Generates an array of minutes in 15-min increments
+ * Generates an array of minutes (00-59)
  */
-export const MINUTE_OPTIONS = ["00", "15", "30", "45"];
+export const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));

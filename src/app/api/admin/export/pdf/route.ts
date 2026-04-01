@@ -25,6 +25,7 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const date = url.searchParams.get("date");
         const branch = url.searchParams.get("branch");
+        const statusParam = url.searchParams.get("status") || "";
 
         if (!date) return NextResponse.json({ ok: false, error: "MISSING_DATE" }, { status: 400 });
 
@@ -46,7 +47,52 @@ export async function GET(req: Request) {
             orderBy: { timestamp: "desc" }
         });
 
-        let filteredRows = rows;
+        let filteredRows: any[] = rows;
+
+        if (statusParam === "absent") {
+            const checkinsToday = await prisma.checkins.findMany({
+                where: { 
+                    timestamp: { gte: dayStart, lte: dayEnd },
+                    type: { in: ["Check-in", "Project-In", "Offsite-In"] }
+                },
+                select: { emp_id: true }
+            });
+            const checkedInSet = new Set(checkinsToday.map(c => c.emp_id));
+
+            const activeEmployees = await prisma.employees.findMany({
+                where: {
+                    is_active: true,
+                    ...(branch ? { branch_id: branch } : {})
+                },
+                select: {
+                    emp_id: true,
+                    name: true,
+                    branches: { select: { name: true } },
+                },
+                orderBy: { emp_id: "asc" }
+            });
+
+            filteredRows = activeEmployees
+                .filter(emp => !checkedInSet.has(emp.emp_id))
+                .map(emp => ({
+                    id: Math.random().toString(36).substring(7),
+                    emp_id: emp.emp_id,
+                    name: emp.name,
+                    type: "ขาดงาน",
+                    timestamp: dayStart,
+                    branch_name: emp.branches?.name || "ไม่ระบุสาขา",
+                    distance: null,
+                    photo_url: null,
+                    project_name: null,
+                    remark: "ไม่มีบันทึกเข้างาน",
+                    late_status: "absent",
+                    late_min: null,
+                    lat: null,
+                    lon: null,
+                }));
+        } else if (statusParam) {
+            filteredRows = rows.filter(r => r.late_status === statusParam);
+        }
 
         filteredRows.reverse(); // Chronological order
 
@@ -83,6 +129,7 @@ export async function GET(req: Request) {
             else if (r.type === "Offsite-In") typeLabel = "เข้า (นอกสถานที่)";
             else if (r.type === "Offsite-Out") typeLabel = "ออก (นอกสถานที่)";
             else if (r.type === "Check-in") typeLabel = "เข้า";
+            else if (r.type === "ขาดงาน") typeLabel = "ขาดงาน";
 
             let locStr = r.branch_name || "";
             if (r.project_name) locStr = `Prj: ${r.project_name}`;
@@ -95,7 +142,7 @@ export async function GET(req: Request) {
 
             draw(`-------------------------------------------------------------------------`, 10);
             draw(`${r.emp_id} | ${r.name}`, 12, true);
-            draw(`Time: ${formatTime(r.timestamp)} | Type: ${typeLabel} | Loc: ${locStr}`, 11);
+            draw(`Time: ${r.type === "ขาดงาน" ? "-" : formatTime(r.timestamp)} | Type: ${typeLabel} | Loc: ${locStr}`, 11);
             draw(`Status: ${lateStr} | Distance: ${r.distance != null ? r.distance + "m" : "-"}`, 11);
         }
 

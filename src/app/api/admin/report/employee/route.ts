@@ -66,7 +66,7 @@ export async function GET(req: Request) {
             const d = dStr.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
             map[d] ||= { date: d, note: "" };
 
-            if (r.type === "Check-in" || r.type === "Project-In") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 if (!map[d].checkIn) {
                     map[d].checkIn = dStr.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour12: false });
                     map[d].checkInDate = dStr;
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
                     map[d].project_string = map[d].project_string ? map[d].project_string + " || " + parts.join(" | ") : parts.join(" | ");
                 }
 
-            } else if (r.type === "Check-out" || r.type === "Project-Out") {
+            } else if (r.type === "Check-out" || r.type === "Project-Out" || r.type === "Offsite-Out") {
                 map[d].checkOut = dStr.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour12: false });
                 map[d].checkOutDate = dStr;
 

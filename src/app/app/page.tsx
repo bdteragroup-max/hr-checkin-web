@@ -62,6 +62,7 @@ function formatLocal(ts: string) {
     } catch { return ts; }
 }
 
+
 function getThaiTime() {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
 }
@@ -372,6 +373,7 @@ export default function AppPage() {
 
             await refreshToday();
             await fetchWarnings();
+            await fetchBirthdays();
             setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
         })();
     }, []);
@@ -403,6 +405,7 @@ export default function AppPage() {
             console.error("Fetch warnings failed:", e);
         }
     }
+
 
     /* ── GPS ── */
     async function readGPS() {
@@ -884,6 +887,7 @@ export default function AppPage() {
 
 
                     <HistoryCard today={today} todayKey={todayKey} />
+
 
                 </div>
             </div>

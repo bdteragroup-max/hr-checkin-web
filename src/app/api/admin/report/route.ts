@@ -47,7 +47,7 @@ export async function GET(req: Request) {
         });
         const empIds = emps.map((e) => e.emp_id);
 
-        // checkins in month (ใช้ timestamp ก็ได้ / หรือ date_key ก็ได้)
+        // checkins in month
         const rows = await prisma.checkins.findMany({
             where: {
                 emp_id: { in: empIds },
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
             select: { emp_id: true, timestamp: true, type: true, late_status: true, late_min: true },
         });
 
-        // leaves in month (approved only)
+        // leaves in month
         const monthStart = new Date(`${month}-01T00:00:00.000Z`);
         const monthEnd = new Date(`${month}-31T00:00:00.000Z`);
 
@@ -73,25 +73,22 @@ export async function GET(req: Request) {
         const holidaysFetch = await prisma.holidays.findMany({
             where: {
                 date: {
-                    gte: monthStart, // Since it's stored as DateTime in DB
+                    gte: monthStart,
                     lte: monthEnd
                 }
             }
         });
 
-        // Convert the fetched DB Date objects back into "YYYY-MM-DD" local strings to match against Check-ins
         const holidayDates = new Set(holidaysFetch.map(h =>
             new Date(h.date).toISOString().split("T")[0]
         ));
 
-        // Calculate expected Work Days (Excluding Sundays and Holidays)
+        // Calculate expected Work Days
         let workDays = 0;
         const totalDaysInMonth = end.getDate();
         for (let day = 1; day <= totalDaysInMonth; day++) {
             const d = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), day));
-            // skip sunday
             if (d.getUTCDay() === 0) continue;
-            // skip holiday
             const dStr = d.toISOString().split("T")[0];
             if (holidayDates.has(dStr)) continue;
 
@@ -106,8 +103,8 @@ export async function GET(req: Request) {
         const lateMinByEmp: Record<string, number> = {};
         const otMinByEmp: Record<string, number> = {};
         const workMinByEmp: Record<string, number> = {};
-        // keep track of first checkins and last checkouts per day
         const dailyPairs: Record<string, Record<string, { in?: Date, out?: Date }>> = {};
+        
         for (const id of empIds) {
             presentDaysSetByEmp[id] = new Set();
             lateTimesByEmp[id] = 0;
@@ -122,24 +119,22 @@ export async function GET(req: Request) {
 
             if (!dailyPairs[r.emp_id][d]) dailyPairs[r.emp_id][d] = {};
 
-            if (r.type === "Check-in" || r.type === "Project-In") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 presentDaysSetByEmp[r.emp_id]?.add(d);
                 if (r.late_status === "late") {
                     lateTimesByEmp[r.emp_id] = (lateTimesByEmp[r.emp_id] || 0) + 1;
                     if (r.late_min) lateMinByEmp[r.emp_id] += r.late_min;
                 }
 
-                // Track earliest checkin
                 const currentIn = dailyPairs[r.emp_id][d].in;
                 if (!currentIn || r.timestamp.getTime() < currentIn.getTime()) {
                     dailyPairs[r.emp_id][d].in = r.timestamp;
                 }
-            } else if (r.type === "Check-out" || r.type === "Project-Out") {
+            } else if (r.type === "Check-out" || r.type === "Project-Out" || r.type === "Offsite-Out") {
                 if (r.late_status === "ot" && r.late_min) {
                     otMinByEmp[r.emp_id] += r.late_min;
                 }
 
-                // Track latest checkout
                 const currentOut = dailyPairs[r.emp_id][d].out;
                 if (!currentOut || r.timestamp.getTime() > currentOut.getTime()) {
                     dailyPairs[r.emp_id][d].out = r.timestamp;
@@ -147,12 +142,10 @@ export async function GET(req: Request) {
             }
         }
 
-        // Compute exact work hours and OT Pay
         const otPayByEmp: Record<string, number> = {};
         for (const e of emps) {
             const emp_id = e.emp_id;
             const days = dailyPairs[emp_id];
-
             const isOtEligible = e.job_positions?.is_ot_eligible ?? false;
             const baseSalary = e.base_salary ? Number(e.base_salary) : 0;
             const hourlyRate = (baseSalary / 30) / 8;
@@ -172,7 +165,6 @@ export async function GET(req: Request) {
 
                         const inMin = inTime.getHours() * 60 + inTime.getMinutes();
                         const outMin = outTime.getHours() * 60 + outTime.getMinutes();
-
                         const isHolidayOrWeekend = new Date(date).getUTCDay() === 0 || holidayDates.has(date);
 
                         const calcOverlap = (startM: number, endM: number, b1: number, b2: number) => {
@@ -180,32 +172,20 @@ export async function GET(req: Request) {
                             const maxEnd = Math.min(endM, b2);
                             return Math.max(0, maxEnd - minStart);
                         };
+                        const intersectWithBreak = (startM: number, endM: number) => calcOverlap(startM, endM, 720, 780);
 
-                        const intersectWithBreak = (startM: number, endM: number) => {
-                            return calcOverlap(startM, endM, 720, 780);
-                        };
-
-                        // OT threshold only after 17:00
                         const outAfterThreshold = outMin >= (1020 + 30) ? outMin : Math.min(outMin, 1020);
 
                         if (isHolidayOrWeekend) {
-                            // 08:00-17:00 = 1x
                             let normalMins = calcOverlap(inMin, outMin, 480, 1020);
                             normalMins -= intersectWithBreak(Math.max(inMin, 480), Math.min(outMin, 1020));
-
-                            // Outside 08:00-17:00 = 3x (considering threshold)
                             let outsideMinsBefore = calcOverlap(inMin, outMin, 0, 480);
                             let outsideMinsAfter = calcOverlap(inMin, outAfterThreshold, 1020, 1440);
-                            let outsideMins = outsideMinsBefore + outsideMinsAfter;
-
-                            otTotalPay += (normalMins / 60) * (hourlyRate * 1) + (outsideMins / 60) * (hourlyRate * 3);
+                            otTotalPay += (normalMins / 60) * (hourlyRate * 1) + ((outsideMinsBefore + outsideMinsAfter) / 60) * (hourlyRate * 3);
                         } else {
-                            // Weekday: OT 1.5x outside 08:00-17:00
                             let outsideMinsBefore = calcOverlap(inMin, outMin, 0, 480);
                             let outsideMinsAfter = calcOverlap(inMin, outAfterThreshold, 1020, 1440);
-                            let outsideMins = outsideMinsBefore + outsideMinsAfter;
-
-                            otTotalPay += (outsideMins / 60) * (hourlyRate * 1.5);
+                            otTotalPay += ((outsideMinsBefore + outsideMinsAfter) / 60) * (hourlyRate * 1.5);
                         }
                     }
                 }
@@ -216,10 +196,9 @@ export async function GET(req: Request) {
 
         const employees = emps.map((e) => {
             const present = presentDaysSetByEmp[e.emp_id]?.size || 0;
-            const leaves = leaveDaysByEmp[e.emp_id] || 0;
-            const absents = Math.max(0, workDays - present - leaves);
+            const leavesCount = leaveDaysByEmp[e.emp_id] || 0;
+            const absents = Math.max(0, workDays - present - leavesCount);
             const otHoursText = otMinByEmp[e.emp_id] > 0 ? (Math.round((otMinByEmp[e.emp_id] / 60) * 10) / 10).toString() : "0";
-
             const wMins = workMinByEmp[e.emp_id];
             const wHoursText = wMins > 0 ? `${Math.floor(wMins / 60)}h ${wMins % 60}m` : "—";
 
@@ -232,7 +211,7 @@ export async function GET(req: Request) {
                 lateMins: lateMinByEmp[e.emp_id] || 0,
                 otHours: otHoursText,
                 otPay: Math.round(otPayByEmp[e.emp_id] || 0),
-                leaveDays: leaves,
+                leaveDays: leavesCount,
                 absentDays: absents,
                 workHours: wHoursText,
             };

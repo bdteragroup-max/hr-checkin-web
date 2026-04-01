@@ -116,13 +116,6 @@ export function calcLateOT(type: CheckType): LateInfo {
                 detail: "เช็คอินก่อนเวลา",
                 min: 0,
             };
-        if (diffMin <= 5)
-            return {
-                status: "ontime",
-                label: "ตรงเวลา",
-                detail: `เช็คอินภายใน ${diffMin} นาที`,
-                min: diffMin,
-            };
         return {
             status: "late",
             label: `สาย ${diffMin} นาที`,
@@ -172,7 +165,7 @@ export function calcLateOTFromTimestamp(
     if (type === "Check-in") {
         const startMin = WORK_START_H * 60 + WORK_START_M;
         const diffMin = totalMin - startMin;
-        if (diffMin <= 5)
+        if (diffMin <= 0)
             return {
                 status: "ontime",
                 label: "ตรงเวลา",
@@ -375,18 +368,6 @@ export function captureWithWatermark(
     const rBase = bY + barH + Math.round(bH * 0.22);
     const rH = Math.round(bH * 0.22);
 
-    ctx.font = `700 ${f1}px 'Segoe UI',Arial`;
-    ctx.fillStyle = "#fff";
-    ctx.fillText(empName, tX, rBase);
-
-    ctx.font = `500 ${f2}px 'Segoe UI',Arial`;
-    ctx.fillStyle = "#b0b0b0";
-    ctx.fillText(`ID: ${empId}   |   ${branchName}`, tX, rBase + rH);
-
-    ctx.font = `700 ${f3}px 'Segoe UI',Arial`;
-    ctx.fillStyle = lateColor;
-    ctx.fillText(lateInfo.label, tX, rBase + rH * 2);
-
     const dtStr = `${dateStr}  ${timeStr}`;
     ctx.font = `700 ${f1}px 'Courier New',monospace`;
     ctx.fillStyle = "#fff";
@@ -398,9 +379,24 @@ export function captureWithWatermark(
     const tW = ctx.measureText(typeLabel).width;
     ctx.fillText(typeLabel, w - tW - lPad, rBase + rH);
 
+    // Left text maxWidth calculation
+    const leftMaxWidth = w - Math.max(dtW, tW) - lPad - tX - 40;
+
+    ctx.font = `700 ${f1}px 'Segoe UI',Arial`;
+    ctx.fillStyle = "#fff";
+    ctx.fillText(empName, tX, rBase, leftMaxWidth);
+
+    ctx.font = `500 ${f2}px 'Segoe UI',Arial`;
+    ctx.fillStyle = "#b0b0b0";
+    ctx.fillText(`ID: ${empId}   |   ${branchName}`, tX, rBase + rH, leftMaxWidth);
+
+    ctx.font = `700 ${f3}px 'Segoe UI',Arial`;
+    ctx.fillStyle = lateColor;
+    ctx.fillText(lateInfo.label, tX, rBase + rH * 2, leftMaxWidth);
+
     ctx.font = `400 ${f3}px 'Courier New',monospace`;
     ctx.fillStyle = "#6e6e6e";
-    ctx.fillText(`GPS: ${gpsStr}`, tX, rBase + rH * 3);
+    ctx.fillText(`GPS: ${gpsStr}`, tX, rBase + rH * 3, leftMaxWidth);
 
     ctx.font = `600 ${Math.round(13 * sc)}px 'Segoe UI',Arial`;
     ctx.fillStyle = "rgba(217,48,37,.75)";

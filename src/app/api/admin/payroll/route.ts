@@ -98,13 +98,15 @@ export async function GET(request: Request) {
         const results = employees.map(emp => {
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
             const isOverridden = adj?.override_salary !== null && adj?.override_salary !== undefined;
-            const baseSalary = isOverridden ? Number(adj.override_salary) : (Number(emp.base_salary) || 0);
-            const hourlyWage = (baseSalary / 30) / 8;
+            const baseSalaryInput = isOverridden ? Number(adj.override_salary) : (Number(emp.base_salary) || 0);
+            const isDaily = (emp as any).salary_type === "daily";
+            let baseSalary = baseSalaryInput;
+            let hourlyWage = isDaily ? (baseSalaryInput / 8) : ((baseSalaryInput / 30) / 8);
 
             let isOtEligible = true;
             let otRule = "";
 
-            if (baseSalary >= 20000) {
+            if (baseSalary >= 20000 && !isDaily) {
                 isOtEligible = false;
                 otRule = "ไม่เข้าเงื่อนไข (เงินเดือน ≥ 20,000)";
             } else {
@@ -212,7 +214,7 @@ export async function GET(request: Request) {
             // 4.1 ACCOMMODATION (Auto-calc only if not overridden)
             if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) {
                 accommodation_allowance = Number(adj.accommodation_allowance_override);
-            } else if (empWarnings.length === 0 && !isOnTrial && emp.hire_date) {
+            } else if (!isDaily && empWarnings.length === 0 && !isOnTrial && emp.hire_date) {
                 const hDate = new Date(emp.hire_date);
                 let yrs = endDate.getFullYear() - hDate.getFullYear();
                 const mDiff = endDate.getMonth() - hDate.getMonth();
@@ -230,6 +232,7 @@ export async function GET(request: Request) {
             if (!isOnTrial && empWarnings.length === 0) {
                 const hasLate = empCheckins.some(c => c.late_status === "late");
                 const hasLeave = empLeaves.length > 0;
+                let totalPaidDays = 0;
                 let validWorkdaysCount = 0;
 
                 let curr = new Date(startDate);
@@ -237,36 +240,43 @@ export async function GET(request: Request) {
                     const dateStr = fmt(curr);
                     const isHoliday = curr.getDay() === 0 || holidayDates.has(dateStr);
                     const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
-                    const scansComplete = dayCheckins.some(c => c.type === "Check-in" || c.type === "Project-In") && dayCheckins.some(c => c.type === "Check-out" || c.type === "Project-Out");
-                    
+                    const scansComplete = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type)) && dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
+
                     if (!isHoliday && !scansComplete) missingScanInCycle = true;
-                    if (scansComplete && !empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date))) {
-                        validWorkdaysCount++;
+                    if (scansComplete) {
+                        totalPaidDays++;
+                        if (!empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date))) {
+                            validWorkdaysCount++;
+                        }
                     }
                     curr.setDate(curr.getDate() + 1);
                 }
 
+                if (isDaily && !isOverridden) {
+                    baseSalary = totalPaidDays * baseSalaryInput;
+                }
+
                 if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) {
                     diligence_allowance = Number(adj.diligence_allowance_override);
-                } else if (!hasLate && !hasLeave && !missingScanInCycle) {
+                } else if (!isDaily && !hasLate && !hasLeave && !missingScanInCycle) {
                     diligence_allowance = Number((emp as any).diligence_allowance || 0) || 0;
                 }
 
                 if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                     meal_allowance = Number(adj.meal_allowance_override);
-                } else {
+                } else if (!isDaily) {
                     meal_allowance = validWorkdaysCount * 30;
                 }
 
                 if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                     travel_allowance = Number(adj.travel_allowance_override);
-                } else {
+                } else if (!isDaily) {
                     travel_allowance = validWorkdaysCount * 60;
                 }
             } else {
                 if (isOnTrial) diligence_failed_reason = "อยู่ระหว่างทดลองงาน";
                 else if (empWarnings.length > 0) diligence_failed_reason = "มีใบเตือน";
-                
+
                 // Still allow overrides even if probation/warning
                 if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) diligence_allowance = Number(adj.diligence_allowance_override);
                 if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) meal_allowance = Number(adj.meal_allowance_override);
@@ -275,17 +285,17 @@ export async function GET(request: Request) {
             }
 
             // 4.3 Position & Phone & Travel Claims
-            position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined 
-                ? Number(adj.position_allowance_override) 
-                : (Number(emp.position_allowance) || 0);
+            position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined
+                ? Number(adj.position_allowance_override)
+                : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
 
             telephone_allowance = adj?.phone_allowance_override !== null && adj?.phone_allowance_override !== undefined
                 ? Number(adj.phone_allowance_override)
-                : (empWarnings.length === 0 && emp.has_telephone_allowance ? 300 : 0);
+                : ((!isDaily && empWarnings.length === 0 && emp.has_telephone_allowance) ? 300 : 0);
 
             if (adj?.travel_site_allowance_override !== null && adj?.travel_site_allowance_override !== undefined) {
                 travel_site_allowance = Number(adj.travel_site_allowance_override);
-            } else {
+            } else if (!isDaily) {
                 const empTravelClaims = travelClaims.filter((tc: any) => tc.emp_id === emp.emp_id);
                 empTravelClaims.forEach((tc: any) => {
                     let rate = 0;
@@ -300,13 +310,13 @@ export async function GET(request: Request) {
 
             if (adj?.travel_accommodation_override !== null && adj?.travel_accommodation_override !== undefined) {
                 travel_accommodation = Number(adj.travel_accommodation_override);
-            } else {
+            } else if (!isDaily) {
                 const empTravelClaims = travelClaims.filter((tc: any) => tc.emp_id === emp.emp_id);
                 empTravelClaims.forEach((tc: any) => { travel_accommodation += Number(tc.accommodation_amount) || 0; });
             }
 
             // 4.4 Long-service (December)
-            if (!isOnTrial && month === 12 && emp.hire_date) {
+            if (!isDaily && !isOnTrial && month === 12 && emp.hire_date) {
                 const hDate = new Date(emp.hire_date);
                 let yrs = endDate.getFullYear() - hDate.getFullYear();
                 if (yrs >= 3 && yrs < 4) long_service_allowance = 3000;
@@ -322,17 +332,17 @@ export async function GET(request: Request) {
             const totalOtAmount = normalOtPay + holiday1xPay + holiday3xPay;
 
             const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance;
-            
+
             const student_loan = Number(adj?.student_loan || 0);
             const unpaid_absenteeism = Number(adj?.unpaid_absenteeism || 0);
-            
+
             // --- 5. SOCIAL SECURITY (SSO) FORMULA ---
             let social_security = 0;
             if (adj?.social_security !== null && adj?.social_security !== undefined) {
                 social_security = Number(adj.social_security);
             } else {
                 const ssoBase = Math.max(0, baseSalary - unpaid_absenteeism);
-                if (ssoBase > 1650) {
+                if (ssoBase > 1650 && !isDaily) {
                     const cappedBase = Math.min(17500, ssoBase);
                     social_security = Math.round(cappedBase * 0.05);
                 }
@@ -343,7 +353,7 @@ export async function GET(request: Request) {
             const bonus = Number(adj?.bonus || 0);
             const other_deductions = Number(adj?.other_deductions || 0);
             const other_benefits = Number(adj?.other_benefits || 0);
-            
+
             const grossPay = netPayCalculated + commissions + bonus + other_benefits;
             const finalNetPay = grossPay - social_security - student_loan - other_deductions - unpaid_absenteeism - tax;
 

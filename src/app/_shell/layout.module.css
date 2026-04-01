@@ -18,8 +18,10 @@
   --sb-w: 252px;
   --sb-w-mini: 68px;
 
-  --sb-bg: #111827; /* rich near-black */
-  --sb-bg-2: #0d1420; /* deeper layer */
+  --sb-bg: #111827;
+  /* rich near-black */
+  --sb-bg-2: #0d1420;
+  /* deeper layer */
   --sb-border: rgba(255, 255, 255, 0.055);
   --sb-border-2: rgba(255, 255, 255, 0.09);
 
@@ -80,17 +82,13 @@
 
   /* Subtle inner texture — diagonal gradient */
   background-image:
-    linear-gradient(
-      160deg,
+    linear-gradient(160deg,
       rgba(255, 255, 255, 0.025) 0%,
       transparent 50%,
-      rgba(0, 0, 0, 0.06) 100%
-    ),
-    radial-gradient(
-      ellipse 120% 60% at 50% 0%,
+      rgba(0, 0, 0, 0.06) 100%),
+    radial-gradient(ellipse 120% 60% at 50% 0%,
       rgba(217, 48, 37, 0.06) 0%,
-      transparent 65%
-    );
+      transparent 65%);
 }
 
 .collapsed .sidebar {
@@ -232,6 +230,7 @@
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -259,6 +258,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -568,16 +568,12 @@
   overflow-y: auto;
   background: var(--bg);
   background-image:
-    radial-gradient(
-      ellipse 80% 50% at 105% -5%,
+    radial-gradient(ellipse 80% 50% at 105% -5%,
       rgba(217, 48, 37, 0.055) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 55% 55% at -5% 105%,
+      transparent 55%),
+    radial-gradient(ellipse 55% 55% at -5% 105%,
       rgba(15, 23, 42, 0.04) 0%,
-      transparent 60%
-    );
+      transparent 60%);
 }
 
 /* ════════════════════════════════════════
@@ -596,9 +592,11 @@
   .shell {
     grid-template-columns: var(--sb-w-mini) 1fr;
   }
+
   .sidebar {
     width: var(--sb-w-mini);
   }
+
   .sidebar:hover {
     width: var(--sb-w);
     box-shadow:
@@ -606,6 +604,7 @@
       6px 0 32px rgba(0, 0, 0, 0.22),
       16px 0 60px rgba(0, 0, 0, 0.12);
   }
+
   /* Reveal text on hover */
   .sidebar:hover .brandText,
   .sidebar:hover .navText,
@@ -617,14 +616,17 @@
     transform: none;
     pointer-events: auto;
   }
+
   .sidebar:hover .navItem {
     justify-content: flex-start;
     padding: 10px 10px;
   }
+
   /* Hide tooltip on hover-open */
   .sidebar:hover .navItem::after {
     display: none;
   }
+
   /* Hide toggle on tablet */
   .collapseBtn {
     display: none;
@@ -637,9 +639,11 @@
     display: block;
     padding-bottom: var(--mob-h);
   }
+
   .sidebar {
     display: none;
   }
+
   .main {
     min-height: calc(100vh - var(--mob-h));
   }
@@ -706,6 +710,7 @@
     font-size: 19px;
     line-height: 1;
   }
+
   .mobileLabel {
     font-family: "Noto Sans Thai", "DM Sans", sans-serif;
     font-size: 9.5px;

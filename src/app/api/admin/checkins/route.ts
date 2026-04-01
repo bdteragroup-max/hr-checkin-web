@@ -14,6 +14,7 @@ function lateLabel(late_status: string | null, late_min: number | null) {
     if (late_status === "early") return `ออกก่อน ${late_min ?? 0} นาที`;
     if (late_status === "ontime") return "ตรงเวลา";
     if (late_status === "ot") return "OT";
+    if (late_status === "absent") return "ขาดงาน";
     return late_status;
 }
 
@@ -39,6 +40,7 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const date = url.searchParams.get("date") || "";     // YYYY-MM-DD
         const branchParam = url.searchParams.get("branch") || ""; // id หรือชื่อสาขา
+        const statusParam = url.searchParams.get("status") || "";
 
         // ✅ active employees only
         const activeEmpIds = (
@@ -70,6 +72,66 @@ export async function GET(req: Request) {
             where.branch_name = branchName;
         }
 
+        // 🔴 ABSENT MODE
+        if (statusParam === "absent") {
+            const dayStart = date ? new Date(`${date}T00:00:00+07:00`) : new Date(new Date().setHours(0,0,0,0));
+            const dayEnd = date ? new Date(`${date}T23:59:59.999+07:00`) : new Date(new Date().setHours(23,59,59,999));
+
+            // Get all check-ins for the day (any type means they are not absent)
+            const checkinsToday = await prisma.checkins.findMany({
+                where: {
+                    timestamp: { gte: dayStart, lte: dayEnd }
+                },
+                select: { emp_id: true }
+            });
+
+            const checkedInSet = new Set(checkinsToday.map(c => c.emp_id));
+
+            // Get all active employees who haven't checked in
+            const activeEmployees = await prisma.employees.findMany({
+                where: {
+                    is_active: true,
+                    ...(branchParam ? { branch_id: branchParam as any } : {})
+                },
+                select: {
+                    emp_id: true,
+                    name: true,
+                    branches: { select: { name: true } },
+                },
+                orderBy: { emp_id: "asc" }
+            });
+
+            const missing = activeEmployees
+                .filter(emp => !checkedInSet.has(emp.emp_id))
+                .map(emp => ({
+                    id: Math.random().toString(36).substring(7),
+                    emp_id: emp.emp_id,
+                    name: emp.name,
+                    type: "ขาดงาน",
+                    timestamp: dayStart.toISOString(), // proxy timestamp
+                    branch_name: emp.branches?.name || "ไม่ระบุสาขา",
+                    distance: null,
+                    photo_url: null,
+                    project_name: null,
+                    remark: "ไม่มีบันทึกเข้างาน",
+                    late_status: "absent",
+                    late_min: null,
+                    lat: null,
+                    lon: null,
+                }));
+
+            return NextResponse.json(
+                jsonSafe({
+                    ok: true,
+                    list: missing.map((r) => ({
+                        ...r,
+                        late_label: lateLabel(r.late_status, null),
+                    })),
+                })
+            );
+        }
+
+        // 🟢 NORMAL LOG MODE
         const rows = await prisma.checkins.findMany({
             where,
             orderBy: { timestamp: "desc" },

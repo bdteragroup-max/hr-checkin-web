@@ -109,7 +109,7 @@ export async function GET(req: Request) {
 
             if (!dailyPairs[r.emp_id][d]) dailyPairs[r.emp_id][d] = {};
 
-            if (r.type === "Check-in" || r.type === "Project-In") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 presentDaysSetByEmp[r.emp_id]?.add(d);
                 if (r.late_status === "late") lateTimesByEmp[r.emp_id] = (lateTimesByEmp[r.emp_id] || 0) + 1;
 
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
                 if (!currentIn || r.timestamp.getTime() < currentIn.getTime()) {
                     dailyPairs[r.emp_id][d].in = r.timestamp;
                 }
-            } else if (r.type === "Check-out" || r.type === "Project-Out") {
+            } else if (r.type === "Check-out" || r.type === "Project-Out" || r.type === "Offsite-Out") {
                 if (r.late_status === "ot" && r.late_min) {
                     otMinByEmp[r.emp_id] += r.late_min;
                 }

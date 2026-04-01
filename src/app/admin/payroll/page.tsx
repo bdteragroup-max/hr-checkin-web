@@ -62,7 +62,7 @@ export default function PayrollPage() {
     const [data, setData] = useState<PayrollResult[]>([]);
     const [cycle, setCycle] = useState<{ start: string; end: string } | null>(null);
     const [loading, setLoading] = useState(true);
-    
+
     // Edit Modal State
     const [showModal, setShowModal] = useState(false);
     const [editingEmp, setEditingEmp] = useState<PayrollResult | null>(null);
@@ -153,7 +153,7 @@ export default function PayrollPage() {
             });
             if (res.ok) {
                 setShowModal(false);
-                loadData(); 
+                loadData();
             } else {
                 alert("Failed to save adjustments");
             }
@@ -446,19 +446,19 @@ export default function PayrollPage() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ฐานเงินเดือนรอบนี้</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.override_salary} onChange={e => setEditForm({...editForm, override_salary: e.target.value})} placeholder={formatB(editingEmp.base_salary_original)} />
+                                            <input className={styles.inputElement} type="number" value={editForm.override_salary} onChange={e => setEditForm({ ...editForm, override_salary: e.target.value })} placeholder={formatB(editingEmp.base_salary_original)} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>OT ปกติ 1.5x (ชม.)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.normal_1_5x_hours_override} onChange={e => setEditForm({...editForm, normal_1_5x_hours_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.normal_1_5x_hours_override} onChange={e => setEditForm({ ...editForm, normal_1_5x_hours_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ทำงานวันหยุด 1x (ชม.)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.holiday_1_x_hours_override} onChange={e => setEditForm({...editForm, holiday_1_x_hours_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.holiday_1_x_hours_override} onChange={e => setEditForm({ ...editForm, holiday_1_x_hours_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>OT วันหยุด 3x (ชม.)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.holiday_3_x_hours_override} onChange={e => setEditForm({...editForm, holiday_3_x_hours_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.holiday_3_x_hours_override} onChange={e => setEditForm({ ...editForm, holiday_3_x_hours_override: e.target.value })} />
                                         </div>
                                     </div>
                                 </div>
@@ -473,47 +473,47 @@ export default function PayrollPage() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>เบี้ยขยัน</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.diligence_allowance_override} onChange={e => setEditForm({...editForm, diligence_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.diligence_allowance_override} onChange={e => setEditForm({ ...editForm, diligence_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าอาหาร</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.meal_allowance_override} onChange={e => setEditForm({...editForm, meal_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.meal_allowance_override} onChange={e => setEditForm({ ...editForm, meal_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าเดินทาง</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.travel_allowance_override} onChange={e => setEditForm({...editForm, travel_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_allowance_override} onChange={e => setEditForm({ ...editForm, travel_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าที่พัก (สวัสดิการ)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.accommodation_allowance_override} onChange={e => setEditForm({...editForm, accommodation_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.accommodation_allowance_override} onChange={e => setEditForm({ ...editForm, accommodation_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าโทรศัพท์</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.phone_allowance_override} onChange={e => setEditForm({...editForm, phone_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.phone_allowance_override} onChange={e => setEditForm({ ...editForm, phone_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>เงินประจำตำแหน่ง</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.position_allowance_override} onChange={e => setEditForm({...editForm, position_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.position_allowance_override} onChange={e => setEditForm({ ...editForm, position_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>เบี้ยเลี้ยง Off-Site</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.travel_site_allowance_override} onChange={e => setEditForm({...editForm, travel_site_allowance_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_site_allowance_override} onChange={e => setEditForm({ ...editForm, travel_site_allowance_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าที่พัก (Claim)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.travel_accommodation_override} onChange={e => setEditForm({...editForm, travel_accommodation_override: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.travel_accommodation_override} onChange={e => setEditForm({ ...editForm, travel_accommodation_override: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ค่าคอมมิชชั่น</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.commissions} onChange={e => setEditForm({...editForm, commissions: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.commissions} onChange={e => setEditForm({ ...editForm, commissions: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>โบนัส</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.bonus} onChange={e => setEditForm({...editForm, bonus: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.bonus} onChange={e => setEditForm({ ...editForm, bonus: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>รายได้อื่นๆ</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.other_benefits} onChange={e => setEditForm({...editForm, other_benefits: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.other_benefits} onChange={e => setEditForm({ ...editForm, other_benefits: e.target.value })} />
                                         </div>
                                     </div>
                                 </div>
@@ -528,23 +528,23 @@ export default function PayrollPage() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ประกันสังคม</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.social_security} onChange={e => setEditForm({...editForm, social_security: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.social_security} onChange={e => setEditForm({ ...editForm, social_security: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>กยศ.</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.student_loan} onChange={e => setEditForm({...editForm, student_loan: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.student_loan} onChange={e => setEditForm({ ...editForm, student_loan: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ขาดงาน (หัก)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.unpaid_absenteeism} onChange={e => setEditForm({...editForm, unpaid_absenteeism: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.unpaid_absenteeism} onChange={e => setEditForm({ ...editForm, unpaid_absenteeism: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ภาษี (หัก)</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.tax} onChange={e => setEditForm({...editForm, tax: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.tax} onChange={e => setEditForm({ ...editForm, tax: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>หักอื่นๆ</label>
-                                            <input className={styles.inputElement} type="number" value={editForm.other_deductions} onChange={e => setEditForm({...editForm, other_deductions: e.target.value})} />
+                                            <input className={styles.inputElement} type="number" value={editForm.other_deductions} onChange={e => setEditForm({ ...editForm, other_deductions: e.target.value })} />
                                         </div>
                                     </div>
                                 </div></div>

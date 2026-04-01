@@ -155,7 +155,7 @@ export async function POST(req: Request) {
 
     const date_key = new Date(dateKeyLocalISO());
     const time_key = new Date();
-    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") ? { status: null, min: null, label: null } : calcLateOT(type as "Check-in" | "Check-out");
+    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") ? { status: "ontime", min: 0, label: "ตรงเวลา" } : calcLateOT(type as "Check-in" | "Check-out");
 
     // ❗ กัน Check-out ก่อน Check-in
     if (type === "Check-out" || type === "Project-Out" || type === "Offsite-Out") {
