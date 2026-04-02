@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { sendOtApprovalFlexMessage } from "@/utils/lineMessaging";
 
 export async function POST(request: Request) {
     try {
@@ -35,7 +36,8 @@ export async function POST(request: Request) {
 
         // Get employee info
         const emp = await prisma.employees.findUnique({
-            where: { emp_id: decoded.emp_id }
+            where: { emp_id: decoded.emp_id },
+            include: { supervisor: { select: { line_user_id: true } } }
         });
 
         if (!emp) {
@@ -61,6 +63,18 @@ export async function POST(request: Request) {
                 supervisor_id: emp.supervisor_id
             }
         });
+
+        if (emp.supervisor?.line_user_id) {
+            sendOtApprovalFlexMessage(emp.supervisor.line_user_id, {
+                id: newOt.id,
+                empName: emp.name,
+                dateFor: new Date(date_for).toLocaleDateString("th-TH"),
+                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                totalHours: diffHrs,
+                reason: reason || ""
+            }).catch(console.error);
+        }
 
         return NextResponse.json(newOt);
     } catch (e: any) {

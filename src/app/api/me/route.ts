@@ -21,6 +21,7 @@ export async function GET() {
         branch_id: emp.branch_id,
         is_supervisor: subsCount > 0,
         base_salary: Number(emp.base_salary),
-        birth_date: emp.birth_date
+        birth_date: emp.birth_date,
+        line_user_id: emp.line_user_id
     });
 }

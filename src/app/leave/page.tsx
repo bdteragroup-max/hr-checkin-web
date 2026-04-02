@@ -16,6 +16,13 @@ import {
 } from "@heroicons/react/24/solid";
 import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/utils/time";
 
+const getLeaveHourOptions = (dateStr: string) => {
+    const isSat = dateStr ? new Date(dateStr).getDay() === 6 : false;
+    const max = isSat ? 15 : 17;
+    return HOUR_OPTIONS.filter(h => Number(h) >= 8 && Number(h) <= max);
+};
+const LEAVE_MINUTE_OPTIONS = MINUTE_OPTIONS;
+
 /* ── Types ── */
 type LeaveType = {
     id: string; name: string;
@@ -120,9 +127,24 @@ export default function LeavePage() {
     const [endHour, setEndHour] = useState("17");
     const [endMin, setEndMin] = useState("00");
 
-    const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00` : "", [startDate, startHour, startMin]);
-    const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00` : "", [endDate, endHour, endMin]);
+    const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
+    const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
     
+    const startHourOptions = useMemo(() => getLeaveHourOptions(startDate), [startDate]);
+    const endHourOptions = useMemo(() => getLeaveHourOptions(endDate), [endDate]);
+
+    useEffect(() => {
+        if (startDate && new Date(startDate).getDay() === 6 && Number(startHour) > 15) {
+            setStartHour("15");
+        }
+    }, [startDate, startHour]);
+
+    useEffect(() => {
+        if (endDate && new Date(endDate).getDay() === 6 && Number(endHour) > 15) {
+            setEndHour("15");
+        }
+    }, [endDate, endHour]);
+
     const [reason, setReason] = useState("");
     const [attachmentUrl, setAttachmentUrl] = useState("");
     const [fileName, setFileName] = useState("");
@@ -374,14 +396,14 @@ export default function LeavePage() {
                                         <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
                                             <label className={styles.label}>ชม.</label>
                                             <select className={styles.select} value={startHour} onChange={e => setStartHour(e.target.value)}>
-                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                                {startHourOptions.map(h => <option key={h} value={h}>{h}</option>)}
                                             </select>
                                         </div>
                                         <span className={styles.timeSeparator}>:</span>
                                         <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
                                             <label className={styles.label}>นาที</label>
                                             <select className={styles.select} value={startMin} onChange={e => setStartMin(e.target.value)}>
-                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                                {LEAVE_MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                                             </select>
                                         </div>
                                     </div>
@@ -397,14 +419,14 @@ export default function LeavePage() {
                                         <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
                                             <label className={styles.label}>ชม.</label>
                                             <select className={styles.select} value={endHour} onChange={e => setEndHour(e.target.value)}>
-                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                                {endHourOptions.map(h => <option key={h} value={h}>{h}</option>)}
                                             </select>
                                         </div>
                                         <span className={styles.timeSeparator}>:</span>
                                         <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
                                             <label className={styles.label}>นาที</label>
                                             <select className={styles.select} value={endMin} onChange={e => setEndMin(e.target.value)}>
-                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                                {LEAVE_MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                                             </select>
                                         </div>
                                     </div>

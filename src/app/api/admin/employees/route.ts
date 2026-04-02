@@ -27,6 +27,7 @@ type CreateEmployeeBody = {
     bank_name?: string | null;
     bank_account_no?: string | null;
     salary_type?: string | null;
+    line_user_id?: string | null;
 };
 
 type PatchEmployeeBody = {
@@ -52,6 +53,7 @@ type PatchEmployeeBody = {
     bank_name?: string | null;
     bank_account_no?: string | null;
     salary_type?: string | null;
+    line_user_id?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -111,6 +113,8 @@ export async function GET(req: Request) {
                 address: true,
                 bank_name: true,
                 bank_account_no: true,
+                line_user_id: true,
+                salary_type: true
             },
         });
 
@@ -180,6 +184,7 @@ export async function POST(req: Request) {
                 bank_name: body.bank_name ? clean(body.bank_name) : null,
                 bank_account_no: body.bank_account_no ? clean(body.bank_account_no) : null,
                 salary_type: body.salary_type || "monthly",
+                line_user_id: body.line_user_id ? clean(body.line_user_id) : null,
             },
             select: {
                 emp_id: true,
@@ -202,6 +207,7 @@ export async function POST(req: Request) {
                 address: true,
                 bank_name: true,
                 bank_account_no: true,
+                line_user_id: true,
             },
         });
 
@@ -305,6 +311,9 @@ export async function PATCH(req: Request) {
         if (body.salary_type !== undefined) {
             data.salary_type = body.salary_type || "monthly";
         }
+        if (body.line_user_id !== undefined) {
+            data.line_user_id = body.line_user_id ? clean(body.line_user_id) : null;
+        }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้
         if (body.pin !== undefined) {
@@ -339,6 +348,7 @@ export async function PATCH(req: Request) {
                 address: true,
                 bank_name: true,
                 bank_account_no: true,
+                line_user_id: true,
             },
         });
 

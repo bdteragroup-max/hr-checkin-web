@@ -13,6 +13,8 @@ type LeaveRow = {
     reason: string | null;
     start_date: string; // ISO
     end_date: string; // ISO
+    start_at?: string; // ISO
+    end_at?: string; // ISO
     status: "pending" | "approved" | "rejected" | string;
     approved_by?: string | null;
     approved_at?: string | null;
@@ -279,7 +281,7 @@ export default function AdminLeavesPage() {
                                                     <div className={styles.monoText} style={{ marginTop: 6 }}>{r.emp_id}</div>
                                                 </td>
                                                 <td>{r.leave_type || "-"}</td>
-                                                <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_date)} - {fmtDateTime(r.end_date)}</td>
+                                                <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_at || r.start_date)} - {fmtDateTime(r.end_at || r.end_date)}</td>
                                                 <td style={{ textAlign: "center" }}>{days} วัน</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
@@ -328,7 +330,7 @@ export default function AdminLeavesPage() {
                                             <td>{r.name || "-"}</td>
                                             <td>{r.leave_type || "-"}</td>
                                             <td style={{ fontSize: 12 }}>
-                                                {fmtDateTime(r.start_date)} – {fmtDateTime(r.end_date)}
+                                                {fmtDateTime(r.start_at || r.start_date)} – {fmtDateTime(r.end_at || r.end_date)}
                                                 {r.days ? <><br />({r.days} วัน)</> : ""}
                                             </td>
                                             <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 520 }}>

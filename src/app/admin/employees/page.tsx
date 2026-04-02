@@ -33,6 +33,7 @@ type Emp = {
     bank_account_no?: string | null;
     bank_name?: string | null;
     salary_type?: string | null;
+    line_user_id?: string | null;
 };
 
 type EditDraft = {
@@ -56,6 +57,7 @@ type EditDraft = {
     bank_account_no: string;
     bank_name: string;
     salary_type: string;
+    line_user_id: string;
 };
 
 type Department = { id: number; name: string };
@@ -100,6 +102,7 @@ export default function AdminEmployeesPage() {
     const [bankAccountNo, setBankAccountNo] = useState("");
     const [bankName, setBankName] = useState("");
     const [salaryType, setSalaryType] = useState<"monthly" | "daily">("monthly");
+    const [lineUserId, setLineUserId] = useState("");
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -184,6 +187,7 @@ export default function AdminEmployeesPage() {
                     bank_account_no: bankAccountNo.trim() || null,
                     bank_name: bankName.trim() || null,
                     salary_type: salaryType,
+                    line_user_id: lineUserId.trim() || null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -200,7 +204,7 @@ export default function AdminEmployeesPage() {
             showToast(`✅ เพิ่ม ${name.trim()} แล้ว`);
             setNewEmpId(empId.trim());
             setTimeout(() => setNewEmpId(null), 3000);
-            
+
             setEmpId(""); setName(""); setBranchId(""); setPin("");
             setIsActive(true); setGender("M"); setHireDate(""); setBirthDate(""); setPhoneNumber("");
             setDepartmentId(0); setPositionId(0); setBaseSalary(""); setSupervisorId("");
@@ -208,6 +212,7 @@ export default function AdminEmployeesPage() {
             setPositionAllowance("");
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
             setSalaryType("monthly");
+            setLineUserId("");
             setCreateModalOpen(false);
             await load();
         } finally { setSaving(false); }
@@ -242,6 +247,7 @@ export default function AdminEmployeesPage() {
                     bank_account_no: editDraft.bank_account_no.trim() || null,
                     bank_name: editDraft.bank_name.trim() || null,
                     salary_type: editDraft.salary_type,
+                    line_user_id: editDraft.line_user_id.trim() || null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -519,6 +525,7 @@ export default function AdminEmployeesPage() {
                                                                     bank_account_no: x.bank_account_no || "",
                                                                     bank_name: x.bank_name || "",
                                                                     salary_type: x.salary_type || "monthly",
+                                                                    line_user_id: x.line_user_id || "",
                                                                 });
                                                             }}
                                                         >
@@ -667,9 +674,9 @@ export default function AdminEmployeesPage() {
                             </div>
 
                             <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
-                            <SearchableSelect 
-                                className={styles.input} 
-                                value={supervisorId} 
+                            <SearchableSelect
+                                className={styles.input}
+                                value={supervisorId}
                                 onChange={(val) => setSupervisorId(val)}
                                 options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                                 placeholder="— ไม่มี / ไม่ระบุ —"
@@ -718,6 +725,10 @@ export default function AdminEmployeesPage() {
                                 <label className={styles.lbl} style={{ marginTop: 16 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
                                 <input type="number" className={styles.input} placeholder="0.00"
                                     value={positionAllowance} onChange={(e) => setPositionAllowance(e.target.value)} />
+
+                                <label className={styles.lbl} style={{ marginTop: 16 }}>LINE User ID (สำหรับการแจ้งเตือน)</label>
+                                <input className={styles.input} placeholder="U123456789..."
+                                    value={lineUserId} onChange={(e) => setLineUserId(e.target.value)} />
                             </div>
                         </div>
 
@@ -860,10 +871,10 @@ export default function AdminEmployeesPage() {
                             </div>
                         </div>
 
-                        <label className={styles.lbl} style={{ marginTop: 10 }}>เบอร์โทรศัพท์มือถือ</label>
-                        <SearchableSelect 
-                            className={styles.input} 
-                            value={editDraft.supervisor_id} 
+                        <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
+                        <SearchableSelect
+                            className={styles.input}
+                            value={editDraft.supervisor_id}
                             onChange={(val) => setEditDraft((d) => d && ({ ...d, supervisor_id: val }))}
                             options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                             placeholder="— ไม่มี / ไม่ระบุ —"
@@ -890,6 +901,10 @@ export default function AdminEmployeesPage() {
                             <label className={styles.lbl} style={{ marginTop: 10 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
                             <input type="number" className={styles.input} placeholder="0.00" value={editDraft.position_allowance}
                                 onChange={(e) => setEditDraft((d) => d && ({ ...d, position_allowance: e.target.value }))} />
+
+                            <label className={styles.lbl} style={{ marginTop: 16 }}>LINE User ID (สำหรับการแจ้งเตือน)</label>
+                            <input className={styles.input} placeholder="U123456789..." value={editDraft.line_user_id}
+                                onChange={(e) => setEditDraft((d) => d && ({ ...d, line_user_id: e.target.value }))} />
                         </div>
 
                         {/* Phone Number */}

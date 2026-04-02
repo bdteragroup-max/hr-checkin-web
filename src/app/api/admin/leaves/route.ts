@@ -57,6 +57,8 @@ export async function GET(req: Request) {
                 reason: true,
                 start_date: true,
                 end_date: true,
+                start_at: true,
+                end_at: true,
                 days: true,
                 minutes: true,
                 status: true,

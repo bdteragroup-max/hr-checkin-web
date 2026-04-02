@@ -32,7 +32,7 @@ const OT_THRESHOLD_MIN = 30;
 /* ──────────────────────────────────────────
    TYPES
 ────────────────────────────────────────── */
-interface Me { emp_id: string; name: string; branch_id: string | null }
+interface Me { emp_id: string; name: string; branch_id: string | null; line_user_id?: string | null; }
 interface Branch { id: string; name: string; centerLat?: number; centerLon?: number; radiusM?: number }
 interface TodayItem {
     id: number | string;
@@ -777,6 +777,7 @@ export default function AppPage() {
                             </div>
                         </div>
                     )}
+
 
                     {(!empId || !empName) && (
                         <div className={styles.card}>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/jwt";
 import crypto from "crypto";
+import { sendLeaveApprovalFlexMessage } from "@/utils/lineMessaging";
 
 export const runtime = "nodejs";
 
@@ -252,7 +253,7 @@ export async function POST(req: Request) {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true },
+        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, supervisor: { select: { line_user_id: true } } },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -361,6 +362,18 @@ export async function POST(req: Request) {
                 supervisor_id: emp.supervisor_id || null,
             },
         });
+
+        if (emp.supervisor?.line_user_id) {
+            sendLeaveApprovalFlexMessage(emp.supervisor.line_user_id, {
+                id,
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH"),
+                endDate: endAt.toLocaleDateString("th-TH"),
+                days,
+                reason: reason || ""
+            }).catch(console.error);
+        }
     } catch (e: any) {
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้
         const msg = String(e?.message || "");
