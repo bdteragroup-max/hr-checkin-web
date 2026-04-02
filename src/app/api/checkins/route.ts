@@ -131,23 +131,35 @@ export async function POST(req: Request) {
     if (!branch)
         return NextResponse.json({ error: "INVALID_BRANCH" }, { status: 400 });
 
-    const bLat = Number(branch.center_lat);
-    const bLon = Number(branch.center_lon);
-    const bRad = branch.radius_m;
-
-    // 🔥 If branch coords + radius are 0, it means "No Fence Setup" -> Skip Radius Check
-    const isUnmapped = bLat === 0 && bLon === 0 && bRad === 0;
+    const isProject = type.startsWith("Project");
     const isOffsite = type.startsWith("Offsite");
-    
-    // Bypass radius check for Unmapped Branches OR Offsite Check-ins
-    const distance = (isUnmapped || isOffsite) ? 0 : getDistanceMeters(lat, lon, bLat, bLon);
 
-    if (!(isUnmapped || isOffsite) && distance > bRad) {
+    let targetLat = Number(branch.center_lat);
+    let targetLon = Number(branch.center_lon);
+    let targetRad = branch.radius_m;
+
+    if (isProject) {
+        if (!customer_id) return NextResponse.json({ error: "MISSING_PROJECT" }, { status: 400 });
+        const project = await prisma.projects.findUnique({ where: { id: customer_id } });
+        if (!project) return NextResponse.json({ error: "INVALID_PROJECT" }, { status: 400 });
+        
+        targetLat = Number(project.lat || 0);
+        targetLon = Number(project.lng || 0);
+        targetRad = project.radius_m || 200;
+    }
+
+    // 🔥 If coords + radius are 0, it means "No Fence Setup" -> Skip Radius Check
+    const isUnmapped = targetLat === 0 && targetLon === 0 && targetRad === 0;
+    
+    // Bypass radius check for Unmapped Branches/Projects OR Offsite Check-ins
+    const distance = (isUnmapped || isOffsite) ? 0 : getDistanceMeters(lat, lon, targetLat, targetLon);
+
+    if (!(isUnmapped || isOffsite) && distance > targetRad) {
         return NextResponse.json(
             {
                 error: "OUT_OF_RADIUS",
                 distance: Math.round(distance),
-                radius_m: bRad,
+                radius_m: targetRad,
             },
             { status: 403 }
         );

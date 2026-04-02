@@ -265,13 +265,13 @@ export async function GET(request: Request) {
                 if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                     meal_allowance = Number(adj.meal_allowance_override);
                 } else if (!isDaily) {
-                    meal_allowance = validWorkdaysCount * 30;
+                    meal_allowance = validWorkdaysCount * 60;
                 }
 
                 if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                     travel_allowance = Number(adj.travel_allowance_override);
                 } else if (!isDaily) {
-                    travel_allowance = validWorkdaysCount * 60;
+                    travel_allowance = validWorkdaysCount * 100;
                 }
             } else {
                 if (isOnTrial) diligence_failed_reason = "อยู่ระหว่างทดลองงาน";

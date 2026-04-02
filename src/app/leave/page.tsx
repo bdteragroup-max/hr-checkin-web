@@ -110,6 +110,7 @@ export default function LeavePage() {
     const [list, setList] = useState<LeaveItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [editingId, setEditingId] = useState("");
     const [leaveTypeId, setLeaveTypeId] = useState("");
     
     const [startDate, setStartDate] = useState("");
@@ -197,15 +198,19 @@ export default function LeavePage() {
     async function submit() {
         if (!canSubmit) return;
         setLoading(true);
+        const method = editingId ? "PUT" : "POST";
+        const payload: any = {
+            leave_type_id: leaveTypeId,
+            start_at: startAt, end_at: endAt,
+            reason: reason || null,
+            attachment_url: attachmentUrl || null,
+        };
+        if (editingId) payload.id = editingId;
+
         const r = await fetch("/api/leave", {
-            method: "POST",
+            method,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                leave_type_id: leaveTypeId,
-                start_at: startAt, end_at: endAt,
-                reason: reason || null,
-                attachment_url: attachmentUrl || null,
-            }),
+            body: JSON.stringify(payload),
         });
         const data = await r.json().catch(() => ({}));
         setLoading(false);
@@ -221,15 +226,50 @@ export default function LeavePage() {
                 ANNUAL_FULL_DAYS_ONLY: "ลาพักร้อนต้องลาเป็นวันเต็มเท่านั้น (08:00 - 17:00)",
                 ADVANCE_NOTICE_REQUIRED: `ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${data?.required_days} วัน`,
                 EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${data?.remaining || 0} วัน (ขอลา ${data?.requested || 0} วัน)`,
+                CANNOT_EDIT_APPROVED: "ไม่สามารถแก้ไขใบลาที่อนุมัติแล้วได้",
             };
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
             return;
         }
         setStartDate(""); setEndDate(""); setReason("");
         setAttachmentUrl(""); setFileName("");
+        setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
         await load();
-        showAlert(`ส่งคำขอลาสำเร็จ\n${data.days} วันทำงาน · ${Math.floor((data.minutes || 0) / 60)}ชม ${(data.minutes || 0) % 60}นาที`, "ok");
+        showAlert(editingId ? `อัปเดตคำขอลาสำเร็จ` : `ส่งคำขอลาสำเร็จ\n${data.days} วันทำงาน · ${Math.floor((data.minutes || 0) / 60)}ชม ${(data.minutes || 0) % 60}นาที`, "ok");
+    }
+
+    function cancelEdit() {
+        setStartDate(""); setEndDate(""); setReason("");
+        setAttachmentUrl(""); setFileName("");
+        setEditingId("");
+        if (fileRef.current) fileRef.current.value = "";
+    }
+
+    function startEdit(item: LeaveItem) {
+        setEditingId(item.id);
+        setLeaveTypeId(item.leave_type_id);
+
+        const dStart = new Date(item.start_at);
+        const stYear = dStart.getFullYear();
+        const stMonth = String(dStart.getMonth() + 1).padStart(2, '0');
+        const stDay = String(dStart.getDate()).padStart(2, '0');
+        setStartDate(`${stYear}-${stMonth}-${stDay}`);
+        setStartHour(String(dStart.getHours()).padStart(2, '0'));
+        setStartMin(String(dStart.getMinutes()).padStart(2, '0'));
+
+        const dEnd = new Date(item.end_at);
+        const enYear = dEnd.getFullYear();
+        const enMonth = String(dEnd.getMonth() + 1).padStart(2, '0');
+        const enDay = String(dEnd.getDate()).padStart(2, '0');
+        setEndDate(`${enYear}-${enMonth}-${enDay}`);
+        setEndHour(String(dEnd.getHours()).padStart(2, '0'));
+        setEndMin(String(dEnd.getMinutes()).padStart(2, '0'));
+
+        setReason(item.reason || "");
+        setAttachmentUrl(item.attachment_url || "");
+        setFileName(item.attachment_url ? "มีไฟล์แนบอยู่แล้ว" : "");
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     useEffect(() => { load(); }, []);
@@ -404,8 +444,14 @@ export default function LeavePage() {
 
                         <button className={styles.btnPrimaryFull} disabled={!canSubmit || loading} onClick={submit}>
                             {loading ? <ArrowPathIcon width={20} className="animate-spin" /> : 
+                            editingId ? <><ArrowPathIcon width={18} style={{ marginRight: 8 }} /> อัปเดตใบลา</> : 
                             <><PaperAirplaneIcon width={18} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ยืนยันการส่งใบลา</>}
                         </button>
+                        {editingId && (
+                            <button className={styles.btnOutlineFull} style={{ marginTop: 8, width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--gray-300)', backgroundColor: 'transparent', fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }} onClick={cancelEdit} disabled={loading}>
+                                ยกเลิกการแก้ไข
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -433,6 +479,15 @@ export default function LeavePage() {
                                     </div>
                                     <div className={styles.historyRowBot}>
                                         <div className={styles.colDays}>{x.days} วันทำงาน</div>
+                                        {x.status.startsWith('pending') && (
+                                            <button 
+                                                className={styles.btnOutlineSm} 
+                                                style={{ marginLeft: "auto", fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text2)' }}
+                                                onClick={() => startEdit(x)}
+                                            >
+                                                แก้ไข
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
