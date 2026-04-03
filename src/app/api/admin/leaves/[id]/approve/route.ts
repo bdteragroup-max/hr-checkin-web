@@ -69,13 +69,17 @@ export async function POST(
                 approvedBy: adminName,
             }).catch(console.error);
 
-            // ✅ Final Step: Notify Management Summary
+        }
+        
+        // ✅ Final Step: Notify Management Summary
+        try {
+            const { sendManagementLeaveSummary } = await import("@/utils/lineMessaging");
             const supervisor = await prisma.employees.findUnique({
-                where: { emp_id: updated.supervisor_id || (existing as any).supervisor_id || "" }, // fallback if possible
+                where: { emp_id: updated.supervisor_id || (existing as any).supervisor_id || "" },
                 select: { name: true }
             });
 
-            sendManagementLeaveSummary({
+            await sendManagementLeaveSummary({
                 empName: updated.name,
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH"),
@@ -84,7 +88,9 @@ export async function POST(
                 reason: updated.reason || "",
                 supervisorName: supervisor?.name || "ไม่ได้ระบุ",
                 hrName: adminName
-            }).catch(console.error);
+            });
+        } catch (e) {
+            console.error("[APPROVE LEAVE] Management summary error:", e);
         }
 
         return NextResponse.json(jsonSafe({ ok: true, updated }));

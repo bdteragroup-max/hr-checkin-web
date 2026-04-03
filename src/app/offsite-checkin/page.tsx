@@ -28,7 +28,24 @@ interface TodayItem {
     branch_name: string;
     remark?: string | null;
 }
-interface AlertState { visible: boolean; message: string; type: "error" | "ok" }
+interface AlertState { 
+    visible: boolean; 
+    message: string; 
+    type: "error" | "ok";
+    id?: string;
+    hasShared?: boolean;
+    shareData?: {
+        name: string;
+        type: string;
+        location: string;
+        time: string;
+        remark: string;
+        photoUrl: string;
+        lat: number | null;
+        lng: number | null;
+    };
+}
+
 interface GpsState { ok: boolean; lat: number | null; lon: number | null; accuracy: number | null }
 
 /* ──────────────────────────────────────────
@@ -47,11 +64,11 @@ function getThaiTime() {
 /* ──────────────────────────────────────────
    COMPONENTS
 ────────────────────────────────────────── */
-function AlertModal({ alert, onClose }: { alert: AlertState; onClose: () => void }) {
+function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: boolean) => void }) {
     if (!alert.visible) return null;
     const isErr = alert.type === "error";
     return (
-        <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
+        <div className={styles.alertOverlay} onClick={() => onClose(false)} role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
                 <div className={`${styles.alertIcon} ${isErr ? styles.alertIconErr : styles.alertIconOk}`}>
                     {isErr ? <ExclamationTriangleIcon width={32} /> : <CheckCircleIcon width={32} />}
@@ -60,10 +77,83 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: () => void
                     {isErr ? "เกิดข้อผิดพลาด" : "สำเร็จ"}
                 </div>
                 <div className={styles.alertMsg}>{alert.message}</div>
-                <button className={`${styles.alertBtn} ${isErr ? styles.alertBtnErr : styles.alertBtnOk}`} onClick={onClose} autoFocus>
-                    ตกลง
-                </button>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 10 }}>
+                    {!isErr && alert.shareData && (
+                        <>
+                            {!alert.hasShared && (
+                                <div style={{ 
+                                    background: '#fff7ed', 
+                                    border: '1px solid #ffedd5', 
+                                    padding: '10px', 
+                                    borderRadius: 8, 
+                                    fontSize: 13, 
+                                    color: '#c2410c',
+                                    textAlign: 'center',
+                                    fontWeight: 600,
+                                    marginBottom: 4,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8
+                                }}>
+                                    <ExclamationTriangleIcon width={18} />
+                                    กรุณาแชร์เข้ากลุ่ม LINE เพื่อทำรายการให้เสร็จสิ้น
+                                </div>
+                            )}
+                            <button 
+                                className={styles.alertBtn} 
+                                style={{ 
+                                    background: '#06c755', 
+                                    color: 'white', 
+                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    animation: !alert.hasShared ? 'pulse 2s infinite' : 'none'
+                                }}
+                                onClick={() => {
+                                    const d = alert.shareData!;
+                                    const shareLink = `${window.location.origin}/share/${alert.id}`;
+                                    const text = [
+                                        `รายงานการเช็กอินนอกสถานที่`,
+                                        `👤 พนักงาน: ${d.name}`,
+                                        `📝 ประเภท: ${d.type === 'Offsite-In' ? 'เข้างาน (IN)' : 'ออกงาน (OUT)'}`,
+                                        `🏢 สถานที่: ${d.location}`,
+                                        `🕒 เวลา: ${d.time}`,
+                                        d.lat ? `📍 พิกัด: ${d.lat.toFixed(5)}, ${d.lng?.toFixed(5)}` : '',
+                                        d.lat ? `🌍 แผนที่: https://www.google.com/maps?q=${d.lat},${d.lng}` : '',
+                                        d.remark ? `💬 หมายเหตุ: ${d.remark}` : '',
+                                        '',
+                                        `🔗 รายงานละเอียด: ${shareLink}`
+                                    ].filter(Boolean).join('\n');
+                                    
+                                    const shareUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
+                                    window.open(shareUrl, '_blank');
+                                    onClose(true);
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 10.304c0-4.58-4.814-8.304-10.739-8.304-5.924 0-10.74 3.724-10.74 8.304 0 4.102 3.821 7.545 8.99 8.216.35.076.825.231 1.054.53.24.316.158.81.077 1.129l-.337 2.03c-.102.614.47.336.663.22 1.393-.84 7.525-4.433 10.27-7.585 1.547-1.848 1.764-3.565 1.764-4.54z"/></svg>
+                                {!alert.hasShared ? "แชร์เข้ากลุ่ม LINE ทันที" : "แชร์อีกครั้ง"}
+                            </button>
+                        </>
+                    )}
+                    
+                    {(isErr || alert.hasShared) && (
+                        <button className={`${styles.alertBtn} ${isErr ? styles.alertBtnErr : styles.alertBtnOk}`} onClick={() => onClose(false)} autoFocus>
+                            {isErr ? "ตกลง" : "บันทึกเสร็จสมบูรณ์"}
+                        </button>
+                    )}
+                </div>
             </div>
+            <style jsx>{`
+                @keyframes pulse {
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(6, 199, 85, 0.4); }
+                    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(6, 199, 85, 0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(6, 199, 85, 0); }
+                }
+            `}</style>
         </div>
     );
 }
@@ -106,8 +196,14 @@ export default function OffsiteCheckinPage() {
     const [me, setMe] = useState<Me | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [today, setToday] = useState<TodayItem[]>([]);
-    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error" });
-    const closeAlert = useCallback(() => setAlert(p => ({ ...p, visible: false })), []);
+    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false });
+    const closeAlert = useCallback((sharedClick = false) => {
+        if (sharedClick) {
+            setAlert(p => ({ ...p, hasShared: true }));
+        } else {
+            setAlert(p => ({ ...p, visible: false, hasShared: false }));
+        }
+    }, []);
 
     // Selection State
     const [locationName, setLocationName] = useState(""); // REQUIRED
@@ -288,7 +384,9 @@ export default function OffsiteCheckinPage() {
 
     /* ── SUBMIT ── */
     async function doSubmitCheckin(targetType: "Offsite-In" | "Offsite-Out") {
-        if (!preview || !locationName.trim() || !me) return showAlert("กรุณาระบุสถานที่และถ่ายรูป");
+        if (!locationName.trim()) return showAlert("กรุณาระบุสถานที่ปฏิบัติงาน");
+        if (!remark.trim()) return showAlert("กรุณาระบุรายละเอียดงาน/หมายเหตุ (จำเป็น)");
+        if (!preview || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
 
         setIsSubmitting(true);
         setCheckType(targetType);
@@ -319,7 +417,23 @@ export default function OffsiteCheckinPage() {
             const dbData = await r.json();
             if (!r.ok) throw new Error(dbData.error || "DB_ERROR");
 
-            showAlert("บันทึกสำเร็จ", "ok");
+            setAlert({
+                visible: true,
+                type: "ok",
+                message: "บันทึกสำเร็จ",
+                id: dbData.id,
+                hasShared: false,
+                shareData: {
+                    name: me.name,
+                    type: targetType,
+                    location: locationName.trim(),
+                    time: formatTimeFull24h(getThaiTime()) + " น.",
+                    remark: remark.trim(),
+                    photoUrl: upData.url,
+                    lat: gps.lat,
+                    lng: gps.lon
+                }
+            });
 
             // Reset
             setPreview(null);
@@ -372,6 +486,34 @@ export default function OffsiteCheckinPage() {
                     </div>
                 </div>
 
+                {/* 2.5. Remark Input Box (Mandatory) */}
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        รายละเอียดงาน / หมายเหตุ (จำเป็น)
+                    </div>
+
+                    <div style={{ position: "relative" }}>
+                        <textarea
+                            style={{
+                                width: "100%", padding: "12px 16px", borderRadius: 8,
+                                border: `1px solid ${remark.trim() ? "#3b82f6" : "#ef4444"}`,
+                                outline: "none", fontSize: 15, background: preview ? "#f9fafb" : "white",
+                                minHeight: 80, resize: "none", fontFamily: "inherit"
+                            }}
+                            placeholder="ระบุสิ่งที่ทำ เช่น ซ่อมอุปกร์, ติดตั้งระบบ"
+                            value={remark}
+                            onChange={e => setRemark(e.target.value)}
+                            disabled={!!preview}
+                        />
+                        {!remark.trim() && (
+                            <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
+                                * จำเป็นต้องระบุรายละเอียดก่อนเช็คอิน
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* 3. Camera Section */}
                 <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
@@ -395,9 +537,9 @@ export default function OffsiteCheckinPage() {
 
                     {!cameraReady && !cameraError && !isCameraStarting && (
                         <button
-                            style={{ width: "100%", background: locationName.trim() ? "#f3f4f6" : "#f1f5f9", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px", display: "flex", justifyContent: "center", alignItems: "center", gap: 8, color: locationName.trim() ? "#1f2937" : "#94a3b8", fontWeight: 600, fontSize: 15, cursor: locationName.trim() ? "pointer" : "not-allowed" }}
+                            style={{ width: "100%", background: (locationName.trim() && remark.trim()) ? "#f3f4f6" : "#f1f5f9", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px", display: "flex", justifyContent: "center", alignItems: "center", gap: 8, color: (locationName.trim() && remark.trim()) ? "#1f2937" : "#94a3b8", fontWeight: 600, fontSize: 15, cursor: (locationName.trim() && remark.trim()) ? "pointer" : "not-allowed" }}
                             onClick={() => startCamera()}
-                            disabled={!locationName.trim()}
+                            disabled={!locationName.trim() || !remark.trim()}
                         >
                             <CameraIcon width={18} />
                             เปิดกล้อง
@@ -465,9 +607,9 @@ export default function OffsiteCheckinPage() {
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
                         <button
-                            style={{ background: "#22c55e", color: "white", fontWeight: 700, fontSize: 18, border: "none", borderRadius: 12, padding: "18px", cursor: preview ? "pointer" : "not-allowed", opacity: preview && !isSubmitting ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                            style={{ background: "#22c55e", color: "white", fontWeight: 700, fontSize: 18, border: "none", borderRadius: 12, padding: "18px", cursor: (preview && remark.trim()) ? "pointer" : "not-allowed", opacity: (preview && remark.trim() && !isSubmitting) ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             onClick={() => doSubmitCheckin("Offsite-In")}
-                            disabled={!preview || isSubmitting}
+                            disabled={!preview || isSubmitting || !remark.trim()}
                         >
                             {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <ArrowRightStartOnRectangleIcon width={20} />}
                             บันทึกเข้า (IN)
@@ -491,15 +633,15 @@ export default function OffsiteCheckinPage() {
                                         border: isDone ? "2px solid #e5e7eb" : "2px solid #ef4444",
                                         borderRadius: 12,
                                         padding: "18px",
-                                        cursor: (preview && !isSubmitting && !isDone) ? "pointer" : "not-allowed",
-                                        opacity: (preview && !isSubmitting && !isDone) ? 1 : 0.6,
+                                        cursor: (preview && !isSubmitting && !isDone && remark.trim()) ? "pointer" : "not-allowed",
+                                        opacity: (preview && !isSubmitting && !isDone && remark.trim()) ? 1 : 0.6,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: 8
                                     }}
-                                    onClick={() => !isDone && doSubmitCheckin("Offsite-Out")}
-                                    disabled={!preview || isSubmitting || isDone}
+                                    onClick={() => !isDone && remark.trim() && doSubmitCheckin("Offsite-Out")}
+                                    disabled={!preview || isSubmitting || isDone || !remark.trim()}
                                 >
                                     {isSubmitting ? <ArrowPathIcon width={20} className="animate-spin" /> : <StopIcon width={20} />}
                                     {isDone ? "บันทึกออกแล้ว" : "บันทึกออก (OUT)"}
