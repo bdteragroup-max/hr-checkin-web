@@ -241,9 +241,20 @@ export default function AdminOtPage() {
                                                     <button onClick={() => openAdjustment(req)} className={localStyles.btnApprove} title="อนุมัติ/จัดการ">จัดการคำขอ</button>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => openAdjustment(req)} className={localStyles.btnEdit} title="แก้ไขผลการพิจารณา">
-                                                    <PencilSquareIcon width={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                                                    แก้ไขผลลัพธ์
+                                                <button 
+                                                    disabled 
+                                                    className={localStyles.btnEdit} 
+                                                    style={{ 
+                                                        opacity: 0.5, 
+                                                        cursor: "not-allowed", 
+                                                        filter: "grayscale(100%)",
+                                                        background: "#e5e7eb",
+                                                        color: "#9ca3af",
+                                                        borderColor: "#e5e7eb"
+                                                    }}
+                                                >
+                                                    <CheckCircleIcon width={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                                    ดำเนินการแล้ว
                                                 </button>
                                             )}
                                         </td>

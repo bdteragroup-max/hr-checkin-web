@@ -24,7 +24,7 @@ export async function GET(req: Request) {
         const end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
 
         const emps = await prisma.employees.findMany({
-            where: { is_active: true, is_checkin_exempt: false }, // Usually records only focus on active employees, or maybe all? Let's use all to be safe for historical data, but optionally filter by frontend.
+            where: { is_active: true, is_checkin_exempt: false } as any, 
             select: {
                 emp_id: true,
                 name: true,

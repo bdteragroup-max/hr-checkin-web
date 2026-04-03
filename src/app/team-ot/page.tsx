@@ -84,12 +84,15 @@ export default function TeamOtPage() {
     }, []);
 
     const [editHours, setEditHours] = useState<{ [key: number]: number }>({});
+    const [processingId, setProcessingId] = useState<number | null>(null);
 
     function handleHoursChange(id: number, val: string) {
         setEditHours(prev => ({ ...prev, [id]: Number(val) }));
     }
 
     async function handleUpdateStatus(id: number, status: "approved" | "rejected", defaultHours: number) {
+        if (processingId) return;
+
         const approvedHours = editHours[id] ?? defaultHours;
 
         if (status === "approved" && (!approvedHours || approvedHours <= 0)) {
@@ -103,6 +106,7 @@ export default function TeamOtPage() {
 
         if (!confirm(confirmMsg)) return;
 
+        setProcessingId(id);
         try {
             const res = await fetch("/api/team/ot", {
                 method: "PUT",
@@ -112,13 +116,15 @@ export default function TeamOtPage() {
 
             if (res.ok) {
                 showAlert(status === "approved" ? "อนุมัติสำเร็จ" : "ปฏิเสธสำเร็จ", "ok");
-                loadData();
+                await loadData();
             } else {
                 const d = await res.json();
                 showAlert(d.error || "เกิดข้อผิดพลาด", "error");
             }
         } catch (e) {
             showAlert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "error");
+        } finally {
+            setProcessingId(null);
         }
     }
 
@@ -199,12 +205,27 @@ export default function TeamOtPage() {
                                             <button
                                                 className={styles.btnApprove}
                                                 onClick={() => handleUpdateStatus(req.id, "approved", dHours)}
+                                                disabled={!!processingId}
+                                                style={{ 
+                                                    opacity: processingId ? 0.5 : 1, 
+                                                    cursor: processingId ? "not-allowed" : "pointer",
+                                                    background: processingId === req.id ? "#e5e7eb" : "var(--ok)",
+                                                    color: processingId === req.id ? "#9ca3af" : "white"
+                                                }}
                                             >
-                                                <HandThumbUpIcon width={18} style={{ marginRight: 6 }} /> อนุมัติ
+                                                <HandThumbUpIcon width={18} style={{ marginRight: 6 }} /> {processingId === req.id ? "กำลังส่ง..." : "อนุมัติ"}
                                             </button>
                                             <button
                                                 className={styles.btnReject}
                                                 onClick={() => handleUpdateStatus(req.id, "rejected", dHours)}
+                                                disabled={!!processingId}
+                                                style={{ 
+                                                    opacity: processingId ? 0.5 : 1, 
+                                                    cursor: processingId ? "not-allowed" : "pointer",
+                                                    background: "white",
+                                                    border: processingId === req.id ? "1px solid #e5e7eb" : "1px solid var(--red-hover)",
+                                                    color: processingId === req.id ? "#9ca3af" : "var(--red)"
+                                                }}
                                             >
                                                 <HandThumbDownIcon width={18} style={{ marginRight: 6 }} /> ไม่อนุมัติ
                                             </button>

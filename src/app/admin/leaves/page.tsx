@@ -298,8 +298,44 @@ export default function AdminLeavesPage() {
                                                 <td style={{ textAlign: "center" }}>{days} วัน</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
-                                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} disabled={!!processingId} style={{ marginRight: 8, display: "inline-flex", alignItems: "center", gap: 4, opacity: processingId ? 0.5 : 1, cursor: processingId ? "not-allowed" : "pointer" }}><CheckCircleIcon width={16} /> {processingId === r.id ? "กำลังดำเนินการ..." : "อนุมัติ"}</button>
-                                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")} disabled={!!processingId} style={{ display: "inline-flex", alignItems: "center", gap: 4, opacity: processingId ? 0.5 : 1, cursor: processingId ? "not-allowed" : "pointer" }}><XCircleIcon width={16} /> ไม่อนุมัติ</button>
+                                                    {/* ✅ Button grays out and disables if status is not pending */}
+                                                    <button 
+                                                        className={styles.btnApprove} 
+                                                        onClick={() => approveLeave(r.id, "approved")} 
+                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                        style={{ 
+                                                            marginRight: 8, 
+                                                            display: "inline-flex", 
+                                                            alignItems: "center", 
+                                                            gap: 4, 
+                                                            opacity: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? 0.5 : 1, 
+                                                            cursor: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? "not-allowed" : "pointer",
+                                                            filter: (r.status !== "pending" && r.status !== "pending_hr") ? "grayscale(100%)" : "none",
+                                                            background: (r.status !== "pending" && r.status !== "pending_hr") ? "#e5e7eb" : "var(--ok)",
+                                                            color: (r.status !== "pending" && r.status !== "pending_hr") ? "#9ca3af" : "white"
+                                                        }}
+                                                    >
+                                                        <CheckCircleIcon width={16} /> 
+                                                        {processingId === r.id ? "กำลังดำเนินการ..." : (r.status === "approved" ? "อนุมัติแล้ว" : "อนุมัติ")}
+                                                    </button>
+                                                    <button 
+                                                        className={styles.btnReject} 
+                                                        onClick={() => approveLeave(r.id, "rejected")} 
+                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                        style={{ 
+                                                            display: "inline-flex", 
+                                                            alignItems: "center", 
+                                                            gap: 4, 
+                                                            opacity: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? 0.5 : 1, 
+                                                            cursor: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? "not-allowed" : "pointer",
+                                                            filter: (r.status !== "pending" && r.status !== "pending_hr") ? "grayscale(100%)" : "none",
+                                                            background: (r.status !== "pending" && r.status !== "pending_hr") ? "#e5e7eb" : "white",
+                                                            color: (r.status !== "pending" && r.status !== "pending_hr") ? "#9ca3af" : "var(--red)"
+                                                        }}
+                                                    >
+                                                        <XCircleIcon width={16} /> 
+                                                        {r.status === "rejected" ? "ไม่อนุมัติแล้ว" : "ไม่อนุมัติ"}
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );

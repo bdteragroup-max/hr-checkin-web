@@ -236,7 +236,7 @@ export async function sendEmployeeLeaveStatusNotification(
     endDate: string;
     days: number;
     reason: string;
-    status: "pending_hr" | "approved" | "rejected";
+    status: "pending_supervisor" | "pending_hr" | "approved" | "rejected";
     approvedBy?: string;
     rejectionReason?: string;
   }
@@ -276,6 +276,15 @@ export async function sendEmployeeLeaveStatusNotification(
       badgeBg: "#fee2e2",
       badgeColor: "#dc2626",
       altText: "ใบลาของคุณไม่ได้รับการอนุมัติ",
+    },
+    pending_supervisor: {
+      headerText: "⏳ ส่งคำขอแล้ว",
+      headerBg: "#f0f9ff",
+      headerColor: "#0284c7",
+      badgeText: "รอหัวหน้าอนุมัติ",
+      badgeBg: "#e0f2fe",
+      badgeColor: "#0284c7",
+      altText: "ใบลาของคุณส่งถึงหัวหน้างานแล้ว",
     },
   };
 

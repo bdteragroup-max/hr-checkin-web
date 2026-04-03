@@ -33,13 +33,49 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return NextResponse.json({ error: "INVALID_STATUS" }, { status: 400 });
         }
 
-        await prisma.leave_requests.update({
+        const updated = await prisma.leave_requests.update({
             where: { id },
             data: {
                 status: "pending_hr",
                 supervisor_approved_at: new Date(),
             },
+            include: {
+                employees: { select: { name: true, line_user_id: true } },
+            },
         });
+
+        const supervisor = await prisma.employees.findUnique({
+            where: { emp_id: p.emp_id },
+            select: { name: true },
+        });
+
+        // ✅ 1. Notify HR Officer
+        const { sendHrLeaveNotification, sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+        
+        sendHrLeaveNotification({
+            id: updated.id,
+            empName: updated.employees?.name || updated.name,
+            leaveType: updated.leave_type,
+            startDate: updated.start_at.toLocaleDateString("th-TH"),
+            endDate: updated.end_at.toLocaleDateString("th-TH"),
+            days: updated.days,
+            reason: updated.reason || "",
+            supervisorName: supervisor?.name || "หัวหน้างาน",
+        }).catch(console.error);
+
+        // ✅ 2. Notify Employee (Transition to Pending HR)
+        if (updated.employees?.line_user_id) {
+            sendEmployeeLeaveStatusNotification(updated.employees.line_user_id, {
+                empName: updated.employees.name,
+                leaveType: updated.leave_type,
+                startDate: updated.start_at.toLocaleDateString("th-TH"),
+                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                days: updated.days,
+                reason: updated.reason || "",
+                status: "pending_hr",
+                approvedBy: supervisor?.name || "หัวหน้างาน",
+            }).catch(console.error);
+        }
 
         return NextResponse.json({ ok: true });
     } catch (e: any) {

@@ -352,7 +352,6 @@ export async function POST(req: Request) {
                 start_at: startAt,
                 end_at: endAt,
                 minutes,
-                // คง start_date/end_date ไว้เพื่อ compatibility/report แบบเดิม (ถ้ายังมี)
                 start_date: new Date(toDateKeyBangkok(startAt)),
                 end_date: new Date(toDateKeyBangkok(endAt)),
                 days,
@@ -363,6 +362,7 @@ export async function POST(req: Request) {
             },
         });
 
+        // ✅ 1. Notify Supervisor (if exists)
         if (emp.supervisor?.line_user_id) {
             sendLeaveApprovalFlexMessage(emp.supervisor.line_user_id, {
                 id,
@@ -373,6 +373,58 @@ export async function POST(req: Request) {
                 days,
                 reason: reason || ""
             }).catch(console.error);
+
+            // ✅ Notify Employee (Submission Confirmation)
+            const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+            const me = await prisma.employees.findUnique({
+                where: { emp_id: emp.emp_id },
+                select: { line_user_id: true }
+            });
+
+            if (me?.line_user_id) {
+                // We use a custom AltText for initial submission
+                sendEmployeeLeaveStatusNotification(me.line_user_id, {
+                    empName: emp.name,
+                    leaveType: def.name,
+                    startDate: startAt.toLocaleDateString("th-TH"),
+                    endDate: endAt.toLocaleDateString("th-TH"),
+                    days,
+                    reason: reason || "",
+                    status: "pending_supervisor",
+                }).catch(console.error);
+            }
+        } else {
+            // ✅ 2. No supervisor? Notify HR directly and notify employee
+            const { sendHrLeaveNotification, sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+            
+            sendHrLeaveNotification({
+                id,
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH"),
+                endDate: endAt.toLocaleDateString("th-TH"),
+                days,
+                reason: reason || "",
+                supervisorName: "ไม่มี (ส่งตรงถึง HR)",
+            }).catch(console.error);
+
+            // Fetch info for employee notification if needed or just use current session
+            const me = await prisma.employees.findUnique({
+                where: { emp_id: emp.emp_id },
+                select: { line_user_id: true }
+            });
+
+            if (me?.line_user_id) {
+                sendEmployeeLeaveStatusNotification(me.line_user_id, {
+                    empName: emp.name,
+                    leaveType: def.name,
+                    startDate: startAt.toLocaleDateString("th-TH"),
+                    endDate: endAt.toLocaleDateString("th-TH"),
+                    days,
+                    reason: reason || "",
+                    status: "pending_hr",
+                }).catch(console.error);
+            }
         }
     } catch (e: any) {
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้

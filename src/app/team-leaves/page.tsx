@@ -134,10 +134,7 @@ export default function TeamLeavesPage() {
     return (
         <div className={styles.page}>
             <div className={styles.wrap}>
-                {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    </div>
                     <h1 className={styles.heroH1}>อนุมัติการลา</h1>
                     <div className={styles.heroMeta}>
                         <div className={styles.heroMetaItem}>
@@ -147,10 +144,9 @@ export default function TeamLeavesPage() {
                     </div>
                 </div>
 
-                {/* ── LIST CARD ── */}
                 <div className={styles.card}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <div className={styles.cardTitle} style={{ margin: 0 }}>รออนุมัติ ({list.length})</div>
+                        <div className={styles.cardTitle} style={{ margin: 0 }}>ประวัติและรายการรออนุมัติ ({list.length})</div>
                         <button onClick={load} disabled={loading} style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <ArrowPathIcon width={18} className={loading ? "animate-spin" : ""} /> รีเฟรช
                         </button>
@@ -161,7 +157,7 @@ export default function TeamLeavesPage() {
                             กำลังโหลดข้อมูล...
                         </div>
                     ) : list.length === 0 ? (
-                        <div className={styles.emptyState}>ไม่มีคำขอลาที่รอการอนุมัติ</div>
+                        <div className={styles.emptyState}>ไม่มีคำขอลาที่ต้องพิจารณา</div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {list.map(x => (
@@ -169,6 +165,23 @@ export default function TeamLeavesPage() {
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                                         <div style={{ fontWeight: 700, color: "var(--text)", fontSize: 16 }}>{x.name} <span style={{ color: "var(--text-3)", fontSize: 13, fontWeight: 400 }}>({x.emp_id})</span></div>
                                         <div style={{ fontWeight: 600, color: "var(--primary)", fontSize: 14 }}>{x.leave_type}</div>
+                                    </div>
+
+                                    {/* 🔴 Status Indicator */}
+                                    <div style={{ marginBottom: 12 }}>
+                                        <span style={{ 
+                                            padding: "4px 10px", 
+                                            borderRadius: 6, 
+                                            fontSize: 12, 
+                                            fontWeight: 700,
+                                            background: x.status === "pending_supervisor" ? "#eff6ff" : x.status === "rejected" ? "#fef2f2" : "#f0fdf4",
+                                            color: x.status === "pending_supervisor" ? "#1d4ed8" : x.status === "rejected" ? "#dc2626" : "#15803d",
+                                            display: "inline-block"
+                                        }}>
+                                            {x.status === "pending_supervisor" ? "⏳ รอคุณพิจารณา" : 
+                                             x.status === "pending_hr" ? "🏛️ ส่งถึง HR แล้ว" : 
+                                             x.status === "approved" ? "✅ อนุมัติสำเร็จ" : "❌ ไม่อนุมัติ"}
+                                        </span>
                                     </div>
 
                                     <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "4px 8px", fontSize: 13, color: "var(--text-2)", marginBottom: 12 }}>
@@ -195,15 +208,43 @@ export default function TeamLeavesPage() {
                                     <div style={{ display: "flex", gap: 10 }}>
                                         <button
                                             onClick={() => handleAction(x.id, "approve")}
-                                            disabled={actionLoading}
-                                            style={{ flex: 1, padding: "10px 0", background: "var(--ok)", color: "white", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                                            disabled={actionLoading || x.status !== "pending_supervisor"}
+                                            style={{ 
+                                                flex: 1, 
+                                                padding: "10px 0", 
+                                                background: x.status === "pending_supervisor" ? "var(--ok)" : "#e5e7eb", 
+                                                color: x.status === "pending_supervisor" ? "white" : "#9ca3af", 
+                                                border: "none", 
+                                                borderRadius: 8, 
+                                                fontWeight: 600, 
+                                                fontSize: 14, 
+                                                cursor: (actionLoading || x.status !== "pending_supervisor") ? "not-allowed" : "pointer", 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                gap: 8 
+                                            }}
                                         >
-                                            <HandThumbUpIcon width={18} /> อนุมัติ
+                                            <HandThumbUpIcon width={18} /> {x.status === "pending_supervisor" ? "อนุมัติ" : "ดำเนินการแล้ว"}
                                         </button>
                                         <button
                                             onClick={() => handleAction(x.id, "reject")}
-                                            disabled={actionLoading}
-                                            style={{ flex: 1, padding: "10px 0", background: "white", border: "1px solid var(--red-hover)", color: "var(--red)", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: actionLoading ? "not-allowed" : "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                                            disabled={actionLoading || x.status !== "pending_supervisor"}
+                                            style={{ 
+                                                flex: 1, 
+                                                padding: "10px 0", 
+                                                background: "white", 
+                                                border: x.status === "pending_supervisor" ? "1px solid var(--red-hover)" : "1px solid #e5e7eb", 
+                                                color: x.status === "pending_supervisor" ? "var(--red)" : "#9ca3af", 
+                                                borderRadius: 8, 
+                                                fontWeight: 600, 
+                                                fontSize: 14, 
+                                                cursor: (actionLoading || x.status !== "pending_supervisor") ? "not-allowed" : "pointer", 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                gap: 8 
+                                            }}
                                         >
                                             <HandThumbDownIcon width={18} /> ไม่อนุมัติ
                                         </button>

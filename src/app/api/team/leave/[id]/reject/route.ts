@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return NextResponse.json({ error: "INVALID_STATUS" }, { status: 400 });
         }
 
-        await prisma.leave_requests.update({
+        const updated = await prisma.leave_requests.update({
             where: { id },
             data: {
                 status: "rejected",
@@ -44,7 +44,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 // Append supervisor reject reason to main reason for HR visibility
                 reason: rejectReason ? `${leave.reason || ""} (หัวหน้าไม่อนุมัติ: ${rejectReason})`.trim() : `${leave.reason || ""} (หัวหน้าไม่อนุมัติ)`,
             },
+            include: {
+                employees: { select: { name: true, line_user_id: true } },
+            },
         });
+
+        // ✅ Notify Employee
+        if (updated.employees?.line_user_id) {
+            const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+            
+            const supervisor = await prisma.employees.findUnique({
+                where: { emp_id: p.emp_id },
+                select: { name: true },
+            });
+
+            sendEmployeeLeaveStatusNotification(updated.employees.line_user_id, {
+                empName: updated.employees.name,
+                leaveType: updated.leave_type,
+                startDate: updated.start_at.toLocaleDateString("th-TH"),
+                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                days: updated.days,
+                reason: updated.reason || "",
+                status: "rejected",
+                approvedBy: supervisor?.name || "หัวหน้างาน",
+                rejectionReason: rejectReason || "หัวหน้างานไม่อนุมัติ",
+            }).catch(console.error);
+        }
 
         return NextResponse.json({ ok: true });
     } catch (e: any) {
