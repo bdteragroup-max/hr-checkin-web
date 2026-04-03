@@ -42,7 +42,7 @@ export async function generateMetadata(
             r: checkin.remark ? Buffer.from(checkin.remark.substring(0, 50)).toString('base64') : ''
         }).toString();
 
-        const imageUrl = `${baseUrl}/share/${id}/opengraph-image?${encodedData}`;
+        const imageUrl = `${baseUrl}/share/${id}/og?${encodedData}`;
 
         return {
             title: `เช็กอิน: ${checkin.name}`,
@@ -69,7 +69,7 @@ export async function generateMetadata(
     } catch (error) {
         // 🛠️ Resilience Fallback: If DB is full, still show a generic card to LINE
         console.error("Metadata DB Error:", error);
-        const fallbackUrl = `${baseUrl}/share/${id}/opengraph-image?n=SFIgUmVjb3Jk&t=Q2hlY2staW4=`; // "HR Record", "Check-in"
+        const fallbackUrl = `${baseUrl}/share/${id}/og?n=SFIgUmVjb3Jk&t=Q2hlY2staW4=`; // "HR Record", "Check-in"
         return {
             title: "Check-in Report (Processing)",
             openGraph: {
