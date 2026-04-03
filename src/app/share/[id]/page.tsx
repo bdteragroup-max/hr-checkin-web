@@ -36,10 +36,19 @@ export async function generateMetadata(
             title: `📍 รายงานการเช็กอิน: ${checkin.name}`,
             description: `${typeStr} ณ ${location}\n🕒 เวลา: ${formatTimeFull24h(checkin.timestamp)} น.`,
             type: "website",
+            images: [
+                {
+                    url: `/share/${id}/opengraph-image`,
+                    width: 1200,
+                    height: 630,
+                    alt: "Check-in Report",
+                },
+            ],
         },
         twitter: {
             card: "summary_large_image",
             title: `เช็กอิน: ${checkin.name}`,
+            images: [`/share/${id}/opengraph-image`],
         },
     };
 }

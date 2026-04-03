@@ -151,17 +151,10 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (sharedCli
                                     const d = alert.shareData!;
                                     const shareLink = `${window.location.origin}/share/${alert.id}`;
                                     const text = [
-                                        `รายงานการปฏิบัติงานในโครงการ`,
-                                        `👤 พนักงาน: ${d.name}`,
-                                        `📝 ประเภท: ${d.type === 'Project-In' ? 'เข้างาน (IN)' : 'ออกงาน (OUT)'}`,
-                                        `🏢 สถานที่: ${d.location}`,
+                                        `📍 รายงานการเช็กอิน: ${d.name}`,
                                         `🕒 เวลา: ${d.time}`,
-                                        d.lat ? `📍 พิกัด: ${d.lat.toFixed(5)}, ${d.lng?.toFixed(5)}` : '',
-                                        d.lat ? `🌍 แผนที่: https://www.google.com/maps?q=${d.lat},${d.lng}` : '',
-                                        d.remark ? `💬 หมายเหตุ: ${d.remark}` : '',
-                                        '',
-                                        `🔗 รายงานละเอียด: ${shareLink}`
-                                    ].filter(Boolean).join('\n');
+                                        `📄 รายงานรายละเอียด: ${shareLink}`
+                                    ].join('\n');
                                     
                                     const shareUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
                                     window.open(shareUrl, '_blank');
