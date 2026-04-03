@@ -390,13 +390,13 @@ export async function sendManagementLeaveSummary(data: {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
   const text = [
-    "Leave Request (Approved Summary)",
-    `👤 Employee: ${data.empName}`,
-    `📝 Type: ${data.leaveType}`,
-    `📅 Date: ${data.startDate} to ${data.endDate} (${formatLeaveMins(data.minutes)})`,
-    `💬 Reason: ${data.reason || "-"}`,
-    `✅ Approved by Supervisor: ${data.supervisorName}`,
-    `✅ Approved by HR: ${data.hrName}`
+    "ข้อมูลการอนุมัติลา (สรุป)",
+    `👤 พนักงาน: ${data.empName}`,
+    `📝 ประเภท: ${data.leaveType}`,
+    `📅 วันที่: ${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`,
+    `💬 เหตุผล: ${data.reason || "-"}`,
+    `✅ หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
+    `✅ HR ที่อนุมัติ: ${data.hrName}`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
 }
@@ -407,13 +407,13 @@ export async function sendManagementOtSummary(data: {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
   const text = [
-    "Overtime Request (Approved Summary)",
-    `👤 Employee: ${data.empName}`,
-    `📅 Date: ${data.dateFor}`,
-    `⏰ Time: ${data.startTime} - ${data.endTime} (${data.totalHours} hours)`,
-    `💬 Reason: ${data.reason || "-"}`,
-    `✅ Approved by Supervisor: ${data.supervisorName}`,
-    `✅ Approved by HR: ${data.hrName}`
+    "ข้อมูลการอนุมัติ OT (สรุป)",
+    `👤 พนักงาน: ${data.empName}`,
+    `📅 วันที่: ${data.dateFor}`,
+    `⏰ เวลา: ${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`,
+    `💬 เหตุผล: ${data.reason || "-"}`,
+    `✅ หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
+    `✅ HR ที่อนุมัติ: ${data.hrName}`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
 }
