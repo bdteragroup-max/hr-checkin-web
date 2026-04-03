@@ -63,7 +63,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH"),
                 endDate: updated.end_at.toLocaleDateString("th-TH"),
-                days: updated.days,
+                minutes: updated.minutes,
                 reason: updated.reason || "",
                 status: "rejected",
                 approvedBy: supervisor?.name || "หัวหน้างาน",

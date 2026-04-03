@@ -58,7 +58,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             leaveType: updated.leave_type,
             startDate: updated.start_at.toLocaleDateString("th-TH"),
             endDate: updated.end_at.toLocaleDateString("th-TH"),
-            days: updated.days,
+            minutes: updated.minutes,
             reason: updated.reason || "",
             supervisorName: supervisor?.name || "หัวหน้างาน",
         }).catch(console.error);
@@ -70,7 +70,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH"),
                 endDate: updated.end_at.toLocaleDateString("th-TH"),
-                days: updated.days,
+                minutes: updated.minutes,
                 reason: updated.reason || "",
                 status: "pending_hr",
                 approvedBy: supervisor?.name || "หัวหน้างาน",
