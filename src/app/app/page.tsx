@@ -20,6 +20,7 @@ import {
     QrCodeIcon,
     CheckIcon
 } from "@heroicons/react/24/solid";
+import { Camera, RotateCcw, X } from "lucide-react";
 import { formatDateThai, formatTime24h, formatTimeFull24h } from "@/utils/time";
 
 /* ──────────────────────────────────────────
@@ -845,7 +846,7 @@ export default function AppPage() {
                                     <div className={`${styles.camCorner} ${styles.br}`} />
                                 </div>
                                 <div style={{ marginTop: 16 }}>
-                                    <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ width: "100%" }} onClick={handleCapture} disabled={!cameraReady}>📷 ถ่ายรูป</button>
+                                    <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ width: "100%", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={handleCapture} disabled={!cameraReady}><Camera size={18} /> ถ่ายรูป</button>
                                 </div>
                             </>
                         )}
@@ -856,7 +857,7 @@ export default function AppPage() {
                                     <Image src={preview} alt="preview" width={1280} height={720} className={styles.video} unoptimized />
                                 </div>
                                 <div style={{ marginTop: 16 }}>
-                                    <button className={`${styles.btn} ${styles.btnGhost}`} style={{ width: "100%" }} onClick={handleRetake}>↺ ถ่ายใหม่</button>
+                                    <button className={`${styles.btn} ${styles.btnGhost}`} style={{ width: "100%", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={handleRetake}><RotateCcw size={18} /> ถ่ายใหม่</button>
                                 </div>
                             </>
                         )}
@@ -898,8 +899,8 @@ export default function AppPage() {
                 <div className={styles.qrOverlay} onClick={e => { if (e.target === e.currentTarget) closeQR(); }}>
                     <div className={styles.qrModal}>
                         <div className={styles.qrModalHeader}>
-                            <h3>📷 สแกน QR รหัสพนักงาน</h3>
-                            <button className={styles.qrClose} onClick={closeQR}>✕</button>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Camera size={20} /> สแกน QR รหัสพนักงาน</h3>
+                            <button className={styles.qrClose} onClick={closeQR}><X size={20} /></button>
                         </div>
                         <div className={styles.qrViewport}>
                             <video ref={qrVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />

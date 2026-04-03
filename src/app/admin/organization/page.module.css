@@ -379,3 +379,44 @@
   0% { background-color: rgba(239, 68, 68, 0.3); }
   100% { background-color: transparent; }
 }
+
+/* Department row selection */
+.deptRow {
+  transition: background 0.15s;
+}
+
+.deptRow:hover td {
+  background: var(--surface2);
+}
+
+.deptRowActive td {
+  background: rgba(220, 38, 38, 0.06) !important;
+  border-left: 3px solid #dc2626;
+}
+
+.deptRowActive:hover td {
+  background: rgba(220, 38, 38, 0.1) !important;
+}
+
+.deptRowAll td {
+  color: var(--text3) !important;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.deptRowAll:hover td {
+  background: var(--surface2);
+  color: var(--text2) !important;
+}
+
+/* Vacant badge */
+.badgeVacant {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.15);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}

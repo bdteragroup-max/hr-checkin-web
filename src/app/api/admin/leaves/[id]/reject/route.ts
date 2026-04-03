@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
-
+import { sendEmployeeLeaveStatusNotification } from "@/utils/lineMessaging";
 
 export const dynamic = "force-dynamic";
 
@@ -21,20 +21,30 @@ function jsonSafe<T>(v: T): any {
 
 export async function POST(
     req: Request,
-    ctx: { params: Promise<{ id: string }> } // ✅ สำคัญ: params เป็น Promise
+    ctx: { params: Promise<{ id: string }> }
 ) {
     try {
         const admin = await requireAdmin();
 
-        const { id } = await ctx.params; // ✅ ต้อง await ไม่งั้น id = undefined
+        const { id } = await ctx.params;
         if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
 
         const body = await req.json().catch(() => ({} as any));
         const noteRaw = body?.reason ?? body?.note ?? null;
         const note = noteRaw ? String(noteRaw).trim() : "";
 
+        // ✅ Guard: Prevent duplicate rejections
+        const leaveBeforeUpdate = await prisma.leave_requests.findUnique({
+            where: { id },
+            select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, reason: true, status: true },
+        });
+        if (!leaveBeforeUpdate) return NextResponse.json({ ok: false, error: "NOT_FOUND" }, { status: 404 });
+        if (leaveBeforeUpdate.status !== "pending" && leaveBeforeUpdate.status !== "pending_hr") {
+            return NextResponse.json({ ok: false, error: "ALREADY_PROCESSED", current_status: leaveBeforeUpdate.status }, { status: 409 });
+        }
+
         const updated = await prisma.leave_requests.update({
-            where: { id }, // ✅ id ของคุณเป็น string แบบ LV-...
+            where: { id },
             data: {
                 status: "rejected",
                 approved_by: admin.emp_id,
@@ -43,6 +53,28 @@ export async function POST(
             },
             select: { id: true, status: true, approved_by: true, approved_at: true, reason: true },
         });
+
+        // ✅ Notify employee via LINE Flex Message that HR has rejected
+        if (leaveBeforeUpdate) {
+            const employee = await prisma.employees.findUnique({
+                where: { emp_id: leaveBeforeUpdate.emp_id },
+                select: { line_user_id: true },
+            });
+
+            if (employee?.line_user_id) {
+                sendEmployeeLeaveStatusNotification(employee.line_user_id, {
+                    empName: leaveBeforeUpdate.name,
+                    leaveType: leaveBeforeUpdate.leave_type,
+                    startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH"),
+                    endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH"),
+                    days: leaveBeforeUpdate.days,
+                    reason: leaveBeforeUpdate.reason || "",
+                    status: "rejected",
+                    approvedBy: admin.emp_id,
+                    rejectionReason: note || undefined,
+                }).catch(console.error);
+            }
+        }
 
         return NextResponse.json(jsonSafe({ ok: true, updated }));
     } catch (e: any) {

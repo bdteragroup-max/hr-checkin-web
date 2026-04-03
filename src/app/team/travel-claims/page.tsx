@@ -5,6 +5,15 @@ import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import { 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    BuildingOfficeIcon, 
+    GlobeAmericasIcon, 
+    DocumentTextIcon, 
+    HomeIcon,
+    ArrowPathIcon
+} from "@heroicons/react/24/outline";
 
 export default function TeamTravelClaimsPage() {
     const [loading, setLoading] = useState(true);
@@ -100,8 +109,8 @@ export default function TeamTravelClaimsPage() {
                 <div className={styles.card}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                         <div className={styles.cardTitle}>รายการรอการพิจารณา ({claims.filter(c => c.status === 'pending_supervisor').length})</div>
-                        <button onClick={fetchClaims} disabled={loading} style={{ background: "none", border: "none", color: "#d93025", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
-                            ↻ รีเฟรช
+                        <button onClick={fetchClaims} disabled={loading} style={{ background: "none", border: "none", color: "#d93025", cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                            <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
                         </button>
                     </div>
 
@@ -118,7 +127,13 @@ export default function TeamTravelClaimsPage() {
                                             <div className={styles.empName}>{c.employee?.name}</div>
                                             <div className={styles.empId}>ID: {c.emp_id}</div>
                                         </div>
-                                        <div className={styles.claimType}>{c.claim_type === 'local' ? '🏢 Local Off-Site' : '✈️ Upcountry Travel'}</div>
+                                        <div className={styles.claimType}>
+                                            {c.claim_type === 'local' ? (
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><BuildingOfficeIcon width={16} /> Local Off-Site</span>
+                                            ) : (
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><GlobeAmericasIcon width={16} /> Upcountry Travel</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className={styles.kv}>
@@ -152,20 +167,24 @@ export default function TeamTravelClaimsPage() {
                                         )}
                                     </div>
 
-                                    <div style={{ marginBottom: 16 }}>
-                                        <a href={c.report_url} target="_blank" className={styles.link}>📄 รายงานปฏิบัติงาน</a>
+                                    <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
+                                        <a href={c.report_url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <DocumentTextIcon width={16} /> รายงานปฏิบัติงาน
+                                        </a>
                                         {c.accommodation_receipt_url && (
-                                            <a href={c.accommodation_receipt_url} target="_blank" className={styles.link}>🏨 ใบเสร็จที่พัก</a>
+                                            <a href={c.accommodation_receipt_url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <HomeIcon width={16} /> ใบเสร็จที่พัก
+                                            </a>
                                         )}
                                     </div>
 
                                     {c.status === "pending_supervisor" && (
                                         <div className={styles.actions}>
-                                            <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove}>
-                                                ✅ อนุมัติ
+                                            <button onClick={() => handleActionClick(c.id, "approved")} className={styles.btnApprove} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                                <CheckCircleIcon width={18} /> อนุมัติ
                                             </button>
-                                            <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject}>
-                                                ✕ ไม่อนุมัติ
+                                            <button onClick={() => handleActionClick(c.id, "rejected")} className={styles.btnReject} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                                <XCircleIcon width={18} /> ไม่อนุมัติ
                                             </button>
                                         </div>
                                     )}

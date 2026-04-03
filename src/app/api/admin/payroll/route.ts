@@ -242,10 +242,21 @@ export async function GET(request: Request) {
                     const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
                     const scansComplete = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type)) && dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
 
+                    // ✅ Check-in Exemption Logic
+                    const isExempt = (emp as any).is_checkin_exempt || false;
+                    const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
+
                     if (!isHoliday && !scansComplete) missingScanInCycle = true;
+
                     if (scansComplete) {
                         totalPaidDays++;
-                        if (!empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date))) {
+                        if (!isOnLeave) {
+                            validWorkdaysCount++;
+                        }
+                    } else if (isExempt && !isHoliday) {
+                        // ✅ For exempt employees, count working days even without scans
+                        totalPaidDays++;
+                        if (!isOnLeave) {
                             validWorkdaysCount++;
                         }
                     }
@@ -265,13 +276,13 @@ export async function GET(request: Request) {
                 if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                     meal_allowance = Number(adj.meal_allowance_override);
                 } else if (!isDaily) {
-                    meal_allowance = validWorkdaysCount * 60;
+                    meal_allowance = validWorkdaysCount * 100;
                 }
 
                 if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                     travel_allowance = Number(adj.travel_allowance_override);
                 } else if (!isDaily) {
-                    travel_allowance = validWorkdaysCount * 100;
+                    travel_allowance = validWorkdaysCount * 60;
                 }
             } else {
                 if (isOnTrial) diligence_failed_reason = "อยู่ระหว่างทดลองงาน";

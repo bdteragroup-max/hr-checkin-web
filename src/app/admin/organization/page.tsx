@@ -26,6 +26,13 @@ export default function OrganizationPage() {
 
     const [newDeptId, setNewDeptId] = useState<number | null>(null);
     const [newPosId, setNewPosId] = useState<number | null>(null);
+    const [selectedDeptId, setSelectedDeptId] = useState<number | null>(null);
+
+    // Filter positions by selected department
+    const filteredPositions = selectedDeptId
+        ? positions.filter(p => p.department_id === selectedDeptId)
+        : positions;
+    const selectedDept = departments.find(d => d.id === selectedDeptId);
 
     // Modals state
     const [deptModal, setDeptModal] = useState({ open: false, isEdit: false, id: 0, name: "" });
@@ -148,19 +155,35 @@ export default function OrganizationPage() {
                             <thead>
                                 <tr>
                                     <th>ชื่อแผนก</th>
-                                    <th>จำนวนตำแหน่ง</th>
+                                    <th>ตำแหน่ง</th>
+                                    <th>พนักงาน</th>
                                     <th className={styles.thRight}>จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {departments.length === 0 && (
-                                    <tr><td colSpan={3} className={styles.empty}>ไม่มีข้อมูลแผนก</td></tr>
+                                    <tr><td colSpan={4} className={styles.empty}>ไม่มีข้อมูลแผนก</td></tr>
+                                )}
+                                {selectedDeptId && (
+                                    <tr
+                                        className={styles.deptRowAll}
+                                        onClick={() => setSelectedDeptId(null)}
+                                        style={{ cursor: "pointer" }}
+                                    >
+                                        <td colSpan={4} style={{ textAlign: "center", fontSize: 12, padding: "8px 24px" }}>↩ แสดงทั้งหมด</td>
+                                    </tr>
                                 )}
                                 {departments.map(d => (
-                                    <tr key={d.id} className={d.id === newDeptId ? styles.highlightRed : undefined}>
+                                    <tr
+                                        key={d.id}
+                                        className={`${d.id === newDeptId ? styles.highlightRed : ""} ${d.id === selectedDeptId ? styles.deptRowActive : styles.deptRow}`}
+                                        onClick={() => setSelectedDeptId(d.id === selectedDeptId ? null : d.id)}
+                                        style={{ cursor: "pointer" }}
+                                    >
                                         <td className={styles.bold}>{d.name}</td>
                                         <td>{d._count.job_positions} ตำแหน่ง</td>
-                                        <td className={styles.tdRight}>
+                                        <td>{d._count.employees} คน</td>
+                                        <td className={styles.tdRight} onClick={e => e.stopPropagation()}>
                                             <button
                                                 className={styles.btnIcon}
                                                 title="แก้ไข"
@@ -186,12 +209,14 @@ export default function OrganizationPage() {
                 {/* POSITIONS CARD */}
                 <div className={styles.card}>
                     <div className={styles.cardHeader}>
-                        <h2 className={styles.cardTitle}>ตำแหน่งงาน (Job Positions)</h2>
+                        <h2 className={styles.cardTitle}>
+                            ตำแหน่งงาน{selectedDept ? ` — ${selectedDept.name}` : " (ทั้งหมด)"}
+                        </h2>
                         <button
                             className={styles.btnAdd}
                             onClick={() => setPosModal({
                                 open: true, isEdit: false, id: 0,
-                                department_id: departments[0]?.id || 0,
+                                department_id: selectedDeptId || departments[0]?.id || 0,
                                 title: "", is_ot_eligible: true
                             })}
                         >
@@ -204,19 +229,29 @@ export default function OrganizationPage() {
                             <thead>
                                 <tr>
                                     <th>ชื่อตำแหน่ง</th>
-                                    <th>แผนก</th>
+                                    {!selectedDeptId && <th>แผนก</th>}
+                                    <th>พนักงาน</th>
                                     <th>สิทธิ์ OT</th>
                                     <th className={styles.thRight}>จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {positions.length === 0 && (
-                                    <tr><td colSpan={4} className={styles.empty}>ไม่มีข้อมูลตำแหน่งงาน</td></tr>
+                                {filteredPositions.length === 0 && (
+                                    <tr><td colSpan={selectedDeptId ? 4 : 5} className={styles.empty}>
+                                        {selectedDeptId ? `ยังไม่มีตำแหน่งงานในแผนก "${selectedDept?.name}"` : "ไม่มีข้อมูลตำแหน่งงาน"}
+                                    </td></tr>
                                 )}
-                                {positions.map(p => (
+                                {filteredPositions.map(p => (
                                     <tr key={p.id} className={p.id === newPosId ? styles.highlightRed : undefined}>
                                         <td className={styles.bold}>{p.title}</td>
-                                        <td>{p.departments.name}</td>
+                                        {!selectedDeptId && <td>{p.departments.name}</td>}
+                                        <td>
+                                            {p._count.employees > 0 ? (
+                                                <span className={styles.badgeOk}>{p._count.employees} คน</span>
+                                            ) : (
+                                                <span className={styles.badgeVacant}>ว่าง</span>
+                                            )}
+                                        </td>
                                         <td>
                                             {p.is_ot_eligible ? (
                                                 <span className={styles.badgeOk}>มีสิทธิ์ OT</span>

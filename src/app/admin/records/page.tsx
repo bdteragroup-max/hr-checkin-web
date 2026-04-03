@@ -16,6 +16,7 @@ import {
 interface Employee {
     emp_id: string;
     name: string;
+    is_checkin_exempt: boolean;
 }
 
 
@@ -208,7 +209,7 @@ export default function RecordsPage() {
                         onChange={(e) => setFilterEmpId(e.target.value)}
                     >
                         <option value="all">ทุกคน (สรุปภาพรวม)</option>
-                        {employees.map(e => (
+                        {employees.filter(e => !e.is_checkin_exempt).map(e => (
                             <option key={e.emp_id} value={e.emp_id}>{e.emp_id} - {e.name}</option>
                         ))}
                     </select>

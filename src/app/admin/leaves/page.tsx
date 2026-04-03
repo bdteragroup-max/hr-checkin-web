@@ -59,6 +59,7 @@ function normalizeReason(s: string) {
 export default function AdminLeavesPage() {
     const [leaveLoading, setLeaveLoading] = useState(false);
     const [err, setErr] = useState("");
+    const [processingId, setProcessingId] = useState<string | null>(null); // ✅ Track which row is being processed
 
     // Filters
     const [status, setStatus] = useState<string>(""); // "", pending, approved, rejected
@@ -145,9 +146,11 @@ export default function AdminLeavesPage() {
     }, [filteredByReason]);
 
     async function approveLeave(id: string, nextStatus: "approved" | "rejected") {
+        if (processingId) return; // ✅ Block if already processing another row
+
         if (nextStatus === "approved") {
             if (!confirm("ยืนยันอนุมัติใบลานี้?")) return;
-            setLeaveLoading(true);
+            setProcessingId(id);
             setErr("");
             try {
                 const res = await fetch(`/api/admin/leaves/${id}/approve`, {
@@ -156,14 +159,19 @@ export default function AdminLeavesPage() {
                 });
                 const data = await res.json().catch(() => null);
                 if (!res.ok) {
-                    setErr(data?.error || `HTTP_${res.status}`);
+                    if (data?.error === "ALREADY_PROCESSED") {
+                        setErr("คำขอนี้ดำเนินการไปแล้ว");
+                    } else {
+                        setErr(data?.error || `HTTP_${res.status}`);
+                    }
+                    await load();
                     return;
                 }
                 await load();
             } catch (e: any) {
                 setErr(e?.message || "APPROVE_FAILED");
             } finally {
-                setLeaveLoading(false);
+                setProcessingId(null);
             }
             return;
         }
@@ -172,7 +180,7 @@ export default function AdminLeavesPage() {
         const reason = prompt("ระบุเหตุผลที่ไม่อนุมัติ (Reject reason):") || "";
         if (!reason.trim()) return;
 
-        setLeaveLoading(true);
+        setProcessingId(id);
         setErr("");
         try {
             const res = await fetch(`/api/admin/leaves/${id}/reject`, {
@@ -182,14 +190,19 @@ export default function AdminLeavesPage() {
             });
             const data = await res.json().catch(() => null);
             if (!res.ok) {
-                setErr(data?.error || `HTTP_${res.status}`);
+                if (data?.error === "ALREADY_PROCESSED") {
+                    setErr("คำขอนี้ดำเนินการไปแล้ว");
+                } else {
+                    setErr(data?.error || `HTTP_${res.status}`);
+                }
+                await load();
                 return;
             }
             await load();
         } catch (e: any) {
             setErr(e?.message || "REJECT_FAILED");
         } finally {
-            setLeaveLoading(false);
+            setProcessingId(null);
         }
     }
 
@@ -285,8 +298,8 @@ export default function AdminLeavesPage() {
                                                 <td style={{ textAlign: "center" }}>{days} วัน</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
-                                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} style={{ marginRight: 8, display: "inline-flex", alignItems: "center", gap: 4 }}><CheckCircleIcon width={16} /> อนุมัติ</button>
-                                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><XCircleIcon width={16} /> ไม่อนุมัติ</button>
+                                                    <button className={styles.btnApprove} onClick={() => approveLeave(r.id, "approved")} disabled={!!processingId} style={{ marginRight: 8, display: "inline-flex", alignItems: "center", gap: 4, opacity: processingId ? 0.5 : 1, cursor: processingId ? "not-allowed" : "pointer" }}><CheckCircleIcon width={16} /> {processingId === r.id ? "กำลังดำเนินการ..." : "อนุมัติ"}</button>
+                                                    <button className={styles.btnReject} onClick={() => approveLeave(r.id, "rejected")} disabled={!!processingId} style={{ display: "inline-flex", alignItems: "center", gap: 4, opacity: processingId ? 0.5 : 1, cursor: processingId ? "not-allowed" : "pointer" }}><XCircleIcon width={16} /> ไม่อนุมัติ</button>
                                                 </td>
                                             </tr>
                                         );

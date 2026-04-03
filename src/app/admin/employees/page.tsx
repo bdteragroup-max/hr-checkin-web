@@ -34,6 +34,7 @@ type Emp = {
     bank_name?: string | null;
     salary_type?: string | null;
     line_user_id?: string | null;
+    is_checkin_exempt: boolean;
 };
 
 type EditDraft = {
@@ -58,6 +59,7 @@ type EditDraft = {
     bank_name: string;
     salary_type: string;
     line_user_id: string;
+    is_checkin_exempt: boolean;
 };
 
 type Department = { id: number; name: string };
@@ -103,6 +105,7 @@ export default function AdminEmployeesPage() {
     const [bankName, setBankName] = useState("");
     const [salaryType, setSalaryType] = useState<"monthly" | "daily">("monthly");
     const [lineUserId, setLineUserId] = useState("");
+    const [isCheckinExempt, setIsCheckinExempt] = useState(false);
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -188,6 +191,7 @@ export default function AdminEmployeesPage() {
                     bank_name: bankName.trim() || null,
                     salary_type: salaryType,
                     line_user_id: lineUserId.trim() || null,
+                    is_checkin_exempt: isCheckinExempt,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -213,6 +217,7 @@ export default function AdminEmployeesPage() {
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
             setSalaryType("monthly");
             setLineUserId("");
+            setIsCheckinExempt(false);
             setCreateModalOpen(false);
             await load();
         } finally { setSaving(false); }
@@ -248,6 +253,7 @@ export default function AdminEmployeesPage() {
                     bank_name: editDraft.bank_name.trim() || null,
                     salary_type: editDraft.salary_type,
                     line_user_id: editDraft.line_user_id.trim() || null,
+                    is_checkin_exempt: editDraft.is_checkin_exempt,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -473,6 +479,9 @@ export default function AdminEmployeesPage() {
                                                     {x.is_on_trial && (
                                                         <span style={{ display: "inline-block", fontSize: 10, color: "var(--ok)", background: "rgba(16, 185, 129, 0.1)", padding: "2px 6px", borderRadius: 4, marginTop: 4 }}>อยู่ระหว่างทดลองงาน</span>
                                                     )}
+                                                    {x.is_checkin_exempt && (
+                                                        <span style={{ display: "inline-block", fontSize: 10, color: "var(--red)", background: "rgba(239, 68, 68, 0.1)", padding: "2px 6px", borderRadius: 4, marginTop: 4, marginLeft: 4 }}>ยกเว้นการลงเวลา</span>
+                                                    )}
                                                 </td>
                                                 <td style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 13 }}>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -526,6 +535,7 @@ export default function AdminEmployeesPage() {
                                                                     bank_name: x.bank_name || "",
                                                                     salary_type: x.salary_type || "monthly",
                                                                     line_user_id: x.line_user_id || "",
+                                                                    is_checkin_exempt: x.is_checkin_exempt || false,
                                                                 });
                                                             }}
                                                         >
@@ -722,6 +732,11 @@ export default function AdminEmployeesPage() {
                                     <span>รับค่าโทรศัพท์ (Receives Telephone Allowance)</span>
                                 </label>
 
+                                <label className={styles.row} style={{ marginTop: 10 }}>
+                                    <input type="checkbox" checked={isCheckinExempt} onChange={(e) => setIsCheckinExempt(e.target.checked)} />
+                                    <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
+                                </label>
+
                                 <label className={styles.lbl} style={{ marginTop: 16 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
                                 <input type="number" className={styles.input} placeholder="0.00"
                                     value={positionAllowance} onChange={(e) => setPositionAllowance(e.target.value)} />
@@ -896,6 +911,13 @@ export default function AdminEmployeesPage() {
                                     checked={editDraft.has_telephone_allowance}
                                     onChange={(e) => setEditDraft((d) => d && ({ ...d, has_telephone_allowance: e.target.checked }))} />
                                 <span>ได้รับค่าโทรศัพท์ (Receives Telephone Allowance)</span>
+                            </label>
+
+                            <label className={styles.row} style={{ marginBottom: 10 }}>
+                                <input type="checkbox"
+                                    checked={editDraft.is_checkin_exempt}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, is_checkin_exempt: e.target.checked }))} />
+                                <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
                             </label>
 
                             <label className={styles.lbl} style={{ marginTop: 10 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>

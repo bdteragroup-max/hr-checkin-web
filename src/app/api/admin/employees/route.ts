@@ -28,6 +28,7 @@ type CreateEmployeeBody = {
     bank_account_no?: string | null;
     salary_type?: string | null;
     line_user_id?: string | null;
+    is_checkin_exempt?: boolean;
 };
 
 type PatchEmployeeBody = {
@@ -54,6 +55,7 @@ type PatchEmployeeBody = {
     bank_account_no?: string | null;
     salary_type?: string | null;
     line_user_id?: string | null;
+    is_checkin_exempt?: boolean;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -114,7 +116,8 @@ export async function GET(req: Request) {
                 bank_name: true,
                 bank_account_no: true,
                 line_user_id: true,
-                salary_type: true
+                salary_type: true,
+                is_checkin_exempt: true
             },
         });
 
@@ -185,6 +188,7 @@ export async function POST(req: Request) {
                 bank_account_no: body.bank_account_no ? clean(body.bank_account_no) : null,
                 salary_type: body.salary_type || "monthly",
                 line_user_id: body.line_user_id ? clean(body.line_user_id) : null,
+                is_checkin_exempt: body.is_checkin_exempt ?? false,
             },
             select: {
                 emp_id: true,
@@ -208,6 +212,7 @@ export async function POST(req: Request) {
                 bank_name: true,
                 bank_account_no: true,
                 line_user_id: true,
+                is_checkin_exempt: true,
             },
         });
 
@@ -314,6 +319,9 @@ export async function PATCH(req: Request) {
         if (body.line_user_id !== undefined) {
             data.line_user_id = body.line_user_id ? clean(body.line_user_id) : null;
         }
+        if (body.is_checkin_exempt !== undefined) {
+            data.is_checkin_exempt = Boolean(body.is_checkin_exempt);
+        }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้
         if (body.pin !== undefined) {
@@ -349,6 +357,7 @@ export async function PATCH(req: Request) {
                 bank_name: true,
                 bank_account_no: true,
                 line_user_id: true,
+                is_checkin_exempt: true,
             },
         });
 

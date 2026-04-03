@@ -45,7 +45,7 @@ export async function GET(req: Request) {
         // ✅ active employees only
         const activeEmpIds = (
             await prisma.employees.findMany({
-                where: { is_active: true },
+                where: { is_active: true, is_checkin_exempt: false },
                 select: { emp_id: true },
             })
         ).map((e) => e.emp_id);
@@ -91,6 +91,7 @@ export async function GET(req: Request) {
             const activeEmployees = await prisma.employees.findMany({
                 where: {
                     is_active: true,
+                    is_checkin_exempt: false,
                     ...(branchParam ? { branch_id: branchParam as any } : {})
                 },
                 select: {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
+import { User, Smartphone, Mail, Lock, ChevronLeft } from "lucide-react";
 
 export default function ResetPinPage() {
     const router = useRouter();
@@ -131,7 +132,7 @@ export default function ResetPinPage() {
                     <>
                         <label className={styles.label}>รหัสพนักงาน</label>
                         <div className={styles.inputWrap}>
-                            <span className={styles.inputIcon}>👤</span>
+                            <span className={styles.inputIcon}><User size={18} strokeWidth={2.5} /></span>
                             <input
                                 className={styles.input}
                                 placeholder="เช่น TE00001"
@@ -145,7 +146,7 @@ export default function ResetPinPage() {
 
                         <label className={styles.label}>เบอร์โทรศัพท์มือถือ</label>
                         <div className={styles.inputWrap}>
-                            <span className={styles.inputIcon}>📱</span>
+                            <span className={styles.inputIcon}><Smartphone size={18} strokeWidth={2.5} /></span>
                             <input
                                 type="tel"
                                 className={styles.input}
@@ -171,7 +172,7 @@ export default function ResetPinPage() {
                     <>
                         <label className={styles.label}>รหัส OTP 6 หลัก</label>
                         <div className={styles.inputWrap}>
-                            <span className={styles.inputIcon}>✉️</span>
+                            <span className={styles.inputIcon}><Mail size={18} strokeWidth={2.5} /></span>
                             <input
                                 className={styles.input}
                                 placeholder="XXXXXX"
@@ -185,7 +186,7 @@ export default function ResetPinPage() {
 
                         <label className={styles.label}>PIN ใหม่ (ตัวเลข 4-8 หลัก)</label>
                         <div className={styles.inputWrap}>
-                            <span className={styles.inputIcon}>🔒</span>
+                            <span className={styles.inputIcon}><Lock size={18} strokeWidth={2.5} /></span>
                             <input
                                 className={`${styles.input} ${styles.inputPin}`}
                                 placeholder="••••••"
@@ -227,8 +228,8 @@ export default function ResetPinPage() {
 
                 {!isSuccess && step === 1 && (
                     <div style={{ marginTop: "24px", textAlign: "center" }}>
-                        <Link href="/" style={{ color: "var(--red)", fontSize: "14px", textDecoration: "none", fontWeight: 600 }}>
-                            ← กลับไปหน้าเข้าสู่ระบบ
+                        <Link href="/" style={{ color: "var(--red)", fontSize: "14px", textDecoration: "none", fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                            <ChevronLeft size={16} /> กลับไปหน้าเข้าสู่ระบบ
                         </Link>
                     </div>
                 )}

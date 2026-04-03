@@ -65,7 +65,7 @@ async function sendPushMessage(to: string, text: string) {
 
 export async function POST(req: Request) {
     console.log("[LINE WEBHOOK] --- New Request Received ---");
-    
+
     // Check Token Presence
     if (!LINE_CHANNEL_ACCESS_TOKEN) {
         console.warn("[LINE WEBHOOK] ALERT: LINE_CHANNEL_ACCESS_TOKEN is NOT defined in this environment!");
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         console.log("[LINE WEBHOOK] Payload:", JSON.stringify(body, null, 2));
-        
+
         if (!body.events || body.events.length === 0) {
             console.log("[LINE WEBHOOK] No events found in body.");
             return new NextResponse("OK", { status: 200 });
@@ -84,12 +84,12 @@ export async function POST(req: Request) {
 
         for (const event of body.events) {
             console.log(`[LINE WEBHOOK] Processing event: ${event.type}`);
-            
+
             try {
                 if (event.type === "postback" && event.postback?.data) {
                     const lineUserId = event.source?.userId;
                     const replyToken = event.replyToken;
-                    
+
                     const params = new URLSearchParams(event.postback.data);
                     const action = params.get("action");
                     const targetId = params.get("id");
@@ -121,27 +121,94 @@ export async function POST(req: Request) {
                             continue;
                         }
 
-                        const statusToSet = action === "approve_leave" ? "approved" : "rejected";
-                        await prisma.leave_requests.update({
-                            where: { id: targetId! },
-                            data: { status: statusToSet, approved_at: new Date() }
-                        });
-                        console.log(`[LINE WEBHOOK] DB Updated to ${statusToSet}`);
+                        // ✅ Guard: Prevent duplicate clicks
+                        if (leaveReq.status !== "pending_supervisor") {
+                            console.warn(`[LINE WEBHOOK] Already processed: status=${leaveReq.status}`);
+                            const statusLabel = leaveReq.status === "pending_hr" ? "รอ HR อนุมัติ"
+                                : leaveReq.status === "approved" ? "อนุมัติแล้ว"
+                                    : leaveReq.status === "rejected" ? "ไม่อนุมัติแล้ว"
+                                        : leaveReq.status;
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการแล้ว (สถานะ: ${statusLabel})`);
+                            continue;
+                        }
 
-                        await sendReplyMessage(replyToken, action === "approve_leave" ? "✅ อนุมัติสำเร็จ" : "❌ ปฏิเสธสำเร็จ");
-                        
-                        if (leaveReq.employees?.line_user_id) {
-                            await sendPushMessage(leaveReq.employees.line_user_id, `📢 ใบลาของคุณได้รับการ "${action === "approve_leave" ? "อนุมัติ" : "ไม่อนุมัติ"}" แล้ว`);
+                        if (action === "approve_leave") {
+                            // ✅ Two-step: Supervisor approves → status moves to "pending_hr"
+                            await prisma.leave_requests.update({
+                                where: { id: targetId! },
+                                data: {
+                                    status: "pending_hr",
+                                    supervisor_approved_at: new Date(),
+                                }
+                            });
+                            console.log(`[LINE WEBHOOK] DB Updated to pending_hr (awaiting HR approval)`);
+
+                            await sendReplyMessage(replyToken, "✅ อนุมัติสำเร็จ — รอ HR อนุมัติขั้นสุดท้าย");
+
+                            // Notify employee with Flex Message (pending_hr status)
+                            if (leaveReq.employees?.line_user_id) {
+                                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
+                                    empName: leaveReq.name,
+                                    leaveType: leaveReq.leave_type,
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    days: leaveReq.days,
+                                    reason: leaveReq.reason || "",
+                                    status: "pending_hr",
+                                    approvedBy: supervisor.name,
+                                }).catch(console.error);
+                            }
+
+                            // Notify HR officer
+                            const { sendHrLeaveNotification } = await import("@/utils/lineMessaging");
+                            sendHrLeaveNotification({
+                                id: leaveReq.id,
+                                empName: leaveReq.name,
+                                leaveType: leaveReq.leave_type,
+                                startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                days: leaveReq.days,
+                                reason: leaveReq.reason || "",
+                                supervisorName: supervisor.name,
+                            }).catch(console.error);
+                        } else {
+                            // Reject: Supervisor rejects directly
+                            await prisma.leave_requests.update({
+                                where: { id: targetId! },
+                                data: {
+                                    status: "rejected",
+                                    supervisor_approved_at: new Date(),
+                                }
+                            });
+                            console.log(`[LINE WEBHOOK] DB Updated to rejected`);
+
+                            await sendReplyMessage(replyToken, "❌ ปฏิเสธสำเร็จ");
+
+                            // Notify employee with Flex Message (rejected status)
+                            if (leaveReq.employees?.line_user_id) {
+                                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
+                                    empName: leaveReq.name,
+                                    leaveType: leaveReq.leave_type,
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    days: leaveReq.days,
+                                    reason: leaveReq.reason || "",
+                                    status: "rejected",
+                                    approvedBy: supervisor.name,
+                                }).catch(console.error);
+                            }
                         }
                     }
                     // OT Logic similarly logged...
-                } 
-                
+                }
+
                 else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;
                     const replyToken = event.replyToken;
                     const text = event.message.text.trim().toLowerCase();
-                    
+
                     console.log(`[LINE WEBHOOK] Message: ${text} from ${lineUserId}`);
 
                     if (text === "/check") {
@@ -152,7 +219,7 @@ export async function POST(req: Request) {
                                 prisma.ot_requests.count({ where: { status: "pending" } }),
                                 prisma.employees.count({ where: { is_active: true } })
                             ]);
-                            
+
                             const statusMsg = `🛡️ [Status Check]\nEmployees: ${activeEmployees}\nPending Leave: ${pendingLeave}\nPending OT: ${pendingOT}`;
                             await sendReplyMessage(replyToken, statusMsg);
                         } catch (err: any) {

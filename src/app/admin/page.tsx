@@ -15,6 +15,7 @@ import {
     ChevronLeftIcon, CalendarIcon, XMarkIcon, PlusIcon, CheckIcon,
     UserIcon, MapPinIcon
 } from "@heroicons/react/24/outline";
+import { AlertTriangle } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateThai } from "@/utils/time";
 
 /* ══════════════════════════════════════════════
@@ -839,7 +840,7 @@ function AdminPageInner() {
                     </div>
                 </div>
 
-                {attMsg && <div className={styles.errorMsg}>⚠️ {attMsg}</div>}
+                {attMsg && <div className={styles.errorMsg} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={18} /> {attMsg}</div>}
 
                 <div className={styles.tableWrap}>
                     <div className={styles.tableHeader}>

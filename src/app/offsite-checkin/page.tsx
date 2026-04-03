@@ -13,6 +13,7 @@ import {
     StopIcon,
     ClockIcon
 } from "@heroicons/react/24/solid";
+import { Camera, RotateCcw, ArrowRight } from "lucide-react";
 import { formatTimeFull24h } from "@/utils/time";
 
 /* ──────────────────────────────────────────
@@ -280,7 +281,7 @@ export default function OffsiteCheckinPage() {
         ctx.font = `bold ${Math.round(22 * w / 1280)}px Arial`;
         ctx.fillText(`${dStr} ${tStr}`, w - 30, bY + 35);
         ctx.fillStyle = currentType === "Offsite-In" ? "#4ade80" : "#fb923c";
-        ctx.fillText(currentType === "Offsite-In" ? "▶ IN" : "■ OUT", w - 30, bY + 65);
+        ctx.fillText(currentType === "Offsite-In" ? "IN" : "OUT", w - 30, bY + 65);
 
         return c.toDataURL("image/jpeg", 0.88);
     }
@@ -449,13 +450,13 @@ export default function OffsiteCheckinPage() {
                                 <div style={{ position: "absolute", inset: 0, width: "100%", background: "black", zIndex: 5 }}>
                                     <img src={preview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                                     <button
-                                        style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: 20, padding: "6px 12px", fontSize: 12, cursor: "pointer", zIndex: 10 }}
+                                        style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: 20, padding: "6px 12px", fontSize: 12, cursor: "pointer", zIndex: 10, display: 'flex', alignItems: 'center', gap: 4 }}
                                         onClick={() => {
                                             setPreview(null);
                                             startCamera();
                                         }}
                                     >
-                                        ↺ ถ่ายใหม่
+                                        <RotateCcw size={14} /> ถ่ายใหม่
                                     </button>
                                 </div>
                             )}
@@ -554,7 +555,7 @@ export default function OffsiteCheckinPage() {
                                         const mins = Math.floor((new Date(x.timestamp).getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
                                         const hrs = Math.floor(mins / 60);
                                         const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
-                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> เข้า: {inTime} ➔ รวมเวลา: {dur}</div>;
+                                        durationInfo = <div style={{ fontSize: 12, color: "#4f46e5", marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> เข้า: {inTime} <ArrowRight size={12} /> รวมเวลา: {dur}</div>;
                                     }
                                 }
 

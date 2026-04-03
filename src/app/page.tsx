@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "./page.module.css";
+import { User, Lock } from "lucide-react";
 
 export default function LoginPage() {
     const [emp_id, setEmpId] = useState("");
@@ -53,7 +54,7 @@ export default function LoginPage() {
                 {/* EMP ID */}
                 <label className={styles.label}>รหัสพนักงาน</label>
                 <div className={styles.inputWrap}>
-                    <span className={styles.inputIcon}>👤</span>
+                    <span className={styles.inputIcon}><User size={18} strokeWidth={2.5} /></span>
                     <input
                         className={styles.input}
                         placeholder="เช่น TE00001"
@@ -69,7 +70,7 @@ export default function LoginPage() {
                 {/* PIN */}
                 <label className={styles.label}>PIN</label>
                 <div className={styles.inputWrap}>
-                    <span className={styles.inputIcon}>🔒</span>
+                    <span className={styles.inputIcon}><Lock size={18} strokeWidth={2.5} /></span>
                     <input
                         className={`${styles.input} ${styles.inputPin}`}
                         placeholder="••••••"
@@ -108,4 +109,4 @@ export default function LoginPage() {
 
         </div>
     );
-}
+}
