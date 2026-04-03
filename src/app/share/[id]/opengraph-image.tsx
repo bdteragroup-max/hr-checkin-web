@@ -1,60 +1,31 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/prisma";
-import { formatTimeFull24h } from "@/utils/time";
 
-export const runtime = "nodejs";
+export const runtime = "edge"; // 🚀 Use Edge runtime for fastest performance (no Prisma needed)
 export const alt = "Check-in Report";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function Image({ params }: { params: Promise<{ id: string }> }) {
-    const id = (await params).id;
-
-    let checkin: any = null;
+function decodeBase64Safe(val: string | null) {
+    if (!val) return "";
     try {
-        checkin = await prisma.checkins.findUnique({
-            where: { id: BigInt(id) },
-        });
+        return Buffer.from(val, 'base64').toString('utf8');
     } catch {
-        // fallback
+        return "";
     }
+}
 
-    if (!checkin) {
-        return new ImageResponse(
-            (
-                <div
-                    style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-                        color: "white",
-                        fontSize: 48,
-                        fontWeight: 700,
-                    }}
-                >
-                    ไม่พบข้อมูลเช็กอิน
-                </div>
-            ),
-            { ...size }
-        );
-    }
+export default async function Image({ searchParams }: { searchParams: URLSearchParams }) {
+    // 🚀 Read data from URL parameters (Zero DB hits!)
+    const name = decodeBase64Safe(searchParams.get("n")) || "—";
+    const typeStr = decodeBase64Safe(searchParams.get("t")) || "—";
+    const location = decodeBase64Safe(searchParams.get("l")) || "—";
+    const timeStr = decodeBase64Safe(searchParams.get("tm")) || "—";
+    const photoUrl = decodeBase64Safe(searchParams.get("p")) || null;
+    const remark = decodeBase64Safe(searchParams.get("r")) || "";
 
-    const isOut = checkin.type.includes("Out");
-    const isProject = checkin.type.includes("Project");
-    const isOffsite = checkin.type.includes("Offsite");
-    const typeStr = checkin.type.includes("In") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
-    const title = isOffsite
-        ? "เช็กอินนอกสถานที่"
-        : isProject
-            ? "ปฏิบัติงานโครงการ"
-            : "เช็กอินพนักงาน";
-    const location = checkin.project_name || checkin.branch_name || "—";
-    const timeStr = formatTimeFull24h(checkin.timestamp) + " น.";
-    const photoUrl = checkin.photo_url;
-
+    const isOut = typeStr.includes("OUT");
+    const title = typeStr.includes("นอกสถานที่") ? "เช็กอินนอกสถานที่" : (typeStr.includes("โครงการ") ? "ปฏิบัติงานโครงการ" : "เช็กอินพนักงาน");
+    
     const gradientStart = isOut ? "#f97316" : "#10b981";
     const gradientEnd = isOut ? "#ea580c" : "#059669";
 
@@ -172,7 +143,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                                 พนักงาน
                             </div>
                             <div style={{ fontSize: 36, fontWeight: 700, color: "#0f172a" }}>
-                                {checkin.name}
+                                {name}
                             </div>
                         </div>
 
@@ -216,7 +187,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                         </div>
 
                         {/* Remark */}
-                        {checkin.remark && (
+                        {remark && (
                             <div
                                 style={{
                                     display: "flex",
@@ -239,8 +210,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                                         maxHeight: "56px",
                                     }}
                                 >
-                                    {String(checkin.remark).substring(0, 80)}
-                                    {String(checkin.remark).length > 80 ? "..." : ""}
+                                    {remark}
                                 </div>
                             </div>
                         )}

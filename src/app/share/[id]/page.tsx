@@ -30,7 +30,18 @@ export async function generateMetadata(
     const location = checkin.project_name || checkin.branch_name || "สถานที่ปฏิบัติงาน";
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hr-checkin-web.vercel.app";
-    const imageUrl = `${baseUrl}/share/${id}/opengraph-image`;
+    
+    // 🚀 Encode data into URL to avoid DB hits in the OG route
+    const encodedData = new URLSearchParams({
+        n: Buffer.from(checkin.name).toString('base64'),
+        t: Buffer.from(typeStr).toString('base64'),
+        l: Buffer.from(location).toString('base64'),
+        tm: Buffer.from(formatTimeFull24h(checkin.timestamp)).toString('base64'),
+        p: checkin.photo_url ? Buffer.from(checkin.photo_url).toString('base64') : '',
+        r: checkin.remark ? Buffer.from(checkin.remark.substring(0, 50)).toString('base64') : ''
+    }).toString();
+
+    const imageUrl = `${baseUrl}/share/${id}/opengraph-image?${encodedData}`;
 
     return {
         title: `เช็กอิน: ${checkin.name}`,
