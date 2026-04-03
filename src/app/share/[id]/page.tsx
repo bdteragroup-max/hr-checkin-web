@@ -29,6 +29,9 @@ export async function generateMetadata(
     const typeStr = checkin.type.includes("In") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
     const location = checkin.project_name || checkin.branch_name || "สถานที่ปฏิบัติงาน";
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hr-checkin-web.vercel.app";
+    const imageUrl = `${baseUrl}/share/${id}/opengraph-image`;
+
     return {
         title: `เช็กอิน: ${checkin.name}`,
         description: `${typeStr} @ ${location} | ${checkin.remark || ""}`,
@@ -38,7 +41,7 @@ export async function generateMetadata(
             type: "website",
             images: [
                 {
-                    url: `/share/${id}/opengraph-image`,
+                    url: imageUrl,
                     width: 1200,
                     height: 630,
                     alt: "Check-in Report",
@@ -48,7 +51,7 @@ export async function generateMetadata(
         twitter: {
             card: "summary_large_image",
             title: `เช็กอิน: ${checkin.name}`,
-            images: [`/share/${id}/opengraph-image`],
+            images: [imageUrl],
         },
     };
 }
