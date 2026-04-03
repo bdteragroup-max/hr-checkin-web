@@ -68,9 +68,9 @@ export async function POST(request: Request) {
             sendOtApprovalFlexMessage(emp.supervisor.line_user_id, {
                 id: newOt.id,
                 empName: emp.name,
-                dateFor: new Date(date_for).toLocaleDateString("th-TH"),
-                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
-                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                dateFor: new Date(date_for).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
                 totalHours: Number(diffHrs),
                 reason: reason || ""
             }).catch(console.error);

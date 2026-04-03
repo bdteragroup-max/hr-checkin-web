@@ -155,8 +155,8 @@ export async function POST(req: Request) {
                                 id: leaveReq.id,
                                 empName: leaveReq.name,
                                 leaveType: leaveReq.leave_type,
-                                startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
                             }, true, replyToken);
@@ -166,8 +166,8 @@ export async function POST(req: Request) {
                                 sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
-                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
                                     status: nextStatus,
@@ -181,8 +181,8 @@ export async function POST(req: Request) {
                                     id: leaveReq.id,
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
-                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
                                     supervisorName: supervisor?.name || "หัวหน้า",
@@ -194,8 +194,8 @@ export async function POST(req: Request) {
                                 sendManagementLeaveSummary({
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
-                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
                                     supervisorName: supervisor?.name || "หัวหน้า",
@@ -213,8 +213,8 @@ export async function POST(req: Request) {
                                 id: leaveReq.id,
                                 empName: leaveReq.name,
                                 leaveType: leaveReq.leave_type,
-                                startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
                             }, true, replyToken);
@@ -223,8 +223,8 @@ export async function POST(req: Request) {
                                 sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
-                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
                                     status: "rejected",
@@ -282,9 +282,9 @@ export async function POST(req: Request) {
                             await sendOtApprovalFlexMessage(lineUserId!, {
                                 id: otReq.id,
                                 empName: otReq.employee.name,
-                                dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                 totalHours: Number(otReq.total_hours),
                                 reason: otReq.reason || "",
                             }, true, replyToken);
@@ -293,9 +293,9 @@ export async function POST(req: Request) {
                             if (otReq.employee.line_user_id) {
                                 sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
                                     empName: otReq.employee.name,
-                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     status: nextStatus,
@@ -308,9 +308,9 @@ export async function POST(req: Request) {
                                 sendHrOtNotification({
                                     id: otReq.id,
                                     empName: otReq.employee.name,
-                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     supervisorName: supervisor?.name || "หัวหน้า",
@@ -321,9 +321,9 @@ export async function POST(req: Request) {
                             if (isHr) {
                                 sendManagementOtSummary({
                                     empName: otReq.employee.name,
-                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     supervisorName: supervisor?.name || "หัวหน้า",
@@ -339,9 +339,9 @@ export async function POST(req: Request) {
                             await sendOtApprovalFlexMessage(lineUserId!, {
                                 id: otReq.id,
                                 empName: otReq.employee.name,
-                                dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                 totalHours: Number(otReq.total_hours),
                                 reason: otReq.reason || "",
                             }, true, replyToken);
@@ -349,9 +349,9 @@ export async function POST(req: Request) {
                             if (otReq.employee.line_user_id) {
                                 sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
                                     empName: otReq.employee.name,
-                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
-                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
-                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     status: "rejected",
