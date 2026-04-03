@@ -42,11 +42,12 @@ export async function generateMetadata(
             r: checkin.remark ? Buffer.from(checkin.remark.substring(0, 50)).toString('base64') : ''
         }).toString();
 
-        const imageUrl = `${baseUrl}/share/${id}/og?${encodedData}`;
+        // 🚀 Force Big Card Support with .png extension hint
+        const imageUrl = `${baseUrl}/share/${id}/og?${encodedData}&.png`;
 
         return {
             title: `เช็กอิน: ${checkin.name}`,
-            description: `${typeStr} @ ${location} | ${checkin.remark || ""}`,
+            description: `${typeStr} ณ ${location}\n🕒 เวลา: ${formatTimeFull24h(checkin.timestamp)} น.`,
             openGraph: {
                 title: `📍 รายงานการเช็กอิน: ${checkin.name}`,
                 description: `${typeStr} ณ ${location}\n🕒 เวลา: ${formatTimeFull24h(checkin.timestamp)} น.`,
@@ -56,25 +57,35 @@ export async function generateMetadata(
                         url: imageUrl,
                         width: 1200,
                         height: 630,
-                        alt: "Check-in Report",
+                        type: "image/png",
+                        alt: `Check-in Report: ${checkin.name}`,
                     },
                 ],
             },
             twitter: {
                 card: "summary_large_image",
-                title: `เช็กอิน: ${checkin.name}`,
+                title: `📍 เช็กอินพนักงาน: ${checkin.name}`,
                 images: [imageUrl],
             },
         };
     } catch (error) {
         // 🛠️ Resilience Fallback: If DB is full, still show a generic card to LINE
         console.error("Metadata DB Error:", error);
-        const fallbackUrl = `${baseUrl}/share/${id}/og?n=SFIgUmVjb3Jk&t=Q2hlY2staW4=`; // "HR Record", "Check-in"
+        const fallbackUrl = `${baseUrl}/share/${id}/og?n=SFIgUmVjb3Jk&t=Q2hlY2staW4=&.png`; // "HR Record", "Check-in"
         return {
             title: "Check-in Report (Processing)",
             openGraph: {
                 title: "📍 รายงานการเช็กอิน (กำลังประมวลผล)",
-                images: [{ url: fallbackUrl, width: 1200, height: 630 }],
+                images: [{ 
+                    url: fallbackUrl, 
+                    width: 1200, 
+                    height: 630,
+                    type: "image/png"
+                }],
+            },
+            twitter: {
+                card: "summary_large_image",
+                images: [fallbackUrl],
             }
         };
     }
