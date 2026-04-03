@@ -36,7 +36,7 @@ export async function POST(
         // ✅ Guard: Prevent duplicate rejections
         const leaveBeforeUpdate = await prisma.leave_requests.findUnique({
             where: { id },
-            select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, reason: true, status: true },
+            select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, status: true },
         });
         if (!leaveBeforeUpdate) return NextResponse.json({ ok: false, error: "NOT_FOUND" }, { status: 404 });
         if (leaveBeforeUpdate.status !== "pending" && leaveBeforeUpdate.status !== "pending_hr") {
@@ -67,7 +67,7 @@ export async function POST(
                     leaveType: leaveBeforeUpdate.leave_type,
                     startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH"),
                     endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH"),
-                    days: leaveBeforeUpdate.days,
+                    minutes: leaveBeforeUpdate.minutes,
                     reason: leaveBeforeUpdate.reason || "",
                     status: "rejected",
                     approvedBy: admin.emp_id,

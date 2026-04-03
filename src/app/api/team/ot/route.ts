@@ -23,7 +23,7 @@ export async function GET() {
                 employee: {
                     supervisor_id: decoded.emp_id
                 },
-                status: "pending"
+                status: "pending_supervisor"
             },
             include: {
                 employee: {
@@ -39,7 +39,7 @@ export async function GET() {
                 employee: {
                     supervisor_id: decoded.emp_id
                 },
-                status: { not: "pending" }
+                status: { not: "pending_supervisor" }
             },
             include: {
                 employee: {
@@ -81,24 +81,63 @@ export async function PUT(request: Request) {
             include: { employee: true }
         });
 
-        if (!existing || existing.employee.supervisor_id !== decoded.emp_id) {
+        if (!existing || existing.employee.supervisor_id !== (decoded as any).emp_id) {
             return NextResponse.json({ error: "Unauthorized or not found" }, { status: 403 });
         }
 
+        if (existing.status !== "pending_supervisor") {
+            return NextResponse.json({ error: "Request already processed" }, { status: 400 });
+        }
+
         const updateData: any = {
-            status,
+            status: status === "approved" ? "pending_hr" : "rejected",
             approved_at: new Date(),
-            supervisor_id: decoded.emp_id
+            supervisor_id: (decoded as any).emp_id
         };
 
         if (status === "approved" && approved_hours !== undefined) {
             updateData.approved_hours = Number(approved_hours);
         }
 
+        const supervisor = await prisma.employees.findUnique({
+            where: { emp_id: decoded.emp_id },
+            select: { name: true }
+        });
+
         const updated = await prisma.ot_requests.update({
             where: { id: reqId },
-            data: updateData
+            data: updateData,
+            include: { employee: true }
         });
+
+        // ✅ LINE Notifications
+        if (updated.employee.line_user_id) {
+            const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
+            sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
+                empName: updated.employee.name,
+                dateFor: updated.date_for.toLocaleDateString("th-TH"),
+                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                totalHours: Number(updated.total_hours),
+                reason: updated.reason || "",
+                status: status === "approved" ? "pending_hr" : "rejected",
+                approvedBy: supervisor?.name || "หัวหน้างาน"
+            }).catch(console.error);
+        }
+
+        if (status === "approved") {
+            const { sendHrOtNotification } = await import("@/utils/lineMessaging");
+            sendHrOtNotification({
+                id: updated.id,
+                empName: updated.employee.name,
+                dateFor: updated.date_for.toLocaleDateString("th-TH"),
+                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                totalHours: Number(updated.total_hours),
+                reason: updated.reason || "",
+                supervisorName: supervisor?.name || "หัวหน้างาน"
+            }).catch(console.error);
+        }
 
         return NextResponse.json(updated);
     } catch (e: any) {

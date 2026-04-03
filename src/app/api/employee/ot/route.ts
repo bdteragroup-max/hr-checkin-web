@@ -59,7 +59,7 @@ export async function POST(request: Request) {
                 end_time: end,
                 total_hours: diffHrs,
                 reason: reason || "",
-                status: "pending",
+                status: "pending_supervisor",
                 supervisor_id: emp.supervisor_id
             }
         });
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
                 dateFor: new Date(date_for).toLocaleDateString("th-TH"),
                 startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
                 endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
-                totalHours: diffHrs,
+                totalHours: Number(diffHrs),
                 reason: reason || ""
             }).catch(console.error);
         }
@@ -134,8 +134,8 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: "Request not found" }, { status: 404 });
         }
 
-        if (existing.status !== "pending") {
-            return NextResponse.json({ error: "สามารถลบได้เฉพาะคำขอที่ยังไม่อนุมัติ (pending) เท่านั้น" }, { status: 400 });
+        if (existing.status !== "pending_supervisor") {
+            return NextResponse.json({ error: "สามารถลบได้เฉพาะคำขอที่ยังไม่อนุมัติโดยหัวหน้า (pending_supervisor) เท่านั้น" }, { status: 400 });
         }
 
         await prisma.ot_requests.delete({

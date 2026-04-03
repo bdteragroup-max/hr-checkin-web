@@ -16,7 +16,7 @@ type OtRequest = {
     total_hours: number;
     approved_hours: number | null;
     reason: string;
-    status: "pending" | "approved" | "rejected";
+    status: "pending_supervisor" | "pending_hr" | "approved" | "rejected";
     supervisor_name: string | null;
     supervisor_remark: string | null;
     employee: { name: string; departments: { name: string } | null };
@@ -117,18 +117,20 @@ export default function AdminOtPage() {
         });
     }, [requests, statusFilter, searchQuery]);
 
-    const pendingCount = requests.filter(r => r.status === "pending").length;
+    const pendingCount = requests.filter(r => r.status === "pending_hr").length;
 
     function getStatusBadge(status: string) {
         if (status === "approved") return `${styles.badge} ${styles.approved}`;
         if (status === "rejected") return `${styles.badge} ${styles.rejected}`;
-        return `${styles.badge} ${styles.pending}`;
+        if (status === "pending_hr") return `${styles.badge} ${styles.pending}`;
+        return `${styles.badge} ${styles.pending_supervisor || styles.pending}`;
     }
 
     function getStatusText(status: string) {
         if (status === "approved") return "อนุมัติแล้ว";
         if (status === "rejected") return "ไม่อนุมัติ";
-        return "รอพิจารณา";
+        if (status === "pending_hr") return "รอ HR อนุมัติ";
+        return "รอหัวหน้าอนุมัติ";
     }
 
     return (
@@ -146,7 +148,8 @@ export default function AdminOtPage() {
                     <div className={styles.filterLabel}>STATUS</div>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option value="">ทุกสถานะ</option>
-                        <option value="pending">รอพิจารณา</option>
+                        <option value="pending_supervisor">รอหัวหน้าอนุมัติ</option>
+                        <option value="pending_hr">รอ HR อนุมัติ</option>
                         <option value="approved">อนุมัติแล้ว</option>
                         <option value="rejected">ไม่อนุมัติ</option>
                     </select>
@@ -236,27 +239,36 @@ export default function AdminOtPage() {
                                             </span>
                                         </td>
                                         <td>
-                                            {req.status === "pending" ? (
-                                                <div style={{ display: "flex", gap: 6 }}>
-                                                    <button onClick={() => openAdjustment(req)} className={localStyles.btnApprove} title="อนุมัติ/จัดการ">จัดการคำขอ</button>
-                                                </div>
-                                            ) : (
+                                            <div style={{ display: "flex", gap: 6 }}>
                                                 <button 
-                                                    disabled 
-                                                    className={localStyles.btnEdit} 
+                                                    onClick={() => openAdjustment(req)} 
+                                                    className={localStyles.btnApprove} 
                                                     style={{ 
-                                                        opacity: 0.5, 
-                                                        cursor: "not-allowed", 
-                                                        filter: "grayscale(100%)",
-                                                        background: "#e5e7eb",
-                                                        color: "#9ca3af",
-                                                        borderColor: "#e5e7eb"
+                                                        background: (req.status === "approved" || req.status === "rejected") 
+                                                            ? "#f1f5f9" 
+                                                            : "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)",
+                                                        color: (req.status === "approved" || req.status === "rejected") ? "#475569" : "#ffffff",
+                                                        border: (req.status === "approved" || req.status === "rejected") ? "1px solid #e2e8f0" : "none",
+                                                        boxShadow: (req.status === "approved" || req.status === "rejected") ? "none" : "0 4px 12px rgba(109, 40, 217, 0.2)",
+                                                        fontWeight: 700,
+                                                        padding: "6px 14px",
+                                                        height: "36px",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        borderRadius: "8px",
+                                                        fontSize: "12px"
                                                     }}
+                                                    title="อนุมัติ/จัดการ"
                                                 >
-                                                    <CheckCircleIcon width={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                                                    ดำเนินการแล้ว
+                                                    {(req.status === "approved" || req.status === "rejected") ? (
+                                                        <>
+                                                            <PencilSquareIcon width={14} style={{ marginRight: 4 }} />
+                                                            แก้ไขข้อมูล
+                                                        </>
+                                                    ) : "จัดการคำขอ"}
                                                 </button>
-                                            )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

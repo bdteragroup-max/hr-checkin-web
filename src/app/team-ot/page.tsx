@@ -253,8 +253,8 @@ export default function TeamOtPage() {
                                     <div key={req.id} className={styles.histCard}>
                                         <div className={styles.histHead}>
                                             <div className={styles.histName}>{req.employee.name}</div>
-                                            <span className={req.status === "approved" ? styles.badgeOk : styles.badgeBad}>
-                                                {req.status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธ"}
+                                            <span className={(req.status === "approved" || req.status === "pending_hr") ? styles.badgeOk : styles.badgeBad}>
+                                                {req.status === "pending_hr" ? "ส่งต่อ HR" : req.status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธ"}
                                             </span>
                                         </div>
 
@@ -266,7 +266,7 @@ export default function TeamOtPage() {
                                             <span className={styles.detailLabel}>ชม.:</span>
                                             <span className={styles.detailVal}>
                                                 ขอ {Number(req.total_hours)} ชม.
-                                                {req.status === "approved" && (
+                                                {(req.status === "approved" || req.status === "pending_hr") && (
                                                     <span style={{ color: "#16a34a", fontWeight: 700, marginLeft: 8 }}>
                                                         อนุมัติ {req.approved_hours ? Number(req.approved_hours) : Number(req.total_hours)} ชม.
                                                     </span>

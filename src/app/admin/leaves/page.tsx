@@ -49,6 +49,20 @@ function badgeClass(status: string) {
     return `${styles.badge} ${styles.pending}`;
 }
 
+function formatLeaveMins(totalMins?: number) {
+    if (!totalMins || totalMins === 0) return "0 วัน";
+    const days = Math.floor(totalMins / 480);
+    const remainingMins = totalMins % 480;
+    const hours = Math.floor(remainingMins / 60);
+    const mins = remainingMins % 60;
+
+    let res = "";
+    if (days > 0) res += `${days} วัน `;
+    if (hours > 0) res += `${hours} ชม. `;
+    if (mins > 0) res += `${mins} นาที`;
+    return res.trim() || "0 วัน";
+}
+
 function normalizeReason(s: string) {
     // กันเหตุผลว่าง/สั้น/แตกต่างกันเล็กน้อย
     const t = (s || "").trim();
@@ -285,8 +299,7 @@ export default function AdminLeavesPage() {
                                 </thead>
                                 <tbody>
                                     {pendingLeave.map((r) => {
-                                        const days = typeof r.days === 'number' ? r.days :
-                                            Math.max(1, Math.round((new Date(r.end_date).getTime() - new Date(r.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                                        const displayDuration = formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined));
                                         return (
                                             <tr key={r.id}>
                                                 <td>
@@ -295,7 +308,7 @@ export default function AdminLeavesPage() {
                                                 </td>
                                                 <td>{r.leave_type || "-"}</td>
                                                 <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_at || r.start_date)} - {fmtDateTime(r.end_at || r.end_date)}</td>
-                                                <td style={{ textAlign: "center" }}>{days} วัน</td>
+                                                <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>{displayDuration}</td>
                                                 <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
                                                     {/* ✅ Button grays out and disables if status is not pending */}
@@ -380,7 +393,10 @@ export default function AdminLeavesPage() {
                                             <td>{r.leave_type || "-"}</td>
                                             <td style={{ fontSize: 12 }}>
                                                 {fmtDateTime(r.start_at || r.start_date)} – {fmtDateTime(r.end_at || r.end_date)}
-                                                {r.days ? <><br />({r.days} วัน)</> : ""}
+                                                <br />
+                                                <span style={{ color: "var(--text4)", fontWeight: 500 }}>
+                                                    ({formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined))})
+                                                </span>
                                             </td>
                                             <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 520 }}>
                                                 {normalizeReason(r.reason || "")}

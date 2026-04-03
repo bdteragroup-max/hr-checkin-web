@@ -46,6 +46,58 @@ function isTypingTarget(el: Element | null) {
     return tag === "input" || tag === "textarea" || tag === "select" || (el as HTMLElement).isContentEditable;
 }
 
+function formatLeaveMins(totalMins?: number) {
+    if (!totalMins || totalMins === 0) return "0 วัน";
+    const days = Math.floor(totalMins / 480);
+    const remainingMins = totalMins % 480;
+    const hours = Math.floor(remainingMins / 60);
+    const mins = remainingMins % 60;
+
+    let res = "";
+    if (days > 0) res += `${days} วัน `;
+    if (hours > 0) res += `${hours} ชม. `;
+    if (mins > 0) res += `${mins} นาที`;
+    return res.trim() || "0 วัน";
+}
+
+function calculateNetMinutes(startStr: string, endStr: string) {
+    if (!startStr || !endStr) return 0;
+    const startAt = new Date(startStr);
+    const endAt = new Date(endStr);
+    if (endAt <= startAt) return 0;
+
+    let totalWorkingMinutes = 0;
+    const current = new Date(startAt.getTime());
+
+    while (current < endAt) {
+        const dateStr = current.getFullYear() + "-" + String(current.getMonth() + 1).padStart(2, '0') + "-" + String(current.getDate()).padStart(2, '0');
+        const dayStart = new Date(`${dateStr}T08:00:00+07:00`);
+        const lunchStart = new Date(`${dateStr}T12:00:00+07:00`);
+        const lunchEnd = new Date(`${dateStr}T13:00:00+07:00`);
+        const dayOfWeek = current.getDay();
+
+        // standard end 17:00, Saturday end 15:00
+        const dayEnd = new Date(`${dateStr}T${dayOfWeek === 6 ? "15" : "17"}:00:00+07:00`);
+
+        const actualStart = current > dayStart ? current : dayStart;
+        const actualEnd = endAt < dayEnd ? endAt : dayEnd;
+
+        if (actualStart < actualEnd) {
+            let mins = Math.floor((actualEnd.getTime() - actualStart.getTime()) / 60000);
+            const overlapLunchStart = actualStart > lunchStart ? actualStart : lunchStart;
+            const overlapLunchEnd = actualEnd < lunchEnd ? actualEnd : lunchEnd;
+            if (overlapLunchStart < overlapLunchEnd) {
+                const lunchOverlapMins = Math.floor((overlapLunchEnd.getTime() - overlapLunchStart.getTime()) / 60000);
+                mins -= lunchOverlapMins;
+            }
+            totalWorkingMinutes += Math.max(0, mins);
+        }
+        current.setDate(current.getDate() + 1);
+        current.setHours(0, 0, 0, 0);
+    }
+    return totalWorkingMinutes;
+}
+
 function fmtDateTimeTH(d: string) {
     try {
         const dateObj = new Date(d);
@@ -129,6 +181,11 @@ export default function LeavePage() {
 
     const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
     const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
+    
+    const estimatedMinutes = useMemo(() => {
+        if (!startAt || !endAt) return 0;
+        return calculateNetMinutes(startAt, endAt);
+    }, [startAt, endAt]);
     
     const startHourOptions = useMemo(() => getLeaveHourOptions(startDate), [startDate]);
     const endHourOptions = useMemo(() => getLeaveHourOptions(endDate), [endDate]);
@@ -247,7 +304,7 @@ export default function LeavePage() {
                 MAX_3_CONSECUTIVE_DAYS: "ลากิจ ลาติดต่อกันได้สูงสุด 3 วันทำงาน",
                 ANNUAL_FULL_DAYS_ONLY: "ลาพักร้อนต้องลาเป็นวันเต็มเท่านั้น (08:00 - 17:00)",
                 ADVANCE_NOTICE_REQUIRED: `ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${data?.required_days} วัน`,
-                EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${data?.remaining || 0} วัน (ขอลา ${data?.requested || 0} วัน)`,
+                EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${formatLeaveMins(data?.remaining_mins || 0)} (ขอลา ${formatLeaveMins(data?.requested_mins || 0)})`,
                 CANNOT_EDIT_APPROVED: "ไม่สามารถแก้ไขใบลาที่อนุมัติแล้วได้",
             };
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
@@ -332,9 +389,9 @@ export default function LeavePage() {
                             <div key={t.id} className={styles.quotaItem}>
                                 <div className={styles.quotaLabel}>{displayName}</div>
                                 <div className={`${styles.quotaVal} ${isNoQuota ? styles.quotaValBad : isWarning ? styles.quotaValWarn : styles.quotaValOk}`}>
-                                    {remaining} <span style={{ fontSize: 13, opacity: 0.8 }}>วัน</span>
+                                    {formatLeaveMins(remaining)}
                                 </div>
-                                <div className={styles.quotaSub}>ใช้ไป {t.used || 0} / {t.quota || 0}</div>
+                                <div className={styles.quotaSub}>ใช้ไป {formatLeaveMins(t.used || 0)} / {formatLeaveMins(t.quota || 0)}</div>
                             </div>
                         );
                     })}
@@ -359,7 +416,7 @@ export default function LeavePage() {
                             
                             {selectedType?.id === 'annual' && (
                                 <div className={`${styles.smallNote} ${styles.smallNoteWarn}`}>
-                                    * ต้องลาล่วงหน้า 30 วัน และลาเป็นวันเต็มเท่านั้น
+                                    * ต้องลาล่วงหน้า 30 วัน
                                 </div>
                             )}
 
@@ -367,16 +424,16 @@ export default function LeavePage() {
                                 <div className={styles.quotaBox}>
                                     <div className={styles.quotaRow}>
                                         <span className={styles.quotaLabel}>สิทธิ์ทั้งหมด</span>
-                                        <span className={styles.quotaVal}>{selectedType.quota} วัน</span>
+                                        <span className={styles.quotaVal}>{formatLeaveMins(selectedType.quota)}</span>
                                     </div>
                                     <div className={styles.quotaRow}>
                                         <span className={styles.quotaLabel}>ใช้ไปแล้ว</span>
-                                        <span className={styles.quotaVal}>{selectedType.used} วัน</span>
+                                        <span className={styles.quotaVal}>{formatLeaveMins(selectedType.used || 0)}</span>
                                     </div>
                                     <div className={styles.quotaRow} style={{ borderTop: "1px solid var(--gray-200)", paddingTop: 8, marginTop: 6 }}>
                                         <span className={styles.quotaLabel} style={{ fontWeight: 600, color: "var(--text)" }}>คงเหลือสุทธิ</span>
                                         <span className={styles.quotaVal} style={{ fontWeight: 700, color: "var(--red)", fontSize: 16 }}>
-                                            {Math.max(0, selectedType.quota - (selectedType.used || 0))} วัน
+                                            {formatLeaveMins(Math.max(0, selectedType.quota - (selectedType.used || 0)))}
                                         </span>
                                     </div>
                                 </div>
@@ -432,6 +489,22 @@ export default function LeavePage() {
                                     </div>
                                 </div>
                             </div>
+                            
+                            {estimatedMinutes > 0 && (
+                                <div style={{ 
+                                    marginTop: 16, 
+                                    padding: "12px 16px", 
+                                    background: "rgba(34, 197, 94, 0.08)", 
+                                    border: "1px dashed #22c55e", 
+                                    borderRadius: 12,
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center"
+                                }}>
+                                    <span style={{ fontSize: 13, color: "var(--text3)", fontWeight: 500 }}>ระยะเวลาที่เลือก (หักพักเที่ยง):</span>
+                                    <span style={{ fontSize: 15, color: "#15803d", fontWeight: 700 }}>{formatLeaveMins(estimatedMinutes)}</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Reason & Action */}
@@ -500,7 +573,7 @@ export default function LeavePage() {
                                         </div>
                                     </div>
                                     <div className={styles.historyRowBot}>
-                                        <div className={styles.colDays}>{x.days} วันทำงาน</div>
+                                        <div className={styles.colDays}>{formatLeaveMins(x.minutes)}</div>
                                         {x.status.startsWith('pending') && (
                                             <button 
                                                 className={styles.btnOutlineSm} 

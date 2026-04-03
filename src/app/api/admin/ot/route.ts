@@ -41,11 +41,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    try {
-        await requireAdmin();
-    } catch (e) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const adminPayload = await requireAdmin();
+    const adminUser = await prisma.admins.findUnique({
+        where: { username: adminPayload.emp_id },
+        select: { full_name: true }
+    });
+    const adminName = adminUser?.full_name || adminPayload.emp_id;
 
     try {
         const body = await request.json();
@@ -68,8 +69,44 @@ export async function POST(request: Request) {
 
         const updated = await prisma.ot_requests.update({
             where: { id: Number(id) },
-            data: updateData
+            data: updateData,
+            include: { employee: true }
         });
+
+        // ✅ LINE Notification to employee
+        if (updated.employee.line_user_id) {
+            const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
+            sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
+                empName: updated.employee.name,
+                dateFor: updated.date_for.toLocaleDateString("th-TH"),
+                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                totalHours: Number(updated.total_hours),
+                reason: updated.reason || "",
+                status: status as any, // "approved" or "rejected"
+                approvedBy: adminName
+            }).catch(console.error);
+        }
+
+        // ✅ Notify Management if Approved
+        if (status === "approved") {
+            const { sendManagementOtSummary } = await import("@/utils/lineMessaging");
+            const supervisor = await prisma.employees.findUnique({
+                where: { emp_id: updated.supervisor_id || "" },
+                select: { name: true }
+            });
+
+            sendManagementOtSummary({
+                empName: updated.employee.name,
+                dateFor: updated.date_for.toLocaleDateString("th-TH"),
+                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                totalHours: Number(updated.total_hours),
+                reason: updated.reason || "",
+                supervisorName: supervisor?.name || "ไม่ได้ระบุ",
+                hrName: adminName
+            }).catch(console.error);
+        }
 
         return NextResponse.json({ ok: true, data: updated });
     } catch (e: any) {

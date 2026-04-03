@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/jwt";
 import crypto from "crypto";
 import { sendLeaveApprovalFlexMessage } from "@/utils/lineMessaging";
+import { calcWorkingMinutes } from "@/utils/time";
 
 export const runtime = "nodejs";
 
@@ -79,9 +80,11 @@ async function countWorkingDaysBangkokInclusive(startAt: Date, endAt: Date) {
     return days;
 }
 
+/**
+ * Calculates net working minutes (DEPRECATED - use calcWorkingMinutes from @/utils/time)
+ */
 function calcMinutes(startAt: Date, endAt: Date) {
-    const ms = endAt.getTime() - startAt.getTime();
-    return Math.max(0, Math.floor(ms / 60000));
+    return calcWorkingMinutes(startAt, endAt);
 }
 
 export async function calculateEntitlements(empId: string, hireDate: Date | null, isOnTrial: boolean = false) {
@@ -153,20 +156,28 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
             start_date: { gte: startOfCurrentYear },
             end_date: { lte: endOfCurrentYear }
         },
-        select: { leave_type_id: true, days: true }
+        select: { leave_type_id: true, days: true, minutes: true }
     });
 
     const used: Record<string, number> = {};
     for (const req of usedLeaves) {
-        used[req.leave_type_id] = (used[req.leave_type_id] || 0) + req.days;
+        // Use minutes as the primary source of truth for used leave
+        const mins = req.minutes || (req.days * 480);
+        used[req.leave_type_id] = (used[req.leave_type_id] || 0) + mins;
     }
 
-    // Combine used days for Personal and Emergency
+    // Combine used minutes for Personal and Emergency
     const combinedUsed = (used['personal'] || 0) + (used['emergency'] || 0);
     used['personal'] = combinedUsed;
     used['emergency'] = combinedUsed;
 
-    return { quotas, used };
+    // Convert all quotas to minutes (1 day = 480 minutes)
+    const quotasInMinutes: Record<string, number> = {};
+    for (const [id, days] of Object.entries(quotas)) {
+        quotasInMinutes[id] = days * 480;
+    }
+
+    return { quotas: quotasInMinutes, used };
 }
 
 export async function GET() {
@@ -197,8 +208,8 @@ export async function GET() {
             max_days: t.max_days ?? null,
             require_attachment: t.id === "sick", // เงื่อนไขละเอียดจะ validate ตอน POST/trigger
             note: t.note ?? null,
-            quota: quotas[t.id] ?? null,
-            used: used[t.id] ?? 0,
+            quota: quotas[t.id] ?? null, // Now in minutes
+            used: used[t.id] ?? 0,       // Now in minutes
             advance_notice: t.advance_notice ?? 0,
         }));
 
@@ -309,18 +320,19 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "MAX_3_CONSECUTIVE_DAYS", days }, { status: 400 });
     }
 
-    // Rule: Annual Leave must be full working days (08:00 - 17:00)
+    // 08:00 to 17:00 check (REMOVED: Annual leave can now be partial hours per user confirmation)
+    /*
     if (leave_type_id === "annual") {
         const startH = startAt.getHours();
         const startM = startAt.getMinutes();
         const endH = endAt.getHours();
         const endM = endAt.getMinutes();
 
-        // 08:00 to 17:00 check (assuming these are the full day hours from config)
         if (startH !== 8 || startM !== 0 || endH !== 17 || endM !== 0) {
             return NextResponse.json({ error: "ANNUAL_FULL_DAYS_ONLY" }, { status: 400 });
         }
     }
+    */
 
     // Quota validation
     if (["annual", "personal", "sick"].includes(leave_type_id)) {
@@ -328,10 +340,17 @@ export async function POST(req: Request) {
 
         // If there is an entitlement definition for this type
         if (leave_type_id in quotas) {
-            const ent = quotas[leave_type_id];
-            const alreadyUsed = used[leave_type_id] || 0;
-            if (days + alreadyUsed > ent) {
-                return NextResponse.json({ error: "EXCEED_ENTITLEMENT", entitlement_days: ent, used: alreadyUsed, remaining: Math.max(0, ent - alreadyUsed), requested: days }, { status: 400 });
+            const entMins = quotas[leave_type_id];
+            const alreadyUsedMins = used[leave_type_id] || 0;
+            if (minutes + alreadyUsedMins > entMins) {
+                const remainingMins = Math.max(0, entMins - alreadyUsedMins);
+                return NextResponse.json({ 
+                    error: "EXCEED_ENTITLEMENT", 
+                    entitlement_mins: entMins, 
+                    used_mins: alreadyUsedMins, 
+                    remaining_mins: remainingMins, 
+                    requested_mins: minutes 
+                }, { status: 400 });
             }
         } else if (leave_type_id === "annual") {
             // If annual leave doesn't have an entitlement (e.g. < 1 year and no 0-year policy defined, block it entirely)
@@ -370,7 +389,7 @@ export async function POST(req: Request) {
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH"),
                 endDate: endAt.toLocaleDateString("th-TH"),
-                days,
+                minutes,
                 reason: reason || ""
             }).catch(console.error);
 
@@ -388,7 +407,7 @@ export async function POST(req: Request) {
                     leaveType: def.name,
                     startDate: startAt.toLocaleDateString("th-TH"),
                     endDate: endAt.toLocaleDateString("th-TH"),
-                    days,
+                    minutes,
                     reason: reason || "",
                     status: "pending_supervisor",
                 }).catch(console.error);
@@ -403,7 +422,7 @@ export async function POST(req: Request) {
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH"),
                 endDate: endAt.toLocaleDateString("th-TH"),
-                days,
+                minutes,
                 reason: reason || "",
                 supervisorName: "ไม่มี (ส่งตรงถึง HR)",
             }).catch(console.error);
@@ -420,7 +439,7 @@ export async function POST(req: Request) {
                     leaveType: def.name,
                     startDate: startAt.toLocaleDateString("th-TH"),
                     endDate: endAt.toLocaleDateString("th-TH"),
-                    days,
+                    minutes,
                     reason: reason || "",
                     status: "pending_hr",
                 }).catch(console.error);
@@ -531,6 +550,7 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "MAX_3_CONSECUTIVE_DAYS", days }, { status: 400 });
     }
 
+    /* (REMOVED: Partial annual leave allowed)
     if (leave_type_id === "annual") {
         const startH = startAt.getHours();
         const startM = startAt.getMinutes();
@@ -541,17 +561,25 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: "ANNUAL_FULL_DAYS_ONLY" }, { status: 400 });
         }
     }
+    */
 
     if (["annual", "personal", "sick"].includes(leave_type_id)) {
         const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
 
         if (leave_type_id in quotas) {
-            const ent = quotas[leave_type_id];
-            const oldDays = (existing.leave_type_id === leave_type_id) ? existing.days : 0;
-            const alreadyUsed = (used[leave_type_id] || 0) - oldDays;
+            const entMins = quotas[leave_type_id];
+            const oldMins = (existing.leave_type_id === leave_type_id) ? (existing.minutes || (existing.days * 480)) : 0;
+            const alreadyUsedMins = (used[leave_type_id] || 0) - oldMins;
             
-            if (days + alreadyUsed > ent) {
-                return NextResponse.json({ error: "EXCEED_ENTITLEMENT", entitlement_days: ent, used: alreadyUsed, remaining: Math.max(0, ent - alreadyUsed), requested: days }, { status: 400 });
+            if (minutes + alreadyUsedMins > entMins) {
+                const remainingMins = Math.max(0, entMins - alreadyUsedMins);
+                return NextResponse.json({ 
+                    error: "EXCEED_ENTITLEMENT", 
+                    entitlement_mins: entMins, 
+                    used_mins: alreadyUsedMins, 
+                    remaining_mins: remainingMins, 
+                    requested_mins: minutes 
+                }, { status: 400 });
             }
         } else if (leave_type_id === "annual") {
             return NextResponse.json({ error: "NO_ENTITLEMENT", entitlement_days: 0 }, { status: 400 });

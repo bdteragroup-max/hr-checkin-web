@@ -109,102 +109,257 @@ export async function POST(req: Request) {
                             continue;
                         }
 
-                        // Auth Check
+                        // Auth Check: Either Supervisor or HR
+                        const hrLineUserId = process.env.HR_LINE_USER_ID;
+                        const isHr = hrLineUserId === lineUserId;
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: leaveReq.supervisor_id || "" }
                         });
-                        console.log(`[LINE WEBHOOK] Supervisor in DB: ${supervisor?.name} (Line: ${supervisor?.line_user_id})`);
+                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
 
-                        if (!supervisor || supervisor.line_user_id !== lineUserId) {
-                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected ${supervisor?.line_user_id}, Got ${lineUserId}`);
+                        if (!isHr && !isSupervisor) {
+                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected supervisor(${supervisor?.line_user_id}) or HR(${hrLineUserId}), Got ${lineUserId}`);
                             await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
                             continue;
                         }
 
                         // ✅ Guard: Prevent duplicate clicks
-                        if (leaveReq.status !== "pending_supervisor") {
-                            console.warn(`[LINE WEBHOOK] Already processed: status=${leaveReq.status}`);
-                            const statusLabel = leaveReq.status === "pending_hr" ? "รอ HR อนุมัติ"
-                                : leaveReq.status === "approved" ? "อนุมัติแล้ว"
-                                    : leaveReq.status === "rejected" ? "ไม่อนุมัติแล้ว"
-                                        : leaveReq.status;
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการแล้ว (สถานะ: ${statusLabel})`);
+                        // If it's supervisor, only allow if status is pending_supervisor
+                        // If it's HR, only allow if status is pending_hr
+                        if (isSupervisor && leaveReq.status !== "pending_supervisor") {
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
+                            continue;
+                        }
+                        if (isHr && !["pending_supervisor", "pending_hr"].includes(leaveReq.status)) {
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
                             continue;
                         }
 
+                        const { sendLeaveApprovalFlexMessage, sendHrLeaveNotification, sendEmployeeLeaveStatusNotification, sendManagementLeaveSummary } = await import("@/utils/lineMessaging");
+
                         if (action === "approve_leave") {
-                            // ✅ Two-step: Supervisor approves → status moves to "pending_hr"
-                            await prisma.leave_requests.update({
+                            // Logic: Supervisor approves -> pending_hr | HR approves -> approved
+                            const nextStatus = isHr ? "approved" : "pending_hr";
+                            const updated = await prisma.leave_requests.update({
                                 where: { id: targetId! },
                                 data: {
-                                    status: "pending_hr",
-                                    supervisor_approved_at: new Date(),
-                                }
+                                    status: nextStatus,
+                                    supervisor_approved_at: isSupervisor ? new Date() : leaveReq.supervisor_approved_at,
+                                    approved_at: isHr ? new Date() : leaveReq.approved_at,
+                                    approved_by: isHr ? "HR_LINE" : leaveReq.approved_by
+                                },
+                                include: { employees: true }
                             });
-                            console.log(`[LINE WEBHOOK] DB Updated to pending_hr (awaiting HR approval)`);
 
-                            await sendReplyMessage(replyToken, "✅ อนุมัติสำเร็จ — รอ HR อนุมัติขั้นสุดท้าย");
-
-                            // Notify employee with Flex Message (pending_hr status)
-                            if (leaveReq.employees?.line_user_id) {
-                                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
-                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
-                                    empName: leaveReq.name,
-                                    leaveType: leaveReq.leave_type,
-                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
-                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
-                                    days: leaveReq.days,
-                                    reason: leaveReq.reason || "",
-                                    status: "pending_hr",
-                                    approvedBy: supervisor.name,
-                                }).catch(console.error);
-                            }
-
-                            // Notify HR officer
-                            const { sendHrLeaveNotification } = await import("@/utils/lineMessaging");
-                            sendHrLeaveNotification({
+                            await sendLeaveApprovalFlexMessage(lineUserId!, {
                                 id: leaveReq.id,
                                 empName: leaveReq.name,
                                 leaveType: leaveReq.leave_type,
                                 startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
                                 endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
-                                days: leaveReq.days,
+                                minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
-                                supervisorName: supervisor.name,
-                            }).catch(console.error);
-                        } else {
-                            // Reject: Supervisor rejects directly
-                            await prisma.leave_requests.update({
-                                where: { id: targetId! },
-                                data: {
-                                    status: "rejected",
-                                    supervisor_approved_at: new Date(),
-                                }
-                            });
-                            console.log(`[LINE WEBHOOK] DB Updated to rejected`);
+                            }, true, replyToken);
 
-                            await sendReplyMessage(replyToken, "❌ ปฏิเสธสำเร็จ");
-
-                            // Notify employee with Flex Message (rejected status)
+                            // Notify employee
                             if (leaveReq.employees?.line_user_id) {
-                                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
                                 sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
-                                    days: leaveReq.days,
+                                    minutes: leaveReq.minutes,
+                                    reason: leaveReq.reason || "",
+                                    status: nextStatus,
+                                    approvedBy: isHr ? "HR" : supervisor?.name || "หัวหน้า",
+                                }).catch(console.error);
+                            }
+
+                            // If Supervisor approved -> notify HR
+                            if (isSupervisor) {
+                                sendHrLeaveNotification({
+                                    id: leaveReq.id,
+                                    empName: leaveReq.name,
+                                    leaveType: leaveReq.leave_type,
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    minutes: leaveReq.minutes,
+                                    reason: leaveReq.reason || "",
+                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                }).catch(console.error);
+                            }
+
+                            // If HR approved -> notify Management Summary
+                            if (isHr) {
+                                sendManagementLeaveSummary({
+                                    empName: leaveReq.name,
+                                    leaveType: leaveReq.leave_type,
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    minutes: leaveReq.minutes,
+                                    reason: leaveReq.reason || "",
+                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                    hrName: "HR Team (via LINE)"
+                                }).catch(console.error);
+                            }
+                        } else {
+                            // Reject Logic
+                            await prisma.leave_requests.update({
+                                where: { id: targetId! },
+                                data: { status: "rejected" }
+                            });
+                            
+                            await sendLeaveApprovalFlexMessage(lineUserId!, {
+                                id: leaveReq.id,
+                                empName: leaveReq.name,
+                                leaveType: leaveReq.leave_type,
+                                startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                minutes: leaveReq.minutes,
+                                reason: leaveReq.reason || "",
+                            }, true, replyToken);
+
+                            if (leaveReq.employees?.line_user_id) {
+                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
+                                    empName: leaveReq.name,
+                                    leaveType: leaveReq.leave_type,
+                                    startDate: leaveReq.start_at.toLocaleDateString("th-TH"),
+                                    endDate: leaveReq.end_at.toLocaleDateString("th-TH"),
+                                    minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
                                     status: "rejected",
-                                    approvedBy: supervisor.name,
+                                }).catch(console.error);
+                            }
+                        }
+                    } else if (action === "approve_ot" || action === "reject_ot") {
+                        console.log(`[LINE WEBHOOK] Querying OT request: ${targetId}`);
+                        const otReq = await prisma.ot_requests.findUnique({
+                            where: { id: Number(targetId!) },
+                            include: { employee: true }
+                        });
+
+                        if (!otReq) {
+                            console.warn("[LINE WEBHOOK] OT request NOT FOUND.");
+                            await sendReplyMessage(replyToken, "❌ ไม่พบข้อมูลคำขอ OT");
+                            continue;
+                        }
+
+                        // Auth Check: Either Supervisor or HR
+                        const hrLineUserId = process.env.HR_LINE_USER_ID;
+                        const isHr = hrLineUserId === lineUserId;
+                        const supervisor = await prisma.employees.findUnique({
+                            where: { emp_id: otReq.employee.supervisor_id || "" }
+                        });
+                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
+
+                        if (!isHr && !isSupervisor) {
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนนี้");
+                            continue;
+                        }
+
+                        if (isSupervisor && otReq.status !== "pending_supervisor") {
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
+                            continue;
+                        }
+                        if (isHr && !["pending_supervisor", "pending_hr"].includes(otReq.status)) {
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
+                            continue;
+                        }
+
+                        const { sendOtApprovalFlexMessage, sendHrOtNotification, sendEmployeeOtStatusNotification, sendManagementOtSummary } = await import("@/utils/lineMessaging");
+
+                        if (action === "approve_ot") {
+                            const nextStatus = isHr ? "approved" : "pending_hr";
+                            await prisma.ot_requests.update({
+                                where: { id: Number(targetId!) },
+                                data: {
+                                    status: nextStatus,
+                                    approved_at: isHr ? new Date() : otReq.approved_at,
+                                }
+                            });
+
+                            // ✅ Feedback Feedback
+                            await sendOtApprovalFlexMessage(lineUserId!, {
+                                id: otReq.id,
+                                empName: otReq.employee.name,
+                                dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                totalHours: Number(otReq.total_hours),
+                                reason: otReq.reason || "",
+                            }, true, replyToken);
+
+                            // Notify employee
+                            if (otReq.employee.line_user_id) {
+                                sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
+                                    empName: otReq.employee.name,
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    totalHours: Number(otReq.total_hours),
+                                    reason: otReq.reason || "",
+                                    status: nextStatus,
+                                    approvedBy: isHr ? "HR" : supervisor?.name || "หัวหน้า",
+                                }).catch(console.error);
+                            }
+
+                            // If Supervisor -> notify HR
+                            if (isSupervisor) {
+                                sendHrOtNotification({
+                                    id: otReq.id,
+                                    empName: otReq.employee.name,
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    totalHours: Number(otReq.total_hours),
+                                    reason: otReq.reason || "",
+                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                }).catch(console.error);
+                            }
+
+                            // If HR -> Management Summary
+                            if (isHr) {
+                                sendManagementOtSummary({
+                                    empName: otReq.employee.name,
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    totalHours: Number(otReq.total_hours),
+                                    reason: otReq.reason || "",
+                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                    hrName: "HR Team (via LINE)"
+                                }).catch(console.error);
+                            }
+                        } else {
+                            await prisma.ot_requests.update({
+                                where: { id: Number(targetId!) },
+                                data: { status: "rejected" }
+                            });
+                            
+                            await sendOtApprovalFlexMessage(lineUserId!, {
+                                id: otReq.id,
+                                empName: otReq.employee.name,
+                                dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                totalHours: Number(otReq.total_hours),
+                                reason: otReq.reason || "",
+                            }, true, replyToken);
+
+                            if (otReq.employee.line_user_id) {
+                                sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
+                                    empName: otReq.employee.name,
+                                    dateFor: otReq.date_for.toLocaleDateString("th-TH"),
+                                    startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+                                    totalHours: Number(otReq.total_hours),
+                                    reason: otReq.reason || "",
+                                    status: "rejected",
                                 }).catch(console.error);
                             }
                         }
                     }
-                    // OT Logic similarly logged...
-                }
-
-                else if (event.type === "message" && event.message?.type === "text") {
+                } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;
                     const replyToken = event.replyToken;
                     const text = event.message.text.trim().toLowerCase();

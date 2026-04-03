@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
-import { sendEmployeeLeaveStatusNotification } from "@/utils/lineMessaging";
+import { sendEmployeeLeaveStatusNotification, sendManagementLeaveSummary } from "@/utils/lineMessaging";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,12 @@ export async function POST(
     ctx: { params: Promise<{ id: string }> }
 ) {
     try {
-        const admin = await requireAdmin();
+        const adminPayload = await requireAdmin();
+        const adminUser = await prisma.admins.findUnique({
+            where: { username: adminPayload.emp_id },
+            select: { full_name: true, username: true }
+        });
+        const adminName = adminUser?.full_name || adminPayload.emp_id;
 
         const { id } = await ctx.params;
         if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
@@ -40,10 +45,10 @@ export async function POST(
             where: { id },
             data: {
                 status: "approved",
-                approved_by: admin.emp_id,
+                approved_by: adminPayload.emp_id,
                 approved_at: new Date(),
             },
-            select: { id: true, status: true, approved_by: true, approved_at: true, emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, reason: true },
+            select: { id: true, status: true, approved_by: true, approved_at: true, emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, supervisor_id: true },
         });
 
         // ✅ Notify employee via LINE Flex Message that HR has approved
@@ -58,10 +63,27 @@ export async function POST(
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH"),
                 endDate: updated.end_at.toLocaleDateString("th-TH"),
-                days: updated.days,
+                minutes: updated.minutes,
                 reason: updated.reason || "",
                 status: "approved",
-                approvedBy: admin.emp_id,
+                approvedBy: adminName,
+            }).catch(console.error);
+
+            // ✅ Final Step: Notify Management Summary
+            const supervisor = await prisma.employees.findUnique({
+                where: { emp_id: updated.supervisor_id || (existing as any).supervisor_id || "" }, // fallback if possible
+                select: { name: true }
+            });
+
+            sendManagementLeaveSummary({
+                empName: updated.name,
+                leaveType: updated.leave_type,
+                startDate: updated.start_at.toLocaleDateString("th-TH"),
+                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                minutes: updated.minutes,
+                reason: updated.reason || "",
+                supervisorName: supervisor?.name || "ไม่ได้ระบุ",
+                hrName: adminName
             }).catch(console.error);
         }
 

@@ -178,11 +178,12 @@ export default function EmployeeOtPage() {
                     </div>
 
                     <form onSubmit={handleSubmit} className={styles.form}>
-                        {/* Compact OT Date-Time Layout */}
-                        <div>
-                            <div className={styles.timePickerContainer}>
-                                <div className={`${styles.dtBlock} ${styles.dateBlock}`}>
-                                    <label className={styles.label}>วันที่ขอ OT / วันหยุด *</label>
+                        {/* Form Rows */}
+                        <div className={styles.formRow}>
+                            <div className={styles.formSection}>
+                                <label className={styles.label}>วันที่ขอ OT / วันหยุด *</label>
+                                <div className={styles.inputWithIcon}>
+                                    <CalendarIcon className={styles.inputIcon} />
                                     <input
                                         type="date"
                                         className={styles.input}
@@ -191,41 +192,46 @@ export default function EmployeeOtPage() {
                                         required
                                     />
                                 </div>
-                                <div className={styles.timeBlockWrap}>
-                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                        <label className={styles.label}>เวลาเริ่ม</label>
-                                        <select className={styles.select || styles.input} value={startHour} onChange={e => setStartHour(e.target.value)}>
-                                            {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                        </select>
-                                    </div>
-                                    <span className={styles.timeSeparator}>:</span>
-                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                        <label className={styles.label}>นาที</label>
-                                        <select className={styles.select || styles.input} value={startMin} onChange={e => setStartMin(e.target.value)}>
-                                            {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
                             </div>
+                        </div>
 
-                            <div className={styles.timePickerContainer} style={{ marginTop: 12 }}>
-                                <div className={`${styles.dtBlock} ${styles.dateBlock} ${styles.mobileHide}`}>
-                                    <label className={styles.label}>Spacer</label>
-                                    <div className={styles.input} />
-                                </div>
-                                <div className={styles.timeBlockWrap}>
-                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                        <label className={styles.label}>สิ้นสุด</label>
-                                        <select className={styles.select || styles.input} value={endHour} onChange={e => setEndHour(e.target.value)}>
-                                            {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                        </select>
+                        <div className={styles.timeSection}>
+                            <div className={styles.timeRow}>
+                                <div className={styles.timeGroup}>
+                                    <label className={styles.label}>เวลาเริ่มทำงาน</label>
+                                    <div className={styles.timeInputsRow}>
+                                        <div className={styles.timeInputUnit}>
+                                            <select className={styles.selectInput} value={startHour} onChange={e => setStartHour(e.target.value)}>
+                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                            </select>
+                                            <span className={styles.unitLabel}>ชั่วโมง</span>
+                                        </div>
+                                        <span className={styles.timeColon}>:</span>
+                                        <div className={styles.timeInputUnit}>
+                                            <select className={styles.selectInput} value={startMin} onChange={e => setStartMin(e.target.value)}>
+                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                            </select>
+                                            <span className={styles.unitLabel}>นาที</span>
+                                        </div>
                                     </div>
-                                    <span className={styles.timeSeparator}>:</span>
-                                    <div className={`${styles.dtBlock} ${styles.timeBlock}`}>
-                                        <label className={styles.label}>นาที</label>
-                                        <select className={styles.select || styles.input} value={endMin} onChange={e => setEndMin(e.target.value)}>
-                                            {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                        </select>
+                                </div>
+
+                                <div className={styles.timeGroup}>
+                                    <label className={styles.label}>เวลาสิ้นสุด</label>
+                                    <div className={styles.timeInputsRow}>
+                                        <div className={styles.timeInputUnit}>
+                                            <select className={styles.selectInput} value={endHour} onChange={e => setEndHour(e.target.value)}>
+                                                {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                                            </select>
+                                            <span className={styles.unitLabel}>ชั่วโมง</span>
+                                        </div>
+                                        <span className={styles.timeColon}>:</span>
+                                        <div className={styles.timeInputUnit}>
+                                            <select className={styles.selectInput} value={endMin} onChange={e => setEndMin(e.target.value)}>
+                                                {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                                            </select>
+                                            <span className={styles.unitLabel}>นาที</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -276,11 +282,12 @@ export default function EmployeeOtPage() {
                                         <div className={styles.historyReason}><InformationCircleIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />เหตุผล: {item.reason}</div>
                                     </div>
                                     <div className={styles.historyRight}>
-                                        {item.status === "pending" && <span className={styles.statusBadgePending} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon width={14} /> รอพิจารณา</span>}
+                                        {item.status === "pending_supervisor" && <span className={styles.statusBadgePending} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon width={14} /> รอหัวหน้าอนุมัติ</span>}
+                                        {item.status === "pending_hr" && <span className={styles.statusBadgePending} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}><ClockIcon width={14} /> รอ HR อนุมัติ</span>}
                                         {item.status === "approved" && <span className={styles.statusBadgeApproved} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon width={14} /> อนุมัติแล้ว</span>}
                                         {item.status === "rejected" && <span className={styles.statusBadgeRejected} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircleIcon width={14} /> ไม่อนุมัติ</span>}
 
-                                        {item.status === "pending" && (
+                                        {item.status === "pending_supervisor" && (
                                             <button
                                                 onClick={() => handleDelete(item.id)}
                                                 className={styles.btnCancel}
