@@ -115,7 +115,8 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: 
                                 }}
                                 onClick={() => {
                                     const d = alert.shareData!;
-                                    const shareLink = `${window.location.origin}/share/${alert.id}`;
+                                    // Add cache buster to ensure LINE fetches fresh OG image every time
+                                    const shareLink = `${window.location.origin}/share/${alert.id}?t=${Date.now()}`;
                                     const text = [
                                         `📍 รายงานการเช็กอินนอกสถานที่: ${d.name}`,
                                         `🕒 เวลา: ${d.time}`,
