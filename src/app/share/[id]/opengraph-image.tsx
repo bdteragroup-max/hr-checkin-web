@@ -14,14 +14,14 @@ function decodeBase64Safe(val: string | null) {
     }
 }
 
-export default async function Image({ searchParams }: { searchParams: URLSearchParams }) {
+export default async function Image({ searchParams }: { searchParams: { [key: string]: string | undefined } }) {
     // 🚀 Read data from URL parameters (Zero DB hits!)
-    const name = decodeBase64Safe(searchParams.get("n")) || "—";
-    const typeStr = decodeBase64Safe(searchParams.get("t")) || "—";
-    const location = decodeBase64Safe(searchParams.get("l")) || "—";
-    const timeStr = decodeBase64Safe(searchParams.get("tm")) || "—";
-    const photoUrl = decodeBase64Safe(searchParams.get("p")) || null;
-    const remark = decodeBase64Safe(searchParams.get("r")) || "";
+    const name = decodeBase64Safe(searchParams.n || null) || "—";
+    const typeStr = decodeBase64Safe(searchParams.t || null) || "—";
+    const location = decodeBase64Safe(searchParams.l || null) || "—";
+    const timeStr = decodeBase64Safe(searchParams.tm || null) || "—";
+    const photoUrl = decodeBase64Safe(searchParams.p || null) || null;
+    const remark = decodeBase64Safe(searchParams.r || null) || "";
 
     const isOut = typeStr.includes("OUT");
     const title = typeStr.includes("นอกสถานที่") ? "เช็กอินนอกสถานที่" : (typeStr.includes("โครงการ") ? "ปฏิบัติงานโครงการ" : "เช็กอินพนักงาน");
