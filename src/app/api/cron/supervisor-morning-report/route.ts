@@ -75,7 +75,12 @@ export async function GET(req: Request) {
                 supervisor_id: { not: null },
                 supervisor: { 
                     is_active: true,
-                    line_user_id: { not: null, not: "" } 
+                    line_user_id: { not: "" } 
+                },
+                NOT: {
+                    supervisor: {
+                        line_user_id: null as any
+                    }
                 }
             },
             select: {
@@ -160,7 +165,7 @@ export async function GET(req: Request) {
                     backgroundColor: "#fef2f2",
                     paddingAll: "16px",
                     contents: [
-                        { type: "text", text: "🕒 พนักงานยังไม่เข้างาน", weight: "bold", size: "lg", color: "#b91c1c" },
+                        { type: "text", text: "พนักงานยังไม่เข้างาน", weight: "bold", size: "lg", color: "#b91c1c" },
                         { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH")}`, size: "sm", color: "#6b7280", margin: "sm" },
                     ]
                 },
