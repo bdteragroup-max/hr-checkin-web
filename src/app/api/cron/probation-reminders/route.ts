@@ -64,7 +64,12 @@ export async function GET(req: Request) {
                 supervisor_id: { not: null },
                 supervisor: { 
                     is_active: true,
-                    line_user_id: { notIn: [null, ""] } 
+                    line_user_id: { not: "" }
+                },
+                NOT: {
+                    supervisor: {
+                        line_user_id: null as any
+                    }
                 }
             },
             include: {
@@ -121,7 +126,7 @@ export async function GET(req: Request) {
                         backgroundColor: "#f0f9ff",
                         paddingAll: "16px",
                         contents: [
-                            { type: "text", text: "📝 ประเมินทดลองงาน", weight: "bold", size: "lg", color: "#0369a1" },
+                            { type: "text", text: "ประเมินทดลองงาน", weight: "bold", size: "lg", color: "#0369a1" },
                             { type: "text", text: `การประเมิน: ${config.milestone}`, size: "sm", color: "#6b7280", margin: "sm" }
                         ]
                     },
