@@ -464,11 +464,20 @@ export default function AppPage() {
         setPreview(null);
         try {
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+                video: { 
+                    facingMode: facing, 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 },
+                    // 📱 Add aspect ratio constraint to help mobile orientation
+                    aspectRatio: { ideal: 1.7777777778 } 
+                },
                 audio: false,
             });
             streamRef.current = s;
-            if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play(); }
+            if (videoRef.current) { 
+                videoRef.current.srcObject = s; 
+                await videoRef.current.play(); 
+            }
             setFacingMode(facing);
             setCameraReady(true);
             setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />กล้อง{facing === "environment" ? "หลัง" : "หน้า"}พร้อม — กด ถ่ายรูป</span>, "ok");
@@ -840,7 +849,13 @@ export default function AppPage() {
                         {step >= 3 && !preview && (
                             <>
                                 <div className={styles.camWrap}>
-                                    <video ref={videoRef} autoPlay playsInline muted className={styles.video} />
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className={`${styles.video} ${facingMode === "user" ? styles.mirror : ""}`}
+                                    />
                                     <div className={styles.camOverlay} />
                                     <div className={`${styles.camCorner} ${styles.tl}`} />
                                     <div className={`${styles.camCorner} ${styles.tr}`} />

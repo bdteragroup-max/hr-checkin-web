@@ -411,8 +411,9 @@ export default function ProjectCheckinPage() {
             const constraints = {
                 video: {
                     facingMode: facing,
-                    width: { ideal: 1280, min: 640 },
-                    height: { ideal: 720, min: 480 }
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    aspectRatio: { ideal: 1.7777777778 }
                 },
                 audio: false
             };
@@ -723,7 +724,15 @@ export default function ProjectCheckinPage() {
 
                             <div style={{ position: "relative", marginBottom: 16 }}>
                                 <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "black", minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", display: cameraReady ? "block" : "none" }} onLoadedMetadata={() => setCameraReady(true)} />
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className={`${styles.video} ${facingMode === "user" ? styles.mirror : ""}`}
+                                        style={{ display: cameraReady ? "block" : "none" }}
+                                        onLoadedMetadata={() => setCameraReady(true)}
+                                    />
                                     <canvas ref={canvasRef} style={{ display: "none" }} />
                                     <canvas ref={rawCanvasRef} style={{ display: "none" }} />
 
