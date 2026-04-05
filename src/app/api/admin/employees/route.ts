@@ -20,6 +20,7 @@ type CreateEmployeeBody = {
     base_salary?: number | null;
     supervisor_id?: string | null;
     is_on_trial?: boolean;
+    probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
     position_allowance?: number | null;
     national_id_card?: string | null;
@@ -47,6 +48,7 @@ type PatchEmployeeBody = {
     base_salary?: number | null;
     supervisor_id?: string | null;
     is_on_trial?: boolean;
+    probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
     position_allowance?: number | null;
     national_id_card?: string | null;
@@ -109,6 +111,7 @@ export async function GET(req: Request) {
                 supervisor_id: true,
                 supervisor: { select: { name: true } },
                 is_on_trial: true,
+                probation_end_date: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
                 national_id_card: true,
@@ -180,6 +183,9 @@ export async function POST(req: Request) {
                 base_salary: body.base_salary != null ? Number(body.base_salary) : null,
                 supervisor_id: body.supervisor_id ? clean(body.supervisor_id) : null,
                 is_on_trial: body.is_on_trial ?? false,
+                probation_end_date: (body.is_on_trial && body.probation_end_date && isISODate(body.probation_end_date)) 
+                    ? new Date(body.probation_end_date) 
+                    : null,
                 has_telephone_allowance: body.has_telephone_allowance ?? false,
                 position_allowance: body.position_allowance != null ? Number(body.position_allowance) : 0,
                 national_id_card: body.national_id_card ? clean(body.national_id_card) : null,
@@ -205,6 +211,7 @@ export async function POST(req: Request) {
                 supervisor_id: true,
                 created_at: true,
                 is_on_trial: true,
+                probation_end_date: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
                 national_id_card: true,
@@ -291,6 +298,13 @@ export async function PATCH(req: Request) {
 
         if (body.is_on_trial !== undefined) {
             data.is_on_trial = Boolean(body.is_on_trial);
+            if (!data.is_on_trial) data.probation_end_date = null;
+        }
+
+        if (body.probation_end_date !== undefined) {
+            const ped = body.probation_end_date ? clean(body.probation_end_date) : null;
+            if (ped && !isISODate(ped)) return jsonError("PROBATION_END_DATE_INVALID", 400);
+            data.probation_end_date = ped ? new Date(ped) : null;
         }
 
         if (body.has_telephone_allowance !== undefined) {
@@ -350,6 +364,7 @@ export async function PATCH(req: Request) {
                 supervisor_id: true,
                 updated_at: true,
                 is_on_trial: true,
+                probation_end_date: true,
                 has_telephone_allowance: true,
                 position_allowance: true,
                 national_id_card: true,

@@ -17,20 +17,22 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     CalendarDaysIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
+    MapPinIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
     { id: "checkin", href: "/app", icon: ClockIcon, label: "เช็คอิน", sub: "Check-in" },
     { id: "project-checkin", href: "/project-checkin", icon: BuildingOfficeIcon, label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
     { id: "offsite-checkin", href: "/offsite-checkin", icon: GlobeAltIcon, label: "เช็คอินนอกสถานที่", sub: "Offsite Check-in" },
+    { id: "trip-log", href: "/trip-log", icon: MapPinIcon, label: "เดินทางต่างจังหวัด", sub: "Trip Mode" },
     { id: "leave", href: "/leave", icon: ClipboardDocumentListIcon, label: "ลางาน", sub: "Leave" },
     { id: "travel", href: "/travel-allowance", icon: TruckIcon, label: "เบี้ยเลี้ยง", sub: "Travel" },
     { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
-const NAV_BOTTOM = [{ href: "/", icon: LockClosedIcon, label: "ออกจากระบบ", sub: "Logout" }];
+const NAV_BOTTOM = [{ href: "/api/auth/logout", icon: LockClosedIcon, label: "ออกจากระบบ", sub: "Logout" }];
 
 export default function AppShell({ children }: { children: ReactNode }) {
     const [collapsed, setCollapsed] = useState(false);
@@ -74,7 +76,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
     }
 
-    // ✅ ไม่แสดง Sidebar ในหน้า Login และหน้า Admin ทั้งหมด
+    // NOTE: Do not show Sidebar on Login or Admin pages
     const hideShell = pathname === "/" || pathname?.startsWith("/admin") || pathname === "/reset-pin";
 
     // ถ้าเป็นหน้า login/admin/reset ให้แสดงแค่เนื้อหาหน้านั้นๆ
@@ -130,7 +132,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     {NAV_BOTTOM.map((item) => {
                         const active = pathname === item.href;
                         return (
-                            <Link
+                            <a
                                 key={item.href}
                                 href={item.href}
                                 data-label={item.label}
@@ -142,7 +144,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                                     <span className={styles.navLabel}>{item.label}</span>
                                     <span className={styles.navSub}>{item.sub}</span>
                                 </span>
-                            </Link>
+                            </a>
                         );
                     })}
                 </div>
@@ -175,6 +177,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                         </Link>
                     );
                 })}
+                {/* Mobile Logout functionality */}
+                <a href="/api/auth/logout" className={styles.mobileItem} style={{ color: 'var(--red)' }}>
+                    <span className={styles.mobileIcon}><LockClosedIcon width={24} /></span>
+                    <span className={styles.mobileLabel}>Logout</span>
+                </a>
             </nav>
         </div>
     );

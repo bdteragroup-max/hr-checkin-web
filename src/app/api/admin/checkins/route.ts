@@ -15,6 +15,7 @@ function lateLabel(late_status: string | null, late_min: number | null) {
     if (late_status === "ontime") return "ตรงเวลา";
     if (late_status === "ot") return "OT";
     if (late_status === "absent") return "ขาดงาน";
+    if (late_status === "leave") return "ลา";
     return late_status;
 }
 
@@ -72,8 +73,29 @@ export async function GET(req: Request) {
             where.branch_name = branchName;
         }
 
-        // 🔴 ABSENT MODE
-        if (statusParam === "absent") {
+        // 0) Fetch Leaves for this day (to use in both modes)
+        let leaveMap = new Map<string, any>();
+        if (date) {
+            const dateObj = new Date(`${date}T00:00:00.000Z`);
+            const leaves = await prisma.leave_requests.findMany({
+                where: {
+                    emp_id: { in: activeEmpIds },
+                    status: { in: ["approved", "pending", "pending_hr"] },
+                    start_date: { lte: dateObj },
+                    end_date: { gte: dateObj },
+                },
+                select: {
+                    emp_id: true,
+                    leave_type: true,
+                    reason: true,
+                    status: true,
+                }
+            });
+            leaves.forEach(l => leaveMap.set(l.emp_id, l));
+        }
+
+        // 🔴 ABSENT or LEAVE MODE
+        if (statusParam === "absent" || statusParam === "leave") {
             const dayStart = date ? new Date(`${date}T00:00:00+07:00`) : new Date(new Date().setHours(0,0,0,0));
             const dayEnd = date ? new Date(`${date}T23:59:59.999+07:00`) : new Date(new Date().setHours(23,59,59,999));
 
@@ -87,7 +109,7 @@ export async function GET(req: Request) {
 
             const checkedInSet = new Set(checkinsToday.map(c => c.emp_id));
 
-            // Get all active employees who haven't checked in
+            // Get all active employees
             const activeEmployees = await prisma.employees.findMany({
                 where: {
                     is_active: true,
@@ -104,22 +126,31 @@ export async function GET(req: Request) {
 
             const missing = activeEmployees
                 .filter(emp => !checkedInSet.has(emp.emp_id))
-                .map(emp => ({
-                    id: Math.random().toString(36).substring(7),
-                    emp_id: emp.emp_id,
-                    name: emp.name,
-                    type: "ขาดงาน",
-                    timestamp: dayStart.toISOString(), // proxy timestamp
-                    branch_name: emp.branches?.name || "ไม่ระบุสาขา",
-                    distance: null,
-                    photo_url: null,
-                    project_name: null,
-                    remark: "ไม่มีบันทึกเข้างาน",
-                    late_status: "absent",
-                    late_min: null,
-                    lat: null,
-                    lon: null,
-                }));
+                .map(emp => {
+                    const leave = leaveMap.get(emp.emp_id);
+                    return {
+                        id: `abs-${emp.emp_id}-${date}`,
+                        emp_id: emp.emp_id,
+                        name: emp.name,
+                        type: leave ? "ลา" : "ขาดงาน",
+                        timestamp: dayStart.toISOString(),
+                        branch_name: emp.branches?.name || "ไม่ระบุสาขา",
+                        distance: null,
+                        photo_url: null,
+                        project_name: null,
+                        remark: leave 
+                            ? `ลา: ${leave.leave_type}${leave.status === 'pending' ? ' (รออนุมัติ)' : ''} ${leave.reason ? ' - ' + leave.reason : ''}`
+                            : "ไม่มีบันทึกเข้างาน",
+                        late_status: leave ? "leave" : "absent",
+                        late_min: null,
+                        lat: null,
+                        lon: null,
+                    };
+                })
+                .filter(row => {
+                    if (statusParam === "leave") return row.late_status === "leave";
+                    return true; // if absent, show both as per previous agreement "show leave as absent"
+                });
 
             return NextResponse.json(
                 jsonSafe({
@@ -155,10 +186,58 @@ export async function GET(req: Request) {
             },
         });
 
+        // If a date is selected and no specific status filter, include people on leave who haven't checked in
+        let mergedRows = [...rows];
+
+        // --- RE-IMPLEMENTING MERGE LOGIC ---
+        // I will re-fetch leaves with employee names to make merging easier.
+        const leavesWithNames = date ? await prisma.leave_requests.findMany({
+            where: {
+                emp_id: { in: activeEmpIds },
+                status: { in: ["approved", "pending", "pending_hr"] },
+                start_date: { lte: new Date(`${date}T00:00:00.000Z`) },
+                end_date: { gte: new Date(`${date}T00:00:00.000Z`) },
+            },
+            select: {
+                emp_id: true,
+                name: true,
+                leave_type: true,
+                reason: true,
+                status: true,
+                employees: { select: { branches: { select: { name: true } } } }
+            }
+        }) : [];
+
+        if (date && !statusParam) {
+            const checkedInSet = new Set(rows.map(r => r.emp_id));
+            const dayStart = new Date(`${date}T00:00:00+07:00`);
+
+            leavesWithNames.forEach(l => {
+                if (!checkedInSet.has(l.emp_id)) {
+                    mergedRows.push({
+                        id: `alt-${l.emp_id}-${date}` as any, // virtual id
+                        emp_id: l.emp_id,
+                        name: l.name,
+                        type: "ลา",
+                        timestamp: dayStart as any,
+                        branch_name: l.employees?.branches?.name || "ไม่ระบุสาขา",
+                        distance: null as any,
+                        photo_url: null,
+                        project_name: null,
+                        remark: `ลา: ${l.leave_type}${l.status === 'pending' ? ' (รออนุมัติ)' : ''} ${l.reason ? ' - ' + l.reason : ''}`,
+                        late_status: "leave",
+                        late_min: null as any,
+                        lat: null as any,
+                        lon: null as any,
+                    } as any);
+                }
+            });
+        }
+
         return NextResponse.json(
             jsonSafe({
                 ok: true,
-                list: rows.map((r) => ({
+                list: mergedRows.map((r) => ({
                     ...r,
                     late_label: lateLabel(r.late_status, r.late_min),
                 })),

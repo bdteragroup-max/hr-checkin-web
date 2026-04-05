@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Script from "next/script";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
+import Link from "next/link";
 import { 
     CheckCircleIcon, 
     XCircleIcon, 
@@ -18,7 +19,8 @@ import {
     CameraIcon,
     PhotoIcon,
     QrCodeIcon,
-    CheckIcon
+    CheckIcon,
+    ChevronRightIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, X } from "lucide-react";
 import { formatDateThai, formatTime24h, formatTimeFull24h } from "@/utils/time";
@@ -738,7 +740,7 @@ export default function AppPage() {
                         <div className={styles.birthdayBanner}>
                             <div className={styles.birthdayIcon}><SparklesIcon width={24} /></div>
                             <div className={styles.birthdayContent}>
-                                <div className={styles.birthdayTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>สุขสันต์วันเกิด! <CakeIcon width={20} /></div>
+                                <div className={styles.birthdayTitle} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>สุขสันต์วันเกิด! <CakeIcon width={20} className="text-pink-500" /></div>
                                 <div className={styles.birthdayNames}>
                                     วันนี้เป็นวันเกิดของคุณ: {birthdays.map(b => b.name).join(", ")}
                                 </div>

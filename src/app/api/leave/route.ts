@@ -24,6 +24,7 @@ const LEAVE_TYPES: LeaveTypeDef[] = [
     { id: "sick", name: "ลาป่วย", gender: "ANY", note: "ลาป่วย > 2 วันทำงาน ต้องแนบเอกสาร", advance_notice: 0 },
     { id: "personal", name: "ลากิจ", gender: "ANY", advance_notice: 3 },
     { id: "emergency", name: "ลากรณีฉุกเฉิน", gender: "ANY", advance_notice: 0 },
+    { id: "business", name: "ปฏิบัติงานนอกสถานที่ (Trip Mode)", gender: "ANY", advance_notice: 0 },
     { id: "unpaid", name: "ลาไม่รับค่าจ้าง", gender: "ANY", advance_notice: 0 },
 
     { id: "maternity", name: "ลาคลอด", gender: "F", max_days: 120, advance_notice: 30 },
@@ -335,13 +336,15 @@ export async function POST(req: Request) {
     */
 
     // Quota validation
-    if (["annual", "personal", "sick"].includes(leave_type_id)) {
         const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
+        
+        const quotaMins = quotas[leave_type_id];
+        const usedMins = used[leave_type_id] || 0;
 
         // If there is an entitlement definition for this type
         if (leave_type_id in quotas) {
-            const entMins = quotas[leave_type_id];
-            const alreadyUsedMins = used[leave_type_id] || 0;
+            const entMins = quotaMins;
+            const alreadyUsedMins = usedMins;
             if (minutes + alreadyUsedMins > entMins) {
                 const remainingMins = Math.max(0, entMins - alreadyUsedMins);
                 return NextResponse.json({ 
@@ -356,8 +359,6 @@ export async function POST(req: Request) {
             // If annual leave doesn't have an entitlement (e.g. < 1 year and no 0-year policy defined, block it entirely)
             return NextResponse.json({ error: "NO_ENTITLEMENT", entitlement_days: 0 }, { status: 400 });
         }
-    }
-
     const id = `LV-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`; // varchar(30)
 
     try {
@@ -390,7 +391,9 @@ export async function POST(req: Request) {
                 startDate: startAt.toLocaleDateString("th-TH"),
                 endDate: endAt.toLocaleDateString("th-TH"),
                 minutes,
-                reason: reason || ""
+                reason: reason || "",
+                quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
+                usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
             }).catch(console.error);
 
             // ✅ Notify Employee (Submission Confirmation)
@@ -425,6 +428,8 @@ export async function POST(req: Request) {
                 minutes,
                 reason: reason || "",
                 supervisorName: "ไม่มี (ส่งตรงถึง HR)",
+                quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
+                usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
             }).catch(console.error);
 
             // Fetch info for employee notification if needed or just use current session

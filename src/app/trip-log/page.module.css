@@ -1,0 +1,481 @@
+/* ============================================
+   TRIP LOG — DESIGN ALIGNMENT
+   Aligning with Main App Design System
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+:root {
+    --red: #d93025;
+    --red-dark: #b71c1c;
+    --red-light: #ef5350;
+    --red-dim: rgba(217, 48, 37, 0.08);
+    --red-border: rgba(217, 48, 37, 0.22);
+    --orange: #e8450a;
+
+    --bg: #f4f6f9;
+    --white: #ffffff;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e8ef;
+    --gray-300: #d1d5dc;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+
+    --text: #111827;
+    --text2: #374151;
+    --text3: #6b7280;
+    --text4: #9ca3af;
+
+    --ok: #16a34a;
+    --ok-bg: #f0fdf4;
+    --ok-bdr: #bbf7d0;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+    --warn-bdr: #fde68a;
+    --bad: #dc2626;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.18);
+
+    --radius: 16px;
+    --radius-sm: 10px;
+
+    --font-th: "Sarabun", sans-serif;
+    --font-display: "Prompt", sans-serif;
+}
+
+/* ── Wrapper ── */
+.wrapper {
+    font-family: var(--font-th);
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+    position: relative;
+}
+
+/* Dot pattern background */
+.wrapper::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle,
+        rgba(217, 48, 37, 0.045) 1px,
+        transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ── Hero Title ── */
+.hero {
+    padding: 28px 0 20px;
+    position: relative;
+    text-align: left;
+}
+
+.heroH1 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 14px;
+}
+
+.heroMeta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+}
+
+.heroMetaItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+}
+
+.heroMetaDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+}
+
+/* ── Wrap (inner content) ── */
+.wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 14px 80px;
+}
+
+/* ── Card ── */
+.card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--red), var(--orange), transparent);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* ── Section Label ── */
+.sectionLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.sectionLabel span {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3px var(--red-dim);
+    flex-shrink: 0;
+}
+
+/* ── Form Controls ── */
+.label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 7px;
+}
+
+.input {
+    width: 100%;
+    font-family: var(--font-th);
+    font-size: 15px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--gray-300);
+    background: var(--gray-50);
+    color: var(--text);
+    outline: none;
+    transition: all 0.18s;
+}
+
+.input:focus {
+    border-color: var(--red);
+    background: var(--white);
+    box-shadow: 0 0 0 3px var(--red-dim);
+}
+
+/* ── Buttons ── */
+.btn {
+    font-family: var(--font-th);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 18px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--gray-300);
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.btnPrimary {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+    box-shadow: var(--shadow-red);
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--red-dark);
+    transform: translateY(-1px);
+}
+
+.btnSecondary {
+    background: var(--white);
+    color: var(--text2);
+    border-color: var(--gray-300);
+}
+
+.btnSecondary:hover {
+    background: var(--gray-100);
+}
+
+/* ── Action Button (Special Trip Round Button) ── */
+.mainBtnContainer {
+    margin: 24px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.updateBtn {
+    width: 140px;
+    height: 140px;
+    background: var(--red);
+    background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow-red);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.updateBtnText {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ── Quick Tags ── */
+.quickTags {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.tagBtn {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 10px 5px;
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tagBtnActive {
+    background: var(--red-dim) !important;
+    border-color: var(--red) !important;
+    color: var(--red) !important;
+}
+
+/* ── Timeline ── */
+.timeline {
+    position: relative;
+    padding-left: 28px;
+    margin-top: 20px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--gray-200);
+}
+
+.timelineItem {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.timelineItem:last-child {
+    margin-bottom: 0;
+}
+
+.timelineDot {
+    position: absolute;
+    left: -28px;
+    top: 6px;
+    width: 14px;
+    height: 14px;
+    background: var(--white);
+    border: 3px solid var(--red);
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 0 0 0 4px var(--white);
+}
+
+.timelineContent {
+    background: var(--gray-50);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid var(--gray-100);
+    transition: transform 0.2s;
+}
+
+.timelineContent:hover {
+    transform: translateX(4px);
+    background: var(--white);
+    border-color: var(--gray-200);
+    box-shadow: var(--shadow);
+}
+
+.timelineHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.timelineLocation {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.timelineTime {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 600;
+}
+
+.timelineNote {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+}
+
+.timelinePhoto {
+    margin-top: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    background: var(--gray-200);
+}
+
+.timelinePhoto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Camera UI (Same as app) ── */
+.camWrap {
+    position: relative;
+    margin: 16px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+}
+
+.video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Status Badge ── */
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid var(--red-border);
+}
+
+/* ── Alert Modal (Same as app) ── */
+.alertOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.alertModal {
+    background: var(--white);
+    width: 90%;
+    max-width: 380px;
+    border-radius: 20px;
+    padding: 24px;
+    text-align: center;
+}
+
+/* 🔥 LED MODAL STYLING 🔥 */
+.ledModal {
+    background: linear-gradient(145deg, #0f172a, #1e293b) !important;
+    border: 2px solid var(--red);
+    box-shadow: 0 0 30px rgba(217, 48, 37, 0.45);
+    color: white !important;
+    animation: ledPulse 2s infinite ease-in-out;
+}
+
+.ledModalSuccess {
+    border-color: var(--ok);
+    box-shadow: 0 0 30px rgba(22, 163, 74, 0.45);
+}
+
+.ledTitle {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    color: white;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+.ledMsg {
+    font-size: 15px;
+    color: #e2e8f0;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+@keyframes ledPulse {
+    0% { transform: scale(1); box-shadow: 0 0 20px rgba(217, 48, 37, 0.3); }
+    50% { transform: scale(1.02); box-shadow: 0 0 40px rgba(217, 48, 37, 0.7); }
+    100% { transform: scale(1); box-shadow: 0 0 20px rgba(217, 48, 37, 0.3); }
+}

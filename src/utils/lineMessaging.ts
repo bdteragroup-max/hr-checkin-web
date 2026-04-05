@@ -57,17 +57,89 @@ export async function sendLeaveApprovalFlexMessage(
     endDate: string;
     minutes: number;
     reason: string;
+    quotaMins?: number;
+    usedMins?: number;
   },
   isProcessed: boolean = false,
   replyToken?: string
 ) {
+  const bodyContents: any[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
+      ]
+    }
+  ];
+
+  // 📝 OPTIONAL: Leave Balance Info
+  if (leaveData.quotaMins !== undefined && leaveData.usedMins !== undefined) {
+    const remainingMins = Math.max(0, leaveData.quotaMins - leaveData.usedMins);
+    bodyContents.push(
+      { type: "separator", margin: "lg" },
+      { type: "text", text: "สรุปสิทธิ์การลา (ปีนี้)", weight: "bold", size: "xs", margin: "md", color: "#64748b" },
+      {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        margin: "sm",
+        contents: [
+          {
+            type: "box", layout: "horizontal", contents: [
+              { type: "text", text: "สิทธิ์ทั้งหมด:", size: "xs", color: "#888888", flex: 4 },
+              { type: "text", text: formatLeaveMins(leaveData.quotaMins), size: "xs", color: "#111111", flex: 6 }
+            ]
+          },
+          {
+            type: "box", layout: "horizontal", contents: [
+              { type: "text", text: "ใช้ไปแล้ว (รวมครั้งนี้):", size: "xs", color: "#888888", flex: 4 },
+              { type: "text", text: formatLeaveMins(leaveData.usedMins), size: "xs", color: "#111111", flex: 6 }
+            ]
+          },
+          {
+            type: "box", layout: "horizontal", contents: [
+              { type: "text", text: "คงเหลือ:", size: "xs", color: "#888888", flex: 4 },
+              { type: "text", text: formatLeaveMins(remainingMins), size: "xs", weight: "bold", color: "#16a34a", flex: 6 }
+            ]
+          }
+        ]
+      }
+    );
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: isProcessed ? "🆗 ดำเนินการแล้ว" : "📝 คำขออนุมัติการลา", weight: "bold", size: "lg", color: isProcessed ? "#64748b" : "#1d4ed8" }
+        { type: "text", text: isProcessed ? "ดำเนินการแล้ว" : "คำขออนุมัติการลา", weight: "bold", size: "lg", color: isProcessed ? "#64748b" : "#1d4ed8" }
       ],
       backgroundColor: isProcessed ? "#f1f5f9" : "#eff6ff"
     },
@@ -75,40 +147,7 @@ export async function sendLeaveApprovalFlexMessage(
       type: "box",
       layout: "vertical",
       spacing: "sm",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: leaveData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
-          ]
-        }
-      ]
+      contents: bodyContents
     },
     footer: {
       type: "box",
@@ -166,17 +205,88 @@ export async function sendOtApprovalFlexMessage(
     endTime: string;
     totalHours: number;
     reason: string;
+    hasDiscrepancy?: boolean;
+    actualIn?: string;
+    actualOut?: string;
   },
   isProcessed: boolean = false,
   replyToken?: string
 ) {
+  const bodyContents: any[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: otData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: otData.dateFor, color: "#111111", size: "sm", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "เวลาที่ขอ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: `${otData.startTime} - ${otData.endTime} (${otData.totalHours} ชม.)`, color: "#111111", size: "sm", flex: 7, wrap: true }
+      ]
+    }
+  ];
+
+  if (otData.actualIn && otData.actualOut) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "บันทึกจริง:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: `${otData.actualIn} - ${otData.actualOut}`, color: "#475569", size: "sm", flex: 7 }
+      ]
+    });
+  }
+
+  bodyContents.push({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      { type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 },
+      { type: "text", text: otData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
+    ]
+  });
+
+  if (otData.hasDiscrepancy) {
+    bodyContents.unshift({
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#fef2f2",
+      cornerRadius: "md",
+      paddingAll: "8px",
+      contents: [
+        {
+          type: "text",
+          text: "หมายเหตุ: พบความผิดปกติ: ชม. OT สูงกว่าเวลาปฏิบัติงานจริง",
+          color: "#dc2626",
+          size: "xs",
+          weight: "bold",
+          wrap: true
+        }
+      ],
+      margin: "md"
+    });
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: isProcessed ? "🆗 ดำเนินการแล้ว" : "🕒 คำขออนุมัติ OT", weight: "bold", size: "lg", color: isProcessed ? "#64748b" : "#6366f1" }
+        { type: "text", text: isProcessed ? "ดำเนินการแล้ว" : "คำขออนุมัติ OT", weight: "bold", size: "lg", color: isProcessed ? "#64748b" : "#6366f1" }
       ],
       backgroundColor: isProcessed ? "#f1f5f9" : "#eef2ff"
     },
@@ -184,40 +294,7 @@ export async function sendOtApprovalFlexMessage(
       type: "box",
       layout: "vertical",
       spacing: "sm",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: otData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: otData.dateFor, color: "#111111", size: "sm", flex: 7 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "เวลา:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: `${otData.startTime} - ${otData.endTime} (${otData.totalHours} ชม.)`, color: "#111111", size: "sm", flex: 7, wrap: true }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 },
-            { type: "text", text: otData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
-          ]
-        }
-      ]
+      contents: bodyContents
     },
     footer: {
       type: "box",
@@ -275,6 +352,8 @@ export async function sendHrLeaveNotification(
     minutes: number;
     reason: string;
     supervisorName: string;
+    quotaMins?: number;
+    usedMins?: number;
   }
 ) {
   const hrLineUserId = process.env.HR_LINE_USER_ID;
@@ -314,10 +393,10 @@ export async function sendEmployeeLeaveStatusNotification(
   }
 ) {
   const statusConfig = {
-    pending_hr: { headerText: "⏳ รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c", altText: "ใบลาของคุณรอ HR อนุมัติ" },
-    approved: { headerText: "✅ อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a", altText: "ใบลาของคุณได้รับการอนุมัติแล้ว" },
-    rejected: { headerText: "❌ ไม่อนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626", altText: "ใบลาของคุณไม่ได้รับการอนุมัติ" },
-    pending_supervisor: { headerText: "⏳ ส่งคำขอแล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7", altText: "ใบลาของคุณส่งถึงหัวหน้างานแล้ว" },
+    pending_hr: { headerText: "รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c", altText: "ใบลาของคุณรอ HR อนุมัติ" },
+    approved: { headerText: "อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a", altText: "ใบลาของคุณได้รับการอนุมัติแล้ว" },
+    rejected: { headerText: "ไม่อนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626", altText: "ใบลาของคุณไม่ได้รับการอนุมัติ" },
+    pending_supervisor: { headerText: "ส่งคำขอแล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7", altText: "ใบลาของคุณส่งถึงหัวหน้างานแล้ว" },
   };
 
   const cfg = statusConfig[leaveData.status];
@@ -358,10 +437,10 @@ export async function sendEmployeeOtStatusNotification(
   }
 ) {
   const statusConfig = {
-    pending_hr: { headerText: "⏳ OT รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c" },
-    approved: { headerText: "✅ OT อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a" },
-    rejected: { headerText: "❌ OT ไม่ได้รับการอนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626" },
-    pending_supervisor: { headerText: "⏳ ส่งคำขอ OT แล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7" },
+    pending_hr: { headerText: "OT รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c" },
+    approved: { headerText: "OT อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a" },
+    rejected: { headerText: "OT ไม่ได้รับการอนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626" },
+    pending_supervisor: { headerText: "ส่งคำขอ OT แล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7" },
   };
 
   const cfg = statusConfig[otData.status];
@@ -391,12 +470,12 @@ export async function sendManagementLeaveSummary(data: {
   if (!managementId) return false;
   const text = [
     "ข้อมูลการอนุมัติลา (สรุป)",
-    `👤 พนักงาน: ${data.empName}`,
-    `📝 ประเภท: ${data.leaveType}`,
-    `📅 วันที่: ${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`,
-    `💬 เหตุผล: ${data.reason || "-"}`,
-    `✅ หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `✅ HR ที่อนุมัติ: ${data.hrName}`
+    `พนักงาน: ${data.empName}`,
+    `ประเภท: ${data.leaveType}`,
+    `วันที่: ${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`,
+    `เหตุผล: ${data.reason || "-"}`,
+    `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
+    `HR ที่อนุมัติ: ${data.hrName}`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
 }
@@ -408,12 +487,126 @@ export async function sendManagementOtSummary(data: {
   if (!managementId) return false;
   const text = [
     "ข้อมูลการอนุมัติ OT (สรุป)",
-    `👤 พนักงาน: ${data.empName}`,
-    `📅 วันที่: ${data.dateFor}`,
-    `⏰ เวลา: ${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`,
-    `💬 เหตุผล: ${data.reason || "-"}`,
-    `✅ หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `✅ HR ที่อนุมัติ: ${data.hrName}`
+    `พนักงาน: ${data.empName}`,
+    `วันที่: ${data.dateFor}`,
+    `เวลา: ${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`,
+    `เหตุผล: ${data.reason || "-"}`,
+    `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
+    `HR ที่อนุมัติ: ${data.hrName}`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
+}
+
+/**
+ * Sends a real-time Trip Update notification with Photo, Location, and Map Link
+ */
+export async function sendTripUpdateNotification(
+  toIds: string[],
+  data: {
+    empName: string;
+    locationName: string;
+    timestamp: string;
+    photoUrl: string;
+    lat?: number;
+    lon?: number;
+    remark?: string;
+  }
+) {
+  const mapUrl = data.lat && data.lon 
+    ? `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lon}`
+    : null;
+
+  const bodyContents: any[] = [
+    {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "พนักงาน:", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: data.empName, size: "sm", weight: "bold", color: "#111111", flex: 7 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "สถานที่:", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: data.locationName, size: "sm", color: "#111111", flex: 7, wrap: true }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "เวลา:", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: data.timestamp, size: "sm", color: "#111111", flex: 7 }
+          ]
+        }
+      ]
+    }
+  ];
+
+  if (data.remark) {
+    bodyContents[0].contents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "หมายเหตุ:", size: "sm", color: "#888888", flex: 3 },
+        { type: "text", text: data.remark, size: "sm", color: "#111111", flex: 7, wrap: true }
+      ]
+    });
+  }
+
+  const contents: any = {
+    type: "bubble",
+    hero: {
+      type: "image",
+      url: data.photoUrl || "https://placeholder.com/600x400",
+      size: "full",
+      aspectRatio: "20:13",
+      aspectMode: "cover"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: "Trip Update", weight: "bold", size: "xl", color: "#d93025" },
+        ...bodyContents
+      ]
+    }
+  };
+
+  if (mapUrl) {
+    contents.footer = {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#d93025",
+          height: "sm",
+          action: {
+            type: "uri",
+            label: "ดูบนแผนที่ (Google Maps)",
+            uri: mapUrl
+          }
+        }
+      ]
+    };
+  }
+
+  // Send to all unique valid IDs
+  const uniqueIds = Array.from(new Set(toIds.filter(id => !!id)));
+  const results = await Promise.all(
+    uniqueIds.map(id => 
+      sendLineMessage(id, [{ type: "flex", altText: `Trip Update: ${data.empName}`, contents }])
+    )
+  );
+  return results.length > 0 ? results.every(r => r) : true;
 }

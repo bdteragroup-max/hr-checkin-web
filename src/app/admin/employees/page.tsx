@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
-import { UsersIcon, MagnifyingGlassIcon, LightBulbIcon, PlusIcon, PencilSquareIcon, ExclamationTriangleIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { 
+    UsersIcon, 
+    MagnifyingGlassIcon, 
+    LightBulbIcon, 
+    PlusIcon, 
+    PencilSquareIcon, 
+    ExclamationTriangleIcon, 
+    TrashIcon, 
+    CheckCircleIcon, 
+    NoSymbolIcon,
+    XCircleIcon
+} from "@heroicons/react/24/outline";
 import SearchableSelect from "@/components/SearchableSelect";
 import { formatDateThai } from "@/utils/time";
 
@@ -35,6 +46,7 @@ type Emp = {
     salary_type?: string | null;
     line_user_id?: string | null;
     is_checkin_exempt: boolean;
+    probation_end_date?: string | null;
 };
 
 type EditDraft = {
@@ -60,6 +72,7 @@ type EditDraft = {
     salary_type: string;
     line_user_id: string;
     is_checkin_exempt: boolean;
+    probation_end_date: string;
 };
 
 type Department = { id: number; name: string };
@@ -106,6 +119,7 @@ export default function AdminEmployeesPage() {
     const [salaryType, setSalaryType] = useState<"monthly" | "daily">("monthly");
     const [lineUserId, setLineUserId] = useState("");
     const [isCheckinExempt, setIsCheckinExempt] = useState(false);
+    const [probationEndDate, setProbationEndDate] = useState("");
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -192,6 +206,7 @@ export default function AdminEmployeesPage() {
                     salary_type: salaryType,
                     line_user_id: lineUserId.trim() || null,
                     is_checkin_exempt: isCheckinExempt,
+                    probation_end_date: isOnTrial && probationEndDate ? probationEndDate : null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -205,7 +220,7 @@ export default function AdminEmployeesPage() {
                 };
                 return setMsg(map[t?.error] || t?.error || "CREATE_FAILED");
             }
-            showToast(`✅ เพิ่ม ${name.trim()} แล้ว`);
+            showToast(`เพิ่ม ${name.trim()} แล้ว`);
             setNewEmpId(empId.trim());
             setTimeout(() => setNewEmpId(null), 3000);
 
@@ -218,6 +233,7 @@ export default function AdminEmployeesPage() {
             setSalaryType("monthly");
             setLineUserId("");
             setIsCheckinExempt(false);
+            setProbationEndDate("");
             setCreateModalOpen(false);
             await load();
         } finally { setSaving(false); }
@@ -254,6 +270,7 @@ export default function AdminEmployeesPage() {
                     salary_type: editDraft.salary_type,
                     line_user_id: editDraft.line_user_id.trim() || null,
                     is_checkin_exempt: editDraft.is_checkin_exempt,
+                    probation_end_date: editDraft.is_on_trial && editDraft.probation_end_date ? editDraft.probation_end_date : null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -267,7 +284,7 @@ export default function AdminEmployeesPage() {
                 showToast(map[t?.error] || t?.error || "UPDATE_FAILED", "bad");
                 return;
             }
-            showToast(`✅ อัปเดต ${editDraft.name} แล้ว`);
+            showToast(`อัปเดต ${editDraft.name} แล้ว`);
             setEditDraft(null);
             await load();
         } finally { setSaving(false); }
@@ -284,7 +301,7 @@ export default function AdminEmployeesPage() {
                 body: JSON.stringify({ emp_id: x.emp_id, is_active: next }),
             });
             if (r.ok) {
-                showToast(next ? `✅ เปิดใช้งาน ${x.name}` : `⛔ ปิดใช้งาน ${x.name}`);
+                showToast(next ? `เปิดใช้งาน ${x.name}` : `ปิดใช้งาน ${x.name}`, next ? "ok" : "bad");
                 setList((prev) => prev.map((e) => e.emp_id === x.emp_id ? { ...e, is_active: next } : e));
             } else showToast("เกิดข้อผิดพลาด", "bad");
         } finally { setSaving(false); }
@@ -312,7 +329,7 @@ export default function AdminEmployeesPage() {
             });
             const t = await r.json();
             if (t.ok) {
-                showToast("✅ บันทึกใบเตือนแล้ว");
+                showToast("บันทึกใบเตือนแล้ว");
                 setNewWarningReason("");
                 await loadWarnings(warningTarget);
             }
@@ -327,7 +344,7 @@ export default function AdminEmployeesPage() {
                 method: "DELETE"
             });
             if (r.ok) {
-                showToast("🗑️ ลบใบเตือนแล้ว");
+                showToast("ลบใบเตือนแล้ว");
                 if (warningTarget) await loadWarnings(warningTarget);
             }
         } finally { setSaving(false); }
@@ -477,7 +494,16 @@ export default function AdminEmployeesPage() {
                                                         <div style={{ display: "block", fontSize: 11, color: "var(--text-4)", marginTop: 4 }}>หัวหน้า: {x.supervisor.name}</div>
                                                     )}
                                                     {x.is_on_trial && (
-                                                        <span style={{ display: "inline-block", fontSize: 10, color: "var(--ok)", background: "rgba(16, 185, 129, 0.1)", padding: "2px 6px", borderRadius: 4, marginTop: 4 }}>อยู่ระหว่างทดลองงาน</span>
+                                                        <div style={{ marginTop: 4 }}>
+                                                            <span style={{ display: "inline-block", fontSize: 10, color: "var(--ok)", background: "rgba(16, 185, 129, 0.1)", padding: "2px 6px", borderRadius: 4 }}>
+                                                                อยู่ระหว่างทดลองงาน
+                                                            </span>
+                                                            {x.probation_end_date && (
+                                                                <span style={{ display: "inline-block", fontSize: 10, color: "var(--red)", background: "rgba(239, 68, 68, 0.1)", padding: "2px 6px", borderRadius: 4, marginLeft: 4 }}>
+                                                                    ครบกำหนด: {formatDateThai(x.probation_end_date)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                     {x.is_checkin_exempt && (
                                                         <span style={{ display: "inline-block", fontSize: 10, color: "var(--red)", background: "rgba(239, 68, 68, 0.1)", padding: "2px 6px", borderRadius: 4, marginTop: 4, marginLeft: 4 }}>ยกเว้นการลงเวลา</span>
@@ -536,6 +562,7 @@ export default function AdminEmployeesPage() {
                                                                     salary_type: x.salary_type || "monthly",
                                                                     line_user_id: x.line_user_id || "",
                                                                     is_checkin_exempt: x.is_checkin_exempt || false,
+                                                                    probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
                                                                 });
                                                             }}
                                                         >
@@ -723,9 +750,20 @@ export default function AdminEmployeesPage() {
                                 </label>
 
                                 <label className={styles.row} style={{ marginTop: 10 }}>
-                                    <input type="checkbox" checked={isOnTrial} onChange={(e) => setIsOnTrial(e.target.checked)} />
+                                    <input type="checkbox" checked={isOnTrial} onChange={(e) => {
+                                        setIsOnTrial(e.target.checked);
+                                        if (!e.target.checked) setProbationEndDate("");
+                                    }} />
                                     <span style={{ color: "var(--red)", fontWeight: 700 }}>อยู่ระหว่างทดลองงาน (On Trial Period)</span>
                                 </label>
+
+                                {isOnTrial && (
+                                    <div style={{ marginLeft: 24, marginTop: 8 }}>
+                                        <label className={styles.lbl} style={{ color: "var(--text-3)", fontSize: 12 }}>วันสิ้นสุดทดลองงาน (ถ้ามี)</label>
+                                        <input type="date" className={styles.input}
+                                            value={probationEndDate} onChange={(e) => setProbationEndDate(e.target.value)} />
+                                    </div>
+                                )}
 
                                 <label className={styles.row} style={{ marginTop: 10 }}>
                                     <input type="checkbox" checked={hasTelephoneAllowance} onChange={(e) => setHasTelephoneAllowance(e.target.checked)} />
@@ -903,9 +941,25 @@ export default function AdminEmployeesPage() {
                             <label className={styles.row} style={{ marginBottom: 10 }}>
                                 <input type="checkbox"
                                     checked={editDraft.is_on_trial}
-                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, is_on_trial: e.target.checked }))} />
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setEditDraft((d) => d && ({ 
+                                            ...d, 
+                                            is_on_trial: checked,
+                                            probation_end_date: checked ? d.probation_end_date : ""
+                                        }));
+                                    }} />
                                 <span style={{ color: "var(--red)", fontWeight: 700 }}>อยู่ระหว่างทดลองงาน (On Trial Period)</span>
                             </label>
+
+                            {editDraft.is_on_trial && (
+                                <div style={{ marginLeft: 24, marginBottom: 16 }}>
+                                    <label className={styles.lbl} style={{ color: "var(--text-3)", fontSize: 12 }}>วันสิ้นสุดทดลองงาน (ถ้ามี)</label>
+                                    <input type="date" className={styles.input}
+                                        value={editDraft.probation_end_date} 
+                                        onChange={(e) => setEditDraft((d) => d && ({ ...d, probation_end_date: e.target.value }))} />
+                                </div>
+                            )}
                             <label className={styles.row} style={{ marginBottom: 16 }}>
                                 <input type="checkbox"
                                     checked={editDraft.has_telephone_allowance}
@@ -1015,7 +1069,10 @@ export default function AdminEmployeesPage() {
 
             {/* ── Toast ── */}
             {toast && (
-                <div className={`${styles.toast} ${styles[toast.type]}`}>{toast.msg}</div>
+                <div className={`${styles.toast} ${styles[toast.type]}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {toast.type === "ok" ? <CheckCircleIcon width={18} /> : <NoSymbolIcon width={18} />}
+                    {toast.msg}
+                </div>
             )}
         </div>
     );

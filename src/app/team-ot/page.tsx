@@ -176,10 +176,34 @@ export default function TeamOtPage() {
                                         </div>
 
                                         <div className={styles.itemDetails}>
-                                            <span className={styles.detailLabel}>วันที่:</span>
-                                            <span className={styles.detailVal}>{dateLabel}</span>
-                                            <span className={styles.detailLabel}>เวลา:</span>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <div>
+                                                    <span className={styles.detailLabel}>วันที่:</span>
+                                                    <span className={styles.detailVal}>{dateLabel}</span>
+                                                </div>
+                                                {req.has_discrepancy && (
+                                                    <div style={{ 
+                                                        color: "var(--red)", fontSize: 11, fontWeight: 700, 
+                                                        display: "flex", alignItems: "center", gap: 4,
+                                                        background: "rgba(239, 68, 68, 0.1)", padding: "2px 8px", borderRadius: 4
+                                                    }}>
+                                                        <ExclamationTriangleIcon width={14} /> พบความผิดปกติ
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <span className={styles.detailLabel}>เวลาที่ขอ:</span>
                                             <span className={styles.detailVal}>{startL} - {endL}</span>
+
+                                            {req.actual_start_at && (
+                                                <>
+                                                    <span className={styles.detailLabel}>เวลาเช็คอินจริง:</span>
+                                                    <span className={styles.detailVal} style={{ color: "var(--text-3)" }}>
+                                                        {formatTime24h(req.actual_start_at)} - {formatTime24h(req.actual_end_at)}
+                                                    </span>
+                                                </>
+                                            )}
+
                                             {req.reason && (
                                                 <>
                                                     <span className={styles.detailLabel}>เหตุผล:</span>

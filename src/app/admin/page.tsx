@@ -373,9 +373,10 @@ function AdminPageInner() {
         const q = filterSearch.toLowerCase();
         return allRows.filter(r => {
             const matchQ = !q || r.emp_id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
-            // If the user selected 'absent', it should ONLY show rows that are actually missing (r.type === 'ขาดงาน')
-            // This prevents all standard check-ins from rendering when the UI state updates before pressing 'Search'.
-            const matchSt = !filterStatus || (filterStatus === "absent" ? (r.type === "ขาดงาน" || r.late_status === "absent") : r.late_status === filterStatus);
+            // Include 'leave' in the 'absent' filter results
+            const matchSt = !filterStatus || (filterStatus === "absent" 
+                ? (r.type === "ขาดงาน" || r.type === "ลา" || r.late_status === "absent" || r.late_status === "leave") 
+                : r.late_status === filterStatus);
             return matchQ && matchSt;
         });
     }, [allRows, filterSearch, filterStatus]);
@@ -823,6 +824,7 @@ function AdminPageInner() {
                             <option value="early">ออกก่อนเวลา</option>
                             <option value="ot">OT</option>
                             <option value="absent">ขาดงาน (ยังไม่เช็คอิน)</option>
+                            <option value="leave">ลา</option>
                         </select>
                     </div>
                     <div className={styles.filterGroup}>
@@ -864,10 +866,10 @@ function AdminPageInner() {
                                             <td style={{ whiteSpace: "nowrap" }}>
                                                 <div className={styles.empName}>{r.name}</div>
                                             </td>
-                                            <td style={{ whiteSpace: "nowrap" }}>
-                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : r.type === "ขาดงาน" ? styles.absent : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    {r.type?.includes("In") ? <PlayIcon width={12} /> : r.type === "ขาดงาน" ? <XCircleIcon width={12} /> : <StopIcon width={12} />}
-                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : r.type === "ขาดงาน" ? "ขาดงาน" : "ออก"}
+                                             <td style={{ whiteSpace: "nowrap" }}>
+                                                <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : (r.type === "ขาดงาน" || r.late_status === "absent") ? styles.absent : r.type === "ลา" ? styles.leave : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    {r.type?.includes("In") ? <PlayIcon width={12} /> : (r.type === "ขาดงาน" || r.late_status === "absent") ? <XCircleIcon width={12} /> : r.type === "ลา" ? <SunIcon width={12} /> : <StopIcon width={12} />}
+                                                    {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : r.type === "ขาดงาน" ? "ขาดงาน" : r.type === "ลา" ? "ลา" : "ออก"}
                                                 </span>
                                             </td>
                                             <td><span className={styles.monoText}>{r.type === "ขาดงาน" ? "—" : formatTime(r.timestamp)}</span></td>

@@ -34,6 +34,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น" }, { status: 400 });
         }
 
+        // --- NEW: VALIDATION AGAINST ACTUAL CHECK-IN/OUT ---
+        const dayCheckins = await prisma.checkins.findMany({
+            where: {
+                emp_id: decoded.emp_id,
+                date_key: new Date(date_for)
+            },
+            orderBy: { timestamp: "asc" }
+        });
+
+        if (dayCheckins.length === 0) {
+            return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในวันที่เลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT" }, { status: 400 });
+        }
+
+        const earliestIn = dayCheckins[0].timestamp;
+        const latestOut = dayCheckins[dayCheckins.length - 1].timestamp;
+
+        // Check window (Strict Rejection)
+        if (start < earliestIn || end > latestOut) {
+            const rangeStr = `${new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })} - ${new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })}`;
+            return NextResponse.json({ 
+                error: `เวลา OT ต้องอยู่ระหว่างเวลาที่เช็คอินและเช็คเอาท์จริงเท่านั้น (เวลาบันทึกจริงของคุณคือ: ${rangeStr})`
+            }, { status: 400 });
+        }
+
+        // Check Discrepancy (Warning for supervisor)
+        // If OT hours > 5 OR (OT hours / Total stay duration) > 0.7
+        const stayMs = latestOut.getTime() - earliestIn.getTime();
+        const stayHrs = stayMs / (1000 * 60 * 60);
+        let hasDiscrepancy = false;
+        if (diffHrs > 5) hasDiscrepancy = true;
+        else if (stayHrs > 0 && (diffHrs / stayHrs) > 0.75) hasDiscrepancy = true;
+
         // Get employee info
         const emp = await prisma.employees.findUnique({
             where: { emp_id: decoded.emp_id },
@@ -48,9 +80,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "พนักงานที่มีฐานเงินเดือนมากกว่า 20,000 บาท ไม่สามารถขอ OT ได้" }, { status: 403 });
         }
 
-        // Verify cycle limits (must submit before 25th of current cycle?)
-        // Standard rule: just record it, supervisor approves it.
-
         const newOt = await prisma.ot_requests.create({
             data: {
                 emp_id: decoded.emp_id,
@@ -60,7 +89,10 @@ export async function POST(request: Request) {
                 total_hours: diffHrs,
                 reason: reason || "",
                 status: "pending_supervisor",
-                supervisor_id: emp.supervisor_id
+                supervisor_id: emp.supervisor_id,
+                actual_start_at: earliestIn,
+                actual_end_at: latestOut,
+                has_discrepancy: hasDiscrepancy
             }
         });
 
@@ -72,7 +104,10 @@ export async function POST(request: Request) {
                 startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
                 endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
                 totalHours: Number(diffHrs),
-                reason: reason || ""
+                reason: reason || "",
+                hasDiscrepancy: hasDiscrepancy,
+                actualIn: new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                actualOut: new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })
             }).catch(console.error);
         }
 

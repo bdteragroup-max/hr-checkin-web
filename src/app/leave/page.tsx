@@ -184,9 +184,39 @@ export default function LeavePage() {
     
     const estimatedMinutes = useMemo(() => {
         if (!startAt || !endAt) return 0;
-        return calculateNetMinutes(startAt, endAt);
+        // The helper in src/utils/time.ts already has the Saturday padding logic
+        const { calcWorkingMinutes } = require("@/utils/time");
+        return calcWorkingMinutes(new Date(startAt), new Date(endAt));
     }, [startAt, endAt]);
-    
+
+    const handlePresetDuration = (days: number) => {
+        let current = startDate ? new Date(startDate) : new Date();
+        // If today is Sunday, start from Monday
+        if (current.getDay() === 0) current.setDate(current.getDate() + 1);
+        
+        const start = new Date(current.getTime());
+        const startStr = start.toISOString().split('T')[0];
+        setStartDate(startStr);
+        setStartHour("08");
+        setStartMin("00");
+
+        let workDaysCount = 0;
+        let end = new Date(current.getTime());
+        
+        while (workDaysCount < days) {
+            if (end.getDay() !== 0) { // Not Sunday
+                workDaysCount++;
+                if (workDaysCount === days) break;
+            }
+            end.setDate(end.getDate() + 1);
+        }
+
+        const endStr = end.toISOString().split('T')[0];
+        setEndDate(endStr);
+        setEndHour(end.getDay() === 6 ? "15" : "17");
+        setEndMin("00");
+    };
+
     const startHourOptions = useMemo(() => getLeaveHourOptions(startDate), [startDate]);
     const endHourOptions = useMemo(() => getLeaveHourOptions(endDate), [endDate]);
 
@@ -438,6 +468,16 @@ export default function LeavePage() {
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        {/* QUICK PRESET BUTTONS */}
+                        <div className={styles.presetButtonGroup}>
+                            {[1, 2, 3, 5].map(d => (
+                                <button key={d} type="button" className={styles.presetBtn} onClick={() => handlePresetDuration(d)}>
+                                    {d} วัน
+                                    <span className={styles.presetBtnSub}>FULL DAY</span>
+                                </button>
+                            ))}
                         </div>
 
                         {/* Date and time layer (STAYS LAYERED) */}

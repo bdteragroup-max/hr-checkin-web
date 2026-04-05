@@ -13,7 +13,9 @@ import {
     HandThumbDownIcon,
     ClockIcon,
     CalendarIcon,
-    UserIcon
+    UserIcon,
+    BuildingOffice2Icon,
+    XCircleIcon
 } from "@heroicons/react/24/outline";
 
 type TeamLeaveItem = {
@@ -178,9 +180,10 @@ export default function TeamLeavesPage() {
                                             color: x.status === "pending_supervisor" ? "#1d4ed8" : x.status === "rejected" ? "#dc2626" : "#15803d",
                                             display: "inline-block"
                                         }}>
-                                            {x.status === "pending_supervisor" ? "⏳ รอคุณพิจารณา" : 
-                                             x.status === "pending_hr" ? "🏛️ ส่งถึง HR แล้ว" : 
-                                             x.status === "approved" ? "✅ อนุมัติสำเร็จ" : "❌ ไม่อนุมัติ"}
+                                            {x.status === "pending_supervisor" ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ClockIcon width={14} /> รอคุณพิจารณา</span> : 
+                                             x.status === "pending_hr" ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><BuildingOffice2Icon width={14} /> ส่งถึง HR แล้ว</span> : 
+                                             x.status === "approved" ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircleIcon width={14} /> อนุมัติสำเร็จ</span> : 
+                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircleIcon width={14} /> ไม่อนุมัติ</span>}
                                         </span>
                                     </div>
 

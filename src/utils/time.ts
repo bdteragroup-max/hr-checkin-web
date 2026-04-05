@@ -2,6 +2,19 @@
  * Formats a date or string into a 24-hour time string (HH:mm)
  * Uses th-TH locale with hour12: false to ensure consistency.
  */
+
+export function getNowBangkok(): Date {
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+}
+
+export function getTodayBangkokISO(): string {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(new Date());
+}
 export function formatTime24h(date: Date | string | null): string {
     if (!date) return "--:--";
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -94,6 +107,11 @@ export function calcWorkingMinutes(startAt: Date, endAt: Date) {
             if (overlapLunchStart < overlapLunchEnd) {
                 const lunchOverlapMins = Math.floor((overlapLunchEnd.getTime() - overlapLunchStart.getTime()) / 60000);
                 mins -= lunchOverlapMins;
+            }
+
+            // Saturday Policy: If it's a full Saturday shift (6 hours actual), count it as 8 hours (480 mins)
+            if (dayOfWeek === 6 && mins >= 360) {
+                mins = 480;
             }
 
             totalWorkingMinutes += Math.max(0, mins);

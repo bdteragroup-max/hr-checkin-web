@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { getTodayBangkokISO, getNowBangkok } from "@/utils/time";
 import { calcLateOT } from "@/utils/checkin";
 
-type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out";
-
-function dateKeyLocalISO(): string {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-}
+type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out" | "Trip-Update";
 
 // Haversine
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -40,9 +33,10 @@ async function requireEmployee() {
     try {
         const payload = verifyToken(token);
 
+        // 🔥 OPTIMIZATION: Fetch employee and supervisor in ONE query
         const emp = await prisma.employees.findUnique({
             where: { emp_id: payload.emp_id },
-            select: { emp_id: true, name: true, is_active: true },
+            include: { supervisor: { select: { line_user_id: true, name: true } } },
         });
 
         if (!emp || !emp.is_active)
@@ -62,32 +56,57 @@ export async function GET() {
     const auth = await requireEmployee();
     if ("error" in auth) return auth.error;
 
-    const date_key = new Date(dateKeyLocalISO());
+    const date_key = new Date(getTodayBangkokISO());
 
-    const list = await prisma.checkins.findMany({
-        where: { emp_id: auth.emp.emp_id, date_key },
-        orderBy: { timestamp: "asc" },
-        select: {
-            id: true,
-            type: true,
-            timestamp: true,
-            branch_name: true,
-            distance: true,
-            photo_url: true,
-            project_name: true,
-            remark: true,
-        },
-    });
+    let list: any[];
+    try {
+        list = await (prisma.checkins.findMany as any)({
+            where: { emp_id: auth.emp.emp_id, date_key },
+            orderBy: { timestamp: "asc" },
+            select: {
+                id: true,
+                type: true,
+                timestamp: true,
+                branch_name: true,
+                distance: true,
+                photo_url: true,
+                project_name: true,
+                remark: true,
+                is_trip: true,
+                lat: true,
+                lon: true,
+            },
+        });
+    } catch (e: any) {
+        console.error("[API/CHECKIN] GET DB Error:", e);
+        // Fallback or re-try without newer columns if DB is out of sync during migrations
+        list = await (prisma.checkins.findMany as any)({
+            where: { emp_id: auth.emp.emp_id, date_key },
+            orderBy: { timestamp: "asc" },
+            select: {
+                id: true,
+                type: true,
+                timestamp: true,
+                branch_name: true,
+                distance: true,
+                photo_url: true,
+                project_name: true,
+                remark: true,
+                lat: true,
+                lon: true,
+            },
+        });
+    }
 
     // 🔥 FIX BigInt
-    const safeList = list.map((row) => ({
+    const safeList = list.map((row: any) => ({
         ...row,
         id: row.id.toString(),
     }));
 
     return NextResponse.json({
         ok: true,
-        date_key: dateKeyLocalISO(),
+        date_key: getTodayBangkokISO(),
         list: safeList,
     });
 }
@@ -103,7 +122,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
 
     const type = String(body?.type || "").trim() as CheckType;
-    const branch_id = String(body?.branch_id || "").trim();
+    const branch_id = String(body?.branch_id || auth.emp.branch_id || "").trim();
     const lat = Number(body?.lat);
     const lon = Number(body?.lon);
     const accuracy = body?.accuracy ? Number(body.accuracy) : null;
@@ -111,8 +130,9 @@ export async function POST(req: Request) {
     const project_name = body?.project_name ? String(body.project_name).trim() : null;
     const customer_id = body?.customer_id ? Number(body.customer_id) : null;
     const remark = body?.remark ? String(body.remark).trim() : null;
+    const is_trip = Boolean(body?.is_trip);
 
-    if (!["Check-in", "Check-out", "Project-In", "Project-Out", "Offsite-In", "Offsite-Out"].includes(type))
+    if (!["Check-in", "Check-out", "Project-In", "Project-Out", "Offsite-In", "Offsite-Out", "Trip-Update"].includes(type))
         return NextResponse.json({ error: "INVALID_TYPE" }, { status: 400 });
 
     if (!branch_id)
@@ -124,107 +144,164 @@ export async function POST(req: Request) {
     if (!photo_url)
         return NextResponse.json({ error: "PHOTO_REQUIRED" }, { status: 400 });
 
-    const branch = await prisma.branches.findUnique({
-        where: { id: branch_id },
-    });
+    // 🔥 OPTIMIZATION: Parallel Fetch Data (Branch, Project, Today's Check-ins)
+    const date_key = new Date(getTodayBangkokISO());
+    const [branch, project, todaysCheckins] = await Promise.all([
+        prisma.branches.findUnique({ where: { id: branch_id } }),
+        customer_id ? prisma.projects.findUnique({ where: { id: customer_id } }) : Promise.resolve(null),
+        prisma.checkins.findMany({
+            where: { emp_id: auth.emp.emp_id, date_key },
+            select: { type: true, customer_id: true, project_name: true }
+        })
+    ]);
 
     if (!branch)
         return NextResponse.json({ error: "INVALID_BRANCH" }, { status: 400 });
 
+    if (customer_id && !project)
+        return NextResponse.json({ error: "INVALID_PROJECT" }, { status: 400 });
+
     const isProject = type.startsWith("Project");
-    const isOffsite = type.startsWith("Offsite");
+    const isOffsite = type.startsWith("Offsite") || type === "Trip-Update";
 
     let targetLat = Number(branch.center_lat);
     let targetLon = Number(branch.center_lon);
     let targetRad = branch.radius_m;
 
-    if (isProject) {
-        if (!customer_id) return NextResponse.json({ error: "MISSING_PROJECT" }, { status: 400 });
-        const project = await prisma.projects.findUnique({ where: { id: customer_id } });
-        if (!project) return NextResponse.json({ error: "INVALID_PROJECT" }, { status: 400 });
-        
+    if (isProject && project) {
         targetLat = Number(project.lat || 0);
         targetLon = Number(project.lng || 0);
         targetRad = project.radius_m || 200;
     }
 
-    // 🔥 If coords + radius are 0, it means "No Fence Setup" -> Skip Radius Check
+    // Radius Check
     const isUnmapped = targetLat === 0 && targetLon === 0 && targetRad === 0;
-    
-    // Bypass radius check for Unmapped Branches/Projects OR Offsite Check-ins
     const distance = (isUnmapped || isOffsite) ? 0 : getDistanceMeters(lat, lon, targetLat, targetLon);
 
     if (!(isUnmapped || isOffsite) && distance > targetRad) {
         return NextResponse.json(
-            {
-                error: "OUT_OF_RADIUS",
-                distance: Math.round(distance),
-                radius_m: targetRad,
-            },
+            { error: "OUT_OF_RADIUS", distance: Math.round(distance), radius_m: targetRad },
             { status: 403 }
         );
     }
 
-    const date_key = new Date(dateKeyLocalISO());
-    const time_key = new Date();
-    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") ? { status: "ontime", min: 0, label: "ตรงเวลา" } : calcLateOT(type as "Check-in" | "Check-out");
+    // Time-based calculations
+    const time_key = getNowBangkok();
+    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") || type === "Trip-Update" 
+        ? { status: "ontime", min: 0, label: "ตรงเวลา" } 
+        : calcLateOT(type as "Check-in" | "Check-out");
 
-    // ❗ กัน Check-out ก่อน Check-in
+    // 🔥 OPTIMIZATION: Validation Logic in-memory using todaysCheckins
     if (type === "Check-out" || type === "Project-Out" || type === "Offsite-Out") {
         let inType = "Check-in";
         if (type === "Project-Out") inType = "Project-In";
         else if (type === "Offsite-Out") inType = "Offsite-In";
 
-        const hasIn = await prisma.checkins.findFirst({
-            where: {
-                emp_id: auth.emp.emp_id,
-                date_key,
-                type: inType,
-                ...(type === "Project-Out" ? (customer_id ? { customer_id } : { project_name: project_name || null }) : {})
-            },
-        });
+        const hasIn = todaysCheckins.find(c => 
+            c.type === inType && 
+            (type === "Project-Out" ? (customer_id ? c.customer_id === customer_id : c.project_name === project_name) : true)
+        );
 
         if (!hasIn)
             return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
     }
 
-    // ❗ กันซ้ำในวันเดียว (สำหรับ Check-in/Check-out ปกติ ให้ Check-in ได้ครั้งเดียว)
+    // Duplicate Check
     if (type === "Check-in" || type === "Check-out") {
-        const exists = await prisma.checkins.findFirst({
-            where: {
-                emp_id: auth.emp.emp_id,
-                date_key,
-                type,
-            },
-        });
-
+        const exists = todaysCheckins.find(c => c.type === type);
         if (exists)
             return NextResponse.json({ error: "DUPLICATE_TODAY" }, { status: 409 });
     }
 
-    const row = await prisma.checkins.create({
-        data: {
-            timestamp: new Date(),
-            date_key,
-            time_key,
-            emp_id: auth.emp.emp_id,
-            name: auth.emp.name,
-            type,
-            branch_name: branch.name,
-            lat,
-            lon,
-            accuracy,
-            distance: Math.round(distance),
-            capture_mode: "webrtc",
-            photo_url,
-            project_name,
-            customer_id,
-            remark,
-            late_status: lateInfo.status,
-            late_min: lateInfo.min ?? null,
-        },
-        select: { id: true },
-    });
+    let row: any;
+    try {
+        row = await (prisma.checkins.create as any)({
+            data: {
+                timestamp: getNowBangkok(),
+                date_key,
+                time_key,
+                emp_id: auth.emp.emp_id,
+                name: auth.emp.name,
+                type: type as string,
+                branch_name: branch.name,
+                lat,
+                lon,
+                accuracy,
+                distance: Math.round(distance),
+                capture_mode: "webrtc",
+                photo_url,
+                project_name,
+                customer_id,
+                remark,
+                is_trip,
+                late_status: lateInfo.status,
+                late_min: lateInfo.min ?? null,
+            },
+            select: { id: true },
+        });
+    } catch (e: any) {
+        console.warn("[API/CHECKIN] POST DB Error (is_trip col missing?):", e.message);
+        // Fallback without is_trip
+        row = await (prisma.checkins.create as any)({
+            data: {
+                timestamp: getNowBangkok(),
+                date_key,
+                time_key,
+                emp_id: auth.emp.emp_id,
+                name: auth.emp.name,
+                type: type as string,
+                branch_name: branch.name,
+                lat,
+                lon,
+                accuracy,
+                distance: Math.round(distance),
+                capture_mode: "webrtc",
+                photo_url,
+                project_name,
+                customer_id,
+                remark,
+                late_status: lateInfo.status,
+                late_min: lateInfo.min ?? null,
+            },
+            select: { id: true },
+        });
+    }
+
+    // 📢 AUTOMATED TRACKING NOTIFICATION (Non-blocking Background Task)
+    if (is_trip || (type as string) === "Trip-Update") {
+        const handleNotification = async () => {
+            try {
+                const targetLineIds = [];
+                // 🔥 Re-using supervisor info fetched in requireEmployee to save 1 query
+                if ((auth.emp as any).supervisor?.line_user_id) {
+                    targetLineIds.push((auth.emp as any).supervisor.line_user_id);
+                }
+                if (process.env.HR_LINE_USER_ID) {
+                    targetLineIds.push(process.env.HR_LINE_USER_ID);
+                }
+
+                if (targetLineIds.length > 0) {
+                    const { sendTripUpdateNotification } = await import("@/utils/lineMessaging");
+                    const [locPart, notePart] = (remark || "").split(" | ");
+                    
+                    await sendTripUpdateNotification(targetLineIds, {
+                        empName: auth.emp.name,
+                        locationName: locPart || branch.name,
+                        timestamp: new Date().toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                        photoUrl: photo_url!,
+                        lat: lat || undefined,
+                        lon: lon || undefined,
+                        remark: notePart || undefined
+                    });
+                }
+            } catch (e) {
+                console.error("[API/CHECKIN] Notification Error:", e);
+            }
+        };
+
+        // 🔥 Execute without await to avoid blocking the main API response
+        handleNotification();
+    }
 
     return NextResponse.json({
         ok: true,
