@@ -175,9 +175,13 @@ export async function POST(req: Request) {
                                 handoverPerson: (leaveReq as any).handover_person,
                             }, true, replyToken);
 
-                            // Notify employee
+                            // Start notifications
+                            const notifications: Promise<any>[] = [];
+
+                            // 1. Notify Employee
                             if (leaveReq.employees?.line_user_id) {
-                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
+                                console.log(`[LINE WEBHOOK] Notifying employee: ${leaveReq.employees.line_user_id} Status: ${nextStatus}`);
+                                notifications.push(sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -187,12 +191,13 @@ export async function POST(req: Request) {
                                     handoverPerson: (leaveReq as any).handover_person,
                                     status: nextStatus as any,
                                     approvedBy: approverName,
-                                }).catch(console.error);
+                                }));
                             }
 
-                            // Supervisor approved → notify HR
+                            // 2. Supervisor approved → notify HR
                             if (isSupervisor) {
-                                sendHrLeaveNotification({
+                                console.log(`[LINE WEBHOOK] Supervisor approved. Notifying HR.`);
+                                notifications.push(sendHrLeaveNotification({
                                     id: leaveReq.id,
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
@@ -202,12 +207,13 @@ export async function POST(req: Request) {
                                     reason: leaveReq.reason || "",
                                     handoverPerson: (leaveReq as any).handover_person,
                                     supervisorName: approverName,
-                                }).catch(console.error);
+                                }));
                             }
 
-                            // If HR approved -> notify Management Summary
+                            // 3. HR approved → notify Management Summary
                             if (isHr) {
-                                sendManagementLeaveSummary({
+                                console.log(`[LINE WEBHOOK] HR approved. Sending summary to Management.`);
+                                notifications.push(sendManagementLeaveSummary({
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -217,8 +223,13 @@ export async function POST(req: Request) {
                                     handoverPerson: (leaveReq as any).handover_person,
                                     supervisorName: supervisor?.name || "หัวหน้า",
                                     hrName: approverName
-                                }).catch(console.error);
+                                }));
                             }
+
+                            const results = await Promise.allSettled(notifications);
+                            results.forEach((res, i) => {
+                                if (res.status === 'rejected') console.error(`[LINE WEBHOOK] Notification ${i} failed:`, res.reason);
+                            });
                         } else {
                             // Reject Logic
                             await prisma.leave_requests.update({
@@ -238,7 +249,8 @@ export async function POST(req: Request) {
                             }, true, replyToken);
 
                             if (leaveReq.employees?.line_user_id) {
-                                sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
+                                console.log(`[LINE WEBHOOK] Notifying employee of REJECTION: ${leaveReq.employees.line_user_id}`);
+                                await sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
                                     empName: leaveReq.name,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -247,7 +259,7 @@ export async function POST(req: Request) {
                                     reason: leaveReq.reason || "",
                                     handoverPerson: (leaveReq as any).handover_person,
                                     status: "rejected",
-                                }).catch(console.error);
+                                });
                             }
                         }
                     } else if (action === "approve_ot" || action === "reject_ot") {

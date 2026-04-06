@@ -31,20 +31,33 @@ async function sendLineMessage(to: string, messages: any[], replyToken?: string)
   if (replyToken) body.replyToken = replyToken;
   else body.to = to;
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify(body)
-    });
-    return res.ok;
-  } catch (e) {
-    console.error("[LINE UTILS] sendLineMessage error:", e);
-    return false;
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000) // 10s timeout
+      });
+      if (res.ok) return true;
+      const errTxt = await res.text();
+      console.error("[LINE UTILS] sendLineMessage fail:", res.status, errTxt);
+      return false; // If API responds with error, don't retry (app level error)
+    } catch (e: any) {
+      retries--;
+      console.warn(`[LINE UTILS] Connection error (${e.message}), retries left: ${retries}`);
+      if (retries === 0) {
+        console.error("[LINE UTILS] sendLineMessage error after retries:", e);
+        return false;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1s before retry
+    }
   }
+  return false;
 }
 
 export async function sendLeaveApprovalFlexMessage(
@@ -507,7 +520,7 @@ export async function sendManagementLeaveSummary(data: {
     `เหตุผล: ${data.reason || "-"}`,
     `ผู้รับผิดชอบแทน: ${data.handoverPerson || "-"}`,
     `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `HR ที่อนุมัติ: ${data.hrName}`
+    `ฝ่ายบุคคลอนุมัติ: ${data.hrName} (${new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false })})`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
 }
@@ -524,7 +537,7 @@ export async function sendManagementOtSummary(data: {
     `เวลา: ${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`,
     `เหตุผล: ${data.reason || "-"}`,
     `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `HR ที่อนุมัติ: ${data.hrName}`
+    `ฝ่ายบุคคลอนุมัติ: ${data.hrName} (${new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false })})`
   ].join("\n");
   return sendLineMessage(managementId, [{ type: "text", text }]);
 }
