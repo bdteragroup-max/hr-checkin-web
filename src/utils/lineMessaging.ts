@@ -360,6 +360,7 @@ export async function sendHrLeaveNotification(
     endDate: string;
     minutes: number;
     reason: string;
+    handoverPerson?: string;
     supervisorName: string;
     quotaMins?: number;
     usedMins?: number;
@@ -396,6 +397,7 @@ export async function sendManagementLeaveApprovalMessage(
     endDate: string;
     minutes: number;
     reason: string;
+    handoverPerson?: string;
   }
 ) {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
