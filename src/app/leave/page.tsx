@@ -36,6 +36,7 @@ type LeaveItem = {
     start_at: string; end_at: string; minutes: number; days: number;
     status: "pending" | "approved" | "rejected" | string;
     reason?: string | null; attachment_url?: string | null;
+    handover_person?: string | null;
 };
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
