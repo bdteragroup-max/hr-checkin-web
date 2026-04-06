@@ -30,3 +30,13 @@ export async function requireAdmin(): Promise<AdminTokenPayload> {
 
     return { emp_id, role: "admin" };
 }
+
+export async function isAdminLoggedIn(): Promise<boolean> {
+    try {
+        await requireAdmin();
+        return true;
+    } catch {
+        return false;
+    }
+}
+

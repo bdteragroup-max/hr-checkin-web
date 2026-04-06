@@ -109,25 +109,29 @@ export async function POST(req: Request) {
                             continue;
                         }
 
-                        // Auth Check: Either Supervisor or HR
+                        // Auth Check: Supervisor, HR, or Management
                         const hrLineUserId = process.env.HR_LINE_USER_ID;
+                        const managementLineUserId = process.env.MANAGEMENT_LINE_USER_ID;
                         const isHr = hrLineUserId === lineUserId;
+                        const isManagement = managementLineUserId === lineUserId;
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: leaveReq.supervisor_id || "" }
                         });
                         const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
 
-                        if (!isHr && !isSupervisor) {
-                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected supervisor(${supervisor?.line_user_id}) or HR(${hrLineUserId}), Got ${lineUserId}`);
+                        if (!isHr && !isSupervisor && !isManagement) {
+                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected supervisor(${supervisor?.line_user_id}), HR(${hrLineUserId}), or Management(${managementLineUserId}), Got ${lineUserId}`);
                             await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
                             continue;
                         }
 
-                        // ✅ Guard: Prevent duplicate clicks
-                        // If it's supervisor, only allow if status is pending_supervisor
-                        // If it's HR, only allow if status is pending_hr
+                        // Guard: Prevent duplicate clicks
                         if (isSupervisor && leaveReq.status !== "pending_supervisor") {
                             await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
+                            continue;
+                        }
+                        if (isManagement && leaveReq.status !== "pending_management") {
+                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
                             continue;
                         }
                         if (isHr && !["pending_supervisor", "pending_hr"].includes(leaveReq.status)) {
@@ -138,15 +142,17 @@ export async function POST(req: Request) {
                         const { sendLeaveApprovalFlexMessage, sendHrLeaveNotification, sendEmployeeLeaveStatusNotification, sendManagementLeaveSummary } = await import("@/utils/lineMessaging");
 
                         if (action === "approve_leave") {
-                            // Logic: Supervisor approves -> pending_hr | HR approves -> approved
-                            const nextStatus = isHr ? "approved" : "pending_hr";
+                            // Management: pending_management → approved directly
+                            // Supervisor: pending_supervisor → pending_hr
+                            // HR: pending_supervisor|pending_hr → approved
+                            const nextStatus = isManagement ? "approved" : isHr ? "approved" : "pending_hr";
                             const updated = await prisma.leave_requests.update({
                                 where: { id: targetId! },
                                 data: {
                                     status: nextStatus,
                                     supervisor_approved_at: isSupervisor ? new Date() : leaveReq.supervisor_approved_at,
-                                    approved_at: isHr ? new Date() : leaveReq.approved_at,
-                                    approved_by: isHr ? "HR_LINE" : leaveReq.approved_by
+                                    approved_at: (isHr || isManagement) ? new Date() : leaveReq.approved_at,
+                                    approved_by: (isHr || isManagement) ? (isManagement ? "MANAGEMENT_LINE" : "HR_LINE") : leaveReq.approved_by
                                 },
                                 include: { employees: true }
                             });
@@ -170,12 +176,12 @@ export async function POST(req: Request) {
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
-                                    status: nextStatus,
-                                    approvedBy: isHr ? "HR" : supervisor?.name || "หัวหน้า",
+                                    status: nextStatus as any,
+                                    approvedBy: isManagement ? "ฝ่ายบริหาร" : isHr ? "HR" : supervisor?.name || "หัวหน้า",
                                 }).catch(console.error);
                             }
 
-                            // If Supervisor approved -> notify HR
+                            // Supervisor approved → notify HR
                             if (isSupervisor) {
                                 sendHrLeaveNotification({
                                     id: leaveReq.id,

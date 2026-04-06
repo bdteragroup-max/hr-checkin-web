@@ -39,7 +39,7 @@ export async function POST(
             select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, status: true },
         });
         if (!leaveBeforeUpdate) return NextResponse.json({ ok: false, error: "NOT_FOUND" }, { status: 404 });
-        if (leaveBeforeUpdate.status !== "pending" && leaveBeforeUpdate.status !== "pending_hr") {
+        if (leaveBeforeUpdate.status !== "pending" && leaveBeforeUpdate.status !== "pending_hr" && leaveBeforeUpdate.status !== "pending_management") {
             return NextResponse.json({ ok: false, error: "ALREADY_PROCESSED", current_status: leaveBeforeUpdate.status }, { status: 409 });
         }
 
@@ -65,8 +65,8 @@ export async function POST(
                 sendEmployeeLeaveStatusNotification(employee.line_user_id, {
                     empName: leaveBeforeUpdate.name,
                     leaveType: leaveBeforeUpdate.leave_type,
-                    startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH"),
-                    endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH"),
+                    startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                    endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                     minutes: leaveBeforeUpdate.minutes,
                     reason: leaveBeforeUpdate.reason || "",
                     status: "rejected",

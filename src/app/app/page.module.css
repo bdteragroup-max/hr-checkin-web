@@ -426,17 +426,14 @@
   color: #22c55e;
 }
 
-.typeBtnIn.typeBtn[class*="typeBtnIn"] {
-  /* Specificity hack or just style */
-}
+/* Cleaned up empty ruleset */
 
 /* Redefine active states */
 .typeBtnIn[class*="typeBtnIn"] {
   border-color: var(--gray-200);
 }
 
-.typeBtnIn:global(.active),
-.typeBtnIn:not(:disabled):hover {}
+/* Cleaned up empty ruleset */
 
 /* Explicit Active States */
 .typeBtnIn[class*="In"] {
@@ -456,7 +453,7 @@
 }
 
 /* Active In */
-.typeBtnIn[class*="typeBtnIn"] {}
+/* Cleaned up empty ruleset */
 
 /* Re-thinking the transition to match my JS: type === "Check-in" ? styles.typeBtnIn : "" */
 /* So I just need classes that represent the SELECTED state */
@@ -801,16 +798,21 @@
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1.5px solid var(--gray-200);
-  background: #111;
+  background: #000;
   position: relative;
   box-shadow: var(--shadow);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .video {
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 75vh;
   display: block;
-  object-fit: cover;
+  object-fit: contain; /* Show full frame, no cropping */
 }
 
 .mirror {

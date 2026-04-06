@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
-import { sendOtApprovalFlexMessage } from "@/utils/lineMessaging";
+import { sendOtApprovalFlexMessage, sendEmployeeOtStatusNotification } from "@/utils/lineMessaging";
 
 export async function POST(request: Request) {
     try {
@@ -108,6 +108,19 @@ export async function POST(request: Request) {
                 hasDiscrepancy: hasDiscrepancy,
                 actualIn: new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
                 actualOut: new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })
+            }).catch(console.error);
+        }
+
+        // ✉️ Confirm to employee that their OT request was received
+        if (emp.line_user_id) {
+            sendEmployeeOtStatusNotification(emp.line_user_id, {
+                empName: emp.name,
+                dateFor: new Date(date_for).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                totalHours: Number(diffHrs),
+                reason: reason || "",
+                status: "pending_supervisor",
             }).catch(console.error);
         }
 

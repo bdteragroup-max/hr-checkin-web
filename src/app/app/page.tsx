@@ -23,7 +23,7 @@ import {
     ChevronRightIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, X } from "lucide-react";
-import { formatDateThai, formatTime24h, formatTimeFull24h } from "@/utils/time";
+import { formatDateThai, formatTime24h, formatTimeFull24h, getBangkokWallClock } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    CONFIG — เวลาเริ่ม/เลิกงาน (24h)
@@ -67,7 +67,7 @@ function formatLocal(ts: string) {
 
 
 function getThaiTime() {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    return getBangkokWallClock();
 }
 
 function calcLateOT(type: "Check-in" | "Check-out"): LateInfo {
@@ -513,60 +513,71 @@ export default function AppPage() {
         const now = new Date();
         const dateStr = now.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Bangkok" });
         const timeStr = formatTimeFull24h(now);
-        const lateInfoNow = calcLateOT(type);
+        const lateInfoNow = calcLateOT(currentType);
         const gpsStr = gps.lat ? `${gps.lat.toFixed(5)}, ${gps.lon!.toFixed(5)}` : "—";
 
-        const bH = Math.round(h * 0.22), bY = h - bH;
-        const grad = ctx.createLinearGradient(0, bY, 0, h);
+        // 📱 Orientation-Aware Scaling
+        const isPortrait = h > w;
+        const baseDim = Math.min(w, h);
+        const sc = baseDim / 720; // Scale relative to 720p short-side
+        
+        const bH = Math.round(baseDim * 0.21); // Bottom bar height
+        const bY = h - bH;
+
+        // Gradient Background
+        const grad = ctx.createLinearGradient(0, bY - 20, 0, h);
         grad.addColorStop(0, "rgba(0,0,0,0)");
-        grad.addColorStop(0.3, "rgba(0,0,0,0.84)");
-        grad.addColorStop(1, "rgba(10,10,10,0.96)");
+        grad.addColorStop(0.2, "rgba(0,0,0,0.85)");
+        grad.addColorStop(1, "rgba(5,5,5,0.98)");
         ctx.fillStyle = grad;
-        ctx.fillRect(0, bY - Math.round(h * 0.05), w, bH + Math.round(h * 0.05));
+        ctx.fillRect(0, bY - Math.round(h * 0.04), w, bH + Math.round(h * 0.04));
 
+        // Accenting Red Line
         ctx.fillStyle = "#d93025";
-        ctx.fillRect(0, bY, w, Math.max(2, Math.round(h * 0.006)));
+        ctx.fillRect(0, bY, w, Math.max(2, Math.round(h * 0.005)));
 
-        const sc = w / 1280;
-        const f1 = Math.round(22 * sc), f2 = Math.round(18 * sc), f3 = Math.round(13 * sc);
-        const lPad = Math.round(w * 0.03);
-        const rBase = bY + Math.round(h * 0.006) + Math.round(bH * 0.22);
-        const rH = Math.round(bH * 0.22);
+        const f1 = Math.round(24 * sc), f2 = Math.round(18 * sc), f3 = Math.round(13 * sc);
+        const lPad = Math.round(w * 0.035);
+        const itemGap = Math.round(bH * 0.22);
+        const yStart = bY + Math.round(bH * 0.28);
 
+        // Left Side Content
         ctx.textAlign = "left";
         ctx.fillStyle = "#ffffff";
-        ctx.font = `700 ${f1}px 'Segoe UI',Arial`;
-        ctx.fillText(empName || me?.name || "—", lPad, rBase);
+        ctx.font = `700 ${f1}px 'Segoe UI',Arial,Tahoma`;
+        ctx.fillText(empName || me?.name || "—", lPad, yStart);
 
-        ctx.fillStyle = "#a0a0a0";
-        ctx.font = `500 ${f2}px 'Segoe UI',Arial`;
-        ctx.fillText(`ID: ${empId || me?.emp_id || "—"}  |  ${branchName}`, lPad, rBase + rH);
+        ctx.fillStyle = "#e0e0e0";
+        ctx.font = `500 ${f2}px 'Segoe UI',Arial,Tahoma`;
+        ctx.fillText(`ID: ${empId || me?.emp_id || "—"}  |  ${branchName}`, lPad, yStart + itemGap);
 
         const lateColor = lateInfoNow.status === "late" ? "#fb923c" : lateInfoNow.status === "ot" ? "#a78bfa" : "#4ade80";
         ctx.fillStyle = lateColor;
-        ctx.font = `700 ${f3}px 'Segoe UI',Arial`;
-        ctx.fillText(lateInfoNow.label, lPad, rBase + rH * 2);
+        ctx.font = `700 ${f3}px 'Segoe UI',Arial,Tahoma`;
+        ctx.fillText(lateInfoNow.label, lPad, yStart + itemGap * 2);
 
-        ctx.fillStyle = "#5a5a5a";
+        ctx.fillStyle = "#888888";
         ctx.font = `400 ${f3}px 'Courier New',monospace`;
-        ctx.fillText(`GPS: ${gpsStr}  ±${Math.round(gps.accuracy ?? 0)}m`, lPad, rBase + rH * 3);
+        ctx.fillText(`GPS: ${gpsStr}  ±${Math.round(gps.accuracy ?? 0)}m`, lPad, yStart + itemGap * 3);
 
+        // Right Side Content
         ctx.textAlign = "right";
         ctx.fillStyle = "#ffffff";
         ctx.font = `700 ${f1}px 'Courier New',monospace`;
-        ctx.fillText(`${dateStr}  ${timeStr}`, w - lPad, rBase);
+        ctx.fillText(`${dateStr}  ${timeStr}`, w - lPad, yStart);
 
         const typeColor = currentType === "Check-in" ? "#4ade80" : "#fb923c";
         ctx.fillStyle = typeColor;
-        ctx.font = `800 ${f2}px 'Segoe UI',Arial`;
-        ctx.fillText(currentType === "Check-in" ? "CHECK-IN" : "CHECK-OUT", w - lPad, rBase + rH);
+        ctx.font = `800 ${f2}px 'Segoe UI',Arial,Tahoma`;
+        ctx.fillText(currentType === "Check-in" ? "CHECK-IN" : "CHECK-OUT", w - lPad, yStart + itemGap);
 
+        // System Label
         ctx.textAlign = "left";
-        ctx.fillStyle = "rgba(217,48,37,0.7)";
+        ctx.fillStyle = "rgba(217,48,37,0.85)";
         ctx.font = `600 ${Math.round(12 * sc)}px 'Segoe UI',Arial`;
-        ctx.fillText("TERA GROUP · HR SYSTEM", lPad, bY - Math.round(h * 0.01));
+        ctx.fillText("TERA GROUP · HR ATTENDANCE", lPad, bY - Math.round(h * 0.012));
 
-        const dataUrl = c.toDataURL("image/jpeg", 0.88);
+        const dataUrl = c.toDataURL("image/jpeg", 0.9);
         setPreview(dataUrl);
         return dataUrl;
     }

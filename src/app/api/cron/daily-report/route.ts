@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTodayBangkokISO, formatTime24h, formatDateThai } from "@/utils/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,21 +10,10 @@ const CRON_SECRET = process.env.CRON_SECRET || "hr-checkin-secret-123";
 const MANAGEMENT_LINE_USER_ID = process.env.MANAGEMENT_LINE_USER_ID;
 
 function todayBangkok() {
-    const now = new Date();
-    const bkk = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-    const y = bkk.getFullYear();
-    const m = String(bkk.getMonth() + 1).padStart(2, "0");
-    const d = String(bkk.getDate()).padStart(2, "0");
-    return { dateStr: `${y}-${m}-${d}`, date: new Date(`${y}-${m}-${d}T00:00:00`), bkk };
-}
-
-function formatDateThai(d: Date) {
-    return d.toLocaleDateString("th-TH", {
-        timeZone: "Asia/Bangkok",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
+    const iso = getTodayBangkokISO();
+    const [y, m, d] = iso.split("-");
+    const date = new Date(`${iso}T00:00:00Z`); // Explicit UTC for Prisma @db.Date
+    return { dateStr: iso, date, iso };
 }
 
 async function sendFlexMessage(to: string, flex: any, altText: string) {
@@ -70,7 +60,7 @@ export async function GET(req: Request) {
     }
 
     try {
-        const { dateStr, date, bkk } = todayBangkok();
+        const { dateStr, date } = todayBangkok();
         const todayStart = date;
         const todayEnd = new Date(date);
         todayEnd.setHours(23, 59, 59, 999);
@@ -124,7 +114,7 @@ export async function GET(req: Request) {
         ).length;
 
         // ── Build Flex Message ──
-        const dateLabel = formatDateThai(bkk);
+        const dateLabel = formatDateThai(date);
 
         const flex = {
             type: "bubble",

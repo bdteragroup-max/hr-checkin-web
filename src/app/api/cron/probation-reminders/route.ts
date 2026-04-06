@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTodayBangkokISO, getNowBangkok } from "@/utils/time";
+import { getTodayBangkokISO, getNowBangkok, getBangkokWallClock } from "@/utils/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

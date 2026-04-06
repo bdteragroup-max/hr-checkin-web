@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
-import { getTodayBangkokISO, getNowBangkok } from "@/utils/time";
+import { getTodayBangkokISO, getNowBangkok, getBangkokWallClock } from "@/utils/time";
 import { calcLateOT } from "@/utils/checkin";
 
 type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out" | "Trip-Update";
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
     }
 
     // Time-based calculations
-    const time_key = getNowBangkok();
+    const time_key = getBangkokWallClock();
     const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") || type === "Trip-Update" 
         ? { status: "ontime", min: 0, label: "ตรงเวลา" } 
         : calcLateOT(type as "Check-in" | "Check-out");

@@ -41,9 +41,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     });
 
     async function logout() {
-        await fetch("/api/admin/logout", { method: "POST" }).catch(() => { });
+        await fetch("/admin/logout", { method: "POST" }).catch(() => { });
         window.location.href = "/admin/login";
     }
+
 
     const isEmployeesActive = pathname.startsWith("/admin/employees");
     const isLeavesActive = pathname.startsWith("/admin/leaves");

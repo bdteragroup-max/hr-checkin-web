@@ -466,23 +466,39 @@ export default function ProjectCheckinPage() {
             ctx.drawImage(v, 0, 0, w, h);
         }
 
-        const dStr = getThaiTime().toLocaleDateString("th-TH");
-        const tStr = formatTimeFull24h(getThaiTime()) + " น.";
+        const now = getThaiTime();
+        const dStr = now.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+        const tStr = formatTimeFull24h(now) + " น.";
 
-        const bH = Math.round(h * 0.22), bY = h - bH;
-        ctx.fillStyle = "rgba(0,0,0,0.85)";
-        ctx.fillRect(0, bY, w, bH);
+        // 📱 Orientation-Aware Scaling
+        const baseDim = Math.min(w, h);
+        const sc = baseDim / 720; 
+        const bH = Math.round(baseDim * 0.22); 
+        const bY = h - bH;
+
+        // Gradient & Line
+        const grad = ctx.createLinearGradient(0, bY - 10, 0, h);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(0.2, "rgba(0,0,0,0.88)");
+        grad.addColorStop(1, "rgba(10,10,10,0.98)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, bY - 15, w, bH + 15);
 
         ctx.fillStyle = currentType === "Project-In" ? "#4ade80" : "#fb923c";
-        ctx.fillRect(0, bY, w, 4);
+        ctx.fillRect(0, bY, w, Math.max(2, Math.round(h * 0.005)));
+
+        const f1 = Math.round(24 * sc), f2 = Math.round(18 * sc), f3 = Math.round(13 * sc);
+        const lPad = Math.round(w * 0.035);
+        const itemGap = Math.round(bH * 0.24);
+        const yStart = bY + Math.round(bH * 0.3);
 
         ctx.textAlign = "left";
         ctx.fillStyle = "white";
-        ctx.font = `bold ${Math.round(22 * w / 1280)}px Arial`;
-        ctx.fillText(me?.name || "—", 30, bY + 35);
+        ctx.font = `bold ${f1}px Arial, Tahoma`;
+        ctx.fillText(me?.name || "—", lPad, yStart);
 
-        ctx.fillStyle = "#aaa";
-        ctx.font = `${Math.round(18 * w / 1280)}px Arial`;
+        ctx.fillStyle = "#e0e0e0";
+        ctx.font = `${f2}px Arial, Tahoma`;
         
         // Auto-calculate duration watermark
         let currentDuration = "";
@@ -496,19 +512,23 @@ export default function ProjectCheckinPage() {
             currentDuration = hrs > 0 ? ` (อยู่ ${hrs} ชม. ${mins % 60} นาที)` : ` (อยู่ ${mins} นาที)`;
         }
 
-        ctx.fillText(`Cus: ${selectedCustomer?.name || "—"}${currentDuration}`, 30, bY + 65);
+        ctx.fillText(`ลูกค้า: ${selectedCustomer?.name || "—"}${currentDuration}`, lPad, yStart + itemGap);
 
-        ctx.font = `${Math.round(14 * w / 1280)}px Arial`;
-        ctx.fillText(`GPS: ${gps.lat?.toFixed(5)}, ${gps.lon?.toFixed(5)} (±${Math.round(gps.accuracy || 0)}m)`, 30, bY + 95);
+        ctx.fillStyle = "#aaaaaa";
+        ctx.font = `${f3}px 'Courier New', monospace`;
+        ctx.fillText(`GPS: ${gps.lat?.toFixed(5)}, ${gps.lon?.toFixed(5)} (±${Math.round(gps.accuracy || 0)}m)`, lPad, yStart + itemGap * 2);
 
         ctx.textAlign = "right";
-        ctx.font = `bold ${Math.round(22 * w / 1280)}px Arial`;
-        ctx.fillText(`${dStr} ${tStr}`, w - 30, bY + 35);
-        ctx.fillStyle = currentType === "Project-In" ? "#4ade80" : "#fb923c";
-        ctx.fillText(currentType === "Project-In" ? "IN" : "OUT", w - 30, bY + 65);
+        ctx.fillStyle = "white";
+        ctx.font = `bold ${f1}px 'Courier New', monospace`;
+        ctx.fillText(`${dStr} ${tStr}`, w - lPad, yStart);
+        
+        const typeColor = currentType === "Project-In" ? "#4ade80" : "#fb923c";
+        ctx.fillStyle = typeColor;
+        ctx.font = `bold ${f2}px Arial, Tahoma`;
+        ctx.fillText(currentType === "Project-In" ? "PROJECT IN" : "PROJECT OUT", w - lPad, yStart + itemGap);
 
-        const dataUrl = c.toDataURL("image/jpeg", 0.88);
-        // stopCamera(); // Don't stop camera here, only after submit
+        const dataUrl = c.toDataURL("image/jpeg", 0.9);
         return dataUrl;
     }
 

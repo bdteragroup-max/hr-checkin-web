@@ -1,12 +1,23 @@
 /**
- * Formats a date or string into a 24-hour time string (HH:mm)
- * Uses th-TH locale with hour12: false to ensure consistency.
+ * Returns the current instant in UTC.
+ * Since Prisma/Postgres handles Timestamptz correctly, we should store pure UTC.
  */
-
 export function getNowBangkok(): Date {
+    return new Date();
+}
+
+/**
+ * Returns a Date object representing the current "wall clock" time in Bangkok.
+ * WARNING: The internal UTC representation of this Date object is shifted.
+ * ONLY use this for fields that don't store timezones (like @db.Time) or for watermarks.
+ */
+export function getBangkokWallClock(): Date {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
 }
 
+/**
+ * Returns today's date in YYYY-MM-DD format for Bangkok.
+ */
 export function getTodayBangkokISO(): string {
     return new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Bangkok",
@@ -15,11 +26,16 @@ export function getTodayBangkokISO(): string {
         day: "2-digit",
     }).format(new Date());
 }
+
+/**
+ * Formats a date into 24-hour time (HH:mm) for Bangkok.
+ */
 export function formatTime24h(date: Date | string | null): string {
     if (!date) return "--:--";
     const d = typeof date === 'string' ? new Date(date) : date;
     
     return d.toLocaleTimeString("th-TH", {
+        timeZone: "Asia/Bangkok",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false
@@ -34,6 +50,7 @@ export function formatTimeFull24h(date: Date | string | null): string {
     const d = typeof date === 'string' ? new Date(date) : date;
     
     return d.toLocaleTimeString("th-TH", {
+        timeZone: "Asia/Bangkok",
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
@@ -49,6 +66,7 @@ export function formatDateThai(date: Date | string | null): string {
     const d = typeof date === 'string' ? new Date(date) : date;
     
     return d.toLocaleDateString("th-TH", {
+        timeZone: "Asia/Bangkok",
         weekday: "long",
         year: "numeric",
         month: "long",

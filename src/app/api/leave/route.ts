@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/jwt";
 import crypto from "crypto";
-import { sendLeaveApprovalFlexMessage } from "@/utils/lineMessaging";
+import { sendLeaveApprovalFlexMessage, sendManagementLeaveApprovalMessage } from "@/utils/lineMessaging";
 import { calcWorkingMinutes } from "@/utils/time";
 
 export const runtime = "nodejs";
@@ -153,7 +153,7 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
     const usedLeaves = await prisma.leave_requests.findMany({
         where: {
             emp_id: empId,
-            status: { in: ["pending", "approved", "pending_supervisor", "pending_hr"] },
+            status: { in: ["pending", "approved", "pending_supervisor", "pending_hr", "pending_management"] },
             start_date: { gte: startOfCurrentYear },
             end_date: { lte: endOfCurrentYear }
         },
@@ -298,7 +298,7 @@ export async function POST(req: Request) {
     const overlap = await prisma.leave_requests.findFirst({
         where: {
             emp_id: p.emp_id,
-            status: { in: ["pending", "approved"] },
+            status: { in: ["pending", "approved", "pending_supervisor", "pending_hr", "pending_management"] },
             AND: [{ start_at: { lte: endAt } }, { end_at: { gte: startAt } }],
         },
         select: { id: true },
@@ -377,13 +377,39 @@ export async function POST(req: Request) {
                 days,
                 reason,
                 attachment_url,
-                status: emp.supervisor_id ? "pending_supervisor" : "pending_hr",
+                status: emp.supervisor_id && leave_type_id !== "annual" ? "pending_supervisor" : leave_type_id === "annual" ? "pending_management" : "pending_hr",
                 supervisor_id: emp.supervisor_id || null,
             },
         });
 
-        // ✅ 1. Notify Supervisor (if exists)
-        if (emp.supervisor?.line_user_id) {
+        // ✅ 1a. Annual leave → notify Management directly
+        if (leave_type_id === "annual") {
+            sendManagementLeaveApprovalMessage({
+                id,
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+            }).catch(console.error);
+
+            // Notify employee: waiting for management
+            const me = await prisma.employees.findUnique({ where: { emp_id: emp.emp_id }, select: { line_user_id: true } });
+            if (me?.line_user_id) {
+                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+                sendEmployeeLeaveStatusNotification(me.line_user_id, {
+                    empName: emp.name,
+                    leaveType: def.name,
+                    startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                    endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                    minutes,
+                    reason: reason || "",
+                    status: "pending_management",
+                }).catch(console.error);
+            }
+        // ✅ 1b. All other leave types → Supervisor (or HR if no supervisor)
+        } else if (emp.supervisor?.line_user_id) {
             sendLeaveApprovalFlexMessage(emp.supervisor.line_user_id, {
                 id,
                 empName: emp.name,

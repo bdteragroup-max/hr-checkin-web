@@ -168,6 +168,10 @@ export default function PayrollPage() {
         setLoading(true);
         try {
             const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}`);
+            if (res.status === 401) {
+                window.location.href = "/admin/login";
+                return;
+            }
             if (res.ok) {
                 const d = await res.json();
                 setData(d.list);
@@ -180,6 +184,7 @@ export default function PayrollPage() {
         }
         setLoading(false);
     }
+
 
     useEffect(() => {
         loadData();

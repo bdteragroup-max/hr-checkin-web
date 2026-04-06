@@ -37,7 +37,7 @@ export async function POST(
         // ✅ Guard: Prevent duplicate approvals
         const existing = await prisma.leave_requests.findUnique({ where: { id }, select: { status: true } });
         if (!existing) return NextResponse.json({ ok: false, error: "NOT_FOUND" }, { status: 404 });
-        if (existing.status !== "pending" && existing.status !== "pending_hr") {
+        if (existing.status !== "pending" && existing.status !== "pending_hr" && existing.status !== "pending_management") {
             return NextResponse.json({ ok: false, error: "ALREADY_PROCESSED", current_status: existing.status }, { status: 409 });
         }
 

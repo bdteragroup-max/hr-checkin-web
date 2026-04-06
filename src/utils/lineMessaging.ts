@@ -378,6 +378,22 @@ export async function sendHrOtNotification(
   return sendOtApprovalFlexMessage(hrLineUserId, otData);
 }
 
+export async function sendManagementLeaveApprovalMessage(
+  leaveData: {
+    id: string;
+    empName: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    minutes: number;
+    reason: string;
+  }
+) {
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  if (!managementId) return false;
+  return sendLeaveApprovalFlexMessage(managementId, leaveData);
+}
+
 export async function sendEmployeeLeaveStatusNotification(
   lineUserId: string,
   leaveData: {
@@ -387,13 +403,14 @@ export async function sendEmployeeLeaveStatusNotification(
     endDate: string;
     minutes: number;
     reason: string;
-    status: "pending_supervisor" | "pending_hr" | "approved" | "rejected";
+    status: "pending_supervisor" | "pending_hr" | "pending_management" | "approved" | "rejected";
     approvedBy?: string;
     rejectionReason?: string;
   }
 ) {
   const statusConfig = {
     pending_hr: { headerText: "รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c", altText: "ใบลาของคุณรอ HR อนุมัติ" },
+    pending_management: { headerText: "รอฝ่ายบริหารอนุมัติ", headerBg: "#faf5ff", headerColor: "#7c3aed", badgeText: "รอฝ่ายบริหารอนุมัติ", badgeColor: "#7c3aed", altText: "ใบลาพักร้อนของคุณรอฝ่ายบริหารอนุมัติ" },
     approved: { headerText: "อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a", altText: "ใบลาของคุณได้รับการอนุมัติแล้ว" },
     rejected: { headerText: "ไม่อนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626", altText: "ใบลาของคุณไม่ได้รับการอนุมัติ" },
     pending_supervisor: { headerText: "ส่งคำขอแล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7", altText: "ใบลาของคุณส่งถึงหัวหน้างานแล้ว" },
@@ -412,6 +429,7 @@ export async function sendEmployeeLeaveStatusNotification(
   if (leaveData.approvedBy) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.approvedBy, color: "#111111", size: "sm", flex: 7 }] });
   if (leaveData.status === "rejected" && leaveData.rejectionReason) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.rejectionReason, color: "#dc2626", size: "sm", flex: 7, wrap: true }] });
   if (leaveData.status === "pending_hr") bodyContents.push({ type: "text", text: "หัวหน้าอนุมัติแล้ว กำลังรอ HR อนุมัติขั้นสุดท้าย", color: "#9ca3af", size: "xs", margin: "md", wrap: true });
+  if (leaveData.status === "pending_management") bodyContents.push({ type: "text", text: "คำขอได้รับการส่งให้ฝ่ายบริหารอนุมัติแล้ว", color: "#9ca3af", size: "xs", margin: "md", wrap: true });
 
   const contents: any = {
     type: "bubble",

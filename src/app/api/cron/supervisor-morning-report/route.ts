@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTodayBangkokISO, getNowBangkok } from "@/utils/time";
+import { getTodayBangkokISO, getNowBangkok, getBangkokWallClock } from "@/utils/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET || "hr-checkin-secret-123";
+const MANAGEMENT_LINE_USER_ID = process.env.MANAGEMENT_LINE_USER_ID;
+const HR_LINE_USER_ID = process.env.HR_LINE_USER_ID;
 
 
 
@@ -47,7 +49,7 @@ export async function GET(req: Request) {
     try {
         const dateStr = getTodayBangkokISO();
         const dateKey = new Date(dateStr);
-        const bkk = getNowBangkok();
+        const bkk = getBangkokWallClock();
         const dayOfWeek = bkk.getDay();
 
         // 🟢 1. Check for Skip Conditions (Sundays)
@@ -213,13 +215,65 @@ export async function GET(req: Request) {
 
         console.log(`[SUBORDINATE REPORT] Processed today: ${dateStr}. Reports sent: ${reportStats.sent}`);
 
+        // ── 7. Push Summary to Management/HR (If anyone is missing) ──
+        const allMissingStaff = Object.values(missingBySupervisor).flatMap(r => r.staff);
+        
+        if (allMissingStaff.length > 0) {
+            const summaryFlex = {
+                type: "bubble",
+                size: "mega",
+                header: {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#fef2f2",
+                    paddingAll: "16px",
+                    contents: [
+                        { type: "text", text: "📊 สรุปพนักงานที่ไม่มาลงเวลา", weight: "bold", size: "lg", color: "#b91c1c" },
+                        { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH")}`, size: "sm", color: "#6b7280", margin: "sm" },
+                    ]
+                },
+                body: {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "md",
+                    paddingAll: "16px",
+                    contents: [
+                        { type: "text", text: `พบพนักงานทั้งหมด ${allMissingStaff.length} คน ยังไม่ได้ลงเวลา`, size: "sm", weight: "bold", color: "#b91c1c" },
+                        { type: "separator", margin: "sm" },
+                        {
+                            type: "box",
+                            layout: "vertical",
+                            margin: "md",
+                            spacing: "xs",
+                            contents: allMissingStaff.map(name => ({
+                                type: "text",
+                                text: `• ${name}`,
+                                size: "xs",
+                                color: "#4b5563"
+                            }))
+                        },
+                        { type: "text", text: "*ส่งข้อมูลหาหัวหน้างานทุกคนแล้ว", size: "xs", color: "#9ca3af", margin: "lg", align: "center" }
+                    ]
+                }
+            };
+
+            const targets = [MANAGEMENT_LINE_USER_ID, HR_LINE_USER_ID].filter(Boolean) as string[];
+            for (const target of targets) {
+                await pushLineMessage(target, [
+                    { type: "flex", altText: "สรุปภาพรวมพนักงานขาดงาน (9:00)", contents: summaryFlex }
+                ]);
+            }
+        }
+
         return NextResponse.json({ 
             ok: true, 
             date: dateStr, 
             stats: reportStats, 
-            results 
+            results,
+            managementReported: allMissingStaff.length > 0
         });
     } catch (error: any) {
+
         console.error("[SUBORDINATE REPORT] Fatal error:", error);
         return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
