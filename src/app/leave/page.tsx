@@ -14,7 +14,7 @@ import {
     PaperAirplaneIcon,
     CalendarIcon
 } from "@heroicons/react/24/solid";
-import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/utils/time";
+import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS, formatDateShortThai } from "@/utils/time";
 
 const getLeaveHourOptions = (dateStr: string) => {
     const isSat = dateStr ? new Date(dateStr).getDay() === 6 : false;
@@ -101,7 +101,7 @@ function calculateNetMinutes(startStr: string, endStr: string) {
 function fmtDateTimeTH(d: string) {
     try {
         const dateObj = new Date(d);
-        return `${dateObj.toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" })} ${formatTime24h(dateObj)}`;
+        return `${formatDateShortThai(dateObj)} ${formatTime24h(dateObj)}`;
     } catch { return d; }
 }
 

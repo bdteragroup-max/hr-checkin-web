@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET || "hr-checkin-secret-123";
+const HR_LINE_USER_ID = process.env.HR_LINE_USER_ID;
 
 // Helper: Push LINE Message
 async function pushLineMessage(to: string, messages: any[]) {
@@ -156,7 +157,7 @@ export async function GET(req: Request) {
                                 contents: [
                                     { type: "text", text: `ชื่อ: ${emp.name}`, size: "sm", weight: "bold", color: "#1e293b" },
                                     { type: "text", text: `รหัส: ${emp.emp_id}`, size: "xs", color: "#64748b" },
-                                    { type: "text", text: `วันที่เริ่มงาน: ${new Date(emp.hire_date!).toLocaleDateString("th-TH")}`, size: "xs", color: "#64748b" }
+                                    { type: "text", text: `วันที่เริ่มงาน: ${new Date(emp.hire_date!).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "xs", color: "#64748b" }
                                 ]
                             },
                             {
@@ -187,6 +188,18 @@ export async function GET(req: Request) {
                 if (success) reportStats.notificationsSent++;
                 results.push({ employee: emp.name, milestone: config.milestone, daysBefore: config.daysBefore, success });
             }
+        }
+
+        // ── 4. Summary to HR (Ms. Duangkamol) ──
+        if (results.length > 0 && HR_LINE_USER_ID) {
+            const summaryText = [
+                "📊 สรุปการแจ้งเตือนพนักงานทดลองงาน",
+                `ประจำวันที่ ${todayBkk.toLocaleDateString("th-TH")}`,
+                "",
+                ...results.map(r => `• ${r.employee} (${r.milestone}) -> แจ้งเตือน ${r.supervisor} ${r.success ? "✅" : "❌"}`)
+            ].join("\n");
+
+            await pushLineMessage(HR_LINE_USER_ID, [{ type: "text", text: summaryText }]);
         }
 
         return NextResponse.json({

@@ -18,7 +18,7 @@ import {
     PencilSquareIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut } from "lucide-react";
-import { formatTime24h, formatTimeFull24h } from "@/utils/time";
+import { formatTime24h, formatTimeFull24h, formatDateShortThai } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    CONFIG 
@@ -467,7 +467,7 @@ export default function ProjectCheckinPage() {
         }
 
         const now = getThaiTime();
-        const dStr = now.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+        const dStr = formatDateShortThai(now);
         const tStr = formatTimeFull24h(now) + " น.";
 
         // 📱 Orientation-Aware Scaling

@@ -69,7 +69,9 @@ export async function POST(request: Request) {
         // Get employee info
         const emp = await prisma.employees.findUnique({
             where: { emp_id: decoded.emp_id },
-            include: { supervisor: { select: { line_user_id: true } } }
+            include: { 
+                supervisor: { select: { line_user_id: true, name: true } }
+            }
         });
 
         if (!emp) {
@@ -97,27 +99,29 @@ export async function POST(request: Request) {
         });
 
         if (emp.supervisor?.line_user_id) {
+            const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendOtApprovalFlexMessage(emp.supervisor.line_user_id, {
                 id: newOt.id,
                 empName: emp.name,
-                dateFor: new Date(date_for).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
-                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(date_for),
+                startTime: formatTime24h(start),
+                endTime: formatTime24h(end),
                 totalHours: Number(diffHrs),
                 reason: reason || "",
                 hasDiscrepancy: hasDiscrepancy,
-                actualIn: new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
-                actualOut: new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })
+                actualIn: formatTime24h(earliestIn),
+                actualOut: formatTime24h(latestOut)
             }).catch(console.error);
         }
 
         // ✉️ Confirm to employee that their OT request was received
         if (emp.line_user_id) {
+            const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendEmployeeOtStatusNotification(emp.line_user_id, {
                 empName: emp.name,
-                dateFor: new Date(date_for).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: start.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
-                endTime: end.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(date_for),
+                startTime: formatTime24h(start),
+                endTime: formatTime24h(end),
                 totalHours: Number(diffHrs),
                 reason: reason || "",
                 status: "pending_supervisor",

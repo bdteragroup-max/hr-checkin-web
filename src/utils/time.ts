@@ -75,6 +75,21 @@ export function formatDateThai(date: Date | string | null): string {
 }
 
 /**
+ * Formats a date into a Thai short date string (DD MMM YYYY)
+ */
+export function formatDateShortThai(date: Date | string | null): string {
+    if (!date) return "";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    
+    return d.toLocaleDateString("th-TH", {
+        timeZone: "Asia/Bangkok",
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+}
+
+/**
  * Generates an array of hours (00-23)
  */
 export const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));

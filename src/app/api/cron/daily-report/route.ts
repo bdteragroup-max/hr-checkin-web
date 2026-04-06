@@ -66,8 +66,9 @@ export async function GET(req: Request) {
         todayEnd.setHours(23, 59, 59, 999);
 
         // ── 1. Pending Approvals ──
-        const [pendingSupervisor, pendingHr, pendingOt] = await Promise.all([
+        const [pendingSupervisor, pendingManagement, pendingHr, pendingOt] = await Promise.all([
             prisma.leave_requests.count({ where: { status: "pending_supervisor" } }),
+            prisma.leave_requests.count({ where: { status: "pending_management" } }),
             prisma.leave_requests.count({ where: { status: "pending_hr" } }),
             prisma.ot_requests.count({ where: { status: "pending" } }),
         ]);
@@ -144,6 +145,7 @@ export async function GET(req: Request) {
                         margin: "sm",
                         contents: [
                             makeRow("🕐 ลารอหัวหน้าอนุมัติ", pendingSupervisor, pendingSupervisor > 0 ? "#ea580c" : "#6b7280"),
+                            makeRow("🕐 ลารอฝ่ายบริหารอนุมัติ", pendingManagement, pendingManagement > 0 ? "#7c3aed" : "#6b7280"),
                             makeRow("🕐 ลารอ HR อนุมัติ", pendingHr, pendingHr > 0 ? "#ea580c" : "#6b7280"),
                             makeRow("🕐 OT รออนุมัติ", pendingOt, pendingOt > 0 ? "#ea580c" : "#6b7280"),
                         ],
@@ -174,7 +176,7 @@ export async function GET(req: Request) {
             ok: true,
             report: {
                 date: dateStr,
-                pending: { supervisor: pendingSupervisor, hr: pendingHr, ot: pendingOt },
+                pending: { supervisor: pendingSupervisor, management: pendingManagement, hr: pendingHr, ot: pendingOt },
                 attendance: { total: totalActive, checkedIn: checkedInCount, late: lateCount, absent: absentCount, onLeave: onLeaveCount },
             },
         });

@@ -96,8 +96,10 @@ export async function GET(req: Request) {
 
         // 🔴 ABSENT or LEAVE MODE
         if (statusParam === "absent" || statusParam === "leave") {
-            const dayStart = date ? new Date(`${date}T00:00:00+07:00`) : new Date(new Date().setHours(0,0,0,0));
-            const dayEnd = date ? new Date(`${date}T23:59:59.999+07:00`) : new Date(new Date().setHours(23,59,59,999));
+            const now = new Date();
+            const todayStr = now.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+            const dayStart = date ? new Date(`${date}T00:00:00+07:00`) : new Date(`${todayStr}T00:00:00+07:00`);
+            const dayEnd = date ? new Date(`${date}T23:59:59.999+07:00`) : new Date(`${todayStr}T23:59:59.999+07:00`);
 
             // Get all check-ins for the day (any type means they are not absent)
             const checkinsToday = await prisma.checkins.findMany({

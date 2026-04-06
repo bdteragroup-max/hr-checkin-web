@@ -13,7 +13,7 @@ import {
     XCircleIcon,
     InformationCircleIcon
 } from "@heroicons/react/24/outline";
-import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/utils/time";
+import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS, formatDateShortThai } from "@/utils/time";
 
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
@@ -272,7 +272,7 @@ export default function EmployeeOtPage() {
                                     <div>
                                         <div className={styles.historyDate}>
                                             <CalendarIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
-                                            {new Date(item.date_for).toLocaleDateString("th-TH", { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            {formatDateShortThai(item.date_for)}
                                         </div>
                                         <div className={styles.historyTime}>
                                             <ClockIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />

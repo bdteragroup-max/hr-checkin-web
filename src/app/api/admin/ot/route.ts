@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
+import { formatDateShortThai, formatTime24h } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
 
@@ -78,9 +79,9 @@ export async function POST(request: Request) {
             const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
             sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
                 empName: updated.employee.name,
-                dateFor: updated.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
-                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(updated.date_for),
+                startTime: formatTime24h(updated.start_time),
+                endTime: formatTime24h(updated.end_time),
                 totalHours: Number(updated.total_hours),
                 reason: updated.reason || "",
                 status: status as any, // "approved" or "rejected"
@@ -98,9 +99,9 @@ export async function POST(request: Request) {
 
             sendManagementOtSummary({
                 empName: updated.employee.name,
-                dateFor: updated.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
-                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(updated.date_for),
+                startTime: formatTime24h(updated.start_time),
+                endTime: formatTime24h(updated.end_time),
                 totalHours: Number(updated.total_hours),
                 reason: updated.reason || "",
                 supervisorName: supervisor?.name || "ไม่ได้ระบุ",

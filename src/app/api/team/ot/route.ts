@@ -113,11 +113,12 @@ export async function PUT(request: Request) {
         // ✅ LINE Notifications
         if (updated.employee.line_user_id) {
             const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
+            const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
                 empName: updated.employee.name,
-                dateFor: updated.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
-                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(updated.date_for),
+                startTime: formatTime24h(updated.start_time),
+                endTime: formatTime24h(updated.end_time),
                 totalHours: Number(updated.total_hours),
                 reason: updated.reason || "",
                 status: status === "approved" ? "pending_hr" : "rejected",
@@ -127,12 +128,13 @@ export async function PUT(request: Request) {
 
         if (status === "approved") {
             const { sendHrOtNotification } = await import("@/utils/lineMessaging");
+            const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendHrOtNotification({
                 id: updated.id,
                 empName: updated.employee.name,
-                dateFor: updated.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                startTime: updated.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
-                endTime: updated.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
+                dateFor: formatDateShortThai(updated.date_for),
+                startTime: formatTime24h(updated.start_time),
+                endTime: formatTime24h(updated.end_time),
                 totalHours: Number(updated.total_hours),
                 reason: updated.reason || "",
                 supervisorName: supervisor?.name || "หัวหน้างาน"

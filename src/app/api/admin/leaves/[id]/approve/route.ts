@@ -61,8 +61,8 @@ export async function POST(
             sendEmployeeLeaveStatusNotification(employee.line_user_id, {
                 empName: updated.name,
                 leaveType: updated.leave_type,
-                startDate: updated.start_at.toLocaleDateString("th-TH"),
-                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
                 status: "approved",
@@ -82,8 +82,8 @@ export async function POST(
             await sendManagementLeaveSummary({
                 empName: updated.name,
                 leaveType: updated.leave_type,
-                startDate: updated.start_at.toLocaleDateString("th-TH"),
-                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
                 supervisorName: supervisor?.name || "ไม่ได้ระบุ",

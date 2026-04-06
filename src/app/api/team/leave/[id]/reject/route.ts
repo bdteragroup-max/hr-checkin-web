@@ -61,8 +61,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             sendEmployeeLeaveStatusNotification(updated.employees.line_user_id, {
                 empName: updated.employees.name,
                 leaveType: updated.leave_type,
-                startDate: updated.start_at.toLocaleDateString("th-TH"),
-                endDate: updated.end_at.toLocaleDateString("th-TH"),
+                startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
                 status: "rejected",

@@ -14,7 +14,7 @@ import {
     ClockIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight } from "lucide-react";
-import { formatTimeFull24h } from "@/utils/time";
+import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    TYPES
@@ -160,7 +160,7 @@ function TimeCard() {
         function update() {
             const now = getThaiTime();
             setTimeStr(formatTimeFull24h(now));
-            const d = now.toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+            const d = formatDateThai(now);
             setDateStr(`วัน${d.split("วัน")[1]}`);
         }
         update();
@@ -335,7 +335,7 @@ export default function OffsiteCheckinPage() {
         }
 
         const now = getThaiTime();
-        const dStr = now.toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+        const dStr = formatDateShortThai(now);
         const tStr = formatTimeFull24h(now) + " น.";
 
         // 📱 Orientation-Aware Scaling

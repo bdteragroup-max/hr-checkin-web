@@ -168,7 +168,7 @@ export async function GET(req: Request) {
                     paddingAll: "16px",
                     contents: [
                         { type: "text", text: "พนักงานยังไม่เข้างาน", weight: "bold", size: "lg", color: "#b91c1c" },
-                        { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH")}`, size: "sm", color: "#6b7280", margin: "sm" },
+                        { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "sm", color: "#6b7280", margin: "sm" },
                     ]
                 },
                 body: {
@@ -229,7 +229,7 @@ export async function GET(req: Request) {
                     paddingAll: "16px",
                     contents: [
                         { type: "text", text: "📊 สรุปพนักงานที่ไม่มาลงเวลา", weight: "bold", size: "lg", color: "#b91c1c" },
-                        { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH")}`, size: "sm", color: "#6b7280", margin: "sm" },
+                        { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "sm", color: "#6b7280", margin: "sm" },
                     ]
                 },
                 body: {

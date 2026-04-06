@@ -16,6 +16,7 @@ import {
     ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
+import { formatTime24h } from "@/utils/time";
 
 /* ──────────────────────────────────────────
    TYPES & UTILS
@@ -342,7 +343,7 @@ export default function TripLogPage() {
                                     <div className={styles.timelineContent}>
                                         <div className={styles.timelineHeader}>
                                             <div className={styles.timelineLocation}>{item.location}</div>
-                                            <div className={styles.timelineTime}>{new Date(item.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
+                                            <div className={styles.timelineTime}>{formatTime24h(item.timestamp)} น.</div>
                                         </div>
                                         {item.remark && <div className={styles.timelineNote}>{item.remark}</div>}
                                         {item.photo_url && (
