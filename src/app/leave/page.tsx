@@ -178,6 +178,8 @@ export default function LeavePage() {
     const [endDate, setEndDate] = useState("");
     const [endHour, setEndHour] = useState("17");
     const [endMin, setEndMin] = useState("00");
+    const [handoverPerson, setHandoverPerson] = useState("");
+    const [colleagues, setColleagues] = useState<string[]>([]);
 
     const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
     const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
@@ -245,9 +247,9 @@ export default function LeavePage() {
     const requireAttachment = useMemo(() => selectedType?.id === "sick", [selectedType]);
 
     const canSubmit = useMemo(() => {
-        if (!leaveTypeId || !startDate || !endDate || loading || uploading) return false;
+        if (!leaveTypeId || !startDate || !endDate || !handoverPerson || loading || uploading) return false;
         return true;
-    }, [leaveTypeId, startDate, endDate, loading, uploading]);
+    }, [leaveTypeId, startDate, endDate, handoverPerson, loading, uploading]);
 
     const currentMinDate = useMemo(() => {
         if (!selectedType) return "";
@@ -269,6 +271,7 @@ export default function LeavePage() {
         const loadedTypes: LeaveType[] = data.types || [];
         setTypes(loadedTypes);
         setList(data.list || []);
+        setColleagues(data.colleagues || []);
         if (!leaveTypeId && loadedTypes.length > 0) setLeaveTypeId(loadedTypes[0].id);
     }
 
@@ -313,6 +316,7 @@ export default function LeavePage() {
             start_at: startAt, end_at: endAt,
             reason: reason || null,
             attachment_url: attachmentUrl || null,
+            handover_person: handoverPerson,
         };
         if (editingId) payload.id = editingId;
 
@@ -340,7 +344,7 @@ export default function LeavePage() {
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
             return;
         }
-        setStartDate(""); setEndDate(""); setReason("");
+        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
         setAttachmentUrl(""); setFileName("");
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
@@ -349,7 +353,7 @@ export default function LeavePage() {
     }
 
     function cancelEdit() {
-        setStartDate(""); setEndDate(""); setReason("");
+        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
         setAttachmentUrl(""); setFileName("");
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
@@ -374,7 +378,7 @@ export default function LeavePage() {
         setEndDate(`${enYear}-${enMonth}-${enDay}`);
         setEndHour(String(dEnd.getHours()).padStart(2, '0'));
         setEndMin(String(dEnd.getMinutes()).padStart(2, '0'));
-
+        setHandoverPerson((item as any).handover_person || "");
         setReason(item.reason || "");
         setAttachmentUrl(item.attachment_url || "");
         setFileName(item.attachment_url ? "มีไฟล์แนบอยู่แล้ว" : "");
@@ -547,8 +551,26 @@ export default function LeavePage() {
                             )}
                         </div>
 
+                        {/* Handover Person */}
+                        <div style={{ marginBottom: 16 }}>
+                            <label className={styles.label}>ผู้รับผิดชอบงานแทน *</label>
+                            <input 
+                                className={styles.input} 
+                                value={handoverPerson} 
+                                onChange={e => setHandoverPerson(e.target.value)} 
+                                placeholder="ระบุชื่อผู้ที่จะรับผิดชอบงานในช่วงที่ลา..."
+                                list="colleagues-list"
+                                required
+                            />
+                            <datalist id="colleagues-list">
+                                {colleagues.map(name => (
+                                    <option key={name} value={name} />
+                                ))}
+                            </datalist>
+                        </div>
+
                         {/* Reason & Action */}
-                        <div style={{ marginBottom: 16, marginTop: 16 }}>
+                        <div style={{ marginBottom: 16 }}>
                             <label className={styles.label}>เหตุผลการลา (ถ้ามี)</label>
                             <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุรายละเอียดที่จำเป็น..." />
                         </div>
@@ -612,6 +634,11 @@ export default function LeavePage() {
                                             {fmtDateTimeTH(x.start_at)}
                                         </div>
                                     </div>
+                                    {x.handover_person && (
+                                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <span style={{ fontWeight: 600 }}>ผู้รับผิดชอบแทน:</span> {x.handover_person}
+                                        </div>
+                                    )}
                                     <div className={styles.historyRowBot}>
                                         <div className={styles.colDays}>{formatLeaveMins(x.minutes)}</div>
                                         {x.status.startsWith('pending') && (

@@ -139,6 +139,13 @@ export async function POST(req: Request) {
                             continue;
                         }
 
+                        // Look up approver name from LINE ID
+                        const approver = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { name: true }
+                        });
+                        const approverName = approver?.name || (isHr ? "HR Team" : isManagement ? "Management" : (supervisor?.name || "Staff"));
+
                         const { sendLeaveApprovalFlexMessage, sendHrLeaveNotification, sendEmployeeLeaveStatusNotification, sendManagementLeaveSummary } = await import("@/utils/lineMessaging");
 
                         if (action === "approve_leave") {
@@ -165,6 +172,7 @@ export async function POST(req: Request) {
                                 endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
+                                handoverPerson: (leaveReq as any).handover_person,
                             }, true, replyToken);
 
                             // Notify employee
@@ -176,8 +184,9 @@ export async function POST(req: Request) {
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
+                                    handoverPerson: (leaveReq as any).handover_person,
                                     status: nextStatus as any,
-                                    approvedBy: isManagement ? "ฝ่ายบริหาร" : isHr ? "HR" : supervisor?.name || "หัวหน้า",
+                                    approvedBy: approverName,
                                 }).catch(console.error);
                             }
 
@@ -191,7 +200,8 @@ export async function POST(req: Request) {
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
-                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                    handoverPerson: (leaveReq as any).handover_person,
+                                    supervisorName: approverName,
                                 }).catch(console.error);
                             }
 
@@ -204,8 +214,9 @@ export async function POST(req: Request) {
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
+                                    handoverPerson: (leaveReq as any).handover_person,
                                     supervisorName: supervisor?.name || "หัวหน้า",
-                                    hrName: "HR Team (via LINE)"
+                                    hrName: approverName
                                 }).catch(console.error);
                             }
                         } else {
@@ -223,6 +234,7 @@ export async function POST(req: Request) {
                                 endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
+                                handoverPerson: (leaveReq as any).handover_person,
                             }, true, replyToken);
 
                             if (leaveReq.employees?.line_user_id) {
@@ -233,6 +245,7 @@ export async function POST(req: Request) {
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     minutes: leaveReq.minutes,
                                     reason: leaveReq.reason || "",
+                                    handoverPerson: (leaveReq as any).handover_person,
                                     status: "rejected",
                                 }).catch(console.error);
                             }
@@ -259,9 +272,16 @@ export async function POST(req: Request) {
                         const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
 
                         if (!isHr && !isSupervisor) {
-                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนนี้");
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
                             continue;
                         }
+
+                        // Look up approver name from LINE ID
+                        const approver = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { name: true }
+                        });
+                        const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
 
                         if (isSupervisor && otReq.status !== "pending_supervisor") {
                             await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
@@ -305,7 +325,7 @@ export async function POST(req: Request) {
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     status: nextStatus,
-                                    approvedBy: isHr ? "HR" : supervisor?.name || "หัวหน้า",
+                                    approvedBy: approverName,
                                 }).catch(console.error);
                             }
 
@@ -319,7 +339,7 @@ export async function POST(req: Request) {
                                     endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
-                                    supervisorName: supervisor?.name || "หัวหน้า",
+                                    supervisorName: approverName,
                                 }).catch(console.error);
                             }
 
@@ -333,7 +353,7 @@ export async function POST(req: Request) {
                                     totalHours: Number(otReq.total_hours),
                                     reason: otReq.reason || "",
                                     supervisorName: supervisor?.name || "หัวหน้า",
-                                    hrName: "HR Team (via LINE)"
+                                    hrName: approverName
                                 }).catch(console.error);
                             }
                         } else {

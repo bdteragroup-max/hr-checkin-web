@@ -57,6 +57,7 @@ export async function sendLeaveApprovalFlexMessage(
     endDate: string;
     minutes: number;
     reason: string;
+    handoverPerson?: string;
     quotaMins?: number;
     usedMins?: number;
   },
@@ -94,6 +95,14 @@ export async function sendLeaveApprovalFlexMessage(
       contents: [
         { type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 },
         { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "รับผิดชอบแทน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.handoverPerson || "-", color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }
       ]
     }
   ];
@@ -403,6 +412,7 @@ export async function sendEmployeeLeaveStatusNotification(
     endDate: string;
     minutes: number;
     reason: string;
+    handoverPerson?: string;
     status: "pending_supervisor" | "pending_hr" | "pending_management" | "approved" | "rejected";
     approvedBy?: string;
     rejectionReason?: string;
@@ -422,6 +432,7 @@ export async function sendEmployeeLeaveStatusNotification(
     { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }] },
     { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
     { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "รับผิดชอบแทน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.handoverPerson || "-", color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
     { type: "separator", margin: "lg" },
     { type: "box", layout: "horizontal", margin: "lg", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: cfg.badgeText, color: cfg.badgeColor, size: "sm", weight: "bold", flex: 7 }] }
   ];
@@ -482,7 +493,7 @@ export async function sendEmployeeOtStatusNotification(
 }
 
 export async function sendManagementLeaveSummary(data: {
-  empName: string; leaveType: string; startDate: string; endDate: string; minutes: number; reason: string; supervisorName: string; hrName: string;
+  empName: string; leaveType: string; startDate: string; endDate: string; minutes: number; reason: string; handoverPerson?: string; supervisorName: string; hrName: string;
 }) {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
@@ -492,6 +503,7 @@ export async function sendManagementLeaveSummary(data: {
     `ประเภท: ${data.leaveType}`,
     `วันที่: ${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`,
     `เหตุผล: ${data.reason || "-"}`,
+    `ผู้รับผิดชอบแทน: ${data.handoverPerson || "-"}`,
     `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
     `HR ที่อนุมัติ: ${data.hrName}`
   ].join("\n");

@@ -194,7 +194,7 @@ export async function GET() {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true },
+        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, department_id: true },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -229,10 +229,26 @@ export async function GET() {
             status: true,
             reason: true,
             attachment_url: true,
+            handover_person: true,
         },
     });
 
-    return NextResponse.json({ ok: true, types, list });
+    // Fetch active colleagues in the same department
+    let colleagues: string[] = [];
+    if (emp.department_id) {
+        const matching = await prisma.employees.findMany({
+            where: {
+                department_id: emp.department_id,
+                is_active: true,
+                emp_id: { not: emp.emp_id }
+            },
+            select: { name: true },
+            orderBy: { name: 'asc' }
+        });
+        colleagues = matching.map(m => m.name);
+    }
+
+    return NextResponse.json({ ok: true, types, list, colleagues });
 }
 
 export async function POST(req: Request) {
@@ -252,6 +268,11 @@ export async function POST(req: Request) {
     const end_at_s = String(body?.end_at || "").trim();
     const reason = body?.reason ? String(body.reason) : null;
     const attachment_url = body?.attachment_url ? String(body.attachment_url) : null;
+    const handover_person = String(body?.handover_person || "").trim();
+
+    if (!leave_type_id || !start_at_s || !end_at_s || !handover_person) {
+        return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 });
+    }
 
     const def = LEAVE_TYPES.find((x) => x.id === leave_type_id);
     if (!def) return NextResponse.json({ error: "INVALID_LEAVE_TYPE" }, { status: 400 });
@@ -265,7 +286,7 @@ export async function POST(req: Request) {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, supervisor: { select: { line_user_id: true } } },
+        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, line_user_id: true, supervisor: { select: { line_user_id: true } } },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -321,20 +342,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "MAX_3_CONSECUTIVE_DAYS", days }, { status: 400 });
     }
 
-    // 08:00 to 17:00 check (REMOVED: Annual leave can now be partial hours per user confirmation)
-    /*
-    if (leave_type_id === "annual") {
-        const startH = startAt.getHours();
-        const startM = startAt.getMinutes();
-        const endH = endAt.getHours();
-        const endM = endAt.getMinutes();
-
-        if (startH !== 8 || startM !== 0 || endH !== 17 || endM !== 0) {
-            return NextResponse.json({ error: "ANNUAL_FULL_DAYS_ONLY" }, { status: 400 });
-        }
-    }
-    */
-
     // Quota validation
         const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
         
@@ -362,6 +369,9 @@ export async function POST(req: Request) {
     const id = `LV-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`; // varchar(30)
 
     try {
+        const initialStatus = emp.supervisor_id ? "pending_supervisor" : "pending_hr";
+        const supervisorLineId = emp.supervisor?.line_user_id;
+
         await prisma.leave_requests.create({
             data: {
                 id,
@@ -377,40 +387,21 @@ export async function POST(req: Request) {
                 days,
                 reason,
                 attachment_url,
-                status: emp.supervisor_id && leave_type_id !== "annual" ? "pending_supervisor" : leave_type_id === "annual" ? "pending_management" : "pending_hr",
+                status: initialStatus,
                 supervisor_id: emp.supervisor_id || null,
+                handover_person,
             },
         });
 
-        // ✅ 1a. Annual leave → notify Management directly
-        if (leave_type_id === "annual") {
-            sendManagementLeaveApprovalMessage({
-                id,
-                empName: emp.name,
-                leaveType: def.name,
-                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                minutes,
-                reason: reason || "",
-            }).catch(console.error);
+        const { 
+            sendLeaveApprovalFlexMessage, 
+            sendHrLeaveNotification, 
+            sendEmployeeLeaveStatusNotification 
+        } = await import("@/utils/lineMessaging");
 
-            // Notify employee: waiting for management
-            const me = await prisma.employees.findUnique({ where: { emp_id: emp.emp_id }, select: { line_user_id: true } });
-            if (me?.line_user_id) {
-                const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
-                sendEmployeeLeaveStatusNotification(me.line_user_id, {
-                    empName: emp.name,
-                    leaveType: def.name,
-                    startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    minutes,
-                    reason: reason || "",
-                    status: "pending_management",
-                }).catch(console.error);
-            }
-        // ✅ 1b. All other leave types → Supervisor (or HR if no supervisor)
-        } else if (emp.supervisor?.line_user_id) {
-            sendLeaveApprovalFlexMessage(emp.supervisor.line_user_id, {
+        // ✅ 1. Has Supervisor -> Notify Supervisor
+        if (supervisorLineId) {
+            sendLeaveApprovalFlexMessage(supervisorLineId, {
                 id,
                 empName: emp.name,
                 leaveType: def.name,
@@ -418,33 +409,25 @@ export async function POST(req: Request) {
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes,
                 reason: reason || "",
+                handoverPerson: handover_person,
                 quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
                 usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
             }).catch(console.error);
 
-            // ✅ Notify Employee (Submission Confirmation)
-            const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
-            const me = await prisma.employees.findUnique({
-                where: { emp_id: emp.emp_id },
-                select: { line_user_id: true }
-            });
+            // Notify Employee
+            sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                status: "pending_supervisor",
+            }).catch(console.error);
 
-            if (me?.line_user_id) {
-                // We use a custom AltText for initial submission
-                sendEmployeeLeaveStatusNotification(me.line_user_id, {
-                    empName: emp.name,
-                    leaveType: def.name,
-                    startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    minutes,
-                    reason: reason || "",
-                    status: "pending_supervisor",
-                }).catch(console.error);
-            }
+        // ✅ 2. No Supervisor -> Notify HR Directly
         } else {
-            // ✅ 2. No supervisor? Notify HR directly and notify employee
-            const { sendHrLeaveNotification, sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
-            
             sendHrLeaveNotification({
                 id,
                 empName: emp.name,
@@ -453,28 +436,23 @@ export async function POST(req: Request) {
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes,
                 reason: reason || "",
+                handoverPerson: handover_person,
                 supervisorName: "ไม่มี (ส่งตรงถึง HR)",
                 quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
                 usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
             }).catch(console.error);
 
-            // Fetch info for employee notification if needed or just use current session
-            const me = await prisma.employees.findUnique({
-                where: { emp_id: emp.emp_id },
-                select: { line_user_id: true }
-            });
-
-            if (me?.line_user_id) {
-                sendEmployeeLeaveStatusNotification(me.line_user_id, {
-                    empName: emp.name,
-                    leaveType: def.name,
-                    startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
-                    minutes,
-                    reason: reason || "",
-                    status: "pending_hr",
-                }).catch(console.error);
-            }
+            // Notify Employee
+            sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                status: "pending_hr",
+            }).catch(console.error);
         }
     } catch (e: any) {
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้
@@ -517,6 +495,9 @@ export async function PUT(req: Request) {
     const end_at_s = String(body?.end_at || "").trim();
     const reason = body?.reason ? String(body.reason) : null;
     const attachment_url = body?.attachment_url !== undefined ? (body.attachment_url ? String(body.attachment_url) : null) : existing.attachment_url;
+    const handover_person = body?.handover_person !== undefined ? String(body.handover_person).trim() : (existing as any).handover_person;
+
+    if (!handover_person) return NextResponse.json({ error: "MISSING_HANDOVER_PERSON" }, { status: 400 });
 
     const def = LEAVE_TYPES.find((x) => x.id === leave_type_id);
     if (!def) return NextResponse.json({ error: "INVALID_LEAVE_TYPE" }, { status: 400 });
@@ -631,6 +612,7 @@ export async function PUT(req: Request) {
                 days,
                 reason,
                 attachment_url,
+                handover_person,
             },
         });
     } catch (e: any) {
