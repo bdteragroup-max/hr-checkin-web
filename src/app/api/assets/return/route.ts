@@ -75,8 +75,8 @@ export async function POST(req: Request) {
                     actualReturnDate: new Date(actual_return_date).toLocaleDateString("th-TH"),
                     condition: condition_at_return || "ปกติ",
                     isDamaged: is_damaged || false,
-                    photoUrl: photo_url_return,
-                    location: borrowing.location
+                    photoUrl: photo_url_return ?? undefined,
+                    location: borrowing.location ?? undefined
                 });
             } catch (err) {
                 console.error("[API/assets/return] Notification Error:", err);

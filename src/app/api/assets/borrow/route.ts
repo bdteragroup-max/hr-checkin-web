@@ -72,7 +72,7 @@ export async function POST(req: Request) {
                     borrowDate: new Date(borrow_date).toLocaleDateString("th-TH"),
                     returnDate: new Date(expected_return_date).toLocaleDateString("th-TH"),
                     location: location || "ไม่ได้ระบุ",
-                    photoUrl: photo_url_borrow
+                    photoUrl: photo_url_borrow ?? undefined
                 });
             } catch (notifyError) {
                 console.error("[API/assets/borrow] Notification Error:", notifyError);
