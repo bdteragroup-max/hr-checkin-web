@@ -66,6 +66,7 @@ export async function GET(req: Request) {
                 approved_at: true,
                 supervisor_id: true,
                 supervisor_approved_at: true,
+                handover_person: true,
             },
         });
 

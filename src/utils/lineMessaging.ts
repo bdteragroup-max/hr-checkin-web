@@ -22,6 +22,7 @@ function formatLeaveMins(totalMins: number) {
  */
 async function sendLineMessage(to: string, messages: any[], replyToken?: string) {
   if (!LINE_CHANNEL_ACCESS_TOKEN) return false;
+  if (!to?.trim() && !replyToken) return false;
   
   const url = replyToken 
     ? "https://api.line.me/v2/bot/message/reply" 

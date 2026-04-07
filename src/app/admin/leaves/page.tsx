@@ -20,6 +20,7 @@ type LeaveRow = {
     approved_at?: string | null;
     days?: number;
     minutes?: number;
+    handover_person?: string | null;
 };
 
 // ปรับได้ตามจริงของบริษัทคุณ
@@ -294,6 +295,7 @@ export default function AdminLeavesPage() {
                                         <th>วันที่</th>
                                         <th>จำนวน</th>
                                         <th>เหตุผล</th>
+                                        <th>ผู้รับผิดชอบแทน</th>
                                         <th>จัดการ</th>
                                     </tr>
                                 </thead>
@@ -309,7 +311,8 @@ export default function AdminLeavesPage() {
                                                 <td>{r.leave_type || "-"}</td>
                                                 <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_at || r.start_date)} - {fmtDateTime(r.end_at || r.end_date)}</td>
                                                 <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>{displayDuration}</td>
-                                                <td style={{ maxWidth: 420, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
+                                                <td style={{ maxWidth: 300, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
+                                                <td style={{ color: "var(--text2)", fontWeight: 500 }}>{r.handover_person || "—"}</td>
                                                 <td style={{ whiteSpace: "nowrap" }}>
                                                     {/* ✅ Button grays out and disables if status is not pending */}
                                                     <button 
@@ -380,6 +383,7 @@ export default function AdminLeavesPage() {
                                         <th>ประเภท</th>
                                         <th>วันที่</th>
                                         <th>เหตุผลการลา</th>
+                                        <th>ผู้รับผิดชอบแทน</th>
                                         <th>สถานะ</th>
                                     </tr>
                                 </thead>
@@ -398,9 +402,10 @@ export default function AdminLeavesPage() {
                                                     ({formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined))})
                                                 </span>
                                             </td>
-                                            <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 520 }}>
+                                            <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 400 }}>
                                                 {normalizeReason(r.reason || "")}
                                             </td>
+                                            <td style={{ fontSize: 12, color: "var(--text2)" }}>{r.handover_person || "—"}</td>
                                             <td>
                                                 <span className={badgeClass(r.status)}>
                                                     {r.status === "approved"

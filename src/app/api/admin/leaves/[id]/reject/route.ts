@@ -24,7 +24,12 @@ export async function POST(
     ctx: { params: Promise<{ id: string }> }
 ) {
     try {
-        const admin = await requireAdmin();
+        const adminPayload = await requireAdmin();
+        const adminUser = await prisma.admins.findUnique({
+            where: { username: adminPayload.emp_id },
+            select: { full_name: true }
+        });
+        const adminName = adminUser?.full_name || adminPayload.emp_id;
 
         const { id } = await ctx.params;
         if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
@@ -36,7 +41,7 @@ export async function POST(
         // ✅ Guard: Prevent duplicate rejections
         const leaveBeforeUpdate = await prisma.leave_requests.findUnique({
             where: { id },
-            select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, status: true },
+            select: { emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, status: true, handover_person: true },
         });
         if (!leaveBeforeUpdate) return NextResponse.json({ ok: false, error: "NOT_FOUND" }, { status: 404 });
         if (leaveBeforeUpdate.status !== "pending" && leaveBeforeUpdate.status !== "pending_hr" && leaveBeforeUpdate.status !== "pending_management") {
@@ -47,7 +52,7 @@ export async function POST(
             where: { id },
             data: {
                 status: "rejected",
-                approved_by: admin.emp_id,
+                approved_by: adminPayload.emp_id,
                 approved_at: new Date(),
                 ...(note ? { reason: note } : {}),
             },
@@ -62,17 +67,18 @@ export async function POST(
             });
 
             if (employee?.line_user_id) {
-                sendEmployeeLeaveStatusNotification(employee.line_user_id, {
+                await sendEmployeeLeaveStatusNotification(employee.line_user_id, {
                     empName: leaveBeforeUpdate.name,
                     leaveType: leaveBeforeUpdate.leave_type,
                     startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                     endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                     minutes: leaveBeforeUpdate.minutes,
                     reason: leaveBeforeUpdate.reason || "",
+                    handoverPerson: (leaveBeforeUpdate as any).handover_person || "",
                     status: "rejected",
-                    approvedBy: admin.emp_id,
+                    approvedBy: adminName,
                     rejectionReason: note || undefined,
-                }).catch(console.error);
+                });
             }
         }
 

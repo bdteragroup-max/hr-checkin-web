@@ -130,12 +130,15 @@ export async function GET(req: Request) {
                 .filter(emp => !checkedInSet.has(emp.emp_id))
                 .map(emp => {
                     const leave = leaveMap.get(emp.emp_id);
+                    // Use the date string directly to avoid UTC day-shift in front-end display
+                    const virtualTimestamp = date ? `${date}T00:00:00.000Z` : dayStart.toISOString();
+
                     return {
                         id: `abs-${emp.emp_id}-${date}`,
                         emp_id: emp.emp_id,
                         name: emp.name,
                         type: leave ? "ลา" : "ขาดงาน",
-                        timestamp: dayStart.toISOString(),
+                        timestamp: virtualTimestamp,
                         branch_name: emp.branches?.name || "ไม่ระบุสาขา",
                         distance: null,
                         photo_url: null,
@@ -212,7 +215,7 @@ export async function GET(req: Request) {
 
         if (date && !statusParam) {
             const checkedInSet = new Set(rows.map(r => r.emp_id));
-            const dayStart = new Date(`${date}T00:00:00+07:00`);
+            const virtualTimestamp = `${date}T00:00:00.000Z`;
 
             leavesWithNames.forEach(l => {
                 if (!checkedInSet.has(l.emp_id)) {
@@ -221,7 +224,7 @@ export async function GET(req: Request) {
                         emp_id: l.emp_id,
                         name: l.name,
                         type: "ลา",
-                        timestamp: dayStart as any,
+                        timestamp: virtualTimestamp as any,
                         branch_name: l.employees?.branches?.name || "ไม่ระบุสาขา",
                         distance: null as any,
                         photo_url: null,

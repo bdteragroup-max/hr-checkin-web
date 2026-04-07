@@ -48,7 +48,7 @@ export async function POST(
                 approved_by: adminPayload.emp_id,
                 approved_at: new Date(),
             },
-            select: { id: true, status: true, approved_by: true, approved_at: true, emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, supervisor_id: true },
+            select: { id: true, status: true, approved_by: true, approved_at: true, emp_id: true, name: true, leave_type: true, start_at: true, end_at: true, days: true, minutes: true, reason: true, supervisor_id: true, handover_person: true },
         });
 
         // ✅ Notify employee via LINE Flex Message that HR has approved
@@ -58,16 +58,17 @@ export async function POST(
         });
 
         if (employee?.line_user_id) {
-            sendEmployeeLeaveStatusNotification(employee.line_user_id, {
+            await sendEmployeeLeaveStatusNotification(employee.line_user_id, {
                 empName: updated.name,
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
+                handoverPerson: (updated as any).handover_person || "",
                 status: "approved",
                 approvedBy: adminName,
-            }).catch(console.error);
+            });
 
         }
         
@@ -86,6 +87,7 @@ export async function POST(
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
+                handoverPerson: (updated as any).handover_person || "",
                 supervisorName: supervisor?.name || "ไม่ได้ระบุ",
                 hrName: adminName
             });
