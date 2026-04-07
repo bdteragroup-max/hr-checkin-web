@@ -20,8 +20,8 @@ export async function GET(req: Request) {
         const [sy, sm] = startMonth.split("-").map(Number);
         const [ey, em] = endMonth.split("-").map(Number);
 
-        const start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
-        const end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
+        const startDate = new Date(Date.UTC(sy, sm - 1, 1));
+        const endDate = new Date(Date.UTC(ey, em, 0));
 
         const emps = await prisma.employees.findMany({
             where: { is_active: true, is_checkin_exempt: false } as any, 
@@ -39,29 +39,34 @@ export async function GET(req: Request) {
         const rows = await prisma.checkins.findMany({
             where: {
                 emp_id: { in: empIds },
-                timestamp: { gte: start, lte: end },
+                date_key: { gte: startDate, lte: endDate },
             },
-            select: { emp_id: true, timestamp: true, type: true, late_status: true, late_min: true },
+            select: { emp_id: true, date_key: true, timestamp: true, type: true, late_status: true, late_min: true },
         });
 
         const leaves = await prisma.leave_requests.findMany({
             where: {
                 emp_id: { in: empIds },
-                start_date: { lte: end },
-                end_date: { gte: start },
+                start_date: { lte: endDate },
+                end_date: { gte: startDate },
             },
             select: { emp_id: true, days: true, status: true },
         });
 
         const holidaysFetch = await prisma.holidays.findMany({
-            where: { date: { gte: start, lte: end } }
+            where: { date: { gte: startDate, lte: endDate } }
         });
 
         const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
-        // Calculate expected Work Days
+        // Guard: Today's date in Bangkok
+        const nowBKK = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+        const todayDate = new Date(Date.UTC(nowBKK.getFullYear(), nowBKK.getMonth(), nowBKK.getDate()));
+        const effectiveEnd = endDate < todayDate ? endDate : todayDate;
+
+        // Calculate expected Work Days using UTC logic up to effectiveEnd
         let totalWorkDays = 0;
-        for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+        for (let dt = new Date(startDate); dt <= effectiveEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
             if (dt.getUTCDay() === 0) continue; // skip sunday
             const dStr = dt.toISOString().split("T")[0];
             if (holidayDates.has(dStr)) continue; // skip holiday
@@ -94,7 +99,8 @@ export async function GET(req: Request) {
         // Process checkins
         for (const r of rows) {
             if (!stats[r.emp_id]) continue;
-            const d = new Date(r.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+            // Match by date_key string comparison
+            const d = r.date_key.toISOString().split("T")[0];
 
             if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 stats[r.emp_id].present_dates.add(d);
@@ -128,7 +134,7 @@ export async function GET(req: Request) {
             };
         });
 
-        return NextResponse.json({ ok: true, start_date: start, end_date: end, summary });
+        return NextResponse.json({ ok: true, start_date: startDate, end_date: endDate, summary });
 
     } catch (e: any) {
         console.error("ADMIN_RECORDS_ERROR:", e);

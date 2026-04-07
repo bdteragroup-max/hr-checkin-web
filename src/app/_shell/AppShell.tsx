@@ -18,7 +18,8 @@ import {
     ChevronRightIcon,
     CalendarDaysIcon,
     GlobeAltIcon,
-    MapPinIcon
+    MapPinIcon,
+    CubeIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
@@ -29,6 +30,7 @@ const NAV_MAIN_BASE = [
     { id: "leave", href: "/leave", icon: ClipboardDocumentListIcon, label: "ลางาน", sub: "Leave" },
     { id: "travel", href: "/travel-allowance", icon: TruckIcon, label: "เบี้ยเลี้ยง", sub: "Travel" },
     { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },
+    { id: "assets", href: "/assets/borrow", icon: CubeIcon, label: "ยืมอุปกรณ์", sub: "Borrow" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 

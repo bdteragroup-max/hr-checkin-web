@@ -7,7 +7,9 @@ import {
     ClockIcon,
     DocumentTextIcon,
     GlobeAltIcon,
-    BuildingOfficeIcon
+    BuildingOfficeIcon,
+    MagnifyingGlassIcon,
+    CloudIcon
 } from "@heroicons/react/24/outline";
 
 type Props = {
@@ -104,7 +106,9 @@ export default async function SharePage({ params }: Props) {
             return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', color: '#666' }}>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
+                        <div style={{ color: '#cbd5e1', marginBottom: '20px' }}>
+                            <MagnifyingGlassIcon width={64} />
+                        </div>
                         <h1>ไม่พบข้อมูลการเช็กอิน</h1>
                         <p>รายการนี้อาจถูกลบหรือลิงก์ไม่ถูกต้อง</p>
                     </div>
@@ -300,7 +304,9 @@ export default async function SharePage({ params }: Props) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px' }}>
                 <div>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>☁️</div>
+                    <div style={{ color: '#cbd5e1', marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+                        <CloudIcon width={64} />
+                    </div>
                     <h1 style={{ color: '#1e293b' }}>ระบบหนาแน่นชั่วคราว</h1>
                     <p style={{ color: '#64748b', fontSize: '18px' }}>ขณะนี้มีการเข้าใช้งานจำนวนมาก กรุณารอสักครู่แล้วลองใหม่อีกครั้งครับ</p>
                     <button 

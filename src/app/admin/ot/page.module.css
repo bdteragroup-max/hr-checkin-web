@@ -173,11 +173,13 @@
 }
 
 .btnApprove {
-  background: var(--ink);
+  background: linear-gradient(135deg, var(--red3), var(--red2));
   color: white;
+  box-shadow: var(--shadow-red);
 }
 .btnApprove:hover {
-  background: var(--ink2);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 .btnReject {
@@ -365,17 +367,18 @@
   font-weight: 700;
   cursor: pointer;
   border: none;
-  background: linear-gradient(135deg, var(--ot) 0%, #4c1d95 100%);
+  background: linear-gradient(135deg, var(--red3) 0%, var(--red2) 100%);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.25);
+  box-shadow: var(--shadow-red);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .btnConfirm:hover {
+  filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(109, 40, 217, 0.35);
+  box-shadow: 0 6px 20px rgba(200, 41, 30, 0.35);
 }
 
 .btnConfirm:disabled {

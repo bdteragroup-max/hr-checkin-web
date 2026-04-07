@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
+import { 
+    UserIcon, 
+    LockClosedIcon, 
+    EyeIcon, 
+    EyeSlashIcon, 
+    ExclamationTriangleIcon,
+    ArrowRightIcon
+} from "@heroicons/react/24/outline";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -82,7 +90,7 @@ export default function LoginPage() {
                                     ชื่อผู้ใช้
                                 </label>
                                 <div className={styles.fieldInputWrap}>
-                                    <span className={styles.fieldIcon}>👤</span>
+                                    <span className={styles.fieldIcon}><UserIcon width={18} /></span>
                                     <input
                                         id="username"
                                         type="text"
@@ -103,7 +111,7 @@ export default function LoginPage() {
                                     รหัสผ่าน
                                 </label>
                                 <div className={styles.fieldInputWrap}>
-                                    <span className={styles.fieldIcon}>🔒</span>
+                                    <span className={styles.fieldIcon}><LockClosedIcon width={18} /></span>
                                     <input
                                         id="password"
                                         type={showPass ? "text" : "password"}
@@ -121,7 +129,7 @@ export default function LoginPage() {
                                         tabIndex={-1}
                                         aria-label={showPass ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                                     >
-                                        {showPass ? "🙈" : "👁️"}
+                                        {showPass ? <EyeSlashIcon width={20} /> : <EyeIcon width={20} />}
                                     </button>
                                 </div>
                             </div>
@@ -129,7 +137,7 @@ export default function LoginPage() {
                             {/* Error */}
                             {error && (
                                 <div className={styles.errorBox} role="alert">
-                                    <span>⚠️</span>
+                                    <ExclamationTriangleIcon width={18} />
                                     {error}
                                 </div>
                             )}
@@ -148,7 +156,7 @@ export default function LoginPage() {
                                 ) : (
                                     <>
                                         เข้าสู่ระบบ
-                                        <span style={{ fontSize: 16 }}>→</span>
+                                        <ArrowRightIcon width={18} />
                                     </>
                                 )}
                             </button>

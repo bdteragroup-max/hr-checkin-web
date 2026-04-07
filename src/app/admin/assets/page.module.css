@@ -1,0 +1,197 @@
+.container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: var(--text4);
+}
+
+.addBtn {
+    background: linear-gradient(135deg, var(--red3), var(--red2));
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.addBtn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-red);
+}
+
+.statsBar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.statCard {
+    background: var(--surface);
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+}
+
+.statLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text4);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.statVal {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.tableCard {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text3);
+}
+
+.table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+}
+
+.assetName {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.assetId {
+    font-size: 12px;
+    color: var(--text4);
+}
+
+.statusBadge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.available { background: var(--ok-bg); color: var(--ok); }
+.borrowed { background: var(--blue-lt); color: var(--blue); }
+.damaged { background: var(--bad-bg); color: var(--bad); }
+.maintenance { background: var(--late-bg); color: var(--late); }
+
+.borrowerInfo, .dateInfo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.returnBtn {
+    background: var(--blue-lt);
+    color: var(--blue);
+    border: 1px solid var(--blue-bdr);
+    padding: 6px 12px;
+    border-radius: var(--radius-xs);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.editBtn {
+    color: var(--text4);
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text4);
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: var(--surface);
+    width: 450px;
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow-lg);
+}
+
+.modalHeader h2 { margin:0; font-size: 20px; color: var(--text); }
+.modalHeader p { color: var(--text4); margin: 4px 0 24px; }
+
+.inputGroup { margin-bottom: 20px; }
+.inputGroup label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.inputGroup input, .inputGroup textarea {
+    width: 100%; padding: 12px; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+    font-family: inherit;
+}
+
+.checkboxGroup { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+.checkboxGroup input { width: 18px; height: 18px; }
+
+.modalFooter { display: flex; gap: 12px; }
+.cancelBtn { flex: 1; padding: 12px; border: 1.5px solid var(--line); background: var(--surface); border-radius: var(--radius-sm); cursor: pointer; color: var(--text2); font-weight: 600; }
+.confirmBtn { flex: 1; padding: 12px; border: none; background: linear-gradient(135deg, var(--red3), var(--red2)); color: #fff; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; box-shadow: var(--shadow-red); }

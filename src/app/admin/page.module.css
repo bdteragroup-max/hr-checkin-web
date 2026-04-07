@@ -59,6 +59,7 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.09), 0 12px 32px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.14), 0 20px 60px rgba(0, 0, 0, 0.08);
   --shadow-red: 0 4px 18px rgba(200, 41, 30, 0.25);
+  --blue-glow: 0 0 0 3px rgba(29, 78, 216, 0.14);
 
   font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
   background: var(--bg);
@@ -710,6 +711,75 @@
 .tableWrap:hover {
   box-shadow: var(--shadow);
 }
+.modalBody {
+  padding: 18px 24px 26px;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
+}
+.modalFooter {
+  padding: 16px 24px;
+  background: var(--surface2);
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.formRow:last-child {
+  margin-bottom: 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.formLabel {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.formInput {
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.15s;
+}
+.formInput:focus {
+  border-color: var(--red);
+  box-shadow: var(--red-glow);
+  outline: none;
+}
+.formTextarea {
+  padding: 12px 14px;
+  border: 1.5px solid var(--line2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.15s;
+  resize: vertical;
+}
+.formTextarea:focus {
+  border-color: var(--red);
+  box-shadow: var(--red-glow);
+  outline: none;
+}
 
 .tableHeader {
   padding: 13px 20px;
@@ -1104,10 +1174,15 @@
   border: 1px solid var(--ok-bdr);
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
-.btnApprove:hover {
+.btnApprove:hover:not(:disabled) {
   background: var(--ok);
   color: #fff;
   box-shadow: 0 3px 10px rgba(15, 155, 88, 0.3);
+}
+.btnApprove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(80%);
 }
 
 .btnReject {
@@ -1122,10 +1197,15 @@
   border: 1px solid var(--bad-bdr);
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
-.btnReject:hover {
+.btnReject:hover:not(:disabled) {
   background: var(--bad);
   color: #fff;
   box-shadow: 0 3px 10px rgba(201, 32, 32, 0.3);
+}
+.btnReject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(80%);
 }
 
 /* Pending table (compact inside card) */

@@ -63,12 +63,14 @@
     background: #fef2f2;
     color: #dc2626;
     border: 2px solid #fecaca;
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.2);
 }
 
 .alertIconOk {
     background: #f0fdf4;
     color: #16a34a;
     border: 2px solid #bbf7d0;
+    box-shadow: 0 0 15px rgba(22, 163, 74, 0.2);
 }
 
 .alertTitle {
@@ -112,13 +114,15 @@
 .alertBtnErr {
     background: #dc2626;
     color: #fff;
-    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4), 0 0 0 1px rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .alertBtnOk {
     background: #16a34a;
     color: #fff;
-    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+    box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4), 0 0 0 1px rgba(22, 163, 74, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .alertBtn:hover {

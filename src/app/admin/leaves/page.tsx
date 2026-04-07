@@ -319,17 +319,7 @@ export default function AdminLeavesPage() {
                                                         className={styles.btnApprove} 
                                                         onClick={() => approveLeave(r.id, "approved")} 
                                                         disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
-                                                        style={{ 
-                                                            marginRight: 8, 
-                                                            display: "inline-flex", 
-                                                            alignItems: "center", 
-                                                            gap: 4, 
-                                                            opacity: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? 0.5 : 1, 
-                                                            cursor: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? "not-allowed" : "pointer",
-                                                            filter: (r.status !== "pending" && r.status !== "pending_hr") ? "grayscale(100%)" : "none",
-                                                            background: (r.status !== "pending" && r.status !== "pending_hr") ? "#e5e7eb" : "var(--ok)",
-                                                            color: (r.status !== "pending" && r.status !== "pending_hr") ? "#9ca3af" : "white"
-                                                        }}
+                                                        style={{ marginRight: 8 }}
                                                     >
                                                         <CheckCircleIcon width={16} /> 
                                                         {processingId === r.id ? "กำลังดำเนินการ..." : (r.status === "approved" ? "อนุมัติแล้ว" : "อนุมัติ")}
@@ -338,16 +328,6 @@ export default function AdminLeavesPage() {
                                                         className={styles.btnReject} 
                                                         onClick={() => approveLeave(r.id, "rejected")} 
                                                         disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
-                                                        style={{ 
-                                                            display: "inline-flex", 
-                                                            alignItems: "center", 
-                                                            gap: 4, 
-                                                            opacity: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? 0.5 : 1, 
-                                                            cursor: (processingId || (r.status !== "pending" && r.status !== "pending_hr")) ? "not-allowed" : "pointer",
-                                                            filter: (r.status !== "pending" && r.status !== "pending_hr") ? "grayscale(100%)" : "none",
-                                                            background: (r.status !== "pending" && r.status !== "pending_hr") ? "#e5e7eb" : "white",
-                                                            color: (r.status !== "pending" && r.status !== "pending_hr") ? "#9ca3af" : "var(--red)"
-                                                        }}
                                                     >
                                                         <XCircleIcon width={16} /> 
                                                         {r.status === "rejected" ? "ไม่อนุมัติแล้ว" : "ไม่อนุมัติ"}

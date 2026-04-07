@@ -243,22 +243,7 @@ export default function AdminOtPage() {
                                                 <button 
                                                     onClick={() => openAdjustment(req)} 
                                                     className={localStyles.btnApprove} 
-                                                    style={{ 
-                                                        background: (req.status === "approved" || req.status === "rejected") 
-                                                            ? "#f1f5f9" 
-                                                            : "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)",
-                                                        color: (req.status === "approved" || req.status === "rejected") ? "#475569" : "#ffffff",
-                                                        border: (req.status === "approved" || req.status === "rejected") ? "1px solid #e2e8f0" : "none",
-                                                        boxShadow: (req.status === "approved" || req.status === "rejected") ? "none" : "0 4px 12px rgba(109, 40, 217, 0.2)",
-                                                        fontWeight: 700,
-                                                        padding: "6px 14px",
-                                                        height: "36px",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "center",
-                                                        borderRadius: "8px",
-                                                        fontSize: "12px"
-                                                    }}
+                                                    disabled={saving}
                                                     title="อนุมัติ/จัดการ"
                                                 >
                                                     {(req.status === "approved" || req.status === "rejected") ? (

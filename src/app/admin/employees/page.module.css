@@ -141,7 +141,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #3b82f6;
+  background: linear-gradient(135deg, var(--red-3) 0%, var(--red-2) 100%);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -150,12 +150,13 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  box-shadow: var(--shadow-red);
   transition: all 0.2s;
 }
 .btnAdd:hover {
-  background: #2563eb;
+  filter: brightness(1.1);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 41, 30, 0.3);
 }
 
 .warningBanner {
@@ -594,11 +595,11 @@
 }
 
 input:checked + .slider {
-  background-color: #3b82f6;
+  background-color: var(--red);
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #3b82f6;
+  box-shadow: 0 0 0 3px var(--red-glow);
 }
 
 input:checked + .slider:before {

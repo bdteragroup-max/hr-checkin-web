@@ -120,6 +120,7 @@ model employees {
   ot_requests             ot_requests[]          @relation("EmployeeToOtRequests")
   travel_claims           travel_claims[]
   leave_requests          leave_requests[]
+  asset_borrowings        asset_borrowings[]
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -324,4 +325,40 @@ model monthly_payroll_data {
   employee                         employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@unique([emp_id, cycle_month, cycle_year], map: "idx_monthly_payroll_unique")
+}
+
+model assets {
+  id               Int                @id @default(autoincrement())
+  asset_id         String             @unique @db.VarChar(50)
+  name             String             @db.VarChar(200)
+  category         String?            @db.VarChar(100)
+  status           String             @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
+  description      String?
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  asset_borrowings asset_borrowings[]
+}
+
+model asset_borrowings {
+  id                    Int       @id @default(autoincrement())
+  asset_id              Int
+  emp_id                String    @db.VarChar(20)
+  borrow_date           DateTime  @db.Date
+  expected_return_date  DateTime  @db.Date
+  actual_return_date    DateTime? @db.Date
+  location              String?   @db.VarChar(255)
+  condition_at_borrow   String?
+  condition_at_return   String?
+  is_damaged            Boolean   @default(false)
+  photo_url_borrow      String?
+  photo_url_return      String?
+  status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
+  created_at            DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
+  assets                assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  employee              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@index([asset_id])
+  @@index([emp_id])
+  @@index([status])
 }

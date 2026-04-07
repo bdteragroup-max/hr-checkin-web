@@ -1,13 +1,6 @@
-:root {
-  --text1: #111827;
-  --text2: #374151;
-  --text3: #6b7280;
-  --text4: #9ca3af;
-}
-
 .page {
   padding: 18px;
-  background: #f6f7fb;
+  background: var(--bg);
   min-height: 100vh;
 }
 
@@ -23,14 +16,14 @@
 .title {
   font-size: 28px;
   font-weight: 900;
-  color: var(--text1);
+  color: var(--text);
   line-height: 1.1;
 }
 
 .subtitle {
   margin-top: 4px;
   font-size: 14px;
-  color: var(--text3);
+  color: var(--text4);
 }
 
 .headerRight {
@@ -144,11 +137,12 @@
 .btnPrimary {
   height: 38px;
   border-radius: 10px;
-  border: 1px solid #c7d2fe;
-  background: #eef2ff;
-  color: #3730a3;
-  font-weight: 900;
+  border: none;
+  background: linear-gradient(135deg, var(--red3) 0%, var(--red2) 100%);
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: var(--shadow-red);
 }
 
 .btnPrimary:disabled {

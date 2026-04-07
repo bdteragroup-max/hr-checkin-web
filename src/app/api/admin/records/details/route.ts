@@ -25,8 +25,11 @@ export async function GET(req: Request) {
         const [sy, sm] = startMonth.split("-").map(Number);
         const [ey, em] = endMonth.split("-").map(Number);
 
-        const start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
-        const end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
+        // Start of month (00:00 local Bangkok, stored as UTC in Prisma for @db.Date if handled correctly)
+        // More robust: use strings for @db.Date comparisons in Prisma if possible, 
+        // or ensure the Date object represents midnight UTC.
+        const startDate = new Date(Date.UTC(sy, sm - 1, 1));
+        const endDate = new Date(Date.UTC(ey, em, 0)); // Last day of endMonth
 
         const emp = await prisma.employees.findUnique({ where: { emp_id } });
         if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
@@ -34,7 +37,7 @@ export async function GET(req: Request) {
         const checkins = await prisma.checkins.findMany({
             where: {
                 emp_id,
-                timestamp: { gte: start, lte: end },
+                date_key: { gte: startDate, lte: endDate },
             },
             orderBy: { timestamp: "asc" },
         });
@@ -43,13 +46,13 @@ export async function GET(req: Request) {
             where: {
                 emp_id,
                 status: "approved",
-                start_date: { lte: end },
-                end_date: { gte: start },
+                start_date: { lte: endDate },
+                end_date: { gte: startDate },
             },
         });
 
         const holidays = await prisma.holidays.findMany({
-            where: { date: { gte: start, lte: end } }
+            where: { date: { gte: startDate, lte: endDate } }
         });
 
         const holidayMap = new Map<string, string>();
@@ -69,18 +72,22 @@ export async function GET(req: Request) {
             }
         });
 
-        // Loop over every day
-        for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+        // Guard: Today's date in Bangkok for future date handling
+        const nowBKK = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+        const todayDate = new Date(Date.UTC(nowBKK.getFullYear(), nowBKK.getMonth(), nowBKK.getDate()));
+        const effectiveEnd = endDate < todayDate ? endDate : todayDate;
+
+        // Loop over every day using UTC methods to avoid local server timezone shifts
+        for (let dt = new Date(startDate); dt <= effectiveEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
             const dateStr = dt.toISOString().split("T")[0];
             const isSunday = dt.getUTCDay() === 0;
             const holName = holidayMap.get(dateStr);
             const isLeave = leaveDays.has(dateStr);
 
-            // Fetch Checkins for this day
-            // Because checkins timestamps are UTC but represent local events, we match by `date_key` string or just parse the local string
+            // Match by date_key string comparison
             const dayCheckins = checkins.filter(c => {
-                const localStr = new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-                return localStr === dateStr;
+                const checkInDateStr = c.date_key.toISOString().split("T")[0];
+                return checkInDateStr === dateStr;
             });
 
             const inRecord = dayCheckins.find(c => c.type.includes("In"));

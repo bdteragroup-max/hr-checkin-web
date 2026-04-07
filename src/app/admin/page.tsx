@@ -145,11 +145,11 @@ function fmtThai(d: Date | string | null | undefined) {
 }
 
 const DEFAULT_LEAVE_TYPES = [
-    { id: "sick", name: "ลาป่วย", color: "#ef4444", quota: 30 },
-    { id: "personal", name: "ลากิจ", color: "#3b82f6", quota: 6 },
-    { id: "vacation", name: "ลาพักร้อน", color: "#10b981", quota: 10 },
+    { id: "sick", name: "ลาป่วย", color: "var(--red3)", quota: 30 },
+    { id: "personal", name: "ลากิจ", color: "var(--red2)", quota: 6 },
+    { id: "vacation", name: "ลาพักร้อน", color: "var(--red)", quota: 10 },
     { id: "maternity", name: "ลาคลอด", color: "#ec4899", quota: 90 },
-    { id: "ordain", name: "ลาบวช", color: "#f59e0b", quota: 15 },
+    { id: "ordain", name: "ลาบวช", color: "var(--late)", quota: 15 },
 ];
 
 /* ══════════════════════════════════════════════
@@ -374,8 +374,8 @@ function AdminPageInner() {
         return allRows.filter(r => {
             const matchQ = !q || r.emp_id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
             // Include 'leave' in the 'absent' filter results
-            const matchSt = !filterStatus || (filterStatus === "absent" 
-                ? (r.type === "ขาดงาน" || r.type === "ลา" || r.late_status === "absent" || r.late_status === "leave") 
+            const matchSt = !filterStatus || (filterStatus === "absent"
+                ? (r.type === "ขาดงาน" || r.type === "ลา" || r.late_status === "absent" || r.late_status === "leave")
                 : r.late_status === filterStatus);
             return matchQ && matchSt;
         });
@@ -717,7 +717,7 @@ function AdminPageInner() {
                         { color: "green", icon: <CheckCircleIcon width={24} />, val: dash?.present, label: "มาทำงานวันนี้" },
                         { color: "red", icon: <XCircleIcon width={24} />, val: dash?.absent, label: "ขาดงาน" },
                         { color: "orange", icon: <ClockIcon width={24} />, val: dash?.late, label: "มาสาย" },
-                        { color: "blue", icon: <SunIcon width={24} />, val: dash?.onLeave, label: "ลาวันนี้" },
+                        { color: "red", icon: <SunIcon width={24} />, val: dash?.onLeave, label: "ลาวันนี้" },
                     ] as { color: string; icon: React.ReactNode; val: number | undefined; label: string }[]).map(s => (
                         <div key={s.label} className={`${styles.statCard} ${styles[s.color as keyof typeof styles]}`}>
                             <div className={styles.statTop}>
@@ -866,7 +866,7 @@ function AdminPageInner() {
                                             <td style={{ whiteSpace: "nowrap" }}>
                                                 <div className={styles.empName}>{r.name}</div>
                                             </td>
-                                             <td style={{ whiteSpace: "nowrap" }}>
+                                            <td style={{ whiteSpace: "nowrap" }}>
                                                 <span className={`${styles.typeBadge} ${r.type?.includes("In") ? styles.checkin : (r.type === "ขาดงาน" || r.late_status === "absent") ? styles.absent : r.type === "ลา" ? styles.leave : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     {r.type?.includes("In") ? <PlayIcon width={12} /> : (r.type === "ขาดงาน" || r.late_status === "absent") ? <XCircleIcon width={12} /> : r.type === "ลา" ? <SunIcon width={12} /> : <StopIcon width={12} />}
                                                     {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : r.type === "ขาดงาน" ? "ขาดงาน" : r.type === "ลา" ? "ลา" : "ออก"}
@@ -1044,12 +1044,10 @@ function AdminPageInner() {
 
     function renderReport() {
         const selMonthLabel = monthOptionsList.find(m => m.val === reportSelMonth)?.label || "";
-        // Show CE year (matches exported file naming like 2026-02)
         const selYearLabel = String(parseInt(reportSelYear));
 
         return (
             <div style={{ background: "white", padding: 24, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)", minHeight: "calc(100vh - 120px)" }}>
-                {/* Header Row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
                     <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
                         <div>
@@ -1136,7 +1134,6 @@ function AdminPageInner() {
                                                         </button>
                                                     </td>
                                                 </tr>
-                                                {/* Expanded Details Row using existing component */}
                                                 {expandedEmpId === e.emp_id && (
                                                     <tr className={styles.expandedRowBoundary}>
                                                         <td colSpan={8} style={{ padding: 0 }}>
@@ -1147,7 +1144,6 @@ function AdminPageInner() {
                                                                     </div>
                                                                 ) : empDetailsCache[e.emp_id] ? (
                                                                     <div className={styles.dropdownGrid}>
-                                                                        {/* Left Column: Stats & Export */}
                                                                         <div className={styles.dropdownSidebar}>
                                                                             <div className={styles.sidebarHeader}>ข้อมูลรายบุคคล</div>
                                                                             <div className={styles.dropdownStats}>
@@ -1173,8 +1169,6 @@ function AdminPageInner() {
                                                                                 </div>
                                                                             )}
                                                                         </div>
-
-                                                                        {/* Right Column: Daily Log Table */}
                                                                         <div className={styles.dropdownMain}>
                                                                             {empDetailsCache[e.emp_id].dailyRows.length === 0 ? (
                                                                                 <div className={styles.emptyStateContainer}>ไม่มีประวัติลงเวลาเดือนนี้</div>
@@ -1200,7 +1194,7 @@ function AdminPageInner() {
                                                                                                 </td>
                                                                                                 <td style={{ fontSize: 12, color: "var(--text4)" }}>
                                                                                                     {row.note && <div>{row.note}</div>}
-                                                                                                    {row.project_string && <div style={{ color: "var(--blue)", marginTop: 2 }}>{row.project_string}</div>}
+                                                                                                    {row.project_string && <div style={{ color: "var(--red)", marginTop: 2 }}>{row.project_string}</div>}
                                                                                                     {(!row.note && !row.project_string) && "—"}
                                                                                                 </td>
                                                                                             </tr>
@@ -1229,94 +1223,88 @@ function AdminPageInner() {
 
     function renderProjects() {
         return (
-            <div style={{ background: "white", padding: 24, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)", minHeight: "calc(100vh - 120px)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "#111827" }}>
-                        ลูกค้า / โปรเจกต์
-                    </div>
-                    <button style={{
-                        padding: "8px 16px",
-                        background: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8
-                    }} onClick={() => {
+            <div className={styles.contentInner}>
+                <div className={styles.pageHeader} style={{ marginBottom: 24, padding: 0 }}>
+
+                    <button className={styles.btnAdd} onClick={() => {
                         setProjectForm({ id: 0, code: "", name: "", address: "", is_active: true, status: "CURRENT", contact: "", phone: "", lat: null, lng: null, radius_m: 200 });
                         setShowProjectModal(true);
                     }}>
-                        <PlusIcon width={16} /> เพิ่มลูกค้า
+                        <PlusIcon width={18} /> เพิ่มลูกค้าใหม่
                     </button>
                 </div>
 
-                <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-                    <div style={{ flex: 1, position: "relative" }}>
-                        <div style={{ position: "absolute", left: 14, top: 10, color: "#9ca3af" }}>
-                            <MagnifyingGlassIcon width={18} />
+                <div className={styles.filterBar} style={{ marginBottom: 20 }}>
+                    <div className={styles.filterGroup} style={{ flex: 1 }}>
+                        <div className={styles.filterLabel}>ค้นหาโครงการ</div>
+                        <div style={{ position: "relative", width: "100%" }}>
+                            <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text4)" }}>
+                                <MagnifyingGlassIcon width={18} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="ค้นหาชื่อบริษัท, รหัส หรือผู้ติดต่อ..."
+                                className={styles.input}
+                                style={{ paddingLeft: 40, width: "100%" }}
+                                value={projectsSearch}
+                                onChange={e => setProjectsSearch(e.target.value)}
+                            />
                         </div>
-                        <input type="text" placeholder="ค้นหาชื่อหรือรหัส..."
-                            style={{ width: "100%", padding: "10px 16px 10px 40px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", outline: "none", fontSize: 14 }}
-                            value={projectsSearch} onChange={e => setProjectsSearch(e.target.value)} />
-                    </div>
-                    <div>
-                        <select style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", outline: "none", fontSize: 14, color: "#374151", "appearance": "none", minWidth: 120 }}>
-                            <option value="">ทั้งหมด</option>
-                        </select>
                     </div>
                 </div>
 
-                <div className={styles.tableWrap} style={{ boxShadow: "none", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                <div className={styles.tableWrap}>
                     <div className={styles.tableScroll}>
                         {projectsLoading ? (
                             <div className={styles.loader} style={{ height: 200 }}><div className={styles.spinner} />กำลังโหลด...</div>
                         ) : filteredProjects.length === 0 ? (
-                            <div style={{ padding: "60px 20px", textAlign: "center", color: "#9ca3af" }}>
-                                ไม่พบข้อมูลลูกค้า
+                            <div className={styles.emptyState}>
+                                <span className={styles.emptyIcon}><InboxIcon width={32} /></span>
+                                ไม่พบข้อมูลลูกค้าที่ต้องการ
                             </div>
                         ) : (
-                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                            <table className={styles.table}>
                                 <thead>
-                                    <tr style={{ background: "#f9fafb", textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
-                                        <th style={{ padding: "12px 16px", fontWeight: 500 }}>รหัส</th>
-                                        <th style={{ padding: "12px 16px", fontWeight: 500 }}>ชื่อบริษัท</th>
-                                        <th style={{ padding: "12px 16px", fontWeight: 500 }}>ผู้ติดต่อ</th>
-                                        <th style={{ padding: "12px 16px", fontWeight: 500 }}>เบอร์โทร</th>
-                                        <th style={{ padding: "12px 16px", fontWeight: 500 }}>สถานะ</th>
-                                        <th style={{ padding: "12px 16px", width: 50 }}></th>
+                                    <tr>
+                                        <th>รหัส</th>
+                                        <th>ชื่อบริษัท / สถานที่</th>
+                                        <th>ผู้ติดต่อ</th>
+                                        <th>เบอร์โทร</th>
+                                        <th>สถานะ</th>
+                                        <th style={{ width: 80 }}>จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredProjects.map(p => {
-                                        let badgeCfg = { bg: "#f3f4f6", text: "#6b7280", label: "ไม่ใช้งาน" };
+                                        let badgeStyle = styles.badge;
+                                        let badgeLabel = "Inactive";
                                         if (p.is_active) {
-                                            if (p.status === "NEW") badgeCfg = { bg: "#fef3c7", text: "#d97706", label: "ลูกค้าใหม่" };
-                                            else badgeCfg = { bg: "#dcfce7", text: "#16a34a", label: "ลูกค้าปัจจุบัน" };
+                                            if (p.status === "NEW") {
+                                                badgeStyle = `${styles.badge} ${styles.pending}`;
+                                                badgeLabel = "ลูกค้าใหม่";
+                                            } else {
+                                                badgeStyle = `${styles.badge} ${styles.approved}`;
+                                                badgeLabel = "ลูกค้าปัจจุบัน";
+                                            }
+                                        } else {
+                                            badgeStyle = `${styles.badge} ${styles.rejected}`;
+                                            badgeLabel = "ระงับการติดต่อ";
                                         }
 
                                         return (
-                                            <tr key={p.id} style={{ borderBottom: "1px solid #f3f4f6", color: "#111827" }}>
-                                                <td style={{ padding: "16px", color: "#6b7280", fontFamily: "monospace", fontSize: 13 }}>{p.code || "—"}</td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ fontWeight: 600, color: "#111827", marginBottom: 2 }}>{p.name}</div>
-                                                    <div style={{ fontSize: 12, color: "#6b7280" }}>{p.address ? p.address.substring(0, 40) + (p.address.length > 40 ? "..." : "") : "ไม่มีที่อยู่"}</div>
+                                            <tr key={p.id}>
+                                                <td><span className={styles.monoText}>{p.code || "—"}</span></td>
+                                                <td>
+                                                    <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>{p.name}</div>
+                                                    <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.4 }}>{p.address || "—"}</div>
                                                 </td>
-                                                <td style={{ padding: "16px", fontWeight: 500 }}>{p.contact || "—"}</td>
-                                                <td style={{ padding: "16px" }}>{p.phone || "—"}</td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <span style={{
-                                                        background: badgeCfg.bg, color: badgeCfg.text,
-                                                        padding: "4px 8px", borderRadius: 20, fontSize: 12, fontWeight: 600
-                                                    }}>
-                                                        {badgeCfg.label}
-                                                    </span>
+                                                <td style={{ fontWeight: 600 }}>{p.contact || "—"}</td>
+                                                <td className={styles.monoText}>{p.phone || "—"}</td>
+                                                <td>
+                                                    <span className={badgeStyle}>{badgeLabel}</span>
                                                 </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280" }} onClick={() => {
+                                                <td style={{ textAlign: "center" }}>
+                                                    <button className={styles.pageBtn} onClick={() => {
                                                         setProjectForm(p);
                                                         setShowProjectModal(true);
                                                     }}>
@@ -1332,79 +1320,91 @@ function AdminPageInner() {
                     </div>
                 </div>
 
-                {/* Project Modal */}
                 {showProjectModal && (
                     <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowProjectModal(false); }}>
-                        <div className={styles.modal} style={{ maxWidth: 550 }}>
+                        <div className={styles.modal} style={{ maxWidth: 640 }}>
                             <div className={styles.modalHeader}>
-                                <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    {projectForm.id ? <PencilSquareIcon width={24} /> : <GiftIcon width={24} />}
-                                    {projectForm.id ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}
-                                </span>
+                                <div className={styles.modalTitle}>
+                                    {projectForm.id ? <PencilSquareIcon width={22} /> : <PlusIcon width={22} />}
+                                    <span>{projectForm.id ? "แก้ไขข้อมูลลูกค้า" : "เพิ่มลูกค้าใหม่"}</span>
+                                </div>
                                 <button className={styles.modalClose} onClick={() => setShowProjectModal(false)}><XMarkIcon width={24} /></button>
+                            </div>
 
-                                <div style={{ padding: "0 4px" }}>
-                                    <div className={styles.settingsFieldGrid} style={{ gridTemplateColumns: "1fr 1fr" }}>
-                                        <div className={styles.settingsField}>
-                                            <input className={styles.settingsFieldInput} value={projectForm.code || ""} onChange={e => setProjectForm({ ...projectForm, code: e.target.value })} placeholder="เช่น PRJ-001" />
-                                        </div>
+                            <div className={styles.modalBody}>
+                                <div className={styles.formRow}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>รหัสโครงการ (Project Code)</label>
+                                        <input className={styles.formInput} value={projectForm.code || ""} onChange={e => setProjectForm({ ...projectForm, code: e.target.value })} placeholder="เช่น PRJ-001" />
                                     </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                        <div className={styles.settingsField}>
-                                            <label className={styles.settingsFieldLabel}>เบอร์โทรติดต่อ</label>
-                                            <input className={styles.settingsFieldInput} value={projectForm.phone || ""} onChange={e => setProjectForm({ ...projectForm, phone: e.target.value })} placeholder="08X-XXX-XXXX" />
-                                        </div>
-                                        <div className={styles.settingsField}>
-                                            <label className={styles.settingsFieldLabel}>ชื่อผู้ติดต่อ</label>
-                                            <input className={styles.settingsFieldInput} value={projectForm.contact || ""} onChange={e => setProjectForm({ ...projectForm, contact: e.target.value })} placeholder="คุณสมชาย" />
-                                        </div>
-                                    </div>
-                                    <div className={styles.settingsField}>
-                                        <label className={styles.settingsFieldLabel}>ที่อยู่ (Address)</label>
-                                        <textarea className={styles.settingsFieldInput} value={projectForm.address || ""} onChange={e => setProjectForm({ ...projectForm, address: e.target.value })} placeholder="ระบุที่อยู่ไซต์งาน / โครงการเพื่อประโยชน์ในการอ้างอิง" rows={3} style={{ resize: "vertical" }} />
-                                    </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", gap: "16px" }}>
-                                        <div className={styles.settingsField}>
-                                            <label className={styles.settingsFieldLabel}>สถานะลูกค้า</label>
-                                            <select className={styles.settingsFieldInput} value={projectForm.status || "CURRENT"} onChange={e => setProjectForm({ ...projectForm, status: e.target.value })}>
-                                                <option value="NEW">ลูกค้าใหม่ (NEW)</option>
-                                                <option value="CURRENT">ลูกค้าปัจจุบัน (CURRENT)</option>
-                                                <option value="INACTIVE">เลิกติดต่อ (INACTIVE)</option>
-                                            </select>
-                                        </div>
-                                        <div className={styles.settingsField}>
-                                            <label className={styles.settingsFieldLabel}>Lat (ละติจูด)</label>
-                                            <input type="number" step="any" className={styles.settingsFieldInput} value={projectForm.lat || ""} onChange={e => setProjectForm({ ...projectForm, lat: parseFloat(e.target.value) || null })} placeholder="13.75..." />
-                                        </div>
-                                        <div className={styles.settingsField}>
-                                            <label className={styles.settingsFieldLabel}>Lng (ลองจิจูด)</label>
-                                            <input type="number" step="any" className={styles.settingsFieldInput} value={projectForm.lng || ""} onChange={e => setProjectForm({ ...projectForm, lng: parseFloat(e.target.value) || null })} placeholder="100.5..." />
-                                        </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>ชื่อลูกค้า / บริษัท</label>
+                                        <input className={styles.formInput} value={projectForm.name || ""} onChange={e => setProjectForm({ ...projectForm, name: e.target.value })} placeholder="ระบุชื่อบริษัท" />
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, padding: "12px 16px", background: "var(--surface2)", borderRadius: "8px", border: "1px solid var(--line)" }}>
-                                    <input type="checkbox" id="projectActive" checked={projectForm.is_active} onChange={e => setProjectForm({ ...projectForm, is_active: e.target.checked })} style={{ width: 18, height: 18, accentColor: "var(--ok)" }} />
-                                    <label htmlFor="projectActive" style={{ cursor: "pointer", fontWeight: 600, color: "var(--text2)", fontSize: 14 }}>
-                                        เปิดใช้งานโครงการนี้ (Active)
+
+                                <div className={styles.formRow}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>เบอร์โทรติดต่อ</label>
+                                        <input className={styles.formInput} value={projectForm.phone || ""} onChange={e => setProjectForm({ ...projectForm, phone: e.target.value })} placeholder="08X-XXX-XXXX" />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>ชื่อผู้ติดต่อ</label>
+                                        <input className={styles.formInput} value={projectForm.contact || ""} onChange={e => setProjectForm({ ...projectForm, contact: e.target.value })} placeholder="คุณสมชาย" />
+                                    </div>
+                                </div>
+
+                                <div className={styles.formGroup} style={{ marginBottom: 18 }}>
+                                    <label className={styles.formLabel}>ที่อยู่ (Address)</label>
+                                    <textarea className={styles.formTextarea} value={projectForm.address || ""} onChange={e => setProjectForm({ ...projectForm, address: e.target.value })} placeholder="ระบุที่อยู่ไซต์งาน / โครงการ" rows={2} />
+                                </div>
+
+                                <div className={styles.formRow}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>สถานะลูกค้า</label>
+                                        <select className={styles.formInput} value={projectForm.status || "CURRENT"} onChange={e => setProjectForm({ ...projectForm, status: e.target.value })}>
+                                            <option value="NEW">ลูกค้าใหม่ (NEW)</option>
+                                            <option value="CURRENT">ลูกค้าปัจจุบัน (CURRENT)</option>
+                                            <option value="INACTIVE">เลิกติดต่อ (INACTIVE)</option>
+                                        </select>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>LAT (ละติจูด)</label>
+                                        <input type="number" step="any" className={styles.formInput} value={projectForm.lat || ""} onChange={e => setProjectForm({ ...projectForm, lat: parseFloat(e.target.value) || null })} placeholder="13.75..." />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>LNG (ลองจิจูด)</label>
+                                        <input type="number" step="any" className={styles.formInput} value={projectForm.lng || ""} onChange={e => setProjectForm({ ...projectForm, lng: parseFloat(e.target.value) || null })} placeholder="100.5..." />
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 12,
+                                    padding: "14px 18px",
+                                    background: "var(--surface2)",
+                                    borderRadius: "12px",
+                                    border: "1.5px solid var(--line)"
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        id="projectActive"
+                                        checked={projectForm.is_active}
+                                        onChange={e => setProjectForm({ ...projectForm, is_active: e.target.checked })}
+                                        style={{ width: 20, height: 20, cursor: "pointer", accentColor: "var(--red)" }}
+                                    />
+                                    <label htmlFor="projectActive" style={{ cursor: "pointer", fontWeight: 700, color: "var(--text)", fontSize: 14 }}>
+                                        เปิดใช้งานโครงการนี้ (Active Status)
                                     </label>
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                                    <button className={styles.btnSettingsCancel} onClick={() => setShowProjectModal(false)} style={{ padding: "10px 20px" }}>ยกเลิก</button>
-                                    <button style={{
-                                        padding: "10px 24px",
-                                        background: "#10b981",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: "8px",
-                                        fontSize: "14.5px",
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6
-                                    }} onClick={saveProject}><CheckIcon width={18} /> บันทึกข้อมูล</button>
-                                </div>
+                            </div>
+
+                            <div className={styles.modalFooter}>
+                                <button className={styles.btnLogout} style={{ height: 40, padding: "0 22px" }} onClick={() => setShowProjectModal(false)}>ยกเลิก</button>
+                                <button className={styles.btnAdd} style={{ height: 40, padding: "0 28px" }} onClick={saveProject}>
+                                    <CheckIcon width={18} /> บันทึกข้อมูล
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1418,7 +1418,6 @@ function AdminPageInner() {
         attendance: "การเข้างาน",
         leave: "การลา",
         holiday: "วันหยุด",
-
         projects: "โครงการ / ลูกค้า",
     };
 
@@ -1429,8 +1428,6 @@ function AdminPageInner() {
                     {TAB_TITLES[activeTab]}
                     <span className={styles.pageSubtitle}>TERA GROUP · HR Admin System</span>
                 </h2>
-
-
             </div>
 
             {activeTab === "dashboard" && renderDashboard()}
@@ -1439,7 +1436,6 @@ function AdminPageInner() {
             {activeTab === "holiday" && renderHoliday()}
             {activeTab === "projects" && renderProjects()}
 
-            {/* ── PHOTO MODAL ── */}
             {photoModal && (
                 <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setPhotoModal(null); }}>
                     <div className={styles.modal}>
@@ -1447,7 +1443,6 @@ function AdminPageInner() {
                             <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><CameraIcon width={20} /> ภาพประกอบการเช็คอิน</span>
                             <button className={styles.modalClose} onClick={() => setPhotoModal(null)}><XMarkIcon width={24} /></button>
                         </div>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={photoModal.url} alt="check-in" className={styles.modalPhoto} />
                         <div className={styles.modalKV}>
                             <span className={styles.modalKey}>รหัส</span>   <span className={styles.modalValue}>{photoModal.empId}</span>
@@ -1460,7 +1455,6 @@ function AdminPageInner() {
                 </div>
             )}
 
-            {/* ── SETTINGS MODAL ── */}
             {showSettings && (
                 <div className={styles.settingsOverlay} onClick={e => { if (e.target === e.currentTarget) closeSettings(); }}>
                     <div className={styles.settingsModal}>
@@ -1588,10 +1582,8 @@ function AdminPageInner() {
                 </div>
             )}
 
-            {/* ── MODALS ── */}
             {renderMapModal()}
 
-            {/* ── TOAST ── */}
             {toast && (
                 <div className={`${styles.toast} ${styles[toast.type]}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {toast.type === 'ok' ? <CheckCircleIcon width={20} /> : <ExclamationTriangleIcon width={20} />}

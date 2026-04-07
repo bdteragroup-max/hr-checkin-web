@@ -9,7 +9,8 @@ import {
     BuildingOfficeIcon, MapPinIcon, BriefcaseIcon,
     SunIcon, ClockIcon, GiftIcon, TruckIcon,
     CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
-    ArrowRightOnRectangleIcon
+    ArrowRightOnRectangleIcon,
+    CubeIcon
 } from "@heroicons/react/24/outline";
 
 type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "projects";
@@ -152,13 +153,21 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className={styles.navIcon}><GiftIcon width={20} /></span>สวัสดิการวันเกิด
                             </Link>
 
-                            {/* ✅ Travel & Off-Site Claims */}
-                            <Link
-                                href="/admin/travel-claims"
-                                className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
-                            >
-                                <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
-                            </Link>
+                             {/* ✅ Travel & Off-Site Claims */}
+                             <Link
+                                 href="/admin/travel-claims"
+                                 className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
+                             >
+                                 <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
+                             </Link>
+ 
+                             {/* ✅ Asset Management */}
+                             <Link
+                                 href="/admin/assets"
+                                 className={`${styles.navItem} ${pathname.startsWith("/admin/assets") ? styles.active : ""}`}
+                             >
+                                 <span className={styles.navIcon}><CubeIcon width={20} /></span>ระบบอุปกรณ์ (Assets)
+                             </Link>
 
                             {/* ✅ Holiday -> link to /admin/holiday */}
                             <Link

@@ -173,6 +173,8 @@ export async function POST(req: Request) {
                                 minutes: leaveReq.minutes,
                                 reason: leaveReq.reason || "",
                                 handoverPerson: (leaveReq as any).handover_person,
+                                supervisorName: supervisor?.name,
+                                approvedBy: approverName,
                             }, true, replyToken);
 
                             // Start notifications
@@ -325,6 +327,8 @@ export async function POST(req: Request) {
                                 endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                 totalHours: Number(otReq.total_hours),
                                 reason: otReq.reason || "",
+                                supervisorName: supervisor?.name,
+                                approvedBy: approverName,
                             }, true, replyToken);
 
                             // Notify employee

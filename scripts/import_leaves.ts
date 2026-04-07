@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 // Configuration
 const CSV_FILE = path.join(__dirname, "leave_import_example.csv");
-const DRY_RUN = process.env.DRY_RUN === "true" || true; // Default to true for safety
+const DRY_RUN = process.env.DRY_RUN !== "false"; // Default to true (safe)
 
 /**
  * Utility to calculate total working minutes (08:00-17:00, 1h lunch)
@@ -82,7 +82,8 @@ async function main() {
         return;
     }
 
-    const content = fs.readFileSync(CSV_FILE, "utf-8");
+    const rawContent = fs.readFileSync(CSV_FILE, "utf-8");
+    const content = rawContent.replace(/^\uFEFF/, ""); // Strip UTF-8 BOM if present
     const lines = content.split("\n").filter(l => l.trim().length > 0);
     const headers = parseCsvLine(lines[0]);
 
@@ -115,30 +116,39 @@ async function main() {
         const minutes = calculateMinutes(startAt, endAt);
         const days = Math.ceil(minutes / 480); // Standard 8-hour work day = 480 mins
 
-        const id = `LV-HIST-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+        // Generate a deterministic ID based on row data to prevent duplicates
+        const dataHash = crypto.createHash("sha256")
+            .update(`${emp_id}|${start_at}|${end_at}|${leave_type_id}`)
+            .digest("hex")
+            .slice(0, 16);
+        const id = `LV-HIST-${dataHash}`;
 
-        console.log(`[PROCESS] Row ${i}: ${emp.name} (${emp_id}) -> ${leave_type_id} (${days} days, ${minutes} mins)`);
+        console.log(`[PROCESS] Row ${i}: [${id}] ${emp.name} (${emp_id}) -> ${leave_type_id} (${days} days)`);
 
         if (!DRY_RUN) {
-            await prisma.leave_requests.create({
-                data: {
-                    id,
-                    emp_id,
-                    name: emp.name,
-                    leave_type_id,
-                    leave_type: typeMap.get(leave_type_id)!,
-                    start_at: startAt,
-                    end_at: endAt,
-                    start_date: new Date(startAt.toISOString().split("T")[0]),
-                    end_date: new Date(endAt.toISOString().split("T")[0]),
-                    minutes,
-                    days,
-                    reason: reason || "",
-                    handover_person: handover_person === "NULL" ? null : handover_person,
-                    status: status || "approved",
-                    approved_at: new Date(),
-                    approved_by: "HISTORICAL_IMPORT"
-                }
+            const leaveData = {
+                id,
+                emp_id,
+                name: emp.name,
+                leave_type_id,
+                leave_type: typeMap.get(leave_type_id)!,
+                start_at: startAt,
+                end_at: endAt,
+                start_date: new Date(startAt.toISOString().split("T")[0]),
+                end_date: new Date(endAt.toISOString().split("T")[0]),
+                minutes,
+                days,
+                reason: reason || "",
+                handover_person: handover_person === "NULL" ? null : handover_person,
+                status: status || "approved",
+                approved_at: new Date(),
+                approved_by: "HISTORICAL_IMPORT"
+            };
+
+            await prisma.leave_requests.upsert({
+                where: { id },
+                create: leaveData,
+                update: leaveData
             });
         }
     }

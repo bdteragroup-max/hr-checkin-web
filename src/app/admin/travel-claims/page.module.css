@@ -89,7 +89,7 @@
 .input:focus,
 .select:focus {
     border-color: var(--red);
-    box-shadow: 0 0 0 3px rgba(200, 41, 30, 0.1);
+    box-shadow: 0 0 0 3px var(--red-glow);
 }
 
 .btnRefresh {
@@ -259,8 +259,9 @@
 }
 
 .link {
-    color: var(--blue);
-    text-decoration: none;
+    color: var(--red);
+    text-decoration: underline;
+    text-underline-offset: 3px;
     font-weight: 600;
     font-size: 12px;
 }

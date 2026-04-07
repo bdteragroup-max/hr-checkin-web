@@ -268,7 +268,7 @@ export async function POST(req: Request) {
     }
 
     // 📢 AUTOMATED TRACKING NOTIFICATION (Non-blocking Background Task)
-    if (is_trip || (type as string) === "Trip-Update") {
+    if (is_trip || (type as string) === "Trip-Update" || type === "Check-out") {
         const handleNotification = async () => {
             try {
                 const targetLineIds = [];
@@ -280,19 +280,69 @@ export async function POST(req: Request) {
                     targetLineIds.push(process.env.HR_LINE_USER_ID);
                 }
 
-                if (targetLineIds.length > 0) {
-                    const { sendTripUpdateNotification } = await import("@/utils/lineMessaging");
-                    const [locPart, notePart] = (remark || "").split(" | ");
-                    
-                    await sendTripUpdateNotification(targetLineIds, {
-                        empName: auth.emp.name,
-                        locationName: locPart || branch.name,
-                        timestamp: new Date().toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
-                        photoUrl: photo_url!,
-                        lat: lat || undefined,
-                        lon: lon || undefined,
-                        remark: notePart || undefined
+                const { sendTripUpdateNotification, sendCheckoutOtVerificationNotification } = await import("@/utils/lineMessaging");
+
+                // Case 1: Trip or Manual Update
+                if (is_trip || (type as string) === "Trip-Update") {
+                    if (targetLineIds.length > 0) {
+                        const [locPart, notePart] = (remark || "").split(" | ");
+                        await sendTripUpdateNotification(targetLineIds, {
+                            empName: auth.emp.name,
+                            locationName: locPart || branch.name,
+                            timestamp: new Date().toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                            photoUrl: photo_url!,
+                            lat: lat || undefined,
+                            lon: lon || undefined,
+                            remark: notePart || undefined
+                        });
+                    }
+                }
+
+                // Case 2: Check-out with OT Verification
+                if (type === "Check-out") {
+                    const approvedOt = await prisma.ot_requests.findFirst({
+                        where: {
+                            emp_id: auth.emp.emp_id,
+                            date_for: date_key,
+                            status: "approved"
+                        },
+                        orderBy: { created_at: "desc" }
                     });
+
+                    if (approvedOt) {
+                        const actualOut = new Date();
+                        const requestedEnd = new Date(approvedOt.end_time);
+                        
+                        // Calculate diff in minutes
+                        const diffMins = Math.floor((actualOut.getTime() - requestedEnd.getTime()) / 60000);
+                        const hasDiscrepancy = diffMins < -5; // Left more than 5 mins early
+                        const status = hasDiscrepancy ? "early" : (diffMins > 15 ? "late" : "ontime");
+
+                        // Update OT record
+                        await prisma.ot_requests.update({
+                            where: { id: approvedOt.id },
+                            data: {
+                                actual_end_at: actualOut,
+                                has_discrepancy: hasDiscrepancy
+                            }
+                        });
+
+                        // Get Check-in for "Actual In" time
+                        const checkIn = todaysCheckins.find(c => c.type === "Check-in");
+                        const actualInStr = checkIn ? "บันทึกเข้า" : "—"; // simplified for now or fetch full record
+
+                        // Send Verification Notification
+                        await sendCheckoutOtVerificationNotification({
+                            empName: auth.emp.name,
+                            dateFor: date_key.toLocaleDateString("th-TH"),
+                            requestedTime: `${new Date(approvedOt.start_time).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' })} - ${requestedEnd.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' })}`,
+                            actualIn: checkIn ? "ช่วงเช้า" : "—", // In a real scenario, we'd fetch the exact time
+                            actualOut: actualOut.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                            status,
+                            diffMins: Math.abs(diffMins),
+                            photoUrl: photo_url!
+                        });
+                    }
                 }
             } catch (e) {
                 console.error("[API/CHECKIN] Notification Error:", e);

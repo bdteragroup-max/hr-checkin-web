@@ -23,11 +23,11 @@ function formatLeaveMins(totalMins: number) {
 async function sendLineMessage(to: string, messages: any[], replyToken?: string) {
   if (!LINE_CHANNEL_ACCESS_TOKEN) return false;
   if (!to?.trim() && !replyToken) return false;
-  
-  const url = replyToken 
-    ? "https://api.line.me/v2/bot/message/reply" 
+
+  const url = replyToken
+    ? "https://api.line.me/v2/bot/message/reply"
     : "https://api.line.me/v2/bot/message/push";
-    
+
   const body: any = { messages };
   if (replyToken) body.replyToken = replyToken;
   else body.to = to;
@@ -74,6 +74,8 @@ export async function sendLeaveApprovalFlexMessage(
     handoverPerson?: string;
     quotaMins?: number;
     usedMins?: number;
+    supervisorName?: string;
+    approvedBy?: string;
   },
   isProcessed: boolean = false,
   replyToken?: string
@@ -120,6 +122,28 @@ export async function sendLeaveApprovalFlexMessage(
       ]
     }
   ];
+
+  if (leaveData.supervisorName) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "หัวหน้างาน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.supervisorName, color: "#111111", size: "sm", flex: 7 }
+      ]
+    });
+  }
+
+  if (isProcessed && leaveData.approvedBy) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "ผู้อนุมัติ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: leaveData.approvedBy, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }
+      ]
+    });
+  }
 
   // 📝 OPTIONAL: Leave Balance Info
   if (leaveData.quotaMins !== undefined && leaveData.usedMins !== undefined) {
@@ -231,6 +255,8 @@ export async function sendOtApprovalFlexMessage(
     hasDiscrepancy?: boolean;
     actualIn?: string;
     actualOut?: string;
+    supervisorName?: string;
+    approvedBy?: string;
   },
   isProcessed: boolean = false,
   replyToken?: string
@@ -281,6 +307,28 @@ export async function sendOtApprovalFlexMessage(
       { type: "text", text: otData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }
     ]
   });
+
+  if (otData.supervisorName) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "หัวหน้างาน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: otData.supervisorName, color: "#111111", size: "sm", flex: 7 }
+      ]
+    });
+  }
+
+  if (isProcessed && otData.approvedBy) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "ผู้อนุมัติ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: otData.approvedBy, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }
+      ]
+    });
+  }
 
   if (otData.hasDiscrepancy) {
     bodyContents.unshift({
@@ -513,17 +561,37 @@ export async function sendManagementLeaveSummary(data: {
 }) {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
-  const text = [
-    "ข้อมูลการอนุมัติลา (สรุป)",
-    `พนักงาน: ${data.empName}`,
-    `ประเภท: ${data.leaveType}`,
-    `วันที่: ${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`,
-    `เหตุผล: ${data.reason || "-"}`,
-    `ผู้รับผิดชอบแทน: ${data.handoverPerson || "-"}`,
-    `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `ฝ่ายบุคคลอนุมัติ: ${data.hrName} (${new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false })})`
-  ].join("\n");
-  return sendLineMessage(managementId, [{ type: "text", text }]);
+
+  const timeStr = new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "ข้อมูลการอนุมัติลา (สรุป)", weight: "bold", size: "lg", color: "#1e293b" }
+      ],
+      backgroundColor: "#f8fafc"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.leaveType, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.startDate} ถึง ${data.endDate} (${formatLeaveMins(data.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "รับผิดชอบแทน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.handoverPerson || "-", color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+        { type: "separator", margin: "lg" },
+        { type: "box", layout: "horizontal", margin: "lg", contents: [{ type: "text", text: "หัวหน้างาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.supervisorName, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ฝ่ายบุคคล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.hrName} (${timeStr})`, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }] }
+      ]
+    }
+  };
+
+  return sendLineMessage(managementId, [{ type: "flex", altText: `สรุปการอนุมัติลา: ${data.empName}`, contents }]);
 }
 
 export async function sendManagementOtSummary(data: {
@@ -531,16 +599,36 @@ export async function sendManagementOtSummary(data: {
 }) {
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
-  const text = [
-    "ข้อมูลการอนุมัติ OT (สรุป)",
-    `พนักงาน: ${data.empName}`,
-    `วันที่: ${data.dateFor}`,
-    `เวลา: ${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`,
-    `เหตุผล: ${data.reason || "-"}`,
-    `หัวหน้างานที่อนุมัติ: ${data.supervisorName}`,
-    `ฝ่ายบุคคลอนุมัติ: ${data.hrName} (${new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false })})`
-  ].join("\n");
-  return sendLineMessage(managementId, [{ type: "text", text }]);
+
+  const timeStr = new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false });
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "ข้อมูลการอนุมัติ OT (สรุป)", weight: "bold", size: "lg", color: "#1e293b" }
+      ],
+      backgroundColor: "#f8fafc"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.dateFor, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เวลา:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.startTime} - ${data.endTime} (${data.totalHours} ชม.)`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "separator", margin: "lg" },
+        { type: "box", layout: "horizontal", margin: "lg", contents: [{ type: "text", text: "หัวหน้างาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.supervisorName, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ฝ่ายบุคคล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.hrName} (${timeStr})`, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }] }
+      ]
+    }
+  };
+
+  return sendLineMessage(managementId, [{ type: "flex", altText: `สรุปการอนุมัติ OT: ${data.empName}`, contents }]);
 }
 
 /**
@@ -558,7 +646,7 @@ export async function sendTripUpdateNotification(
     remark?: string;
   }
 ) {
-  const mapUrl = data.lat && data.lon 
+  const mapUrl = data.lat && data.lon
     ? `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lon}`
     : null;
 
@@ -650,9 +738,210 @@ export async function sendTripUpdateNotification(
   // Send to all unique valid IDs
   const uniqueIds = Array.from(new Set(toIds.filter(id => !!id)));
   const results = await Promise.all(
-    uniqueIds.map(id => 
+    uniqueIds.map(id =>
       sendLineMessage(id, [{ type: "flex", altText: `Trip Update: ${data.empName}`, contents }])
     )
   );
   return results.length > 0 ? results.every(r => r) : true;
+}
+
+/**
+ * Sends a real-time OT Verification notification when an employee checks out
+ * Compares requested OT time vs actual checkout time
+ */
+export async function sendCheckoutOtVerificationNotification(
+  data: {
+    empName: string;
+    dateFor: string;
+    requestedTime: string;
+    actualIn: string;
+    actualOut: string;
+    status: "ontime" | "early" | "late";
+    diffMins: number;
+    photoUrl: string;
+  }
+) {
+  const hrManagerId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  if (targetIds.length === 0) return false;
+
+  const statusCfg = {
+    ontime: { text: "✅ OT ครบถ้วน", color: "#16a34a" },
+    early: { text: `⚠️ ออกก่อน (${data.diffMins} นาที)`, color: "#dc2626" },
+    late: { text: "✅ ทำเกินเวลาที่ขอ", color: "#2563eb" }
+  };
+  const cfg = statusCfg[data.status];
+
+  const contents: any = {
+    type: "bubble",
+    hero: {
+      type: "image",
+      url: data.photoUrl || "https://placeholder.com/600x400",
+      size: "full",
+      aspectRatio: "20:13",
+      aspectMode: "cover"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: "บันทึกการเลิกงาน (ตรวจสอบ OT)", weight: "bold", size: "lg", color: "#1e293b" },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.dateFor, color: "#111111", size: "sm", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เวลาที่ขอ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.requestedTime, color: "#111111", size: "sm", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "บันทึกจริง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.actualIn} - ${data.actualOut}`, color: "#111111", size: "sm", flex: 7 }] },
+            { type: "separator", margin: "md" },
+            { type: "box", layout: "horizontal", margin: "md", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: cfg.text, color: cfg.color, size: "sm", weight: "bold", flex: 7 }] }
+          ]
+        }
+      ]
+    }
+  };
+
+  const results = await Promise.all(
+    targetIds.map(id => sendLineMessage(id, [{ type: "flex", altText: `OT Check: ${data.empName}`, contents }]))
+  );
+  return results.every(r => r);
+}
+
+export async function sendAssetBorrowNotification(
+  data: {
+    empName: string;
+    assetName: string;
+    assetId: string;
+    borrowDate: string;
+    returnDate: string;
+    location: string;
+    jobTitle?: string;
+    branchName?: string;
+    photoUrl?: string;
+  }
+) {
+  const hrManagerId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  if (targetIds.length === 0) return false;
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "บันทึกการยืมอุปกรณ์", weight: "bold", size: "lg", color: "#1e293b" }
+      ],
+      backgroundColor: "#f1f5f9"
+    },
+    hero: data.photoUrl ? {
+      type: "image",
+      url: data.photoUrl,
+      size: "full",
+      aspectMode: "cover",
+      aspectRatio: "16:9"
+    } : undefined,
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+            ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+            ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#2563eb", size: "sm", weight: "bold", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ชื่องาน / สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }
+          ]
+        }
+      ]
+    }
+  };
+
+  const results = await Promise.all(
+    targetIds.map(id => sendLineMessage(id, [{ type: "flex", altText: `ยืมอุปกรณ์: ${data.assetName}`, contents }]))
+  );
+  return results.every(r => r);
+}
+
+/**
+ * Sends a real-time Asset Returning notification
+ */
+export async function sendAssetReturnNotification(
+  data: {
+    empName: string;
+    assetName: string;
+    assetId: string;
+    actualReturnDate: string;
+    condition: string;
+    isDamaged: boolean;
+    jobTitle?: string;
+    branchName?: string;
+    photoUrl?: string;
+    location?: string;
+  }
+) {
+  const hrManagerId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  if (targetIds.length === 0) return false;
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "บันทึกการคืนอุปกรณ์", weight: "bold", size: "lg", color: data.isDamaged ? "#dc2626" : "#16a34a" }
+      ],
+      backgroundColor: data.isDamaged ? "#fef2f2" : "#f0fdf4"
+    },
+    hero: data.photoUrl ? {
+      type: "image",
+      url: data.photoUrl,
+      size: "full",
+      aspectMode: "cover",
+      aspectRatio: "16:9"
+    } : undefined,
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+            ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+            ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#111111", size: "sm", flex: 7 }] },
+            ...(data.location ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ชื่องาน / สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพอุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition, color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] }
+          ]
+        }
+      ]
+    }
+  };
+
+  const results = await Promise.all(
+    targetIds.map(id => sendLineMessage(id, [{ type: "flex", altText: `คืนอุปกรณ์: ${data.assetName}`, contents }]))
+  );
+  return results.every(r => r);
 }
