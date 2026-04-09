@@ -609,6 +609,35 @@ export default function AdminAssetsPage() {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* 📋 รายงานสภาพเมื่อยืม (ถ้ามี) */}
+                                            {item.borrow_vehicle_status && (
+                                                <div style={{ marginTop: 12, padding: "12px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                                    <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px", color: "#1e293b", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                        <ClipboardDocumentListIcon width={14} /> รายงานสภาพรถยนต์ก่อนใช้งาน
+                                                    </div>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px" }}>
+                                                        {[
+                                                            { label: "สถานะ", val: item.borrow_vehicle_status, bad: item.borrow_vehicle_status.includes("ซ่อม") },
+                                                            { label: "ความสะอาด", val: item.borrow_is_clean ? "สะอาด" : "ไม่สะอาด", bad: !item.borrow_is_clean },
+                                                            { label: "ระบบไฟ/จอ", val: item.borrow_is_lights_ok ? "ปกติ" : "ไม่ปกติ", bad: !item.borrow_is_lights_ok },
+                                                            { label: "ยาง/ลมยาง", val: item.borrow_is_tires_ok ? "ปกติ" : "ไม่ปกติ", bad: !item.borrow_is_tires_ok },
+                                                            { label: "ตัวถัง/อุปกรณ์", val: item.borrow_is_body_ok ? "ปกติ" : "ไม่ปกติ", bad: !item.borrow_is_body_ok },
+                                                            { label: "ประกัน/พรบ.", val: item.borrow_is_insurance_ok ? "ปกติ (>1ด.)" : "ใกล้หมด (<1ด.)", bad: !item.borrow_is_insurance_ok },
+                                                        ].map((check, idx) => (
+                                                            <div key={idx} style={{ fontSize: "11px", display: "flex", justifyContent: "space-between", padding: "4px 8px", backgroundColor: "#fff", borderRadius: "4px", border: "1px solid #f1f5f9" }}>
+                                                                <span style={{ color: "#64748b" }}>{check.label}:</span>
+                                                                <span style={{ fontWeight: 600, color: check.bad ? "#dc2626" : "#16a34a" }}>{check.val}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {item.borrow_inspection_remark && (
+                                                        <div style={{ marginTop: 8, fontSize: "11px", color: "#64748b", fontStyle: "italic" }}>
+                                                            บันทึกเพิ่มเติม: {item.borrow_inspection_remark}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             
                                             {(borrowPhotos.length > 0 || returnPhotos.length > 0) && (
                                                 <div style={{ marginTop: 12 }}>
