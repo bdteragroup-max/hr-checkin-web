@@ -464,7 +464,7 @@ export default function CarBorrowPage() {
 
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setSelectedAsset(null)} disabled={submitting}>ยกเลิก</button>
-                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || uploading}>
+                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || !!uploading}>
                                     {submitting ? "ระบบกำลังดำเนินการ..." : "ยืนยันการยืมรถยนต์"}
                                 </button>
                             </div>
@@ -555,7 +555,7 @@ export default function CarBorrowPage() {
 
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setShowReturnModal(false)} disabled={submitting}>ยกเลิก</button>
-                                <button type="submit" className={`${styles.btn}`} style={{ backgroundColor: "#0f172a", color: "#fff" }} disabled={submitting || uploading}>
+                                <button type="submit" className={`${styles.btn}`} style={{ backgroundColor: "#0f172a", color: "#fff" }} disabled={submitting || !!uploading}>
                                     {submitting ? "กำลังดำเนินการ..." : "กดยืนยันเพื่อบันทึกการส่งคืน"}
                                 </button>
                             </div>
