@@ -355,8 +355,9 @@ export function captureWithWatermark(
     const f1 = Math.round(22 * sc);
     const f2 = Math.round(18 * sc);
     const f3 = Math.round(14 * sc);
-    const typeColor = type === "Check-in" ? "#4ade80" : "#fb923c";
-    const typeLabel = type === "Check-in" ? "CHECK-IN" : "CHECK-OUT";
+    const isIn = type.toLowerCase().includes("in");
+    const typeColor = isIn ? "#4ade80" : "#fb923c";
+    const typeLabel = type.toUpperCase().replace("-", " ");
     const lateColor =
         lateInfo.status === "late"
             ? "#fb923c"

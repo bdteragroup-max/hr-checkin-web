@@ -119,7 +119,7 @@ function generateImageGrid(photoUrls: string[]) {
       });
     } else {
       // Filler to keep balance if odd number of photos
-      rowContents.push({ type: "spacer", flex: 1 });
+      rowContents.push({ type: "filler", flex: 1 });
     }
     rows.push({
       type: "box",

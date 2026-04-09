@@ -405,10 +405,11 @@ export default function OffsiteCheckinPage() {
         ctx.font = `bold ${f1}px 'Courier New', monospace`;
         ctx.fillText(`${dStr} ${tStr}`, w - lPad, yStart);
         
-        const typeColor = currentType === "Offsite-In" ? "#4ade80" : "#fb923c";
+        const isIn = currentType.toLowerCase().includes("in");
+        const typeColor = isIn ? "#4ade80" : "#fb923c";
         ctx.fillStyle = typeColor;
         ctx.font = `bold ${f2}px Arial, Tahoma`;
-        ctx.fillText(currentType === "Offsite-In" ? "OFFSITE IN" : "OFFSITE OUT", w - lPad, yStart + itemGap);
+        ctx.fillText(isIn ? "OFFSITE IN" : "OFFSITE OUT", w - lPad, yStart + itemGap);
 
         return c.toDataURL("image/jpeg", 0.9);
     }

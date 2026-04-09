@@ -538,10 +538,17 @@ export default function ProjectCheckinPage() {
         ctx.font = `bold ${f1}px 'Courier New', monospace`;
         ctx.fillText(`${dStr} ${tStr}`, w - lPad, yStart);
         
-        const typeColor = currentType === "Project-In" ? "#4ade80" : "#fb923c";
+        const isIn = currentType.toLowerCase().includes("in");
+        const typeColor = isIn ? "#4ade80" : "#fb923c";
         ctx.fillStyle = typeColor;
         ctx.font = `bold ${f2}px Arial, Tahoma`;
-        ctx.fillText(currentType === "Project-In" ? "PROJECT IN" : "PROJECT OUT", w - lPad, yStart + itemGap);
+        ctx.fillText(isIn ? "PROJECT IN" : "PROJECT OUT", w - lPad, yStart + itemGap);
+        
+        // Also ensure duration watermark is clearly legible
+        if (currentDuration) {
+            ctx.fillStyle = "#fb923c"; // Orange for duration info
+            ctx.font = `bold ${f2}px Arial, Tahoma`;
+        }
 
         const dataUrl = c.toDataURL("image/jpeg", 0.9);
         return dataUrl;
@@ -741,6 +748,37 @@ export default function ProjectCheckinPage() {
                 {/* ── SELECTION ACTIVE: MORE FORMS ── */}
                 {selectedCustomer && (
                     <>
+                        {/* 1. Remark Section (Moved up) */}
+                        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
+                                <PencilSquareIcon width={18} /> บันทึกเพิ่มเติม / รายละเอียด (จำเป็น)
+                            </div>
+                            <textarea
+                                style={{ 
+                                    width: "100%", 
+                                    border: `1px solid ${remark.trim() ? "#3b82f6" : "#ef4444"}`, 
+                                    borderRadius: 10, 
+                                    padding: "14px", 
+                                    background: preview ? "#f9fafb" : "white", 
+                                    outline: "none", 
+                                    fontSize: 15, 
+                                    resize: "none", 
+                                    minHeight: 120,
+                                    fontFamily: "inherit"
+                                }}
+                                placeholder="ระบุรายละเอียดงานที่ทำวันนี้..."
+                                value={remark}
+                                onChange={e => setRemark(e.target.value)}
+                                disabled={!!preview}
+                            />
+                            {!remark.trim() && (
+                                <div style={{ color: "#ef4444", fontSize: 12, marginTop: 6, fontWeight: 500 }}>
+                                    * จำเป็นต้องระบรายละเอียดงานก่อนบันทึก
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 2. Camera Section */}
                         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
 
 
@@ -894,34 +932,6 @@ export default function ProjectCheckinPage() {
                             </div>
                         </div>
 
-                        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 600, color: "#1f2937", marginBottom: 12 }}>
-                                <PencilSquareIcon width={18} /> บันทึกเพิ่มเติม / รายละเอียด (จำเป็น)
-                            </div>
-                            <textarea
-                                style={{ 
-                                    width: "100%", 
-                                    border: `1px solid ${remark.trim() ? "#3b82f6" : "#ef4444"}`, 
-                                    borderRadius: 10, 
-                                    padding: "14px", 
-                                    background: preview ? "#f9fafb" : "white", 
-                                    outline: "none", 
-                                    fontSize: 15, 
-                                    resize: "none", 
-                                    minHeight: 120,
-                                    fontFamily: "inherit"
-                                }}
-                                placeholder="ระบุรายละเอียดงานที่ทำวันนี้..."
-                                value={remark}
-                                onChange={e => setRemark(e.target.value)}
-                                disabled={!!preview}
-                            />
-                            {!remark.trim() && (
-                                <div style={{ color: "#ef4444", fontSize: 12, marginTop: 6, fontWeight: 500 }}>
-                                    * จำเป็นต้องระบรายละเอียดงานก่อนบันทึก
-                                </div>
-                            )}
-                        </div>
                     </>
                 )}
 

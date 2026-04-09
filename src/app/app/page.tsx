@@ -566,10 +566,11 @@ export default function AppPage() {
         ctx.font = `700 ${f1}px 'Courier New',monospace`;
         ctx.fillText(`${dateStr}  ${timeStr}`, w - lPad, yStart);
 
-        const typeColor = currentType === "Check-in" ? "#4ade80" : "#fb923c";
+        const isIn = currentType.toLowerCase().includes("in");
+        const typeColor = isIn ? "#4ade80" : "#fb923c";
         ctx.fillStyle = typeColor;
         ctx.font = `800 ${f2}px 'Segoe UI',Arial,Tahoma`;
-        ctx.fillText(currentType === "Check-in" ? "CHECK-IN" : "CHECK-OUT", w - lPad, yStart + itemGap);
+        ctx.fillText(currentType.toUpperCase().replace("-", " "), w - lPad, yStart + itemGap);
 
         // System Label
         ctx.textAlign = "left";
