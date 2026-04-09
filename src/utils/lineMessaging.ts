@@ -899,6 +899,15 @@ export async function sendAssetBorrowNotification(
     branchName?: string;
     photoUrl?: string;
     extraTargetIds?: string[];
+    inspectionSummary?: {
+      status?: string;
+      is_clean?: boolean;
+      is_lights_ok?: boolean;
+      is_tires_ok?: boolean;
+      is_body_ok?: boolean;
+      is_insurance_ok?: boolean;
+      remark?: string;
+    };
   }
 ) {
   const hrManagerId = process.env.HR_LINE_USER_ID;
@@ -916,6 +925,71 @@ export async function sendAssetBorrowNotification(
   const photos = parsePhotoData(data.photoUrl);
   const heroComponent = generateImageGrid(photos);
 
+  const bodyContents: any[] = [
+    {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+        ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#2563eb", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }
+      ]
+    }
+  ];
+
+  // Add Inspection Summary if exists
+  if (data.inspectionSummary) {
+    const s = data.inspectionSummary;
+    const checklistItems: any[] = [];
+    
+    const addItem = (label: string, value: string, isBad: boolean) => {
+      checklistItems.push({
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          { type: "text", text: label, size: "xs", color: "#666666", flex: 6 },
+          { type: "text", text: value, size: "xs", color: isBad ? "#dc2626" : "#16a34a", weight: "bold", flex: 4, align: "end" }
+        ]
+      });
+    };
+
+    if (s.status) addItem("สถานะรถ:", s.status, s.status.includes("ซ่อม"));
+    if (s.is_clean !== undefined) addItem("ความสะอาด:", s.is_clean ? "สะอาด" : "ไม่สะอาด", !s.is_clean);
+    if (s.is_lights_ok !== undefined) addItem("ระบบไฟ:", s.is_lights_ok ? "ปกติ" : "ไม่ปกติ", !s.is_lights_ok);
+    if (s.is_tires_ok !== undefined) addItem("สภาพยาง:", s.is_tires_ok ? "ปกติ" : "ไม่ปกติ", !s.is_tires_ok);
+    if (s.is_body_ok !== undefined) addItem("สภาพตัวถัง:", s.is_body_ok ? "ปกติ" : "ไม่ปกติ", !s.is_body_ok);
+    if (s.is_insurance_ok !== undefined) addItem("ประกัน/พรบ.:", s.is_insurance_ok ? "ปกติ (>1ด.)" : "ใกล้หมด (<1ด.)", !s.is_insurance_ok);
+
+    bodyContents.push(
+      { type: "separator", margin: "lg" },
+      { type: "text", text: "📋 การตรวจสอบสภาพรถ", weight: "bold", size: "sm", margin: "md", color: "#334155" },
+      {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        margin: "sm",
+        contents: checklistItems
+      }
+    );
+
+    if (s.remark) {
+      bodyContents.push({
+        type: "text",
+        text: `หมายเหตุ: ${s.remark}`,
+        size: "xs",
+        color: "#6b7280",
+        margin: "md",
+        wrap: true,
+        style: "italic"
+      });
+    }
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -931,22 +1005,7 @@ export async function sendAssetBorrowNotification(
       type: "box",
       layout: "vertical",
       spacing: "md",
-      contents: [
-        {
-          type: "box",
-          layout: "vertical",
-          spacing: "sm",
-          contents: [
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-            ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
-            ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#2563eb", size: "sm", weight: "bold", flex: 7 }] },
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ชื่องาน / สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }
-          ]
-        }
-      ]
+      contents: bodyContents
     }
   };
 

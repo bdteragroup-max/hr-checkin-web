@@ -365,6 +365,15 @@ model asset_borrowings {
   status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
   created_at            DateTime  @default(now()) @db.Timestamptz(6)
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
+
+  // New Inspection Checklist Fields (Borrow)
+  borrow_vehicle_status  String?   @db.VarChar(50)
+  borrow_is_clean        Boolean?
+  borrow_is_lights_ok    Boolean?
+  borrow_is_tires_ok     Boolean?
+  borrow_is_body_ok      Boolean?
+  borrow_is_insurance_ok Boolean?
+  borrow_inspection_remark String?
   assets                assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   employee              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 

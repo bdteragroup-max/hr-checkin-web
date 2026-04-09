@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/probation-reminders?secret=hr-checkin-secret-123",
       "schedule": "0 2 * * 1-6"
+    },
+    {
+      "path": "/api/cron/asset-reminders?secret=hr-checkin-secret-123",
+      "schedule": "0 2 * * *"
     }
   ]
 }

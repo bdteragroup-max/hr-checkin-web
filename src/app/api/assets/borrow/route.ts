@@ -10,7 +10,11 @@ export async function POST(req: Request) {
 
         const payload = verifyToken(token) as { emp_id: string };
         const body = await req.json();
-        const { asset_id, borrow_date, expected_return_date, location, remark, photo_url_borrow } = body;
+        const { 
+            asset_id, borrow_date, expected_return_date, location, remark, photo_url_borrow,
+            borrow_vehicle_status, borrow_is_clean, borrow_is_lights_ok, borrow_is_tires_ok,
+            borrow_is_body_ok, borrow_is_insurance_ok, borrow_inspection_remark
+        } = body;
 
         if (!asset_id || !borrow_date || !expected_return_date) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
@@ -47,7 +51,15 @@ export async function POST(req: Request) {
                     location: location || null,
                     condition_at_borrow: remark || null,
                     photo_url_borrow: photo_url_borrow || null,
-                    status: "borrowed"
+                    status: "borrowed",
+                    // New Inspection Fields
+                    borrow_vehicle_status,
+                    borrow_is_clean: borrow_is_clean === true,
+                    borrow_is_lights_ok: borrow_is_lights_ok === true,
+                    borrow_is_tires_ok: borrow_is_tires_ok === true,
+                    borrow_is_body_ok: borrow_is_body_ok === true,
+                    borrow_is_insurance_ok: borrow_is_insurance_ok === true,
+                    borrow_inspection_remark: borrow_inspection_remark || null
                 }
             });
 
@@ -87,7 +99,17 @@ export async function POST(req: Request) {
                     returnDate: new Date(expected_return_date).toLocaleDateString("th-TH"),
                     location: location || "ไม่ได้ระบุ",
                     photoUrl: photo_url_borrow ?? undefined,
-                    extraTargetIds: extraIds
+                    extraTargetIds: extraIds,
+                    // Pass inspection data for notification
+                    inspectionSummary: {
+                        status: borrow_vehicle_status,
+                        is_clean: borrow_is_clean,
+                        is_lights_ok: borrow_is_lights_ok,
+                        is_tires_ok: borrow_is_tires_ok,
+                        is_body_ok: borrow_is_body_ok,
+                        is_insurance_ok: borrow_is_insurance_ok,
+                        remark: borrow_inspection_remark
+                    }
                 });
             } catch (notifyError) {
                 console.error("[API/assets/borrow] Notification Error:", notifyError);

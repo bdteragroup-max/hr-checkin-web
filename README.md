@@ -1,75 +1,94 @@
-# TERA HR Check-in Web
+# 🌌 TERA HR Check-in Ecosystem
 
-A comprehensive Human Resources and Employee Management system built with Next.js, handling everything from daily attendance to complex payroll calculations.
+A premium, state-of-the-art **Human Resources & Employee Management System** engineered for the modern mobile-first workforce. Built with **Next.js**, it seamlessly integrates precision attendance tracking, multi-branch operations, and automated payroll workflows with the **LINE Messaging Ecosystem**.
 
-## 🚀 Key Features
+---
 
-### Employee Attendance & Check-in
-- **Distance-Based Check-in**: Geographic-aware check-in system for office and project sites.
-- **Photo Verification**: Real-time photo capture for attendance validation.
-- **Dashboard**: Live monitoring of present, late, absent, and on-leave employees.
+## ✨ System Highlights
 
-### Payroll & Allowances
-- **Automated Calculation**: Seamlessly calculates base salary, OT, and various allowances.
-- **Allowance Types**:
-  - **Diligence Allowance** (เบี้ยขยัน): Automated based on attendance records.
-  - **Meal Allowance**: Per-day or fixed meal support.
-  - **Travel & Off-Site Claims**: Integrated workflow for travel expenses and accommodation.
-  - **Telephone Allowance**: Configurable per-employee.
-  - **Position Allowance** (เงินประจำตำแหน่ง): Variable role-based allowances.
-  - **Birthday Benefits**: Monthly cash gift and meal allowance submission system.
+### 📍 Precision Check-in Ecosystem
+*   **Location-Aware Intelligence**: Triple-mode check-in (Standard Branch, Project Site, and flexible Offsite).
+*   **Advanced Watermarking**: Dynamic photo capture with real-time GPS coordinates, timestamping, and smart "In/Out" status indicators.
+*   **Geofencing**: Branch-specific distance validation ensuring employees are actually on-site.
 
-### Management & Workflows
-- **Leave Management**: Support for multiple leave types with specific entitlements (Annual, Sick, Personal, etc.).
-- **OT Management**: Request and approval workflow for overtime work.
-- **Employee Admin**: Centralized management of employee profiles, branches, departments, and payroll settings.
-- **Administrative Tools**: Export functionality for payroll and reports.
+### 🍱 Comprehensive Benefit Modules
+*   **🚗 Car Borrowing**: Integrated logistics for requesting and managing company vehicle usage.
+*   **🎂 Birthday Claims**: Automated celebration benefits including cash gifts and meal allowance requests.
+*   **✈️ Travel & Offsite**: End-to-end workflow for travel logs (`trip-log`), accommodation claims, and daily allowances.
+*   **💰 Smart OT & Leave**: High-precision request and approval workflows for Overtime and Leave (Business, Sick, Annual).
 
-## 🛠️ Tech Stack
-- **Framework**: [Next.js](https://nextjs.org) (App Router)
-- **Database**: [PostgreSQL](https://www.postgresql.org/) via [Prisma ORM](https://www.prisma.io/)
-- **Authentication**: JWT-based security with separate User and Admin tokens.
-- **Styling**: Vanilla CSS Modules for premium, responsive UI.
-- **Form Handling**: Multi-part form data support for file uploads (Receipts, Slips, Photos).
+### 💬 LINE Integration (The Communication Hub)
+*   **Flex Messages 2.0**: Beautifully formatted multi-photo reports sent directly to LINE groups.
+*   **Auto-Reporting**: Real-time notifications for every check-in, OT request, and leave approval.
+*   **Interactive Sharing**: "Share-to-LINE" gated workflows ensure transparency and group awareness.
 
-## 📁 Project Structure
-- `/src/app`: Application routes and UI components.
-  - `/src/app/admin`: Administrative dashboard and management pages.
-  - `/src/app/api`: Server-side API endpoints (Protected by `requireAdmin` or user tokens).
-  - `/src/app/app`: Main employee-facing dashboard and features.
-- `/src/lib`: Core utility functions (Prisma client, JWT handling, Auth guards).
-- `/src/components`: Shared React components (e.g., `AlertModal`, `Sidebar`).
-- `/public/uploads`: File system storage for uploaded evidence (Photos, Slips).
-- `/prisma`: Database schema definition and migrations.
+---
 
-## 🛠️ Getting Started
+## 🎨 Design Philosophy
+The system follows a **Premium Modern Aesthetic**:
+*   **Glassmorphism & Gradients**: Sleek, translucent UI elements with smooth color transitions.
+*   **Micro-animations**: Interactive hover effects and state transitions for a responsive "alive" feel.
+*   **Tailored Color Palettes**: Semantic color coding (Soft Green for Presence, Vibrant Orange for Check-out, Royal Purple for OT).
+
+---
+
+## 🛠️ Technical Architecture
+
+### Core Stack
+*   **Framework**: Next.js 14+ (App Router)
+*   **Language**: TypeScript (Strict Mode)
+*   **ORM**: Prisma with PostgreSQL
+*   **Styling**: Vanilla CSS Modules (Optimized for performance & custom aesthetics)
+*   **External APIs**: LINE Messaging API (Flex Messages, OG Image Generation)
+
+### 📁 Project Structure
+```bash
+/src
+  /app
+    /admin            # Management Dashboard & Reports
+    /app              # Employee Mobile Dashboard
+    /project-checkin  # Site-specific work logging
+    /offsite-checkin  # Remote work & Coffee shop logging
+    /car-borrow       # Vehicle log management
+    /share            # Edge-runtime OG Image handlers for LINE
+    /api              # Robust REST API layer
+  /utils              # GIS, Time formatting, and Canvas Watermarking logic
+  /lib                # Prisma Client & Security Middleware
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (Latest LTS recommended)
-- PostgreSQL Database
-- `.env` file with `DATABASE_URL` and `JWT_SECRET`
+*   Node.js 18.x or higher
+*   PostgreSQL instance
+*   LINE Developers Account (Channel Access Token & Secret)
 
-### Installation
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Generate Prisma client:
-   ```bash
-   npx prisma generate
-   ```
-4. Push schema to database:
-   ```bash
-   npx prisma db push
-   ```
-5. Run the development server:
-   ```bash
-   npm run dev
-   ```
+### Quick Start
+1.  **Clone & Install**:
+    ```bash
+    npm install
+    ```
+2.  **Environment Sync**: Create a `.env` file mapping your database and LINE credentials.
+3.  **Database Sync**:
+    ```bash
+    npx prisma db push
+    ```
+4.  **Dev Mode**:
+    ```bash
+    npm run dev
+    ```
 
-## 🔒 Security
-The application uses a dual-token system:
-- `token`: Used for employee-level access.
-- `admin_token`: Used for administrative functions.
-API routes use the `requireAdmin()` utility to enforce strict authorization for management endpoints.
+---
+
+## 🔐 Security & Governance
+*   **Dual-Token Authentication**: Separate secure contexts for standard Users and privileged Administrators.
+*   **Edge Guards**: Navigation protection and state-aware forms to prevent data loss.
+*   **Encrypted Payloads**: Secure handling of sensitive employee PINs and identity data.
+
+---
+> [!IMPORTANT]
+> **Aesthetically Driven**: This system is designed to provide a "Wow" factor on first use, prioritizing visual excellence alongside functional accuracy.
+
+© 2026 TERA GROUP HR Solutions. All rights reserved.

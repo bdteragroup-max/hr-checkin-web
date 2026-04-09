@@ -65,7 +65,15 @@ export default function CarBorrowPage() {
         borrow_date: new Date().toISOString().split("T")[0],
         expected_return_date: "",
         location: "",
-        remark: ""
+        remark: "",
+        // New Inspection Checklist
+        borrow_vehicle_status: "รถอยู่ Tera",
+        borrow_is_clean: true,
+        borrow_is_lights_ok: true,
+        borrow_is_tires_ok: true,
+        borrow_is_body_ok: true,
+        borrow_is_insurance_ok: true,
+        borrow_inspection_remark: ""
     });
 
     useEffect(() => {
@@ -160,7 +168,14 @@ export default function CarBorrowPage() {
                     borrow_date: new Date().toISOString().split("T")[0],
                     expected_return_date: "",
                     location: "",
-                    remark: ""
+                    remark: "",
+                    borrow_vehicle_status: "รถอยู่ Tera",
+                    borrow_is_clean: true,
+                    borrow_is_lights_ok: true,
+                    borrow_is_tires_ok: true,
+                    borrow_is_body_ok: true,
+                    borrow_is_insurance_ok: true,
+                    borrow_inspection_remark: ""
                 });
                 loadData();
             } else {
@@ -417,6 +432,174 @@ export default function CarBorrowPage() {
                                     value={formData.remark}
                                     onChange={e => setFormData({ ...formData, remark: e.target.value })}
                                 />
+                            </div>
+
+                            {/* 📋 VEHICLE INSPECTION CHECKLIST (ตามภาพ) */}
+                            <div className={styles.checklistSection} style={{ backgroundColor: "#f8fafc", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "20px" }}>
+                                <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <ClipboardDocumentListIcon width={18} /> ตรวจเช็คสภาพรถยนต์ก่อนใช้งาน
+                                </h3>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    {/* 1. Status */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สถานะ <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                            {["รถอยู่ Tera", "รถอยู่หน้างาน", "รถไม่อยู่ส่งซ่อม"].map(opt => (
+                                                <button
+                                                    key={opt}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_vehicle_status: opt })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_vehicle_status === opt ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_vehicle_status === opt ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_vehicle_status === opt ? "#1e293b" : "#cbd5e1",
+                                                        transition: "all 0.2s"
+                                                    }}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Cleanliness */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>การตรวจเช็คความสะอาด ภายนอก/ภายใน <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            {[
+                                                { label: "สะอาด", val: true },
+                                                { label: "ไม่สะอาด", val: false }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_is_clean: opt.val })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_is_clean === opt.val ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_is_clean === opt.val ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_is_clean === opt.val ? "#1e293b" : "#cbd5e1"
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Lights */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ไฟหน้า ไฟท้าย ไฟเลี้ยว หน้าจอแสดงผล <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            {[
+                                                { label: "ปกติ", val: true },
+                                                { label: "ไม่ปกติ", val: false }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_is_lights_ok: opt.val })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_is_lights_ok === opt.val ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_is_lights_ok === opt.val ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_is_lights_ok === opt.val ? "#1e293b" : "#cbd5e1"
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 4. Tires */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพยาง และลมยางล้อรถ <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            {[
+                                                { label: "ปกติ", val: true },
+                                                { label: "ไม่ปกติ", val: false }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_is_tires_ok: opt.val })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_is_tires_ok === opt.val ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_is_tires_ok === opt.val ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_is_tires_ok === opt.val ? "#1e293b" : "#cbd5e1"
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 5. Body */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพรถ สีรถ และอุปกรณ์อื่นๆ <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            {[
+                                                { label: "ปกติ", val: true },
+                                                { label: "ไม่ปกติ", val: false }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_is_body_ok: opt.val })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_is_body_ok === opt.val ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_is_body_ok === opt.val ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_is_body_ok === opt.val ? "#1e293b" : "#cbd5e1"
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 6. Insurance */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ประกัน พรบ. ภาษี มีอายุมากกว่า 1 เดือน <span style={{color:"red"}}>*</span></label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            {[
+                                                { label: "มากกว่า 1 เดือน", val: true },
+                                                { label: "น้อยกว่า 1 เดือน", val: false }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, borrow_is_insurance_ok: opt.val })}
+                                                    style={{
+                                                        padding: "6px 12px", borderRadius: "20px", fontSize: "12px", border: "1px solid",
+                                                        backgroundColor: formData.borrow_is_insurance_ok === opt.val ? "#1e293b" : "#fff",
+                                                        color: formData.borrow_is_insurance_ok === opt.val ? "#fff" : "#64748b",
+                                                        borderColor: formData.borrow_is_insurance_ok === opt.val ? "#1e293b" : "#cbd5e1"
+                                                    }}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 7. Remark */}
+                                    <div className={styles.checkItem}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ภาพรวมการตรวจเช็คและสาเหตุที่ไม่ปกติ</label>
+                                        <textarea
+                                            placeholder="ระบุรายละเอียดเพิ่มเติม..."
+                                            style={{ minHeight: "60px", fontSize: "12px" }}
+                                            value={formData.borrow_inspection_remark}
+                                            onChange={e => setFormData({ ...formData, borrow_inspection_remark: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Photo documentation */}
