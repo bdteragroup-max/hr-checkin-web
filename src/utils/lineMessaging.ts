@@ -61,6 +61,81 @@ async function sendLineMessage(to: string, messages: any[], replyToken?: string)
   return false;
 }
 
+/**
+ * Helper to parse photoUrl which might be a single string or stringified JSON object of 5 photos
+ */
+function parsePhotoData(photoUrl: string | undefined): string[] {
+  if (!photoUrl) return [];
+  try {
+    if (photoUrl.startsWith("{") || photoUrl.startsWith("[")) {
+      const parsed = JSON.parse(photoUrl);
+      if (typeof parsed === 'object' && parsed !== null) {
+        // Handle object {front, back, left, right, mileage}
+        return Object.values(parsed).filter(val => typeof val === 'string' && !!val) as string[];
+      }
+      if (Array.isArray(parsed)) return parsed.filter(v => !!v);
+    }
+  } catch (e) {
+    // Falls back to single photo if not valid JSON
+  }
+  return [photoUrl];
+}
+
+/**
+ * Helper to generate Flex Box components for multiple images
+ */
+function generateImageGrid(photoUrls: string[]) {
+  if (photoUrls.length === 0) return null;
+  if (photoUrls.length === 1) {
+    return {
+      type: "image",
+      url: photoUrls[0],
+      size: "full",
+      aspectMode: "cover",
+      aspectRatio: "16:9"
+    };
+  }
+
+  // Create a grid layout (rows of images)
+  const rows: any[] = [];
+  for (let i = 0; i < photoUrls.length; i += 2) {
+    const rowContents: any[] = [
+      {
+        type: "image",
+        url: photoUrls[i],
+        flex: 1,
+        aspectRatio: "4:3",
+        aspectMode: "cover"
+      }
+    ];
+    if (photoUrls[i + 1]) {
+      rowContents.push({
+        type: "image",
+        url: photoUrls[i + 1],
+        flex: 1,
+        aspectRatio: "4:3",
+        aspectMode: "cover",
+        margin: "sm"
+      });
+    } else {
+      // Filler to keep balance if odd number of photos
+      rowContents.push({ type: "spacer", flex: 1 });
+    }
+    rows.push({
+      type: "box",
+      layout: "horizontal",
+      contents: rowContents,
+      margin: i > 0 ? "sm" : "none"
+    });
+  }
+
+  return {
+    type: "box",
+    layout: "vertical",
+    contents: rows
+  };
+}
+
 export async function sendLeaveApprovalFlexMessage(
   lineUserId: string,
   leaveData: {
@@ -823,13 +898,23 @@ export async function sendAssetBorrowNotification(
     jobTitle?: string;
     branchName?: string;
     photoUrl?: string;
+    extraTargetIds?: string[];
   }
 ) {
   const hrManagerId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
-  const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+  let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  // Merge extra targets
+  if (data.extraTargetIds && data.extraTargetIds.length > 0) {
+    const uniqueExtras = data.extraTargetIds.filter(id => id && !targetIds.includes(id));
+    targetIds = [...targetIds, ...uniqueExtras];
+  }
 
   if (targetIds.length === 0) return false;
+
+  const photos = parsePhotoData(data.photoUrl);
+  const heroComponent = generateImageGrid(photos);
 
   const contents: any = {
     type: "bubble",
@@ -837,17 +922,11 @@ export async function sendAssetBorrowNotification(
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: "บันทึกการยืมอุปกรณ์", weight: "bold", size: "lg", color: "#1e293b" }
+        { type: "text", text: "บันทึกการยืมรถยนต์ / อุปกรณ์", weight: "bold", size: "lg", color: "#1e293b" }
       ],
       backgroundColor: "#f1f5f9"
     },
-    hero: data.photoUrl ? {
-      type: "image",
-      url: data.photoUrl,
-      size: "full",
-      aspectMode: "cover",
-      aspectRatio: "16:9"
-    } : undefined,
+    hero: heroComponent || undefined,
     body: {
       type: "box",
       layout: "vertical",
@@ -892,13 +971,23 @@ export async function sendAssetReturnNotification(
     branchName?: string;
     photoUrl?: string;
     location?: string;
+    extraTargetIds?: string[];
   }
 ) {
   const hrManagerId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
-  const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+  let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  // Merge extra targets
+  if (data.extraTargetIds && data.extraTargetIds.length > 0) {
+    const uniqueExtras = data.extraTargetIds.filter(id => id && !targetIds.includes(id));
+    targetIds = [...targetIds, ...uniqueExtras];
+  }
 
   if (targetIds.length === 0) return false;
+
+  const photos = parsePhotoData(data.photoUrl);
+  const heroComponent = generateImageGrid(photos);
 
   const contents: any = {
     type: "bubble",
@@ -906,17 +995,11 @@ export async function sendAssetReturnNotification(
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: "บันทึกการคืนอุปกรณ์", weight: "bold", size: "lg", color: data.isDamaged ? "#dc2626" : "#16a34a" }
+        { type: "text", text: "บันทึกการคืนรถยนต์ / อุปกรณ์", weight: "bold", size: "lg", color: data.isDamaged ? "#dc2626" : "#16a34a" }
       ],
       backgroundColor: data.isDamaged ? "#fef2f2" : "#f0fdf4"
     },
-    hero: data.photoUrl ? {
-      type: "image",
-      url: data.photoUrl,
-      size: "full",
-      aspectMode: "cover",
-      aspectRatio: "16:9"
-    } : undefined,
+    hero: heroComponent || undefined,
     body: {
       type: "box",
       layout: "vertical",

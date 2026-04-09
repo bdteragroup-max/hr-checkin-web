@@ -39,7 +39,7 @@ interface Me { emp_id: string; name: string; branch_id: string | null; line_user
 interface Branch { id: string; name: string; centerLat?: number; centerLon?: number; radiusM?: number }
 interface TodayItem {
     id: number | string;
-    type: "Check-in" | "Check-out" | "Project-In" | "Project-Out";
+    type: "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out";
     timestamp: string;
     branch_name: string;
     distance?: number | null;
@@ -265,7 +265,7 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
             ) : (
                 <div className={styles.historyList}>
                     {today.map(x => {
-                        const isIn = x.type === "Check-in" || x.type === "Project-In";
+                        const isIn = x.type.toLowerCase().includes("in");
                         const tagCls = x.lateStatus === "late" ? styles.tagLate : x.lateStatus === "ot" ? styles.tagOt : styles.tagOntime;
                         return (
                             <div key={String(x.id)} className={styles.historyItem}>

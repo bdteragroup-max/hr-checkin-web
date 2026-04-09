@@ -180,7 +180,8 @@
 
 .modal {
     background: var(--surface);
-    width: 450px;
+    width: 600px;
+    max-width: 90vw;
     border-radius: var(--radius);
     padding: 32px;
     box-shadow: var(--shadow-lg);
@@ -189,8 +190,16 @@
 .modalHeader h2 { margin:0; font-size: 20px; color: var(--text); }
 .modalHeader p { color: var(--text4); margin: 4px 0 24px; }
 
-.inputGroup { margin-bottom: 20px; }
+.inputGroup { margin-bottom: 20px; width: 100%; }
 .inputGroup label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.formRow {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+}
+.formRow > .inputGroup {
+    flex: 1;
+}
 .inputGroup input, .inputGroup textarea {
     width: 100%; padding: 12px; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
     font-family: inherit;

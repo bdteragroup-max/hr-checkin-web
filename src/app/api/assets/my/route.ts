@@ -5,18 +5,26 @@ import { verifyToken } from "@/lib/jwt";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const { searchParams } = new URL(req.url);
+        const category = searchParams.get("category");
+        const categoryExclude = searchParams.get("category_exclude");
+
         const token = (await cookies()).get("token")?.value;
         if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
         const payload = verifyToken(token) as { emp_id: string };
 
+        const whereClause: any = { emp_id: payload.emp_id, status: "borrowed" };
+        if (category) {
+            whereClause.assets = { category };
+        } else if (categoryExclude) {
+            whereClause.assets = { category: { not: categoryExclude } };
+        }
+
         const borrowings = await prisma.asset_borrowings.findMany({
-            where: { 
-                emp_id: payload.emp_id,
-                status: "borrowed"
-            },
+            where: whereClause,
             include: {
                 assets: true
             },

@@ -21,6 +21,12 @@ type Asset = {
     asset_id: string;
     name: string;
     category: string | null;
+    company_owner: string | null;
+    vehicle_type: string | null;
+    brand: string | null;
+    vehicle_model: string | null;
+    main_user: string | null;
+    usage_remark: string | null;
     status: "available" | "borrowed" | "maintenance" | "damaged";
     asset_borrowings: Array<{
         id: number;
@@ -56,10 +62,16 @@ export default function AdminAssetsPage() {
     const [assetForm, setAssetForm] = useState({
         id: undefined as number | undefined,
         asset_id: "",
-        name: "",
-        avg_category: "", // internal placeholder
-        category: "",
+        name: "", // Will be auto-generated or used as fallback
+        avg_category: "Car", // Force Car
+        category: "Car",
         description: "",
+        company_owner: "",
+        vehicle_type: "",
+        brand: "",
+        vehicle_model: "",
+        main_user: "",
+        usage_remark: "",
         status: "available"
     });
     const [assetSaving, setAssetSaving] = useState(false);
@@ -72,7 +84,7 @@ export default function AdminAssetsPage() {
     async function loadAssets() {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/assets?category_exclude=Car");
+            const res = await fetch("/api/admin/assets?category=Car");
             if (res.ok) {
                 const data = await res.json();
                 setAssets(data);
@@ -90,7 +102,21 @@ export default function AdminAssetsPage() {
 
     function openAddModal() {
         setIsEditing(false);
-        setAssetForm({ id: undefined, asset_id: "", name: "", avg_category: "", category: "", description: "", status: "available" });
+        setAssetForm({ 
+            id: undefined, 
+            asset_id: "", 
+            name: "", 
+            avg_category: "Car", 
+            category: "Car", 
+            description: "", 
+            company_owner: "",
+            vehicle_type: "",
+            brand: "",
+            vehicle_model: "",
+            main_user: "",
+            usage_remark: "",
+            status: "available" 
+        });
         setShowAssetModal(true);
     }
 
@@ -101,8 +127,14 @@ export default function AdminAssetsPage() {
             asset_id: asset.asset_id, 
             name: asset.name, 
             category: asset.category || "", 
-            avg_category: "",
-            description: "", // todo: add to fetch if needed
+            avg_category: "Car",
+            description: "", // internal placeholder if needed
+            company_owner: asset.company_owner || "",
+            vehicle_type: asset.vehicle_type || "",
+            brand: asset.brand || "",
+            vehicle_model: asset.vehicle_model || "",
+            main_user: asset.main_user || "",
+            usage_remark: asset.usage_remark || "",
             status: asset.status 
         });
         setShowAssetModal(true);
@@ -111,14 +143,20 @@ export default function AdminAssetsPage() {
     async function handleAssetSubmit(e: React.FormEvent) {
         e.preventDefault();
         setAssetSaving(true);
+        const payload = { ...assetForm };
+        if (!payload.name) {
+            payload.name = `${payload.brand || ""} ${payload.vehicle_model || ""}`.trim();
+            if (!payload.name) payload.name = "Unknown Vehicle";
+        }
+
         try {
-            const url = isEditing ? `/api/admin/assets/${assetForm.id}` : "/api/admin/assets";
+            const url = isEditing ? `/api/admin/assets/${payload.id}` : "/api/admin/assets";
             const method = isEditing ? "PATCH" : "POST";
 
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(assetForm)
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();
@@ -185,7 +223,7 @@ export default function AdminAssetsPage() {
 
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: "รับคืนอุปกรณ์เรียบร้อยแล้ว", type: "ok" });
+                setAlert({ visible: true, message: "รับคืนรถยนต์เรียบร้อยแล้ว", type: "ok" });
                 setShowReturnModal(false);
                 loadAssets();
             } else {
@@ -244,11 +282,11 @@ export default function AdminAssetsPage() {
             
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>จัดการอุปกรณ์ (Assets)</h1>
-                    <p className={styles.subtitle}>จัดการอุปกรณ์บริษัท การยืม-คืน และประวัติการใช้งาน</p>
+                    <h1 className={styles.title}>จัดการรถยนต์ (Cars)</h1>
+                    <p className={styles.subtitle}>จัดการรถยนต์บริษัท การยืม-คืน และประวัติการใช้งาน</p>
                 </div>
                 <button className={styles.addBtn} onClick={openAddModal}>
-                    <PlusIcon width={20} /> เพิ่มอุปกรณ์
+                    <PlusIcon width={20} /> เพิ่มรถยนต์
                 </button>
             </div>
 
@@ -275,10 +313,10 @@ export default function AdminAssetsPage() {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>อุปกรณ์</th>
-                            <th>สถานะ</th>
-                            <th>ผู้ยืมปัจจุบัน</th>
-                            <th>กำหนดคืน</th>
+                            <th>เจ้าของรถ (Company)</th>
+                            <th>ทะเบียน / รุ่นรถ</th>
+                            <th>ผู้ใช้งานหลัก</th>
+                            <th>สถานะปัจจุบัน</th>
                             <th>จัดการ</th>
                         </tr>
                     </thead>
@@ -286,38 +324,36 @@ export default function AdminAssetsPage() {
                         {loading ? (
                             <tr><td colSpan={5} className={styles.loading}>กำลังโหลด...</td></tr>
                         ) : assets.length === 0 ? (
-                            <tr><td colSpan={5} className={styles.loading}>ไม่มีข้อมูลอุปกรณ์</td></tr>
+                            <tr><td colSpan={5} className={styles.loading}>ไม่มีข้อมูลรถยนต์</td></tr>
                         ) : (
                             assets.map(asset => {
                                 const currentBorrow = asset.asset_borrowings.find(b => b.status === "borrowed");
                                 return (
                                     <tr key={asset.id}>
                                         <td>
-                                            <div className={styles.assetName}>{asset.name}</div>
-                                            <div className={styles.assetId}>{asset.asset_id} • {asset.category}</div>
+                                            <div style={{fontWeight: 500, color: "#1e293b"}}>{asset.company_owner || "—"}</div>
+                                            <div style={{fontSize: "0.80rem", color: "#64748b"}}>{asset.vehicle_type || "—"}</div>
                                         </td>
                                         <td>
-                                            <span className={`${styles.statusBadge} ${styles[asset.status]}`}>
-                                                {asset.status === "available" ? "พร้อมใช้งาน" : 
-                                                 asset.status === "borrowed" ? "ถูกยืม" : 
-                                                 asset.status === "damaged" ? "ชำรุด" : "ซ่อมบำรุง"}
-                                            </span>
+                                            <div className={styles.assetName}>{asset.asset_id}</div>
+                                            <div className={styles.assetId}>{asset.name}</div>
                                         </td>
                                         <td>
-                                            {currentBorrow ? (
-                                                <div className={styles.borrowerInfo}>
-                                                    <UserIcon width={14} />
-                                                    {currentBorrow.employee.name}
-                                                </div>
-                                            ) : "—"}
+                                            <div className={styles.assetName}>{asset.main_user || "—"}</div>
                                         </td>
                                         <td>
-                                            {currentBorrow ? (
-                                                <div className={styles.dateInfo}>
-                                                    <ClockIcon width={14} />
-                                                    {new Date(currentBorrow.expected_return_date).toLocaleDateString("th-TH")}
-                                                </div>
-                                            ) : "—"}
+                                            <div style={{display: "flex", flexDirection: "column", gap: "4px"}}>
+                                                <span className={`${styles.statusBadge} ${styles[asset.status]}`}>
+                                                    {asset.status === "available" ? "พร้อมใช้งาน" : 
+                                                     asset.status === "borrowed" ? "ถูกยืม" : 
+                                                     asset.status === "damaged" ? "ชำรุด" : "ซ่อมบำรุง"}
+                                                </span>
+                                                {currentBorrow && (
+                                                    <div className={styles.borrowerInfo} style={{fontSize: "0.8rem", marginTop: 4}}>
+                                                        <UserIcon width={12} /> {currentBorrow.employee.name}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td>
                                             <div className={styles.actions}>
@@ -367,46 +403,93 @@ export default function AdminAssetsPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
-                            <h2>{isEditing ? "แก้ไขข้อมูลอุปกรณ์" : "เพิ่มอุปกรณ์ใหม่"}</h2>
-                            <p>{isEditing ? "ปรับปรุงรายละเอียดของอุปกรณ์ในระบบ" : "ลงทะเบียนอุปกรณ์ใหม่เข้าสู่ระบบ"}</p>
+                            <h2>{isEditing ? "แก้ไขข้อมูลรถยนต์" : "เพิ่มรถยนต์ใหม่"}</h2>
+                            <p>{isEditing ? "ปรับปรุงรายละเอียดและผู้ถือครองรถในระบบ" : "ลงทะเบียนรถเข้าสู่ระบบ"}</p>
                         </div>
                         <form onSubmit={handleAssetSubmit}>
                             <div className={styles.modalBody}>
-                                <div className={styles.inputGroup}>
-                                    <label>Asset ID (รหัสอุปกรณ์)</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="เช่น NB-001, PRJ-05"
-                                        value={assetForm.asset_id}
-                                        onChange={e => setAssetForm({...assetForm, asset_id: e.target.value})}
-                                        required
-                                        disabled={isEditing}
-                                    />
+                                <div className={styles.formRow}>
+                                    <div className={styles.inputGroup}>
+                                        <label>เจ้าของรถ (Company) <span style={{color: "#ef4444"}}>*</span></label>
+                                        <select 
+                                            value={assetForm.company_owner}
+                                            onChange={e => setAssetForm({...assetForm, company_owner: e.target.value})}
+                                            required
+                                        >
+                                            <option value="">เลือกบริษัท...</option>
+                                            <option value="TERA GROUP">TERA GROUP</option>
+                                            <option value="TERA POWER">TERA POWER</option>
+                                            <option value="TERA ELECTRIC">TERA ELECTRIC</option>
+                                        </select>
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                        <label>ประเภทรถ <span style={{color: "#ef4444"}}>*</span></label>
+                                        <select 
+                                            value={assetForm.vehicle_type}
+                                            onChange={e => setAssetForm({...assetForm, vehicle_type: e.target.value})}
+                                            required
+                                        >
+                                            <option value="">เลือกประเภท...</option>
+                                            <option value="กระบะ">กระบะ</option>
+                                            <option value="เก๋ง">เก๋ง</option>
+                                            <option value="รถตู้">รถตู้</option>
+                                            <option value="เฮี้ยบ">เฮี้ยบ</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className={styles.formRow}>
+                                    <div className={styles.inputGroup}>
+                                        <label>ยี่ห้อ (Brand) <span style={{color: "#ef4444"}}>*</span></label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="เช่น MITSUBISHI, ISUZU"
+                                            value={assetForm.brand}
+                                            onChange={e => setAssetForm({...assetForm, brand: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                        <label>รุ่น (Model) <span style={{color: "#ef4444"}}>*</span></label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="เช่น XPANDER, D-Cab"
+                                            value={assetForm.vehicle_model}
+                                            onChange={e => setAssetForm({...assetForm, vehicle_model: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className={styles.formRow}>
+                                    <div className={styles.inputGroup}>
+                                        <label>ทะเบียนรถ <span style={{color: "#ef4444"}}>*</span></label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="เช่น กท 1234"
+                                            value={assetForm.asset_id}
+                                            onChange={e => setAssetForm({...assetForm, asset_id: e.target.value})}
+                                            required
+                                            disabled={isEditing}
+                                        />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                        <label>ผู้ใช้งานหลัก <span style={{color: "#ef4444"}}>*</span></label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="เช่น เอกชัย (เอก)"
+                                            value={assetForm.main_user}
+                                            onChange={e => setAssetForm({...assetForm, main_user: e.target.value})}
+                                            required
+                                        />
+                                    </div>
                                 </div>
                                 <div className={styles.inputGroup}>
-                                    <label>ชื่ออุปกรณ์</label>
+                                    <label>หมายเหตุ</label>
                                     <input 
                                         type="text" 
-                                        placeholder="เช่น Laptop Dell Vostro"
-                                        value={assetForm.name}
-                                        onChange={e => setAssetForm({...assetForm, name: e.target.value})}
-                                        required
+                                        placeholder="เช่น ใช้เมื่อออกไปหน้างาน, รถผู้บริหาร"
+                                        value={assetForm.usage_remark}
+                                        onChange={e => setAssetForm({...assetForm, usage_remark: e.target.value})}
                                     />
-                                </div>
-                                <div className={styles.inputGroup}>
-                                    <label>หมวดหมู่</label>
-                                    <select 
-                                        value={assetForm.category}
-                                        onChange={e => setAssetForm({...assetForm, category: e.target.value})}
-                                    >
-                                        <option value="">เลือกหมวดหมู่...</option>
-                                        <option value="Notebook">Notebook</option>
-                                        <option value="PC">PC / Monitor</option>
-                                        <option value="Peripheral">Peripheral (Mouse/Keyboard)</option>
-                                        <option value="Camera">Camera</option>
-                                        <option value="Tool">Tool (เครื่องมือช่าง)</option>
-                                        <option value="Other">Other</option>
-                                    </select>
                                 </div>
                                 {isEditing && (
                                     <div className={styles.inputGroup}>
@@ -487,13 +570,13 @@ export default function AdminAssetsPage() {
                         <div className={styles.modalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
                                 <h2>ประวัติการยืม: {selectedAsset.name}</h2>
-                                <p>รหัสคุณครุภัณฑ์: {selectedAsset.asset_id}</p>
+                                <p>รหัสคุณครุภัณฑ์/ทะเบียน: {selectedAsset.asset_id}</p>
                             </div>
                             <button className={styles.editBtn} onClick={() => setShowHistoryModal(false)}>
                                 <XMarkIcon width={24} />
                             </button>
                         </div>
-                        <div className={styles.modalScroll} style={{ padding: "0 24px" }}>
+                        <div className={styles.modalScroll}>
                             {historyLoading ? (
                                 <div className={styles.loading}>กำลังโหลดประวัติ...</div>
                             ) : assetHistory.length === 0 ? (
@@ -551,7 +634,7 @@ export default function AdminAssetsPage() {
                                 })
                             )}
                         </div>
-                        <div className={styles.modalFooter} style={{ padding: "0 32px 32px" }}>
+                        <div className={styles.modalFooter}>
                             <button className={styles.cancelBtn} onClick={() => setShowHistoryModal(false)}>ปิดหน้าย่อย</button>
                         </div>
                     </div>

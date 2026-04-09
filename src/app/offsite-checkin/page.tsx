@@ -32,6 +32,7 @@ interface AlertState {
     visible: boolean; 
     message: string; 
     type: "error" | "ok";
+    isMandatory?: boolean;
     id?: string;
     hasShared?: boolean;
     shareData?: {
@@ -43,6 +44,7 @@ interface AlertState {
         photoUrl: string;
         lat: number | null;
         lng: number | null;
+        duration?: string;
     };
 }
 
@@ -117,11 +119,15 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: 
                                     const d = alert.shareData!;
                                     // Add cache buster to ensure LINE fetches fresh OG image every time
                                     const shareLink = `${window.location.origin}/share/${alert.id}?t=${Date.now()}`;
-                                    const text = [
+                                    const textLines = [
                                         `📍 รายงานการเช็กอินนอกสถานที่: ${d.name}`,
-                                        `🕒 เวลา: ${d.time}`,
-                                        `📄 รายงานรายละเอียด: ${shareLink}`
-                                    ].join('\n');
+                                        `🕒 เวลา: ${d.time}`
+                                    ];
+                                    if (d.duration) {
+                                        textLines.push(`⏱️ ระยะเวลาที่อยู่: ${d.duration}`);
+                                    }
+                                    textLines.push(`📄 รายงานรายละเอียด: ${shareLink}`);
+                                    const text = textLines.join('\n');
                                     
                                     const shareUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
                                     window.open(shareUrl, '_blank');
@@ -134,7 +140,7 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: 
                         </>
                     )}
                     
-                    {(isErr || alert.hasShared) && (
+                    {(isErr || alert.hasShared || !alert.isMandatory) && (
                         <button className={`${styles.alertBtn} ${isErr ? styles.alertBtnErr : styles.alertBtnOk}`} onClick={() => onClose(false)} autoFocus>
                             {isErr ? "ตกลง" : "บันทึกเสร็จสมบูรณ์"}
                         </button>
@@ -190,7 +196,7 @@ export default function OffsiteCheckinPage() {
     const [me, setMe] = useState<Me | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [today, setToday] = useState<TodayItem[]>([]);
-    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false });
+    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false, isMandatory: false });
     const closeAlert = useCallback((sharedClick = false) => {
         if (sharedClick) {
             setAlert(p => ({ ...p, hasShared: true }));
@@ -281,9 +287,8 @@ export default function OffsiteCheckinPage() {
             const constraints = {
                 video: {
                     facingMode: facing,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    aspectRatio: { ideal: 1.7777777778 }
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
                 },
                 audio: false
             };
@@ -321,18 +326,28 @@ export default function OffsiteCheckinPage() {
         const v = videoRef.current, c = canvasRef.current, raw = rawCanvasRef.current;
         if (!v || !c || !raw) return null;
         const currentType = overrideType || checkType;
-        const w = v.videoWidth || 1280, h = v.videoHeight || 720;
+        const w = v.videoWidth, h = v.videoHeight;
+        if (!w || !h) return null;
+
         c.width = w; c.height = h;
         const ctx = c.getContext("2d");
-        if (!ctx) return null;
+        const rawCtx = raw.getContext("2d");
+        if (!ctx || !rawCtx) return null;
+
+        ctx.save();
+        if (facingMode === "user") {
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
+        }
 
         if (useRaw) {
             ctx.drawImage(raw, 0, 0);
         } else {
             raw.width = w; raw.height = h;
-            raw.getContext("2d")?.drawImage(v, 0, 0);
+            rawCtx.drawImage(v, 0, 0, w, h);
             ctx.drawImage(v, 0, 0, w, h);
         }
+        ctx.restore();
 
         const now = getThaiTime();
         const dStr = formatDateShortThai(now);
@@ -433,12 +448,28 @@ export default function OffsiteCheckinPage() {
             const dbData = await r.json();
             if (!r.ok) throw new Error(dbData.error || "DB_ERROR");
 
+            // Calculate duration for shared message if it's an OUT
+            let stayDuration = "";
+            if (targetType === "Offsite-Out") {
+                const matchIn = today.filter(x => x.type.startsWith("Offsite")).find(c =>
+                    c.type === "Offsite-In" &&
+                    (c.remark?.split(" | ")[0] || "") === locationName.trim()
+                );
+                if (matchIn) {
+                    const diffMs = new Date().getTime() - new Date(matchIn.timestamp).getTime();
+                    const mins = Math.floor(diffMs / 60000);
+                    const hrs = Math.floor(mins / 60);
+                    stayDuration = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
+                }
+            }
+
             setAlert({
                 visible: true,
                 type: "ok",
                 message: "บันทึกสำเร็จ",
                 id: dbData.id,
                 hasShared: false,
+                isMandatory: targetType === "Offsite-Out",
                 shareData: {
                     name: me.name,
                     type: targetType,
@@ -447,7 +478,8 @@ export default function OffsiteCheckinPage() {
                     remark: remark.trim(),
                     photoUrl: upData.url,
                     lat: gps.lat,
-                    lng: gps.lon
+                    lng: gps.lon,
+                    duration: stayDuration
                 }
             });
 

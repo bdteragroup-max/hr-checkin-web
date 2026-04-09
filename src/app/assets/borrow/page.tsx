@@ -65,11 +65,11 @@ export default function AssetBorrowPage() {
         setLoading(true);
         try {
             if (activeTab === "borrow") {
-                const res = await fetch("/api/assets/available");
+                const res = await fetch("/api/assets/available?category_exclude=Car");
                 const data = await res.json();
                 setAssets(Array.isArray(data) ? data : []);
             } else {
-                const res = await fetch("/api/assets/my");
+                const res = await fetch("/api/assets/my?category_exclude=Car");
                 const data = await res.json();
                 setMyBorrowings(Array.isArray(data) ? data : []);
             }

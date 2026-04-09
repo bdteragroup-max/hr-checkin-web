@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/supervisor-morning-report?secret=hr-checkin-secret-123",
+      "schedule": "0 2 * * 1-6"
+    },
+    {
+      "path": "/api/cron/daily-report?secret=hr-checkin-secret-123",
+      "schedule": "0 2 * * 1-6"
+    },
+    {
+      "path": "/api/cron/probation-reminders?secret=hr-checkin-secret-123",
+      "schedule": "0 2 * * 1-6"
+    }
+  ]
+}

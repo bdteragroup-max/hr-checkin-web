@@ -3,10 +3,21 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const { searchParams } = new URL(req.url);
+        const category = searchParams.get("category");
+        const categoryExclude = searchParams.get("category_exclude");
+
+        const whereClause: any = { status: "available" };
+        if (category) {
+            whereClause.category = category;
+        } else if (categoryExclude) {
+            whereClause.category = { not: categoryExclude };
+        }
+
         const availableAssets = await prisma.assets.findMany({
-            where: { status: "available" },
+            where: whereClause,
             orderBy: { name: "asc" }
         });
         return NextResponse.json(availableAssets);

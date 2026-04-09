@@ -6,7 +6,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const { id: idStr } = await params;
         const id = Number(idStr);
         const body = await req.json();
-        const { asset_id, name, category, description, status } = body;
+        const { 
+            asset_id, name, category, description, status,
+            company_owner, vehicle_type, brand, vehicle_model, main_user, usage_remark 
+        } = body;
 
         // Check if another asset uses the same asset_id
         if (asset_id) {
@@ -25,7 +28,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
                 name,
                 category,
                 description,
-                status
+                status,
+                company_owner: company_owner !== undefined ? company_owner : undefined,
+                vehicle_type: vehicle_type !== undefined ? vehicle_type : undefined,
+                brand: brand !== undefined ? brand : undefined,
+                vehicle_model: vehicle_model !== undefined ? vehicle_model : undefined,
+                main_user: main_user !== undefined ? main_user : undefined,
+                usage_remark: usage_remark !== undefined ? usage_remark : undefined
             }
         });
 

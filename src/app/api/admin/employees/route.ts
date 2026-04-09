@@ -58,6 +58,7 @@ type PatchEmployeeBody = {
     salary_type?: string | null;
     line_user_id?: string | null;
     is_checkin_exempt?: boolean;
+    resignation_date?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -120,7 +121,8 @@ export async function GET(req: Request) {
                 bank_account_no: true,
                 line_user_id: true,
                 salary_type: true,
-                is_checkin_exempt: true
+                is_checkin_exempt: true,
+                resignation_date: true
             },
         });
 
@@ -258,6 +260,16 @@ export async function PATCH(req: Request) {
 
         if (body.is_active !== undefined) {
             data.is_active = Boolean(body.is_active);
+            // If reactivating (is_active: true), clear resignation date
+            if (data.is_active) {
+                data.resignation_date = null;
+            }
+        }
+
+        if (body.resignation_date !== undefined) {
+            const rd = body.resignation_date ? clean(body.resignation_date) : null;
+            if (rd && !isISODate(rd)) return jsonError("RESIGNATION_DATE_INVALID", 400);
+            data.resignation_date = rd ? new Date(rd) : null;
         }
 
         if (body.gender !== undefined) {
@@ -373,6 +385,7 @@ export async function PATCH(req: Request) {
                 bank_account_no: true,
                 line_user_id: true,
                 is_checkin_exempt: true,
+                resignation_date: true,
             },
         });
 

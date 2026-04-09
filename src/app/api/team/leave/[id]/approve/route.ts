@@ -60,6 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
             minutes: updated.minutes,
             reason: updated.reason || "",
+            handoverPerson: (updated as any).handover_person || "",
             supervisorName: supervisor?.name || "หัวหน้างาน",
         }).catch(console.error);
 
@@ -72,6 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
+                handoverPerson: (updated as any).handover_person || "",
                 status: "pending_hr",
                 approvedBy: supervisor?.name || "หัวหน้างาน",
             }).catch(console.error);

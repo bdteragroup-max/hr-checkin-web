@@ -65,6 +65,20 @@ export async function POST(req: Request) {
         // 📢 LINE NOTIFICATION (Non-blocking)
         const sendNotification = async () => {
             try {
+                // Find ACT.Purchase&warehouse Mgr. to notify as well
+                const warehouseMgrs = await prisma.employees.findMany({
+                    where: {
+                        job_positions: {
+                            title: "ACT.Purchase&warehouse Mgr."
+                        },
+                        is_active: true
+                    },
+                    select: { line_user_id: true }
+                });
+                const extraIds = warehouseMgrs
+                    .map(m => m.line_user_id)
+                    .filter(id => !!id) as string[];
+
                 const { sendAssetReturnNotification } = await import("@/utils/lineMessaging");
                 await sendAssetReturnNotification({
                     empName: borrowing.employee.name,
@@ -76,7 +90,8 @@ export async function POST(req: Request) {
                     condition: condition_at_return || "ปกติ",
                     isDamaged: is_damaged || false,
                     photoUrl: photo_url_return ?? undefined,
-                    location: borrowing.location ?? undefined
+                    location: borrowing.location ?? undefined,
+                    extraTargetIds: extraIds
                 });
             } catch (err) {
                 console.error("[API/assets/return] Notification Error:", err);

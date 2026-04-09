@@ -62,6 +62,20 @@ export async function POST(req: Request) {
         // 📢 LINE NOTIFICATION (Non-blocking)
         const sendNotification = async () => {
             try {
+                // Find ACT.Purchase&warehouse Mgr. to notify as well
+                const warehouseMgrs = await prisma.employees.findMany({
+                    where: {
+                        job_positions: {
+                            title: "ACT.Purchase&warehouse Mgr."
+                        },
+                        is_active: true
+                    },
+                    select: { line_user_id: true }
+                });
+                const extraIds = warehouseMgrs
+                    .map(m => m.line_user_id)
+                    .filter(id => !!id) as string[];
+
                 const { sendAssetBorrowNotification } = await import("@/utils/lineMessaging");
                 await sendAssetBorrowNotification({
                     empName: employee.name,
@@ -72,7 +86,8 @@ export async function POST(req: Request) {
                     borrowDate: new Date(borrow_date).toLocaleDateString("th-TH"),
                     returnDate: new Date(expected_return_date).toLocaleDateString("th-TH"),
                     location: location || "ไม่ได้ระบุ",
-                    photoUrl: photo_url_borrow ?? undefined
+                    photoUrl: photo_url_borrow ?? undefined,
+                    extraTargetIds: extraIds
                 });
             } catch (notifyError) {
                 console.error("[API/assets/borrow] Notification Error:", notifyError);

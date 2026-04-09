@@ -43,6 +43,7 @@ type Emp = {
     address?: string | null;
     bank_account_no?: string | null;
     bank_name?: string | null;
+    resignation_date?: string | null;
     salary_type?: string | null;
     line_user_id?: string | null;
     is_checkin_exempt: boolean;
@@ -73,6 +74,7 @@ type EditDraft = {
     line_user_id: string;
     is_checkin_exempt: boolean;
     probation_end_date: string;
+    resignation_date: string;
 };
 
 type Department = { id: number; name: string };
@@ -242,6 +244,13 @@ export default function AdminEmployeesPage() {
     /* ── update (from modal) ── */
     async function saveEdit() {
         if (!editDraft) return;
+
+        // Validation for resignation date
+        if (!editDraft.is_active && !editDraft.resignation_date) {
+            showToast("กรุณาระบุวันที่ลาออก", "bad");
+            return;
+        }
+
         setSaving(true);
         try {
             const r = await fetch("/api/admin/employees", {
@@ -271,6 +280,7 @@ export default function AdminEmployeesPage() {
                     line_user_id: editDraft.line_user_id.trim() || null,
                     is_checkin_exempt: editDraft.is_checkin_exempt,
                     probation_end_date: editDraft.is_on_trial && editDraft.probation_end_date ? editDraft.probation_end_date : null,
+                    resignation_date: !editDraft.is_active ? editDraft.resignation_date : null,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -293,6 +303,38 @@ export default function AdminEmployeesPage() {
     /* ── quick toggle active (inline) ── */
     async function toggleActive(x: Emp) {
         const next = !x.is_active;
+
+        // If deactivating, open edit modal instead to force resignation date
+        if (!next) {
+            setEditDraft({
+                emp_id: x.emp_id,
+                name: x.name,
+                branch_id: x.branch_id ?? "",
+                gender: x.gender ?? "M",
+                hire_date: x.hire_date ? String(x.hire_date).slice(0, 10) : "",
+                birth_date: x.birth_date ? String(x.birth_date).slice(0, 10) : "",
+                phone_number: x.phone_number ?? "",
+                is_active: false,
+                department_id: x.department_id ?? 0,
+                job_position_id: x.job_position_id ?? 0,
+                base_salary: x.base_salary ? String(x.base_salary) : "",
+                supervisor_id: x.supervisor_id ?? "",
+                is_on_trial: x.is_on_trial,
+                has_telephone_allowance: x.has_telephone_allowance,
+                position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                national_id_card: x.national_id_card || "",
+                address: x.address || "",
+                bank_account_no: x.bank_account_no || "",
+                bank_name: x.bank_name || "",
+                salary_type: x.salary_type || "monthly",
+                line_user_id: x.line_user_id || "",
+                is_checkin_exempt: x.is_checkin_exempt || false,
+                probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
+                resignation_date: new Date().toISOString().split("T")[0], // Default to today
+            });
+            return;
+        }
+
         setSaving(true);
         try {
             const r = await fetch("/api/admin/employees", {
@@ -529,6 +571,11 @@ export default function AdminEmployeesPage() {
                                                     <span className={x.is_active ? styles.badgeActive : styles.badgeInactive}>
                                                         {x.is_active ? "ใช้งาน" : "ปิดใช้งาน"}
                                                     </span>
+                                                    {!x.is_active && x.resignation_date && (
+                                                        <div style={{ fontSize: 10, color: "var(--red)", marginTop: 4, fontWeight: 600 }}>
+                                                            ออกเมื่อ: {formatDateThai(x.resignation_date)}
+                                                        </div>
+                                                    )}
                                                 </td>
 
                                                 {/* ── Manage Column ── */}
@@ -563,6 +610,7 @@ export default function AdminEmployeesPage() {
                                                                     line_user_id: x.line_user_id || "",
                                                                     is_checkin_exempt: x.is_checkin_exempt || false,
                                                                     probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
+                                                                    resignation_date: x.resignation_date ? String(x.resignation_date).slice(0, 10) : "",
                                                                 });
                                                             }}
                                                         >
@@ -1001,11 +1049,43 @@ export default function AdminEmployeesPage() {
                             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                                 <input type="checkbox"
                                     checked={editDraft.is_active}
-                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, is_active: e.target.checked }))}
+                                    onChange={(e) => {
+                                        const active = e.target.checked;
+                                        setEditDraft((d) => d && ({ 
+                                            ...d, 
+                                            is_active: active,
+                                            resignation_date: active ? "" : (d.resignation_date || new Date().toISOString().split("T")[0])
+                                        }));
+                                    }}
                                     style={{ accentColor: "var(--ok)", width: 18, height: 18, cursor: "pointer" }} />
                                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-2)" }}>Active</span>
                             </label>
                         </div>
+
+                        {!editDraft.is_active && (
+                            <div style={{
+                                marginTop: -12, marginBottom: 20, padding: 16,
+                                background: "rgba(239, 68, 68, 0.05)",
+                                border: "1px solid rgba(239, 68, 68, 0.1)",
+                                borderRadius: "0 0 12px 12px",
+                                borderTop: "none"
+                            }}>
+                                <label className={styles.lbl} style={{ color: "var(--red)", fontWeight: 700 }}>
+                                    <ExclamationTriangleIcon width={14} style={{ display: "inline-block", verticalAlign: "text-bottom", marginRight: 4 }} />
+                                    ระบุวันที่ลาออก (วันที่ออกจริง) <span style={{ color: "var(--red)" }}>* บังคับ</span>
+                                </label>
+                                <input 
+                                    type="date" 
+                                    className={styles.input} 
+                                    style={{ border: "1px solid var(--red)", background: "#fff" }}
+                                    value={editDraft.resignation_date}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, resignation_date: e.target.value }))}
+                                />
+                                <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 6 }}>
+                                    * เมื่อบันทึกแล้ว ข้อมูลจะไม่สามารถลงเวลาได้ และจะแสดงวันที่ออกในรายงาน
+                                </div>
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className={styles.modalActions}>

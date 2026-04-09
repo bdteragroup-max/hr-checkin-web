@@ -65,6 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 minutes: updated.minutes,
                 reason: updated.reason || "",
+                handoverPerson: (updated as any).handover_person || "",
                 status: "rejected",
                 approvedBy: supervisor?.name || "หัวหน้างาน",
                 rejectionReason: rejectReason || "หัวหน้างานไม่อนุมัติ",
