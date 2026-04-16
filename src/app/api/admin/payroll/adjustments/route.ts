@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
         const {
             emp_id, cycle_month, cycle_year,
-            social_security, student_loan, unpaid_absenteeism, tax, commissions, bonus, other_deductions, other_benefits, override_salary,
+            social_security, student_loan, insurance, insurance_income, unpaid_absenteeism, tax, commissions, bonus, other_deductions, other_benefits, override_salary,
             normal_1_5x_hours_override, holiday_1_x_hours_override, holiday_3_x_hours_override,
             diligence_allowance_override, meal_allowance_override, travel_allowance_override,
             accommodation_allowance_override, phone_allowance_override, position_allowance_override,
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
         const dataInput = {
             social_security: clean(social_security) || 0,
             student_loan: clean(student_loan) || 0,
+            insurance: clean(insurance) || 0,
+            insurance_income: clean(insurance_income) || 0,
             unpaid_absenteeism: clean(unpaid_absenteeism) || 0,
             tax: clean(tax) || 0,
             commissions: clean(commissions) || 0,

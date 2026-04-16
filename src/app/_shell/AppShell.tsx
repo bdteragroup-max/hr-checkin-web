@@ -19,7 +19,8 @@ import {
     CalendarDaysIcon,
     GlobeAltIcon,
     MapPinIcon,
-    CubeIcon
+    CubeIcon,
+    DocumentTextIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
@@ -32,6 +33,7 @@ const NAV_MAIN_BASE = [
     { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },
     { id: "car-borrow", href: "/car-borrow", icon: TruckIcon, label: "จองรถยนต์", sub: "Car Booking" },
     { id: "assets", href: "/assets/borrow", icon: CubeIcon, label: "ยืมอุปกรณ์", sub: "Borrow" },
+    { id: "payslip", href: "/payslip", icon: DocumentTextIcon, label: "สลิปเงินเดือน", sub: "My Payslips" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
@@ -41,6 +43,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const [collapsed, setCollapsed] = useState(false);
     const [isSupervisor, setIsSupervisor] = useState(false);
     const [baseSalary, setBaseSalary] = useState(0);
+    const [hasPayslip, setHasPayslip] = useState(false);
     const [birthMonth, setBirthMonth] = useState<number | null>(null); // 0-11
     const pathname = usePathname();
 
@@ -51,6 +54,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             .then(d => {
                 setIsSupervisor(!!d?.is_supervisor);
                 setBaseSalary(Number(d?.base_salary) || 0);
+                setHasPayslip(!!d?.has_published_payslips);
                 if (d?.birth_date) {
                     const bDate = new Date(d.birth_date);
                     setBirthMonth(bDate.getMonth());
@@ -62,6 +66,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const navMain = NAV_MAIN_BASE.filter(item => {
         // Hide OT for salary > 20000
         if (item.id === "ot" && baseSalary > 20000) return false;
+
+        // Hide Payslip if no published payslips
+        if (item.id === "payslip" && !hasPayslip) return false;
 
         // Hide Birthday if not birth month
         if (item.id === "birthday") {

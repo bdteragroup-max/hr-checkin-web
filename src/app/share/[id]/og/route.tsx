@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { UserIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 export const runtime = "edge"; // 🚀 Use Edge runtime for fastest performance (no Prisma needed)
 
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
                                 fontSize: 100,
                             }}
                         >
-                            👤
+                            <UserIcon width={120} height={120} color="#cbd5e1" strokeWidth={1} />
                         </div>
                     )}
                 </div>
@@ -177,7 +178,8 @@ export async function GET(request: NextRequest) {
                                     gap: "8px",
                                 }}
                             >
-                                🕒 {timeStr}
+                                <ClockIcon width={28} height={28} strokeWidth={2} />
+                                {timeStr}
                             </div>
                         </div>
 

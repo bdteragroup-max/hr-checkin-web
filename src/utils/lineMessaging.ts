@@ -1087,3 +1087,53 @@ export async function sendAssetReturnNotification(
   );
   return results.every(r => r);
 }
+
+export async function sendPayslipNotification(lineUserId: string, data: {
+  empName: string;
+  month: number;
+  year: number;
+}) {
+  const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  const monthName = THAI_MONTHS[data.month - 1] || `${data.month}`;
+  const yearTh = data.year + 543;
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "แจ้งเตือนสลิปเงินเดือน", weight: "bold", size: "lg", color: "#1d4ed8" }
+      ],
+      backgroundColor: "#eff6ff"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประจำเดือน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${monthName} ${yearTh}`, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "text", text: "สลิปเงินเดือนของคุณได้รับการอนุมัติ และพร้อมให้ดาวน์โหลดผ่านระบบ HR แล้ว", color: "#64748b", size: "xs", margin: "md", wrap: true }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#d93025",
+          action: {
+            type: "uri",
+            label: "ดาวน์โหลดสลิป",
+            uri: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://hr.teragroup.co.th'}/payslip`
+          }
+        }
+      ]
+    }
+  };
+
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `สลิปเงินเดือน ${monthName} ออกแล้ว`, contents }]);
+}

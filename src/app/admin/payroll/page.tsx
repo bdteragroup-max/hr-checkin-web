@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
-import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 
 type PayrollResult = {
     emp_id: string;
@@ -41,6 +41,7 @@ type PayrollResult = {
     ot_amount: number;
     social_security: number;
     student_loan: number;
+    insurance: number;
     unpaid_absenteeism: number;
     tax: number;
     commissions: number;
@@ -54,14 +55,17 @@ type PayrollResult = {
     bank_name: string;
     bank_account_no: string;
     is_on_trial: boolean;
+    is_published?: boolean;
+    raw_adjustments?: any;
 };
 
 export default function PayrollPage() {
     const [month, setMonth] = useState(new Date().getMonth() + 1); // 1-12
     const [year, setYear] = useState(new Date().getFullYear());
     const [data, setData] = useState<PayrollResult[]>([]);
-    const [cycle, setCycle] = useState<{ start: string; end: string } | null>(null);
+    const [cycle, setCycle] = useState<{ start: string; end: string; is_published?: boolean } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [publishing, setPublishing] = useState(false);
 
     // Edit Modal State
     const [showModal, setShowModal] = useState(false);
@@ -81,6 +85,7 @@ export default function PayrollPage() {
         travel_accommodation_override: "",
         social_security: "",
         student_loan: "",
+        insurance: "",
         unpaid_absenteeism: "",
         tax: "",
         commissions: "",
@@ -92,27 +97,32 @@ export default function PayrollPage() {
 
     const openEditModal = (emp: PayrollResult) => {
         setEditingEmp(emp);
+        const raw = emp.raw_adjustments || {};
+        const v = (val: any) => (val !== null && val !== undefined) ? String(val) : "";
+
         setEditForm({
-            override_salary: emp.is_salary_overridden ? String(emp.base_salary) : "",
-            normal_1_5x_hours_override: String(emp.normal_1_5x_hours || ""),
-            holiday_1_x_hours_override: String(emp.holiday_1x_hours || ""),
-            holiday_3_x_hours_override: String(emp.holiday_3x_hours || ""),
-            diligence_allowance_override: String(emp.diligence_allowance || ""),
-            meal_allowance_override: String(emp.meal_allowance || ""),
-            travel_allowance_override: String(emp.travel_allowance || ""),
-            accommodation_allowance_override: String(emp.accommodation_allowance || ""),
-            phone_allowance_override: String(emp.telephone_allowance || ""),
-            position_allowance_override: String(emp.position_allowance || ""),
-            travel_site_allowance_override: String(emp.travel_site_allowance || ""),
-            travel_accommodation_override: String(emp.travel_accommodation || ""),
-            social_security: String(emp.social_security || 0),
-            student_loan: String(emp.student_loan || 0),
-            unpaid_absenteeism: String(emp.unpaid_absenteeism || 0),
-            tax: String(emp.tax || 0),
-            commissions: String(emp.commissions || 0),
-            bonus: String(emp.bonus || 0),
-            other_deductions: String(emp.other_deductions || 0),
-            other_benefits: String(emp.other_benefits || 0)
+            override_salary: v(raw.override_salary),
+            normal_1_5x_hours_override: v(raw.normal_1_5x_hours_override),
+            holiday_1_x_hours_override: v(raw.holiday_1_x_hours_override),
+            holiday_3_x_hours_override: v(raw.holiday_3_x_hours_override),
+            diligence_allowance_override: v(raw.diligence_allowance_override),
+            meal_allowance_override: v(raw.meal_allowance_override),
+            travel_allowance_override: v(raw.travel_allowance_override),
+            accommodation_allowance_override: v(raw.accommodation_allowance_override),
+            phone_allowance_override: v(raw.phone_allowance_override),
+            position_allowance_override: v(raw.position_allowance_override),
+            travel_site_allowance_override: v(raw.travel_site_allowance_override),
+            travel_accommodation_override: v(raw.travel_accommodation_override),
+            social_security: raw.social_security !== null && raw.social_security !== undefined && Number(raw.social_security) !== 0 ? String(raw.social_security) : "",
+            student_loan: raw.student_loan !== null && raw.student_loan !== undefined && Number(raw.student_loan) !== 0 ? String(raw.student_loan) : "",
+            insurance: raw.insurance !== null && raw.insurance !== undefined && Number(raw.insurance) !== 0 ? String(raw.insurance) : "",
+            insurance_income: raw.insurance_income !== null && raw.insurance_income !== undefined && Number(raw.insurance_income) !== 0 ? String(raw.insurance_income) : "",
+            unpaid_absenteeism: raw.unpaid_absenteeism !== null && raw.unpaid_absenteeism !== undefined && Number(raw.unpaid_absenteeism) !== 0 ? String(raw.unpaid_absenteeism) : "",
+            tax: raw.tax !== null && raw.tax !== undefined && Number(raw.tax) !== 0 ? String(raw.tax) : "",
+            commissions: raw.commissions !== null && raw.commissions !== undefined && Number(raw.commissions) !== 0 ? String(raw.commissions) : "",
+            bonus: raw.bonus !== null && raw.bonus !== undefined && Number(raw.bonus) !== 0 ? String(raw.bonus) : "",
+            other_deductions: raw.other_deductions !== null && raw.other_deductions !== undefined && Number(raw.other_deductions) !== 0 ? String(raw.other_deductions) : "",
+            other_benefits: raw.other_benefits !== null && raw.other_benefits !== undefined && Number(raw.other_benefits) !== 0 ? String(raw.other_benefits) : ""
         });
         setShowModal(true);
     };
@@ -139,6 +149,8 @@ export default function PayrollPage() {
                 travel_accommodation_override: editForm.travel_accommodation_override,
                 social_security: editForm.social_security,
                 student_loan: editForm.student_loan,
+                insurance: editForm.insurance,
+                insurance_income: editForm.insurance_income,
                 unpaid_absenteeism: editForm.unpaid_absenteeism,
                 tax: editForm.tax,
                 commissions: editForm.commissions,
@@ -190,7 +202,55 @@ export default function PayrollPage() {
         loadData();
     }, [month, year]);
 
+    const handlePublish = async (emp_id: string, publishStatus: boolean) => {
+        if (!confirm(publishStatus ? `ยืนยันการเผยแพร่สลิปเงินเดือนให้พนักงานคนนี้?` : `ยืนยันการยกเลิกเผยแพร่?`)) return;
+        setPublishing(true);
+        try {
+            const res = await fetch("/api/admin/payroll/publish", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ month, year, emp_id, is_published: publishStatus })
+            });
+            if (res.ok) {
+                loadData();
+            } else {
+                alert("เกิดข้อผิดพลาด");
+            }
+        } catch (e) {
+            alert("Error");
+        }
+        setPublishing(false);
+    };
+
+    const handlePublishBatch = async (companyTitle: string, items: PayrollResult[], targetStatus: boolean) => {
+        if (!confirm(`ยืนยันการ${targetStatus ? 'เผยแพร่' : 'ยกเลิกเผยแพร่'}สลิปเงินเดือนทั้งหมดให้กับพนักงานใน ${companyTitle} จำนวน ${items.length} คน?`)) return;
+        setPublishing(true);
+        try {
+            let changesMade = false;
+            for (const emp of items) {
+                if (Boolean(emp.is_published) === targetStatus) continue;
+                changesMade = true;
+                await fetch("/api/admin/payroll/publish", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ month, year, emp_id: emp.emp_id, is_published: targetStatus })
+                });
+            }
+            if (changesMade) loadData();
+        } catch (e) {
+            alert("เกิดข้อผิดพลาดในการตั้งค่า");
+        }
+        setPublishing(false);
+    };
+
     const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num));
+
+    const groupedData = [
+        { title: "บริษัท เทอรา กรุ๊ป จำกัด (TG)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TG")) },
+        { title: "บริษัท เทอรา อิเลคทริค จำกัด (TE)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TE")) },
+        { title: "บริษัท เทอรา พาวเวอร์ จำกัด (TP)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TP")) },
+        { title: "บริษัทอื่นๆ", items: data.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2))) }
+    ].filter(g => g.items.length > 0);
 
     if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูลเงินเดือน...</div>;
 
@@ -217,9 +277,27 @@ export default function PayrollPage() {
                 </div>
             </div>
 
-            <div className={styles.card}>
-                <div className={styles.tableWrap}>
-                    <table className={styles.table}>
+            {groupedData.length === 0 ? (
+                <div className={styles.card} style={{ padding: "40px", textAlign: "center", color: "var(--text3)", background: "white", borderRadius: "12px", border: "1px solid var(--line)" }}>
+                    ไม่มีข้อมูลพนักงาน หรือข้อมูลการทำงานในรอบนี้
+                </div>
+            ) : (
+                groupedData.map((group, gIdx) => (
+                    <div key={gIdx} className={styles.card} style={{ marginBottom: 24, overflow: "hidden" }}>
+                        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--gray-50)", display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)" }}></div>
+                            <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{group.title}</h2>
+                            <span style={{ color: "var(--text3)", fontSize: 14, fontWeight: 500 }}>({group.items.length} คน)</span>
+                            <div style={{ flex: 1 }}></div>
+                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => handlePublishBatch(group.title, group.items, false)} disabled={publishing || loading}>
+                                ยกเลิก Publish ทั้งหมด
+                            </button>
+                            <button className={styles.btnPrimary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => handlePublishBatch(group.title, group.items, true)} disabled={publishing || loading}>
+                                <PaperAirplaneIcon width={14} /> Publish ทั้งหมด
+                            </button>
+                        </div>
+                        <div className={styles.tableWrap}>
+                            <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th>พนักงาน (ID)</th>
@@ -247,6 +325,7 @@ export default function PayrollPage() {
                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หัก กยศ.</th>
+                                <th className={styles.thRight} style={{ minWidth: 90 }}>ประกันทำงาน</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>ขาดงาน</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>ภาษี</th>
                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักอื่นๆ</th>
@@ -256,12 +335,7 @@ export default function PayrollPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {data.length === 0 && (
-                                <tr>
-                                    <td colSpan={9} className={styles.empty}>ไม่มีข้อมูลพนักงาน หรือข้อมูลการทำงานในรอบนี้</td>
-                                </tr>
-                            )}
-                            {data.map(p => (
+                            {group.items.map(p => (
                                 <tr key={p.emp_id}>
                                     <td style={{ whiteSpace: "nowrap" }}>
                                         <span className={styles.bold}>{p.name}</span> <span style={{ fontSize: 12, color: "var(--text3)" }}>({p.emp_id})</span>
@@ -398,6 +472,11 @@ export default function PayrollPage() {
                                         </span>
                                     </td>
                                     <td className={styles.tdRight}>
+                                        <span style={{ fontWeight: 600, color: p.insurance > 0 ? "var(--red)" : "inherit" }}>
+                                            {p.insurance > 0 ? "-" + formatB(p.insurance) : "-"}
+                                        </span>
+                                    </td>
+                                    <td className={styles.tdRight}>
                                         <span style={{ fontWeight: 600, color: p.unpaid_absenteeism > 0 ? "var(--red)" : "inherit" }}>
                                             {p.unpaid_absenteeism > 0 ? "-" + formatB(p.unpaid_absenteeism) : "-"}
                                         </span>
@@ -421,16 +500,27 @@ export default function PayrollPage() {
                                         <div style={{ fontSize: 13, fontWeight: 600 }}>{p.bank_name}</div>
                                         <div style={{ fontSize: 12, color: "var(--text3)" }}>{p.bank_account_no}</div>
                                     </td>
-                                    <td>
+                                    <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                                         <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => openEditModal(p)}>
                                             <PencilSquareIcon width={14} /> จัดการ
+                                        </button>
+                                        <button 
+                                            className={p.is_published ? styles.btnSecondary : styles.btnPrimary} 
+                                            style={{ padding: "4px 8px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }} 
+                                            onClick={() => handlePublish(p.emp_id, !p.is_published)}
+                                            disabled={publishing || loading}
+                                        >
+                                            {p.is_published ? "ยกเลิก Publish" : <><PaperAirplaneIcon width={12} /> Publish</>}
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                </div>
+                        </div>
+                    </div>
+                ))
+            )}
 
                 {showModal && editingEmp && (
                     <div className={styles.modalOverlay}>
@@ -520,6 +610,10 @@ export default function PayrollPage() {
                                             <label className={styles.inputLabel}>รายได้อื่นๆ</label>
                                             <input className={styles.inputElement} type="number" value={editForm.other_benefits} onChange={e => setEditForm({ ...editForm, other_benefits: e.target.value })} />
                                         </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ประกันทำงาน (คืน)</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.insurance_income} onChange={e => setEditForm({ ...editForm, insurance_income: e.target.value })} />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -538,6 +632,10 @@ export default function PayrollPage() {
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>กยศ.</label>
                                             <input className={styles.inputElement} type="number" value={editForm.student_loan} onChange={e => setEditForm({ ...editForm, student_loan: e.target.value })} />
+                                        </div>
+                                        <div className={styles.inputField}>
+                                            <label className={styles.inputLabel}>ประกันทำงาน</label>
+                                            <input className={styles.inputElement} type="number" value={editForm.insurance} onChange={e => setEditForm({ ...editForm, insurance: e.target.value })} />
                                         </div>
                                         <div className={styles.inputField}>
                                             <label className={styles.inputLabel}>ขาดงาน (หัก)</label>
@@ -569,7 +667,6 @@ export default function PayrollPage() {
                         </div>
                     </div>
                 )}
-            </div>
         </div>
     );
 }

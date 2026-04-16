@@ -14,6 +14,9 @@ export async function GET() {
     if (!emp) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
     const subsCount = await prisma.employees.count({ where: { supervisor_id: emp.emp_id } });
+    const publishedPayslipCount = await prisma.monthly_payroll_data.count({
+        where: { emp_id: payload.emp_id, is_published: true }
+    });
 
     return NextResponse.json({
         emp_id: emp.emp_id,
@@ -22,6 +25,7 @@ export async function GET() {
         is_supervisor: subsCount > 0,
         base_salary: Number(emp.base_salary),
         birth_date: emp.birth_date,
-        line_user_id: emp.line_user_id
+        line_user_id: emp.line_user_id,
+        has_published_payslips: publishedPayslipCount > 0
     });
 }

@@ -228,7 +228,7 @@ export async function GET(req: Request) {
                     backgroundColor: "#fef2f2",
                     paddingAll: "16px",
                     contents: [
-                        { type: "text", text: "📊 สรุปพนักงานที่ไม่มาลงเวลา", weight: "bold", size: "lg", color: "#b91c1c" },
+                        { type: "text", text: "สรุปพนักงานที่ไม่มาลงเวลา", weight: "bold", size: "lg", color: "#b91c1c" },
                         { type: "text", text: `ประจำวันที่ ${bkk.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "sm", color: "#6b7280", margin: "sm" },
                     ]
                 },

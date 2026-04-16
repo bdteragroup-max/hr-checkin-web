@@ -359,6 +359,8 @@ export async function GET(request: Request) {
                 }
             }
 
+            const insurance = Number(adj?.insurance || 0);
+
             const tax = Number(adj?.tax || 0);
             const commissions = Number(adj?.commissions || 0);
             const bonus = Number(adj?.bonus || 0);
@@ -366,7 +368,7 @@ export async function GET(request: Request) {
             const other_benefits = Number(adj?.other_benefits || 0);
 
             const grossPay = netPayCalculated + commissions + bonus + other_benefits;
-            const finalNetPay = grossPay - social_security - student_loan - other_deductions - unpaid_absenteeism - tax;
+            const finalNetPay = grossPay - social_security - student_loan - insurance - other_deductions - unpaid_absenteeism - tax;
 
             return {
                 emp_id: emp.emp_id,
@@ -406,6 +408,7 @@ export async function GET(request: Request) {
                 ot_amount: totalOtAmount,
                 social_security,
                 student_loan,
+                insurance,
                 unpaid_absenteeism,
                 tax,
                 commissions,
@@ -416,15 +419,20 @@ export async function GET(request: Request) {
                 net_pay: finalNetPay,
                 bank_name: (emp as any).bank_name || "-",
                 bank_account_no: (emp as any).bank_account_no || "-",
+                is_published: adj?.is_published || false,
+                raw_adjustments: adj || null,
             };
         });
+
+        const isPublished = adjustments.length > 0 ? adjustments[0].is_published : false;
 
         return NextResponse.json({
             cycle: {
                 start: startDate.toISOString(),
                 end: endDate.toISOString(),
                 month,
-                year
+                year,
+                is_published: isPublished
             },
             list: results
         });
