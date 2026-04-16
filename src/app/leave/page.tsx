@@ -181,6 +181,7 @@ export default function LeavePage() {
     const [endMin, setEndMin] = useState("00");
     const [handoverPerson, setHandoverPerson] = useState("");
     const [colleagues, setColleagues] = useState<string[]>([]);
+    const [holidays, setHolidays] = useState<string[]>([]);
 
     const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
     const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
@@ -189,8 +190,8 @@ export default function LeavePage() {
         if (!startAt || !endAt) return 0;
         // The helper in src/utils/time.ts already has the Saturday padding logic
         const { calcWorkingMinutes } = require("@/utils/time");
-        return calcWorkingMinutes(new Date(startAt), new Date(endAt));
-    }, [startAt, endAt]);
+        return calcWorkingMinutes(new Date(startAt), new Date(endAt), holidays);
+    }, [startAt, endAt, holidays]);
 
     const handlePresetDuration = (days: number) => {
         let current = startDate ? new Date(startDate) : new Date();
@@ -248,9 +249,9 @@ export default function LeavePage() {
     const requireAttachment = useMemo(() => selectedType?.id === "sick", [selectedType]);
 
     const canSubmit = useMemo(() => {
-        if (!leaveTypeId || !startDate || !endDate || !handoverPerson || loading || uploading) return false;
+        if (!leaveTypeId || !startDate || !endDate || !handoverPerson || !reason || reason.trim() === "" || loading || uploading) return false;
         return true;
-    }, [leaveTypeId, startDate, endDate, handoverPerson, loading, uploading]);
+    }, [leaveTypeId, startDate, endDate, handoverPerson, reason, loading, uploading]);
 
     const currentMinDate = useMemo(() => {
         if (!selectedType) return "";
@@ -274,6 +275,20 @@ export default function LeavePage() {
         setList(data.list || []);
         setColleagues(data.colleagues || []);
         if (!leaveTypeId && loadedTypes.length > 0) setLeaveTypeId(loadedTypes[0].id);
+
+        const r2 = await fetch("/api/holidays", { cache: "no-store" });
+        if (r2.ok) {
+            const hData = await r2.json().catch(() => ({}));
+            const hDates = (hData.list || []).map((h: any) => {
+                // Ensure date string is properly formatted as YYYY-MM-DD in local time
+                const d = new Date(h.date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            });
+            setHolidays(hDates);
+        }
     }
 
     async function uploadFile(file: File) {
@@ -330,6 +345,7 @@ export default function LeavePage() {
         setLoading(false);
         if (!r.ok) {
             const errMap: Record<string, string> = {
+                MISSING_REASON: "กรุณาระบุเหตุผลการลาเสมอ",
                 OVERLAP_LEAVE: "ช่วงเวลาลาซ้อนกับใบลาที่มีอยู่แล้ว",
                 ZERO_WORKING_DAYS: "ช่วงที่เลือกไม่มีวันทำงาน (ติดวันหยุด/อาทิตย์)",
                 END_BEFORE_START: "เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม",
@@ -572,8 +588,8 @@ export default function LeavePage() {
 
                         {/* Reason & Action */}
                         <div style={{ marginBottom: 16 }}>
-                            <label className={styles.label}>เหตุผลการลา (ถ้ามี)</label>
-                            <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุรายละเอียดที่จำเป็น..." />
+                            <label className={styles.label}>เหตุผลการลา *</label>
+                            <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุรายละเอียดที่จำเป็น..." required />
                         </div>
 
                         <div className={styles.uploadBox}>

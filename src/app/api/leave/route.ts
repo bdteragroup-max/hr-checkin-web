@@ -84,12 +84,12 @@ async function countWorkingDaysBangkokInclusive(startAt: Date, endAt: Date) {
 /**
  * Calculates net working minutes (DEPRECATED - use calcWorkingMinutes from @/utils/time)
  */
-function calcMinutes(startAt: Date, endAt: Date) {
-    return calcWorkingMinutes(startAt, endAt);
+function calcMinutes(startAt: Date, endAt: Date, holidayDates: string[] = []) {
+    return calcWorkingMinutes(startAt, endAt, holidayDates);
 }
 
-export async function calculateEntitlements(empId: string, hireDate: Date | null, isOnTrial: boolean = false) {
-    const now = new Date();
+export async function calculateEntitlements(empId: string, hireDate: Date | null, isOnTrial: boolean = false, baseDate: Date = new Date()) {
+    const now = baseDate;
     const currentYear = now.getFullYear();
     const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
 
@@ -273,6 +273,10 @@ export async function POST(req: Request) {
     if (!leave_type_id || !start_at_s || !end_at_s || !handover_person) {
         return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 });
     }
+    
+    if (!reason || reason.trim() === "") {
+        return NextResponse.json({ error: "MISSING_REASON" }, { status: 400 });
+    }
 
     const def = LEAVE_TYPES.find((x) => x.id === leave_type_id);
     if (!def) return NextResponse.json({ error: "INVALID_LEAVE_TYPE" }, { status: 400 });
@@ -326,7 +330,10 @@ export async function POST(req: Request) {
     });
     if (overlap) return NextResponse.json({ error: "OVERLAP_LEAVE" }, { status: 409 });
 
-    const minutes = calcMinutes(startAt, endAt);
+    const holidays = await prisma.holidays.findMany({ select: { date: true } });
+    const holidayDates = holidays.map(h => toDateKeyBangkok(h.date));
+
+    const minutes = calcMinutes(startAt, endAt, holidayDates);
     if (minutes <= 0) return NextResponse.json({ error: "ZERO_MINUTES" }, { status: 400 });
 
     const days = await countWorkingDaysBangkokInclusive(startAt, endAt);
@@ -343,7 +350,7 @@ export async function POST(req: Request) {
     }
 
     // Quota validation
-        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
+        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial, startAt);
         
         const quotaMins = quotas[leave_type_id];
         const usedMins = used[leave_type_id] || 0;
@@ -498,6 +505,10 @@ export async function PUT(req: Request) {
     const handover_person = body?.handover_person !== undefined ? String(body.handover_person).trim() : (existing as any).handover_person;
 
     if (!handover_person) return NextResponse.json({ error: "MISSING_HANDOVER_PERSON" }, { status: 400 });
+    
+    if (!reason || reason.trim() === "") {
+        return NextResponse.json({ error: "MISSING_REASON" }, { status: 400 });
+    }
 
     const def = LEAVE_TYPES.find((x) => x.id === leave_type_id);
     if (!def) return NextResponse.json({ error: "INVALID_LEAVE_TYPE" }, { status: 400 });
@@ -548,7 +559,10 @@ export async function PUT(req: Request) {
     });
     if (overlap) return NextResponse.json({ error: "OVERLAP_LEAVE" }, { status: 409 });
 
-    const minutes = calcMinutes(startAt, endAt);
+    const holidays = await prisma.holidays.findMany({ select: { date: true } });
+    const holidayDates = holidays.map(h => toDateKeyBangkok(h.date));
+
+    const minutes = calcMinutes(startAt, endAt, holidayDates);
     if (minutes <= 0) return NextResponse.json({ error: "ZERO_MINUTES" }, { status: 400 });
 
     const days = await countWorkingDaysBangkokInclusive(startAt, endAt);
@@ -576,7 +590,7 @@ export async function PUT(req: Request) {
     */
 
     if (["annual", "personal", "sick"].includes(leave_type_id)) {
-        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
+        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial, startAt);
 
         if (leave_type_id in quotas) {
             const entMins = quotas[leave_type_id];

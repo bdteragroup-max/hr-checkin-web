@@ -185,9 +185,9 @@ export async function GET(req: Request) {
                             layout: "vertical",
                             margin: "lg",
                             spacing: "sm",
-                            contents: report.staff.map(name => ({
+                            contents: report.staff.map((name, index) => ({
                                 type: "text",
-                                text: `• ${name}`,
+                                text: `${index + 1}. ${name}`,
                                 size: "sm",
                                 color: "#374151"
                             }))
@@ -245,9 +245,9 @@ export async function GET(req: Request) {
                             layout: "vertical",
                             margin: "md",
                             spacing: "xs",
-                            contents: allMissingStaff.map(name => ({
+                            contents: allMissingStaff.map((name, index) => ({
                                 type: "text",
-                                text: `• ${name}`,
+                                text: `${index + 1}. ${name}`,
                                 size: "xs",
                                 color: "#4b5563"
                             }))
