@@ -86,6 +86,7 @@ export default function PayrollPage() {
         social_security: "",
         student_loan: "",
         insurance: "",
+        insurance_income: "",
         unpaid_absenteeism: "",
         tax: "",
         commissions: "",
