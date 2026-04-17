@@ -15,7 +15,13 @@ export async function GET() {
 
     const subsCount = await prisma.employees.count({ where: { supervisor_id: emp.emp_id } });
     const publishedPayslipCount = await prisma.monthly_payroll_data.count({
-        where: { emp_id: payload.emp_id, is_published: true }
+        where: { 
+            emp_id: {
+                equals: payload.emp_id,
+                mode: 'insensitive'
+            }, 
+            is_published: true 
+        }
     });
 
     return NextResponse.json({

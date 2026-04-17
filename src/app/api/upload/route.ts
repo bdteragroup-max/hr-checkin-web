@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -65,8 +65,8 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    // Upload to Supabase Storage using Admin client to bypass RLS
+    const { data, error } = await supabaseAdmin.storage
         .from("uploads")
         .upload(filePath, buffer, {
             contentType: file.type,
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     }
 
     // Get Public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = supabaseAdmin.storage
         .from("uploads")
         .getPublicUrl(filePath);
 
@@ -117,7 +117,7 @@ export async function DELETE(req: Request) {
     }
 
     try {
-        await supabase.storage.from("uploads").remove([filePath]);
+        await supabaseAdmin.storage.from("uploads").remove([filePath]);
         return NextResponse.json({ ok: true });
     } catch (e) {
         console.error("Supabase delete error:", e);

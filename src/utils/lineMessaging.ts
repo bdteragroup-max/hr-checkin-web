@@ -1088,6 +1088,9 @@ export async function sendAssetReturnNotification(
   return results.every(r => r);
 }
 
+/**
+ * Sends a premium red-and-white 'greeting card' Payslip notification
+ */
 export async function sendPayslipNotification(lineUserId: string, data: {
   empName: string;
   month: number;
@@ -1103,37 +1106,74 @@ export async function sendPayslipNotification(lineUserId: string, data: {
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: "แจ้งเตือนสลิปเงินเดือน", weight: "bold", size: "lg", color: "#1d4ed8" }
+        {
+          type: "text",
+          text: "PAYSLIP",
+          weight: "bold",
+          size: "xl",
+          color: "#ffffff",
+          align: "center"
+        }
       ],
-      backgroundColor: "#eff6ff"
+      backgroundColor: "#d93025"
     },
     body: {
       type: "box",
       layout: "vertical",
-      spacing: "sm",
-      contents: [
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประจำเดือน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${monthName} ${yearTh}`, color: "#111111", size: "sm", flex: 7 }] },
-        { type: "text", text: "สลิปเงินเดือนของคุณได้รับการอนุมัติ และพร้อมให้ดาวน์โหลดผ่านระบบ HR แล้ว", color: "#64748b", size: "xs", margin: "md", wrap: true }
-      ]
-    },
-    footer: {
-      type: "box",
-      layout: "horizontal",
+      spacing: "md",
       contents: [
         {
-          type: "button",
-          style: "primary",
-          color: "#d93025",
-          action: {
-            type: "uri",
-            label: "ดาวน์โหลดสลิป",
-            uri: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://hr.teragroup.co.th'}/payslip`
-          }
+          type: "text",
+          text: "สลิปเงินเดือนออกแล้ว",
+          weight: "bold",
+          size: "lg",
+          align: "center",
+          color: "#d93025"
+        },
+        {
+          type: "text",
+          text: `ประจำเดือน ${monthName} ${yearTh}`,
+          size: "sm",
+          align: "center",
+          color: "#64748b"
+        },
+        {
+          type: "separator",
+          margin: "xl"
+        },
+        {
+          type: "box",
+          layout: "vertical",
+          margin: "xl",
+          spacing: "xs",
+          contents: [
+            {
+              type: "text",
+              text: "คุณสามารถดาวน์โหลดสลิปเงินเดือนได้ที่:",
+              size: "xs",
+              color: "#94a3b8",
+              align: "center"
+            },
+            {
+              type: "text",
+              text: "เมนู 'สลิปของฉัน' ในระบบเช็คอิน",
+              size: "sm",
+              weight: "bold",
+              color: "#334155",
+              align: "center",
+              wrap: true
+            }
+          ]
         }
       ]
     }
   };
 
-  return sendLineMessage(lineUserId, [{ type: "flex", altText: `สลิปเงินเดือน ${monthName} ออกแล้ว`, contents }]);
+  return sendLineMessage(lineUserId, [
+    { 
+      type: "flex", 
+      altText: `สลิปเงินเดือนประจำเดือน ${monthName} ออกแล้ว`, 
+      contents 
+    }
+  ]);
 }

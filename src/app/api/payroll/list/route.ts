@@ -19,7 +19,10 @@ export async function GET() {
 
         const publishedData = await prisma.monthly_payroll_data.findMany({
             where: {
-                emp_id: p.emp_id,
+                emp_id: {
+                    equals: p.emp_id,
+                    mode: 'insensitive'
+                },
                 is_published: true
             },
             orderBy: [

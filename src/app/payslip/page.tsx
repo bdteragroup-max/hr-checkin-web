@@ -62,7 +62,17 @@ export default function PayslipPage() {
                     {list.length === 0 ? (
                         <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text4)" }}>
                             <DocumentTextIcon width={48} style={{ margin: "0 auto", marginBottom: 12, opacity: 0.5 }} />
-                            <p>ยังไม่มีสลิปเงินเดือนที่สามารถดาวน์โหลดได้ในขณะนี้</p>
+                            <p style={{ marginBottom: 16 }}>ยังไม่มีสลิปเงินเดือนที่สามารถดาวน์โหลดได้ในขณะนี้</p>
+                            <div style={{ fontSize: 13, color: "var(--text4)", fontStyle: "italic", marginBottom: 20 }}>
+                                (หากคุณเพิ่งได้รับแจ้งเตือน กรุณาลองกดรีเฟรชหรือตรวจสอบกับฝ่ายบุคคล)
+                            </div>
+                            <button 
+                                className={styles.btnSecondary} 
+                                style={{ width: "auto", margin: "0 auto", padding: "8px 20px" }}
+                                onClick={() => window.location.reload()}
+                            >
+                                รีเฟรชหน้านี้
+                            </button>
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

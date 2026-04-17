@@ -168,7 +168,7 @@ export async function GET(req: Request) {
                                 action: {
                                     type: "uri",
                                     label: "ดูรายละเอียดการยืม",
-                                    uri: `${process.env.NEXT_PUBLIC_BASE_URL || "https://hr.teragroup.app"}/car-borrow`
+                                    uri: `${process.env.NEXT_PUBLIC_BASE_URL || "https://hr-checkin-web.vercel.app"}/car-borrow`
                                 },
                                 style: "primary",
                                 color: "#1e293b"

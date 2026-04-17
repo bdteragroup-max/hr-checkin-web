@@ -18,3 +18,19 @@ export const supabase = new Proxy({} as any, {
         return client[prop];
     }
 });
+let adminClient: any = null;
+
+export const supabaseAdmin = new Proxy({} as any, {
+    get(target, prop) {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!adminClient || (adminClient.__isPlaceholder && url && key)) {
+            const finalUrl = url || "https://placeholder.supabase.co";
+            const finalKey = key || "placeholder-key";
+            adminClient = createClient(finalUrl, finalKey);
+            (adminClient as any).__isPlaceholder = !url || !key;
+        }
+        return adminClient[prop];
+    }
+});

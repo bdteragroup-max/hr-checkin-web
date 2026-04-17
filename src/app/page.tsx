@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import styles from "./page.module.css";
 import { User, Lock } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginContent() {
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get("callbackUrl");
+
     const [emp_id, setEmpId] = useState("");
     const [pin, setPin] = useState("");
     const [msg, setMsg] = useState("");
@@ -22,7 +26,9 @@ export default function LoginPage() {
             });
             const data = await r.json().catch(() => ({}));
             if (!r.ok) return setMsg(data?.error === "INVALID_CREDENTIALS" ? "ID หรือ PIN ไม่ถูกต้อง" : data?.error || "เข้าสู่ระบบไม่สำเร็จ");
-            window.location.href = "/app";
+            
+            // Redirect to callbackUrl if present, otherwise default to home
+            window.location.href = callbackUrl || "/app";
         } catch {
             setMsg("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
         } finally {
@@ -109,4 +115,13 @@ export default function LoginPage() {
 
         </div>
     );
-}
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginContent />
+        </Suspense>
+    );
+}
+

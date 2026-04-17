@@ -35,17 +35,29 @@ export async function POST(request: Request) {
         });
 
         if (is_published) {
-            const emp = await prisma.employees.findUnique({
-                where: { emp_id },
-                select: { name: true, line_user_id: true }
+            const emp = await prisma.employees.findFirst({
+                where: { 
+                    emp_id: {
+                        equals: emp_id,
+                        mode: 'insensitive'
+                    }
+                },
+                select: { emp_id: true, name: true, line_user_id: true }
             });
-            if (emp && emp.line_user_id) {
-                // Fire and forget
-                sendPayslipNotification(emp.line_user_id, {
-                    empName: emp.name,
-                    month,
-                    year
-                }).catch(e => console.error("Line notification error:", e));
+
+            if (emp) {
+                if (emp.line_user_id) {
+                    console.log(`[PUBLISH] Sending payslip notification to ${emp.emp_id} (${emp.name})`);
+                    sendPayslipNotification(emp.line_user_id, {
+                        empName: emp.name,
+                        month,
+                        year
+                    }).catch(e => console.error(`[PUBLISH] Line notification error for ${emp.emp_id}:`, e));
+                } else {
+                    console.warn(`[PUBLISH] Employee ${emp.emp_id} found but has no line_user_id. skipping notification.`);
+                }
+            } else {
+                console.error(`[PUBLISH] Employee ID ${emp_id} not found in employees table. notification skipped.`);
             }
         }
 
