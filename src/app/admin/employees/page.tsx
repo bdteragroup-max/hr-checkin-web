@@ -338,6 +338,7 @@ export default function AdminEmployeesPage() {
                 is_checkin_exempt: x.is_checkin_exempt || false,
                 probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
                 resignation_date: new Date().toISOString().split("T")[0], // Default to today
+                secondary_supervisor_id: x.secondary_supervisor_id ?? "",
             });
             return;
         }
