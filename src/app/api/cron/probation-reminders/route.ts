@@ -196,7 +196,6 @@ export async function GET(req: Request) {
                     });
                 }
             }
-            }
         }
 
         // ── 4. Summary to HR (Ms. Duangkamol) ──
