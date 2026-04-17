@@ -1177,3 +1177,153 @@ export async function sendPayslipNotification(lineUserId: string, data: {
     }
   ]);
 }
+
+/**
+ * Sends a notification to HR when a supervisor submits a probation evaluation.
+ */
+export async function sendProbationEvaluationHrAlert(data: {
+  empName: string;
+  empId: string;
+  supervisorName: string;
+  evaluationNo: number;
+  grade: string;
+  totalScore: number;
+  decision: string;
+}) {
+  const hrLineUserId = process.env.HR_LINE_USER_ID;
+  if (!hrLineUserId) return false;
+
+  const decisionMap: Record<string, string> = {
+    pass: "ผ่านทดลองงาน",
+    fail: "ไม่ผ่านทดลองงาน",
+    extend: "ต่อเวลาทดลองงาน",
+    salary_adjust: "พิจารณาปรับเงินเดือน"
+  };
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "แจ้งเตือนการประเมินงาน", weight: "bold", size: "lg", color: "#ffffff" }],
+      backgroundColor: "#0369a1"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: `หัวหน้างานประเมินผลพนักงานเรียบร้อยแล้ว`, size: "sm", color: "#6b7280" },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          backgroundColor: "#f8fafc",
+          paddingAll: "12px",
+          cornerRadius: "8px",
+          contents: [
+            { type: "text", text: `พนักงาน: ${data.empName}`, weight: "bold", size: "sm" },
+            { type: "text", text: `รหัส: ${data.empId}`, size: "xs", color: "#64748b" },
+            { type: "text", text: `ประเมินครั้งที่: ${data.evaluationNo}`, size: "xs", color: "#64748b" }
+          ]
+        },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            {
+              type: "box", layout: "horizontal", contents: [
+                { type: "text", text: "คะแนนที่ได้:", size: "sm", color: "#64748b", flex: 4 },
+                { type: "text", text: `${data.totalScore} / 300`, size: "sm", weight: "bold", flex: 6 }
+              ]
+            },
+            {
+              type: "box", layout: "horizontal", contents: [
+                { type: "text", text: "เกรด:", size: "sm", color: "#64748b", flex: 4 },
+                { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 6 }
+              ]
+            },
+            {
+              type: "box", layout: "horizontal", contents: [
+                { type: "text", text: "สรุปผล:", size: "sm", color: "#64748b", flex: 4 },
+                { type: "text", text: decisionMap[data.decision] || data.decision, size: "sm", weight: "bold", color: "#0369a1", flex: 6, wrap: true }
+              ]
+            }
+          ]
+        },
+        { type: "separator", margin: "md" },
+        { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "xs", color: "#94a3b8", align: "end" }
+      ]
+    }
+  };
+
+  return sendLineMessage(hrLineUserId, [{ type: "flex", altText: `ประเมินงาน: ${data.empName}`, contents }]);
+}
+
+/**
+ * Sends a summary of the probation evaluation to Management.
+ */
+export async function sendProbationSummaryToManagement(data: {
+  empName: string;
+  totalScore: number;
+  grade: string;
+  decision: string;
+  comment: string;
+  hrName: string;
+}) {
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  if (!managementId) return false;
+
+  const decisionMap: Record<string, string> = {
+    pass: "✅ ผ่านการทดลองงาน",
+    fail: "❌ ไม่ผ่านการทดลองงาน",
+    extend: "⏳ ขยายระยะเวลาทดลองงาน",
+    salary_adjust: "💰 พิจารณาปรับเงินเดือน"
+  };
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "สรุปผลการประเมินงาน (ฝ่ายบริหาร)", weight: "bold", size: "md", color: "#1e293b" }],
+      backgroundColor: "#f8fafc"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "พนักงาน:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: data.empName, size: "sm", weight: "bold", flex: 7 }
+          ]
+        },
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "คะแนน/เกรด:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: `${data.totalScore} แต้ม (${data.grade})`, size: "sm", weight: "bold", flex: 7 }
+          ]
+        },
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "ผลประเมิน:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: decisionMap[data.decision] || data.decision, size: "sm", weight: "bold", color: "#16a34a", flex: 7, wrap: true }
+          ]
+        },
+        { type: "separator", margin: "sm" },
+        {
+          type: "box", layout: "vertical", contents: [
+            { type: "text", text: "ความเห็นสรุป:", size: "xs", color: "#64748b", margin: "xs" },
+            { type: "text", text: data.comment || "-", size: "sm", color: "#334155", wrap: true, margin: "xs" }
+          ]
+        },
+        { type: "text", text: `ฝ่ายบุคคล: ${data.hrName}`, size: "xxs", color: "#94a3b8", align: "end", margin: "md" }
+      ]
+    }
+  };
+
+  return sendLineMessage(managementId, [{ type: "flex", altText: `สรุปผลประเมิน: ${data.empName}`, contents }]);
+}

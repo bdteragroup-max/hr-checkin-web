@@ -13,7 +13,8 @@ import {
     Map as MapIcon,
     AlertTriangle,
     Loader2,
-    ArrowLeft
+    ArrowLeft,
+    ClipboardList
 } from "lucide-react";
 import Link from "next/link";
 import { formatTime24h } from "@/utils/time";
@@ -58,6 +59,7 @@ export default function TripLogPage() {
     const [me, setMe] = useState<Me | null>(null);
     const [history, setHistory] = useState<TripItem[]>([]);
     const [loading, setLoading] = useState(true);
+
 
     // Form State
     const [locationName, setLocationName] = useState("");
@@ -250,6 +252,8 @@ export default function TripLogPage() {
                         </div>
                     </div>
                 </header>
+
+
 
                 {/* ── UPDATE FORM ── */}
                 {step === 'log' && (

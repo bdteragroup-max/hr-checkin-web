@@ -119,11 +119,8 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
         quotas['annual'] = 0;
     }
 
-    // Rule: Employees on trial cannot take Personal/Emergency Leave
-    if (isOnTrial) {
-        quotas['personal'] = 0;
-        quotas['emergency'] = 0;
-    }
+    // Rule: Employees on trial can now take Personal/Emergency Leave
+    // Previously blocked: if (isOnTrial) quotas['personal'] = 0;
 
     const personalQuota = quotas['personal'] ?? 0;
 
@@ -133,8 +130,8 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
         if (ent.leave_type_id === 'personal') {
             if (years >= ent.min_years) {
                 if (!('personal' in quotas)) {
-                    quotas['personal'] = isOnTrial ? 0 : ent.days;
-                    quotas['emergency'] = isOnTrial ? 0 : ent.days;
+                    quotas['personal'] = ent.days;
+                    quotas['emergency'] = ent.days;
                 }
             }
             continue;
@@ -294,10 +291,12 @@ export async function POST(req: Request) {
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
-    // Rule: Check probation for Leave of Absence (personal/emergency)
+    // Rule: Check probation for Leave of Absence (personal/emergency) - ALLOWED
+    /* 
     if ((leave_type_id === "personal" || leave_type_id === "emergency") && emp.is_on_trial) {
         return NextResponse.json({ error: "PROBATION_PERSONAL_NOT_ALLOWED" }, { status: 403 });
     }
+    */
 
     // Enforce advance notice based on Thailand timezone calendar day difference
     if (def.advance_notice && def.advance_notice > 0) {

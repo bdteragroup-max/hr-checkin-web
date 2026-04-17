@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, type ReactNode } from "react";
 import styles from "./layout.module.css";
@@ -20,7 +21,8 @@ import {
     GlobeAltIcon,
     MapPinIcon,
     CubeIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    BuildingOffice2Icon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
@@ -84,6 +86,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-leaves", href: "/team-leaves", icon: ClipboardDocumentCheckIcon, label: "อนุมัติลา", sub: "Team Leaves" });
         navMain.push({ id: "team-ot", href: "/team-ot", icon: CalendarDaysIcon, label: "อนุมัติ OT", sub: "Team OT" });
         navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
+        navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
     }
 
     // NOTE: Do not show Sidebar on Login or Admin pages
@@ -102,7 +105,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
                 <div className={styles.brand}>
                     <div className={styles.logoWrap}>
-                        <div className={styles.logo}>T</div>
+                        <Image src="/icon.jpg" width={28} height={28} alt="Logo" className={styles.logoImage} />
                     </div>
                     <div className={styles.brandText}>
                         <span className={styles.brandName}>TERA GROUP</span>

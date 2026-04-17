@@ -30,6 +30,7 @@ type CreateEmployeeBody = {
     salary_type?: string | null;
     line_user_id?: string | null;
     is_checkin_exempt?: boolean;
+    secondary_supervisor_id?: string | null;
 };
 
 type PatchEmployeeBody = {
@@ -59,6 +60,7 @@ type PatchEmployeeBody = {
     line_user_id?: string | null;
     is_checkin_exempt?: boolean;
     resignation_date?: string | null;
+    secondary_supervisor_id?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -111,6 +113,8 @@ export async function GET(req: Request) {
                 job_positions: true,
                 supervisor_id: true,
                 supervisor: { select: { name: true } },
+                secondary_supervisor_id: true,
+                secondary_supervisor: { select: { name: true } },
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
@@ -197,6 +201,7 @@ export async function POST(req: Request) {
                 salary_type: body.salary_type || "monthly",
                 line_user_id: body.line_user_id ? clean(body.line_user_id) : null,
                 is_checkin_exempt: body.is_checkin_exempt ?? false,
+                secondary_supervisor_id: body.secondary_supervisor_id ? clean(body.secondary_supervisor_id) : null,
             },
             select: {
                 emp_id: true,
@@ -211,6 +216,7 @@ export async function POST(req: Request) {
                 job_position_id: true,
                 base_salary: true,
                 supervisor_id: true,
+                secondary_supervisor_id: true,
                 created_at: true,
                 is_on_trial: true,
                 probation_end_date: true,
@@ -307,6 +313,9 @@ export async function PATCH(req: Request) {
         if (body.supervisor_id !== undefined) {
             data.supervisor_id = body.supervisor_id ? clean(body.supervisor_id) : null;
         }
+        if (body.secondary_supervisor_id !== undefined) {
+            data.secondary_supervisor_id = body.secondary_supervisor_id ? clean(body.secondary_supervisor_id) : null;
+        }
 
         if (body.is_on_trial !== undefined) {
             data.is_on_trial = Boolean(body.is_on_trial);
@@ -374,6 +383,7 @@ export async function PATCH(req: Request) {
                 job_position_id: true,
                 base_salary: true,
                 supervisor_id: true,
+                secondary_supervisor_id: true,
                 updated_at: true,
                 is_on_trial: true,
                 probation_end_date: true,

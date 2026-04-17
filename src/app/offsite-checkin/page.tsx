@@ -11,7 +11,8 @@ import {
     ArrowPathIcon,
     ArrowRightStartOnRectangleIcon,
     StopIcon,
-    ClockIcon
+    ClockIcon,
+    ClipboardDocumentListIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight } from "lucide-react";
 import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
@@ -196,6 +197,7 @@ export default function OffsiteCheckinPage() {
     const [me, setMe] = useState<Me | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [today, setToday] = useState<TodayItem[]>([]);
+
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false, isMandatory: false });
     const closeAlert = useCallback((sharedClick = false) => {
         if (sharedClick) {
@@ -562,6 +564,8 @@ export default function OffsiteCheckinPage() {
                         )}
                     </div>
                 </div>
+
+
 
                 {/* 3. Camera Section */}
                 <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>

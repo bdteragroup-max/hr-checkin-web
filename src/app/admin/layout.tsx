@@ -10,7 +10,8 @@ import {
     SunIcon, ClockIcon, GiftIcon, TruckIcon,
     CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
     ArrowRightOnRectangleIcon,
-    CubeIcon
+    CubeIcon,
+    DocumentCheckIcon
 } from "@heroicons/react/24/outline";
 
 type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "projects";
@@ -143,6 +144,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 className={`${styles.navItem} ${pathname.startsWith("/admin/ot") ? styles.active : ""}`}
                             >
                                 <span className={styles.navIcon}><ClockIcon width={20} /></span>คำขอ OT
+                            </Link>
+
+                            {/* ✅ Probation Evaluations */}
+                            <Link
+                                href="/admin/probation"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/probation") ? styles.active : ""}`}
+                            >
+                                <span className={styles.navIcon}><DocumentCheckIcon width={20} /></span>ประเมินทดลองงาน
                             </Link>
 
                             {/* ✅ Birthday Claims */}

@@ -33,9 +33,11 @@ type Emp = {
     job_position_id?: number | null;
     base_salary?: number | null;
     supervisor_id?: string | null;
+    secondary_supervisor_id?: string | null;
     departments?: { name: string } | null;
     job_positions?: { title: string; is_ot_eligible: boolean } | null;
     supervisor?: { name: string } | null;
+    secondary_supervisor?: { name: string } | null;
     is_on_trial: boolean;
     has_telephone_allowance: boolean;
     position_allowance?: number | null;
@@ -75,6 +77,7 @@ type EditDraft = {
     is_checkin_exempt: boolean;
     probation_end_date: string;
     resignation_date: string;
+    secondary_supervisor_id: string;
 };
 
 type Department = { id: number; name: string };
@@ -111,6 +114,7 @@ export default function AdminEmployeesPage() {
     const [positionId, setPositionId] = useState<number>(0);
     const [baseSalary, setBaseSalary] = useState("");
     const [supervisorId, setSupervisorId] = useState("");
+    const [secondarySupervisorId, setSecondarySupervisorId] = useState("");
     const [isOnTrial, setIsOnTrial] = useState(false);
     const [hasTelephoneAllowance, setHasTelephoneAllowance] = useState(false);
     const [positionAllowance, setPositionAllowance] = useState("");
@@ -198,6 +202,7 @@ export default function AdminEmployeesPage() {
                     job_position_id: positionId || null,
                     base_salary: baseSalary ? Number(baseSalary) : null,
                     supervisor_id: supervisorId || null,
+                    secondary_supervisor_id: secondarySupervisorId || null,
                     is_on_trial: isOnTrial,
                     has_telephone_allowance: hasTelephoneAllowance,
                     position_allowance: positionAllowance ? Number(positionAllowance) : 0,
@@ -229,6 +234,7 @@ export default function AdminEmployeesPage() {
             setEmpId(""); setName(""); setBranchId(""); setPin("");
             setIsActive(true); setGender("M"); setHireDate(""); setBirthDate(""); setPhoneNumber("");
             setDepartmentId(0); setPositionId(0); setBaseSalary(""); setSupervisorId("");
+            setSecondarySupervisorId("");
             setIsOnTrial(false); setHasTelephoneAllowance(false);
             setPositionAllowance("");
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
@@ -269,6 +275,7 @@ export default function AdminEmployeesPage() {
                     job_position_id: editDraft.job_position_id || null,
                     base_salary: editDraft.base_salary ? Number(editDraft.base_salary) : null,
                     supervisor_id: editDraft.supervisor_id || null,
+                    secondary_supervisor_id: editDraft.secondary_supervisor_id || null,
                     is_on_trial: editDraft.is_on_trial,
                     has_telephone_allowance: editDraft.has_telephone_allowance,
                     position_allowance: editDraft.position_allowance ? Number(editDraft.position_allowance) : 0,
@@ -535,6 +542,9 @@ export default function AdminEmployeesPage() {
                                                     {x.supervisor?.name && (
                                                         <div style={{ display: "block", fontSize: 11, color: "var(--text-4)", marginTop: 4 }}>หัวหน้า: {x.supervisor.name}</div>
                                                     )}
+                                                    {x.secondary_supervisor?.name && (
+                                                        <div style={{ display: "block", fontSize: 11, color: "var(--text-4)", marginTop: 2 }}>ผู้ประเมินร่วม: {x.secondary_supervisor.name}</div>
+                                                    )}
                                                     {x.is_on_trial && (
                                                         <div style={{ marginTop: 4 }}>
                                                             <span style={{ display: "inline-block", fontSize: 10, color: "var(--ok)", background: "rgba(16, 185, 129, 0.1)", padding: "2px 6px", borderRadius: 4 }}>
@@ -611,6 +621,7 @@ export default function AdminEmployeesPage() {
                                                                     is_checkin_exempt: x.is_checkin_exempt || false,
                                                                     probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
                                                                     resignation_date: x.resignation_date ? String(x.resignation_date).slice(0, 10) : "",
+                                                                    secondary_supervisor_id: x.secondary_supervisor_id ?? "",
                                                                 });
                                                             }}
                                                         >
@@ -763,6 +774,15 @@ export default function AdminEmployeesPage() {
                                 className={styles.input}
                                 value={supervisorId}
                                 onChange={(val) => setSupervisorId(val)}
+                                options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                                placeholder="— ไม่มี / ไม่ระบุ —"
+                            />
+
+                            <label className={styles.lbl} style={{ marginTop: 10 }}>ผู้ประเมินร่วม (Co-Evaluator)</label>
+                            <SearchableSelect
+                                className={styles.input}
+                                value={secondarySupervisorId}
+                                onChange={(val) => setSecondarySupervisorId(val)}
                                 options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                                 placeholder="— ไม่มี / ไม่ระบุ —"
                             />
@@ -977,6 +997,15 @@ export default function AdminEmployeesPage() {
                             className={styles.input}
                             value={editDraft.supervisor_id}
                             onChange={(val) => setEditDraft((d) => d && ({ ...d, supervisor_id: val }))}
+                            options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                            placeholder="— ไม่มี / ไม่ระบุ —"
+                        />
+
+                        <label className={styles.lbl} style={{ marginTop: 10 }}>ผู้ประเมินร่วม (Co-Evaluator)</label>
+                        <SearchableSelect
+                            className={styles.input}
+                            value={editDraft.secondary_supervisor_id}
+                            onChange={(val) => setEditDraft((d) => d && ({ ...d, secondary_supervisor_id: val }))}
                             options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                             placeholder="— ไม่มี / ไม่ระบุ —"
                         />

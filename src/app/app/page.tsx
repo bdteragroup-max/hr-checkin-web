@@ -22,6 +22,7 @@ import {
     CheckIcon,
     ChevronRightIcon
 } from "@heroicons/react/24/solid";
+import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { Camera, RotateCcw, X } from "lucide-react";
 import { formatDateThai, formatTime24h, formatTimeFull24h, getBangkokWallClock } from "@/utils/time";
 
@@ -35,7 +36,13 @@ const OT_THRESHOLD_MIN = 30;
 /* ──────────────────────────────────────────
    TYPES
 ────────────────────────────────────────── */
-interface Me { emp_id: string; name: string; branch_id: string | null; line_user_id?: string | null; }
+interface Me { 
+    emp_id: string; 
+    name: string; 
+    branch_id: string | null; 
+    line_user_id?: string | null; 
+    is_supervisor?: boolean;
+}
 interface Branch { id: string; name: string; centerLat?: number; centerLon?: number; radiusM?: number }
 interface TodayItem {
     id: number | string;
@@ -331,6 +338,7 @@ export default function AppPage() {
     const [empName, setEmpName] = useState("");
     const [warnings, setWarnings] = useState<{ id: number; date: string; reason: string }[]>([]);
     const [birthdays, setBirthdays] = useState<{ emp_id: string; name: string }[]>([]);
+
 
 
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -803,6 +811,7 @@ export default function AppPage() {
                     )}
 
 
+
                     {(!empId || !empName) && (
                         <div className={styles.card}>
                             <div className={styles.sectionLabel}>
@@ -851,10 +860,27 @@ export default function AppPage() {
                             </div>
                         </div>
 
+                        {/* ── SCREENING FORM ── */}
+
+
                         {step < 3 && !preview && (
-                            <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ width: "100%", display: "flex", justifyContent: "center", gap: 10, padding: 20, background: "var(--gray-50)", border: "1px solid var(--gray-200)" }} onClick={startFlow}>
+                            <button 
+                                className={`${styles.btn} ${styles.btnSecondary}`} 
+                                style={{ 
+                                    width: "100%", 
+                                    display: "flex", 
+                                    justifyContent: "center", 
+                                    gap: 10, 
+                                    padding: 20, 
+                                    background: "var(--primary)", 
+                                    color: "black",
+                                    border: "none",
+                                    cursor: "pointer"
+                                }} 
+                                onClick={startFlow}
+                            >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                เปิดกล้อง
+                                ถ่ายรูปเพื่อเช็คอิน
                             </button>
                         )}
 

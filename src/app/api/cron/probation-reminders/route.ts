@@ -56,25 +56,20 @@ export async function GET(req: Request) {
         const todayBkk = new Date(dateStr);
         todayBkk.setHours(0, 0, 0, 0);
 
-        // ── 2. Fetch Probation Employees with Supervisors ──
+        // ── 2. Fetch Probation Employees with Supervisors (Primary and Secondary) ──
         const trialEmployees = await prisma.employees.findMany({
             where: {
                 is_active: true,
                 is_on_trial: true,
                 hire_date: { not: null },
-                supervisor_id: { not: null },
-                supervisor: { 
-                    is_active: true,
-                    line_user_id: { not: "" }
-                },
-                NOT: {
-                    supervisor: {
-                        line_user_id: null as any
-                    }
-                }
+                // Must have at least a primary supervisor
+                supervisor_id: { not: null }
             },
             include: {
                 supervisor: {
+                    select: { line_user_id: true, name: true }
+                },
+                secondary_supervisor: {
                     select: { line_user_id: true, name: true }
                 }
             }
@@ -116,77 +111,91 @@ export async function GET(req: Request) {
                 }
             }
 
-            if (config && emp.supervisor?.line_user_id) {
-                // Build Flex Message
-                const flexContent = {
-                    type: "bubble",
-                    size: "mega",
-                    header: {
-                        type: "box",
-                        layout: "vertical",
-                        backgroundColor: "#f0f9ff",
-                        paddingAll: "16px",
-                        contents: [
-                            { type: "text", text: "ประเมินทดลองงาน", weight: "bold", size: "lg", color: "#0369a1" },
-                            { type: "text", text: `การประเมิน: ${config.milestone}`, size: "sm", color: "#6b7280", margin: "sm" }
-                        ]
-                    },
-                    body: {
-                        type: "box",
-                        layout: "vertical",
-                        spacing: "md",
-                        paddingAll: "16px",
-                        contents: [
-                            { type: "text", text: `สวัสดีคุณ ${emp.supervisor.name}`, size: "sm", color: "#6b7280" },
-                            {
-                                type: "text",
-                                text: `อีก ${config.daysBefore} วัน จะถึงกำหนดประเมินงานของ:`,
-                                size: "sm",
-                                color: "#111827",
-                                wrap: true,
-                                margin: "md"
-                            },
-                            {
-                                type: "box",
-                                layout: "vertical",
-                                margin: "lg",
-                                spacing: "xs",
-                                backgroundColor: "#f8fafc",
-                                paddingAll: "12px",
-                                cornerRadius: "8px",
-                                contents: [
-                                    { type: "text", text: `ชื่อ: ${emp.name}`, size: "sm", weight: "bold", color: "#1e293b" },
-                                    { type: "text", text: `รหัส: ${emp.emp_id}`, size: "xs", color: "#64748b" },
-                                    { type: "text", text: `วันที่เริ่มงาน: ${new Date(emp.hire_date!).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "xs", color: "#64748b" }
-                                ]
-                            },
-                            {
-                                type: "box",
-                                layout: "vertical",
-                                margin: "xxl",
-                                contents: [
-                                    {
-                                        type: "text",
-                                        text: config.milestone === "สิ้นสุดทดลองงาน" 
-                                            ? `กรุณาเตรียมสรุปผลการทดลองงาน`
-                                            : `กรุณาเตรียมประเมินผลการทำงาน (${config.milestone})`,
-                                        size: "xs",
-                                        color: "#0369a1",
-                                        align: "center",
-                                        wrap: true
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                };
+            if (config) {
+                // List of supervisors to notify (Primary and Secondary)
+                const supervisorsToNotify = [];
+                if (emp.supervisor?.line_user_id) supervisorsToNotify.push(emp.supervisor);
+                if (emp.secondary_supervisor?.line_user_id) supervisorsToNotify.push(emp.secondary_supervisor);
 
-                const success = await pushLineMessage(emp.supervisor.line_user_id, [
-                    { type: "flex", altText: `แจ้งเตือนประเมินงาน: ${emp.name}`, contents: flexContent }
-                ]);
+                for (const sv of supervisorsToNotify) {
+                    // Build Flex Message per supervisor
+                    const flexContent = {
+                        type: "bubble",
+                        size: "mega",
+                        header: {
+                            type: "box",
+                            layout: "vertical",
+                            backgroundColor: "#f0f9ff",
+                            paddingAll: "16px",
+                            contents: [
+                                { type: "text", text: "แจ้งเตือน: ประเมินทดลองงาน", weight: "bold", size: "lg", color: "#0369a1" },
+                                { type: "text", text: `ระดับ: ${config.milestone}`, size: "sm", color: "#6b7280", margin: "sm" }
+                            ]
+                        },
+                        body: {
+                            type: "box",
+                            layout: "vertical",
+                            spacing: "md",
+                            paddingAll: "16px",
+                            contents: [
+                                { type: "text", text: `สวัสดีคุณ ${sv.name}`, size: "sm", color: "#6b7280" },
+                                {
+                                    type: "text",
+                                    text: `อีก ${config.daysBefore} วัน จะถึงกำหนดประเมินงานของ:`,
+                                    size: "sm",
+                                    color: "#111827",
+                                    wrap: true,
+                                    margin: "md"
+                                },
+                                {
+                                    type: "box",
+                                    layout: "vertical",
+                                    margin: "lg",
+                                    spacing: "xs",
+                                    backgroundColor: "#f8fafc",
+                                    paddingAll: "12px",
+                                    cornerRadius: "8px",
+                                    contents: [
+                                        { type: "text", text: `พนักงาน: ${emp.name}`, size: "sm", weight: "bold", color: "#1e293b" },
+                                        { type: "text", text: `รหัสพนักงาน: ${emp.emp_id}`, size: "xs", color: "#64748b" },
+                                        { type: "text", text: `วันที่เริ่มงาน: ${new Date(emp.hire_date!).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" })}`, size: "xs", color: "#64748b" }
+                                    ]
+                                },
+                                {
+                                    type: "box",
+                                    layout: "vertical",
+                                    margin: "xxl",
+                                    contents: [
+                                        {
+                                            type: "text",
+                                            text: config.milestone === "สิ้นสุดทดลองงาน" 
+                                                ? `กรุณาเตรียมสรุปผลการผ่านทดลองงาน`
+                                                : `กรุณาเตรียมประเมินผลการทำงาน (${config.milestone})`,
+                                            size: "xs",
+                                            color: "#0369a1",
+                                            align: "center",
+                                            wrap: true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    };
 
-                if (success) reportStats.notificationsSent++;
-                results.push({ employee: emp.name, milestone: config.milestone, daysBefore: config.daysBefore, success });
+                    const success = await pushLineMessage(sv.line_user_id, [
+                        { type: "flex", altText: `แจ้งเตือนประเมินงาน: ${emp.name}`, contents: flexContent }
+                    ]);
+
+                    if (success) reportStats.notificationsSent++;
+                    results.push({ 
+                        employee: emp.name, 
+                        milestone: config.milestone, 
+                        supervisor: sv.name,
+                        daysBefore: config.daysBefore, 
+                        success 
+                    });
+                }
+            }
             }
         }
 

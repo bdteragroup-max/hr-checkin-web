@@ -15,7 +15,8 @@ import {
     StopIcon,
     PlusIcon,
     ClockIcon,
-    PencilSquareIcon
+    PencilSquareIcon,
+    ClipboardDocumentListIcon
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateShortThai } from "@/utils/time";
@@ -231,6 +232,7 @@ export default function ProjectCheckinPage() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [today, setToday] = useState<TodayItem[]>([]);
+
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false, isMandatory: false });
     const closeAlert = useCallback((sharedClick = false) => {
         if (sharedClick) {
@@ -777,6 +779,8 @@ export default function ProjectCheckinPage() {
                                 </div>
                             )}
                         </div>
+
+
 
                         {/* 2. Camera Section */}
                         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px", marginBottom: 16 }}>
