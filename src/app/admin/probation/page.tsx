@@ -510,7 +510,7 @@ export default function AdminProbationPage() {
                                 <div style={{ marginTop: 20 }}>
                                     <div className={styles.label}>หมายเหตุจากฝ่ายบุคคล (HR Notes)</div>
                                     <textarea 
-                                        style={{ width:'100%', padding: 12, borderRadius: 12, border:'1px solid #e2e8f0', fontSans:'var(--font-th)' }}
+                                        style={{ width:'100%', padding: 12, borderRadius: 12, border:'1px solid #e2e8f0', fontFamily:'var(--font-th)' }}
                                         rows={3}
                                         placeholder="ใส่หมายเหตุหรือบันทึกการแก้ไขที่นี่..."
                                         value={editData.hr_remark}
