@@ -189,8 +189,8 @@ export async function POST(req: Request) {
                 base_salary: body.base_salary != null ? Number(body.base_salary) : null,
                 supervisor_id: body.supervisor_id ? clean(body.supervisor_id) : null,
                 is_on_trial: body.is_on_trial ?? false,
-                probation_end_date: (body.is_on_trial && body.probation_end_date && isISODate(body.probation_end_date)) 
-                    ? new Date(body.probation_end_date) 
+                probation_end_date: (body.is_on_trial && body.probation_end_date && isISODate(body.probation_end_date))
+                    ? new Date(body.probation_end_date)
                     : null,
                 has_telephone_allowance: body.has_telephone_allowance ?? false,
                 position_allowance: body.position_allowance != null ? Number(body.position_allowance) : 0,

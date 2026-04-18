@@ -5,7 +5,7 @@ import styles from "../page.module.css";
 import localStyles from "./page.module.css";
 import { formatTime24h, formatDateThai } from "@/utils/time";
 import AlertModal, { AlertState } from "@/components/AlertModal";
-import { CheckCircleIcon, XCircleIcon, PencilSquareIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XCircleIcon, PencilSquareIcon, ClockIcon, ChartBarIcon, ClipboardDocumentListIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
 type OtRequest = {
     id: number;
@@ -28,6 +28,9 @@ export default function AdminOtPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [viewMode, setViewMode] = useState<"list" | "report">("list");
+    const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState<string>(""); // YYYY-MM
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
     const closeAlert = () => setAlert(p => ({ ...p, visible: false }));
 
@@ -118,6 +121,107 @@ export default function AdminOtPage() {
     }, [requests, statusFilter, searchQuery]);
 
     const pendingCount = requests.filter(r => r.status === "pending_hr").length;
+    
+    const availableMonths = useMemo(() => {
+        const months = new Set<string>();
+        requests.forEach(r => {
+            const date = new Date(r.date_for);
+            months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+        });
+        return Array.from(months).sort((a, b) => b.localeCompare(a));
+    }, [requests]);
+
+    const reportData = useMemo(() => {
+        const groups: Record<string, Record<string, { 
+            approved_hours: number, 
+            total_hours: number, 
+            emp_ids: Set<string>,
+            employees: Record<string, { name: string, emp_id: string, total_hours: number, approved_hours: number }>
+        }>> = {};
+        
+        requests.forEach(req => {
+            const date = new Date(req.date_for);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (selectedMonth && monthKey !== selectedMonth) return;
+            const deptName = req.employee.departments?.name || "ไม่ระบุแผนก";
+            
+            if (!groups[monthKey]) groups[monthKey] = {};
+            if (!groups[monthKey][deptName]) {
+                groups[monthKey][deptName] = { 
+                    approved_hours: 0, 
+                    total_hours: 0, 
+                    emp_ids: new Set(),
+                    employees: {}
+                };
+            }
+            
+            const g = groups[monthKey][deptName];
+            g.total_hours += Number(req.total_hours);
+            if (req.status === "approved") {
+                g.approved_hours += Number(req.approved_hours || req.total_hours);
+            }
+            g.emp_ids.add(req.emp_id);
+            
+            if (!g.employees[req.emp_id]) {
+                g.employees[req.emp_id] = { name: req.employee.name, emp_id: req.emp_id, total_hours: 0, approved_hours: 0 };
+            }
+            
+            const emp = g.employees[req.emp_id];
+            emp.total_hours += Number(req.total_hours);
+            if (req.status === "approved") {
+                emp.approved_hours += Number(req.approved_hours || req.total_hours);
+            }
+        });
+        
+        // Convert to sorted array
+        const result: { 
+            month: string, 
+            depts: { 
+                name: string, 
+                approved_hours: number, 
+                total_hours: number, 
+                emp_count: number, 
+                employees: { name: string, emp_id: string, total_hours: number, approved_hours: number }[] 
+            }[] 
+        }[] = [];
+
+        Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(month => {
+            const depts = Object.keys(groups[month]).map(name => ({
+                name,
+                ...groups[month][name],
+                emp_count: groups[month][name].emp_ids.size,
+                employees: Object.values(groups[month][name].employees).sort((a, b) => b.approved_hours - a.approved_hours)
+            })).sort((a, b) => b.approved_hours - a.approved_hours);
+            
+            result.push({ month, depts });
+        });
+        
+        return result;
+    }, [requests, selectedMonth]);
+
+    function exportToCSV() {
+        const BOM = "\uFEFF";
+        let csvContent = "Month,Department,Employee ID,Employee Name,Approved Hours,Total Hours\n";
+        reportData.forEach(m => {
+            m.depts.forEach(d => {
+                d.employees.forEach(emp => {
+                    csvContent += `${m.month},"${d.name}","${emp.emp_id}","${emp.name}",${emp.approved_hours.toFixed(2)},${emp.total_hours.toFixed(2)}\n`;
+                });
+                // Add subtotal row for department
+                csvContent += `${m.month},"${d.name} TOTAL",-,-,${d.approved_hours.toFixed(2)},${d.total_hours.toFixed(2)}\n`;
+            });
+        });
+        
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `OT_Report_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
     function getStatusBadge(status: string) {
         if (status === "approved") return `${styles.badge} ${styles.approved}`;
@@ -141,127 +245,240 @@ export default function AdminOtPage() {
                     <h1 className={styles.pageTitle}>จัดการคำขอ OT</h1>
                     <div className={styles.pageSubtitle}>ตรวจสอบและจัดการการทำงานล่วงเวลาของพนักงาน</div>
                 </div>
-            </div>
-
-            <div className={styles.filterBar}>
-                <div className={styles.filterGroup}>
-                    <div className={styles.filterLabel}>STATUS</div>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">ทุกสถานะ</option>
-                        <option value="pending_supervisor">รอหัวหน้าอนุมัติ</option>
-                        <option value="pending_hr">รอ HR อนุมัติ</option>
-                        <option value="approved">อนุมัติแล้ว</option>
-                        <option value="rejected">ไม่อนุมัติ</option>
-                    </select>
-                </div>
-                <div className={styles.filterGroup}>
-                    <div className={styles.filterLabel}>SEARCH</div>
-                    <input
-                        type="text"
-                        placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-                <button className={styles.btnPrimary} onClick={loadRequests} disabled={loading}>
-                    {loading ? "กำลังโหลด..." : "Refresh"}
-                </button>
-            </div>
-
-            <div className={styles.tableWrap}>
-                <div className={styles.tableHeader}>
-                    <div className={styles.tableHeaderTitle}>
-                        คำขอ OT {pendingCount > 0 && <span className={styles.pendingCountBadge}>{pendingCount}</span>}
+                <div style={{ display: "flex", gap: 10 }}>
+                    <div className={localStyles.toggleGroup}>
+                        <button 
+                            className={`${localStyles.toggleBtn} ${viewMode === "list" ? localStyles.toggleActive : ""}`}
+                            onClick={() => setViewMode("list")}
+                        >
+                            <ClipboardDocumentListIcon width={18} /> รายการคำขอ
+                        </button>
+                        <button 
+                            className={`${localStyles.toggleBtn} ${viewMode === "report" ? localStyles.toggleActive : ""}`}
+                            onClick={() => setViewMode("report")}
+                        >
+                            <ChartBarIcon width={18} /> สรุปผล (Report)
+                        </button>
                     </div>
-                    <span className={styles.rowCount}>{filteredRequests.length} รายการ</span>
-                </div>
-
-                <div className={styles.tableScroll}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>พนักงาน</th>
-                                <th>วันที่</th>
-                                <th>เวลาเริ่ม - สิ้นสุด</th>
-                                <th style={{ textAlign: "center" }}>รวม</th>
-                                <th>ความเห็นหัวหน้างาน</th>
-                                <th>เหตุผล</th>
-                                <th>สถานะ</th>
-                                <th>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRequests.length === 0 && !loading ? (
-                                <tr>
-                                    <td colSpan={8} className={styles.emptyState}>ไม่พบรายการคำขอ OT</td>
-                                </tr>
-                            ) : (
-                                filteredRequests.map(req => (
-                                    <tr key={req.id}>
-                                        <td>
-                                            <div className={styles.empName}>{req.employee.name}</div>
-                                            <div className={styles.empId}>{req.emp_id} • {req.employee.departments?.name || "-"}</div>
-                                        </td>
-                                        <td>
-                                            <div className={styles.monoText}>
-                                                {formatDateThai(req.date_for)}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span style={{ fontWeight: 600 }}>{formatTime24h(req.start_time)}</span>
-                                            {" - "}
-                                            <span style={{ fontWeight: 600 }}>{formatTime24h(req.end_time)}</span>
-                                        </td>
-                                        <td style={{ textAlign: "center" }}>
-                                            <span className={`${styles.badge} ${styles.ot}`}>{req.total_hours} ชม.</span>
-                                        </td>
-                                        <td>
-                                            {req.approved_hours ? (
-                                                <div className={styles.empName}>{Number(req.approved_hours)} ชม.</div>
-                                            ) : (
-                                                <div style={{ color: "var(--text4)" }}>-</div>
-                                            )}
-                                            <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>
-                                                {req.supervisor_name || "ไม่มีข้อมูลหัวหน้า"}
-                                            </div>
-                                            {req.supervisor_remark && (
-                                                <div style={{ fontSize: 11, color: "var(--ot)", marginTop: 4, fontStyle: 'italic' }}>
-                                                    Admin: {req.supervisor_remark}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td style={{ maxWidth: 300 }}>
-                                            <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.4 }}>{req.reason}</div>
-                                        </td>
-                                        <td>
-                                            <span className={getStatusBadge(req.status)}>
-                                                {getStatusText(req.status)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: "flex", gap: 6 }}>
-                                                <button 
-                                                    onClick={() => openAdjustment(req)} 
-                                                    className={localStyles.btnApprove} 
-                                                    disabled={saving}
-                                                    title="อนุมัติ/จัดการ"
-                                                >
-                                                    {(req.status === "approved" || req.status === "rejected") ? (
-                                                        <>
-                                                            <PencilSquareIcon width={14} style={{ marginRight: 4 }} />
-                                                            แก้ไขข้อมูล
-                                                        </>
-                                                    ) : "จัดการคำขอ"}
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
                 </div>
             </div>
+
+            {viewMode === "list" ? (
+                <>
+                    <div className={styles.filterBar}>
+                        <div className={styles.filterGroup}>
+                            <div className={styles.filterLabel}>STATUS</div>
+                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                <option value="">ทุกสถานะ</option>
+                                <option value="pending_supervisor">รอหัวหน้าอนุมัติ</option>
+                                <option value="pending_hr">รอ HR อนุมัติ</option>
+                                <option value="approved">อนุมัติแล้ว</option>
+                                <option value="rejected">ไม่อนุมัติ</option>
+                            </select>
+                        </div>
+                        <div className={styles.filterGroup}>
+                            <div className={styles.filterLabel}>SEARCH</div>
+                            <input
+                                type="text"
+                                placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <button className={styles.btnPrimary} onClick={loadRequests} disabled={loading}>
+                            {loading ? "กำลังโหลด..." : "Refresh"}
+                        </button>
+                    </div>
+
+                    <div className={styles.tableWrap}>
+                        <div className={styles.tableHeader}>
+                            <div className={styles.tableHeaderTitle}>
+                                คำขอ OT {pendingCount > 0 && <span className={styles.pendingCountBadge}>{pendingCount}</span>}
+                            </div>
+                            <span className={styles.rowCount}>{filteredRequests.length} รายการ</span>
+                        </div>
+
+                        <div className={styles.tableScroll}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>พนักงาน</th>
+                                        <th>วันที่</th>
+                                        <th>เวลาเริ่ม - สิ้นสุด</th>
+                                        <th style={{ textAlign: "center" }}>รวม</th>
+                                        <th>การอนุมัติ</th>
+                                        <th>เหตุผล</th>
+                                        <th>สถานะ</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRequests.length === 0 && !loading ? (
+                                        <tr>
+                                            <td colSpan={8} className={styles.emptyState}>ไม่พบรายการคำขอ OT</td>
+                                        </tr>
+                                    ) : (
+                                        filteredRequests.map(req => (
+                                            <tr key={req.id}>
+                                                <td>
+                                                    <div className={styles.empName}>{req.employee.name}</div>
+                                                    <div className={styles.empId}>{req.emp_id} • {req.employee.departments?.name || "-"}</div>
+                                                </td>
+                                                <td>
+                                                    <div className={styles.monoText}>
+                                                        {formatDateThai(req.date_for)}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span style={{ fontWeight: 600 }}>{formatTime24h(req.start_time)}</span>
+                                                    {" - "}
+                                                    <span style={{ fontWeight: 600 }}>{formatTime24h(req.end_time)}</span>
+                                                </td>
+                                                <td style={{ textAlign: "center" }}>
+                                                    <span className={`${styles.badge} ${styles.ot}`}>{req.total_hours} ชม.</span>
+                                                </td>
+                                                <td>
+                                                    {req.approved_hours ? (
+                                                        <div className={styles.empName}>{Number(req.approved_hours)} ชม.</div>
+                                                    ) : (
+                                                        <div style={{ color: "var(--text4)" }}>-</div>
+                                                    )}
+                                                    <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>
+                                                        {req.supervisor_name || "ไม่มีข้อมูลหัวหน้า"}
+                                                    </div>
+                                                    {req.supervisor_remark && (
+                                                        <div style={{ fontSize: 11, color: "var(--ot)", marginTop: 4, fontStyle: 'italic' }}>
+                                                            Admin: {req.supervisor_remark}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td style={{ maxWidth: 300 }}>
+                                                    <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.4 }}>{req.reason}</div>
+                                                </td>
+                                                <td>
+                                                    <span className={getStatusBadge(req.status)}>
+                                                        {getStatusText(req.status)}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: "flex", gap: 6 }}>
+                                                        <button 
+                                                            onClick={() => openAdjustment(req)} 
+                                                            className={localStyles.btnApprove} 
+                                                            disabled={saving}
+                                                            title="อนุมัติ/จัดการ"
+                                                        >
+                                                            {(req.status === "approved" || req.status === "rejected") ? (
+                                                                <>
+                                                                    <PencilSquareIcon width={14} style={{ marginRight: 4 }} />
+                                                                    แก้ไข
+                                                                </>
+                                                            ) : "จัดการ"}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div className={styles.tableWrap} style={{ padding: 0 }}>
+                    <div className={styles.tableHeader}>
+                        <div className={styles.tableHeaderTitle} style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <ChartBarIcon width={20} style={{ marginRight: 8 }} />
+                                สรุป OT แยกตามแผนกและเดือน
+                            </div>
+                            <label className={localStyles.toggleDetail} title="แสดงรายบุคคล">
+                                <input 
+                                    type="checkbox" 
+                                    checked={showEmployeeDetail} 
+                                    onChange={e => setShowEmployeeDetail(e.target.checked)} 
+                                />
+                                <span className={localStyles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
+                            </label>
+                            <select 
+                                className={styles.filterInput} 
+                                style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
+                                value={selectedMonth}
+                                onChange={e => setSelectedMonth(e.target.value)}
+                            >
+                                <option value="">ทุกเดือน</option>
+                                {availableMonths.map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button className={styles.btnGhost} onClick={exportToCSV} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <ArrowDownTrayIcon width={16} /> Export CSV
+                        </button>
+                    </div>
+
+                    <div className={styles.tableScroll}>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>เดือน</th>
+                                    <th>แผนก / พนักงาน</th>
+                                    <th style={{ textAlign: "center" }}>จํานวนพนักงาน / ID</th>
+                                    <th style={{ textAlign: "right" }}>ชั่วโมงที่ขอ (ทั้งหมด)</th>
+                                    <th style={{ textAlign: "right" }}>ชั่วโมงที่อนุมัติแล้ว</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className={styles.emptyState}>ไม่มีข้อมูลสำหรับรายงาน</td>
+                                    </tr>
+                                ) : (
+                                    reportData.flatMap((m, mIdx) => 
+                                        m.depts.flatMap((d, dIdx) => [
+                                            // Department Header Row
+                                            <tr key={`${m.month}-${d.name}`} style={{ background: 'var(--surface2)' }}>
+                                                {dIdx === 0 && (
+                                                    <td rowSpan={m.depts.reduce((acc, curr) => acc + (showEmployeeDetail ? curr.employees.length + 1 : 1), 0)} style={{ verticalAlign: 'top', fontWeight: 700, background: 'var(--surface2)', borderRight: '1px solid var(--line)' }}>
+                                                        {m.month}
+                                                    </td>
+                                                )}
+                                                <td style={{ fontWeight: 700, color: 'var(--text)' }}>
+                                                    {d.name}
+                                                </td>
+                                                <td style={{ textAlign: "center", fontWeight: 700 }}>{d.emp_count} คน</td>
+                                                <td style={{ textAlign: "right", color: 'var(--text3)', fontWeight: 700 }}>{d.total_hours.toFixed(2)} ชม.</td>
+                                                <td style={{ textAlign: "right" }}>
+                                                    <span className={`${styles.badge} ${styles.approved}`} style={{ fontSize: 13, minWidth: 80, textAlign: 'center', fontWeight: 700 }}>
+                                                        {d.approved_hours.toFixed(2)} ชม.
+                                                    </span>
+                                                </td>
+                                            </tr>,
+                                            // Employee Detail Rows (Conditional)
+                                            ...(showEmployeeDetail ? d.employees.map(emp => (
+                                                <tr key={`${m.month}-${d.name}-${emp.emp_id}`} style={{ background: '#fff' }}>
+                                                    <td style={{ paddingLeft: 40, color: 'var(--text2)' }}>
+                                                        <span style={{ color: 'var(--text4)', marginRight: 8 }}>↳</span>
+                                                        {emp.name}
+                                                    </td>
+                                                    <td style={{ textAlign: "center", fontSize: 12, color: 'var(--text3)' }}>{emp.emp_id}</td>
+                                                    <td style={{ textAlign: "right", color: 'var(--text3)', fontSize: 12 }}>{emp.total_hours.toFixed(2)} ชม.</td>
+                                                    <td style={{ textAlign: "right" }}>
+                                                        <span style={{ fontWeight: 600, color: 'var(--ok)', fontSize: 12 }}>
+                                                            {emp.approved_hours.toFixed(2)} ชม.
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            )) : [])
+                                        ])
+                                    )
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {showModal && selectedReq && (
                 <div className={localStyles.modalOverlay}>

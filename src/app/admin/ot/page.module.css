@@ -387,3 +387,66 @@
   transform: none;
 }
 
+.toggleGroup {
+  display: flex;
+  background: var(--surface2);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.toggleBtn:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.toggleActive {
+  background: #fff !important;
+  color: var(--red) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.toggleDetail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.toggleDetail:hover {
+  background: var(--surface2);
+}
+
+.toggleDetail input {
+  cursor: pointer;
+  accent-color: var(--red);
+  width: 16px;
+  height: 16px;
+}
+
+.toggleDetailLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+}
+

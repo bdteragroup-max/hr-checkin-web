@@ -28,6 +28,8 @@ export async function POST(req: Request) {
             period_end,
             scores, // { work_quality: 5, ... }
             attendance_counts, // { late: 0, sick: 0, personal: 0 }
+            system_attendance_counts,
+            correction_remark,
             comment_supervisor,
             comment_improvement,
             comment_praise,
@@ -38,6 +40,13 @@ export async function POST(req: Request) {
 
         if (!emp_id || !scores || !decision) {
             return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 });
+        }
+
+        // --- Handle Corrections Logic ---
+        let finalCommentSupervisor = comment_supervisor || "";
+        if (correction_remark && correction_remark.trim()) {
+            const auditLog = `\n\n---บันทึกการแก้ไขสถิติ---\n${correction_remark.trim()}\n(สถิติเดิมจากระบบ: มาสาย ${system_attendance_counts?.late || 0}, ลาป่วย ${system_attendance_counts?.sick || 0}, ลากิจ ${system_attendance_counts?.personal || 0})`;
+            finalCommentSupervisor += auditLog;
         }
 
         // 1. Verify Supervisor Relationship (Allow Primary or Secondary)
@@ -95,14 +104,14 @@ export async function POST(req: Request) {
                 score_sick_leave: finalScores.sick_leave || 0,
                 score_personal_leave: finalScores.personal_leave || 0,
                 
-                count_late: attendance_counts?.late || 0,
-                count_sick_leave: attendance_counts?.sick || 0,
-                count_personal_leave: attendance_counts?.personal || 0,
+                count_late: Math.round(attendance_counts?.late || 0),
+                count_sick_leave: Math.round(attendance_counts?.sick || 0),
+                count_personal_leave: Math.round(attendance_counts?.personal || 0),
                 
                 total_score: totalScore,
                 grade: grade,
                 
-                comment_supervisor,
+                comment_supervisor: finalCommentSupervisor,
                 comment_improvement,
                 comment_praise,
                 

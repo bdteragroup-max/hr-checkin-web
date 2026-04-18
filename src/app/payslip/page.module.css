@@ -812,7 +812,8 @@
   height: auto;
   max-height: 75vh;
   display: block;
-  object-fit: contain; /* Show full frame, no cropping */
+  object-fit: contain;
+  /* Show full frame, no cropping */
 }
 
 .mirror {

@@ -430,6 +430,10 @@ model probation_evaluations {
   comment_supervisor    String?  @db.Text
   comment_improvement   String?  @db.Text
   comment_praise        String?  @db.Text
+  correction_remark     String?  @db.Text
+  system_count_late     Int?
+  system_count_sick     Decimal? @db.Decimal(5,2)
+  system_count_personal Decimal? @db.Decimal(5,2)
 
   decision              String   @db.VarChar(50) // pass, fail, extend, salary_adjust
   salary_adjust_from    Decimal? @db.Decimal(12, 2)

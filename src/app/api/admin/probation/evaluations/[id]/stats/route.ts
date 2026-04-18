@@ -1,47 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/jwt";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request, { params }: { params: Promise<{ emp_id: string }> }) {
-    const token = (await cookies()).get("token")?.value;
-    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-
-    const { emp_id } = await params;
-    const { searchParams } = new URL(req.url);
-    const startStr = searchParams.get("start");
-    const endStr = searchParams.get("end");
-
-    if (!startStr || !endStr) {
-        return NextResponse.json({ error: "DATE_RANGE_REQUIRED" }, { status: 400 });
-    }
-
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const decoded = verifyToken(token);
-        const supervisorId = decoded.emp_id;
+        await requireAdmin();
+        const { id } = await params;
 
-        // Verify that this user is either the primary or secondary supervisor
-        const targetEmp = await prisma.employees.findUnique({
-            where: { emp_id },
-            select: { supervisor_id: true, secondary_supervisor_id: true }
+        const evalRecord = await prisma.probation_evaluations.findUnique({
+            where: { id: Number(id) },
+            select: { emp_id: true, period_start: true, period_end: true }
         });
 
-        const isAuthorized = targetEmp && (
-            targetEmp.supervisor_id === supervisorId || 
-            targetEmp.secondary_supervisor_id === supervisorId
-        );
+        if (!evalRecord) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-        if (!isAuthorized) {
-            return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
-        }
-
-        const start = new Date(startStr);
-        const end = new Date(endStr);
+        const { emp_id, period_start, period_end } = evalRecord;
+        const start = new Date(period_start);
+        const end = new Date(period_end);
         end.setHours(23, 59, 59, 999);
 
-        // 1. Count Late Check-ins & Minutes
+        // 1. Fetch Late Check-ins
         const lateCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id,
@@ -55,28 +35,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
         const totalLateMin = lateCheckins.reduce((sum, c) => sum + (c.late_min || 0), 0);
         const lateCount = lateCheckins.length;
 
-        // Helper to calculate days within range for a leave request
+        // Helper to calculate days within range
         const calculateDaysInRange = (leaveStart: Date, leaveEnd: Date, leaveTotalDays: number) => {
             const actualStart = leaveStart < start ? start : leaveStart;
             const actualEnd = leaveEnd > end ? end : leaveEnd;
-            
             if (actualStart > actualEnd) return 0;
-            
-            // Full request length in days
             const totalMs = leaveEnd.getTime() - leaveStart.getTime();
-            if (totalMs <= 0) return leaveTotalDays; // Safety fallback
-            
-            // Proportion of the leave within our window
+            if (totalMs <= 0) return leaveTotalDays; 
             const rangeMs = actualEnd.getTime() - actualStart.getTime();
             const proportion = rangeMs / totalMs;
-            
-            // If it's a single day leave, just return 1 if it's in range
             if (leaveStart.toDateString() === leaveEnd.toDateString()) return 1;
-
             return Math.min(leaveTotalDays, Number((leaveTotalDays * proportion).toFixed(2)));
         };
 
-        // 2. Count Sick Leave
+        // 2. Fetch Sick Leaves
         const sickLeaves = await prisma.leave_requests.findMany({
             where: {
                 emp_id,
@@ -91,7 +63,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
             select: { start_date: true, end_date: true, days: true, reason: true, leave_type: true }
         });
 
-        // 3. Count Personal Leave
+        // 3. Fetch Personal Leaves
         const personalLeaves = await prisma.leave_requests.findMany({
             where: {
                 emp_id,
@@ -140,7 +112,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
             }
         });
     } catch (e: any) {
-        console.error("[API/PROBATION/STATS] Error:", e);
-        return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+        console.error("[API/ADMIN/PROBATION/STATS] Error:", e);
+        return NextResponse.json({ error: e.message || "INTERNAL_ERROR" }, { status: 500 });
     }
 }

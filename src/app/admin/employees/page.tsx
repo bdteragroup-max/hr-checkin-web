@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
-import { 
-    UsersIcon, 
-    MagnifyingGlassIcon, 
-    LightBulbIcon, 
-    PlusIcon, 
-    PencilSquareIcon, 
-    ExclamationTriangleIcon, 
-    TrashIcon, 
-    CheckCircleIcon, 
+import {
+    UsersIcon,
+    MagnifyingGlassIcon,
+    LightBulbIcon,
+    PlusIcon,
+    PencilSquareIcon,
+    ExclamationTriangleIcon,
+    TrashIcon,
+    CheckCircleIcon,
     NoSymbolIcon,
     XCircleIcon
 } from "@heroicons/react/24/outline";
@@ -99,6 +99,8 @@ export default function AdminEmployeesPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("all");
     const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
+    const [deptFilter, setDeptFilter] = useState<number | "all">("all");
+    const [branchFilter, setBranchFilter] = useState<string | "all">("all");
 
     /* create form */
     const [empId, setEmpId] = useState("");
@@ -411,8 +413,15 @@ export default function AdminEmployeesPage() {
         const matchT =
             typeFilter === "all" ? true :
                 x.salary_type === typeFilter;
-        return matchQ && matchS && matchT;
-    }), [list, search, statusFilter]);
+        const matchD =
+            deptFilter === "all" ? true :
+                x.department_id === deptFilter;
+        const matchB =
+            branchFilter === "all" ? true :
+                x.branch_id === branchFilter;
+
+        return matchQ && matchS && matchT && matchD && matchB;
+    }), [list, search, statusFilter, typeFilter, deptFilter, branchFilter]);
 
     /* ─────────────────────────────────────────────────────────
        RENDER
@@ -489,6 +498,28 @@ export default function AdminEmployeesPage() {
                                 <option value="all">ทุกประเภท</option>
                                 <option value="monthly">รายเดือน</option>
                                 <option value="daily">รายวัน (Intern)</option>
+                            </select>
+                            <select
+                                className={styles.input}
+                                value={branchFilter}
+                                onChange={(e) => setBranchFilter(e.target.value)}
+                                style={{ width: 140 }}
+                            >
+                                <option value="all">ทุกสาขา</option>
+                                {branches.map((b) => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                            </select>
+                            <select
+                                className={styles.input}
+                                value={deptFilter}
+                                onChange={(e) => setDeptFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                                style={{ width: 160 }}
+                            >
+                                <option value="all">ทุกแผนก</option>
+                                {departments.map((d) => (
+                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                ))}
                             </select>
                             <button className={styles.btnRefresh} onClick={load} disabled={loading}>
                                 ↻
@@ -1021,8 +1052,8 @@ export default function AdminEmployeesPage() {
                                     checked={editDraft.is_on_trial}
                                     onChange={(e) => {
                                         const checked = e.target.checked;
-                                        setEditDraft((d) => d && ({ 
-                                            ...d, 
+                                        setEditDraft((d) => d && ({
+                                            ...d,
                                             is_on_trial: checked,
                                             probation_end_date: checked ? d.probation_end_date : ""
                                         }));
@@ -1034,7 +1065,7 @@ export default function AdminEmployeesPage() {
                                 <div style={{ marginLeft: 24, marginBottom: 16 }}>
                                     <label className={styles.lbl} style={{ color: "var(--text-3)", fontSize: 12 }}>วันสิ้นสุดทดลองงาน (ถ้ามี)</label>
                                     <input type="date" className={styles.input}
-                                        value={editDraft.probation_end_date} 
+                                        value={editDraft.probation_end_date}
                                         onChange={(e) => setEditDraft((d) => d && ({ ...d, probation_end_date: e.target.value }))} />
                                 </div>
                             )}
@@ -1081,8 +1112,8 @@ export default function AdminEmployeesPage() {
                                     checked={editDraft.is_active}
                                     onChange={(e) => {
                                         const active = e.target.checked;
-                                        setEditDraft((d) => d && ({ 
-                                            ...d, 
+                                        setEditDraft((d) => d && ({
+                                            ...d,
                                             is_active: active,
                                             resignation_date: active ? "" : (d.resignation_date || new Date().toISOString().split("T")[0])
                                         }));
@@ -1104,9 +1135,9 @@ export default function AdminEmployeesPage() {
                                     <ExclamationTriangleIcon width={14} style={{ display: "inline-block", verticalAlign: "text-bottom", marginRight: 4 }} />
                                     ระบุวันที่ลาออก (วันที่ออกจริง) <span style={{ color: "var(--red)" }}>* บังคับ</span>
                                 </label>
-                                <input 
-                                    type="date" 
-                                    className={styles.input} 
+                                <input
+                                    type="date"
+                                    className={styles.input}
                                     style={{ border: "1px solid var(--red)", background: "#fff" }}
                                     value={editDraft.resignation_date}
                                     onChange={(e) => setEditDraft((d) => d && ({ ...d, resignation_date: e.target.value }))}

@@ -16,7 +16,11 @@ import {
     CheckBadgeIcon,
     CalendarDaysIcon,
     UserCircleIcon,
-    LockClosedIcon
+    LockClosedIcon,
+    ExclamationTriangleIcon,
+    XMarkIcon,
+    EyeIcon,
+    InformationCircleIcon
 } from "@heroicons/react/24/solid";
 import styles from "./page.module.css";
 import Link from "next/link";
@@ -59,6 +63,26 @@ export default function EvaluatePage() {
     const [commentImprovement, setCommentImprovement] = useState("");
     const [commentPraise, setCommentPraise] = useState("");
 
+    // --- CORRECTIONS & DETAILS ---
+    const [attDetails, setAttDetails] = useState<any>(null);
+    const [activeDetailType, setActiveDetailType] = useState<"late" | "sick" | "personal" | null>(null);
+    const [extraLateMin, setExtraLateMin] = useState(0);
+
+    const [corrections, setCorrections] = useState<Record<string, string>>({
+        late: "",
+        sick: "",
+        personal: ""
+    });
+    const [correctionRemark, setCorrectionRemark] = useState("");
+
+    const displayedStats = useMemo(() => {
+        return {
+            late: corrections.late !== "" ? Number(corrections.late) : attendanceCounts.late,
+            sick: corrections.sick !== "" ? Number(corrections.sick) : attendanceCounts.sick,
+            personal: corrections.personal !== "" ? Number(corrections.personal) : attendanceCounts.personal,
+        };
+    }, [attendanceCounts, corrections]);
+
 
     useEffect(() => {
         fetch("/api/team/probation/employees")
@@ -84,7 +108,11 @@ export default function EvaluatePage() {
         fetch(`/api/team/probation/stats/${emp_id}?start=${periodStart}&end=${periodEnd}`)
             .then(r => r.json())
             .then(data => {
-                if (data.stats) setAttendanceCounts(data.stats);
+                if (data.stats) {
+                    setAttendanceCounts(data.stats);
+                    setExtraLateMin(data.stats.late_min || 0);
+                }
+                if (data.details) setAttDetails(data.details);
             })
             .catch(() => {})
             .finally(() => setAttendanceLoading(false));
@@ -106,11 +134,11 @@ export default function EvaluatePage() {
             if (count <= 4) return 2;
             return 1;
         };
-        input.late = calcAtt("late", attendanceCounts.late);
-        input.sick_leave = calcAtt("sick", attendanceCounts.sick);
-        input.personal_leave = calcAtt("personal", attendanceCounts.personal);
+        input.late = calcAtt("late", displayedStats.late);
+        input.sick_leave = calcAtt("sick", displayedStats.sick);
+        input.personal_leave = calcAtt("personal", displayedStats.personal);
         return calculateTotalScore(input);
-    }, [scores, attendanceCounts]);
+    }, [scores, displayedStats]);
 
     const grade = useMemo(() => calculateGrade(totalScore), [totalScore]);
 
@@ -127,7 +155,9 @@ export default function EvaluatePage() {
                     period_start: periodStart,
                     period_end: periodEnd,
                     scores,
-                    attendance_counts: attendanceCounts,
+                    attendance_counts: displayedStats,
+                    system_attendance_counts: attendanceCounts, // For audit
+                    correction_remark: correctionRemark,
                     comment_supervisor: commentSupervisor,
                     comment_improvement: commentImprovement,
                     comment_praise: commentPraise,
@@ -223,17 +253,72 @@ export default function EvaluatePage() {
                             <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.late}</div>
                                 <div className={styles.attLabel}>มาสาย</div>
+                                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>{extraLateMin} นาที</div>
+                                <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("late")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                             <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.sick}</div>
                                 <div className={styles.attLabel}>ลาป่วย</div>
+                                <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("sick")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                             <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.personal}</div>
                                 <div className={styles.attLabel}>ลากิจ</div>
+                                <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("personal")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                         </div>
                     )}
+
+                    <div className={styles.correctionWrap}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                            <ExclamationTriangleIcon width={16} color="#d93025" />
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#991b1b' }}>แก้ไข/ปรับปรุงสถิติ (ถ้ามี)</span>
+                        </div>
+                        <div className={styles.correctionGrid}>
+                            <div className={styles.correctionInputGroup}>
+                                <label>มาสาย (ครั้ง)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder={String(attendanceCounts.late)}
+                                    value={corrections.late}
+                                    onChange={e => setCorrections(p => ({ ...p, late: e.target.value }))}
+                                />
+                            </div>
+                            <div className={styles.correctionInputGroup}>
+                                <label>ลาป่วย (วัน)</label>
+                                <input 
+                                    type="number" 
+                                    step="0.1"
+                                    placeholder={String(attendanceCounts.sick)}
+                                    value={corrections.sick}
+                                    onChange={e => setCorrections(p => ({ ...p, sick: e.target.value }))}
+                                />
+                            </div>
+                            <div className={styles.correctionInputGroup}>
+                                <label>ลากิจ (วัน)</label>
+                                <input 
+                                    type="number" 
+                                    step="0.1"
+                                    placeholder={String(attendanceCounts.personal)}
+                                    value={corrections.personal}
+                                    onChange={e => setCorrections(p => ({ ...p, personal: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        {(corrections.late !== "" || corrections.sick !== "" || corrections.personal !== "") && (
+                            <div style={{ marginTop: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#991b1b', marginBottom: 4 }}>ระบุเหตุผลการปรับปรุงสถิติ</div>
+                                <textarea 
+                                    style={{ width: '100%', fontSize: 13, padding: 8, border: '1.5px solid #fecaca', borderRadius: 8, background: '#fff' }}
+                                    rows={2}
+                                    value={correctionRemark}
+                                    onChange={e => setCorrectionRemark(e.target.value)}
+                                    placeholder="เช่น แก้ไขเนื่องจากพนักงานลืมลงเวลาแต่มาจริง..."
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── SECTION 3: CORE RUBRIC ── */}
@@ -328,6 +413,54 @@ export default function EvaluatePage() {
                         {submitting ? "..." : "ส่งผลประเมิน"}
                     </button>
                 </div>
+
+                {/* ── MODAL: ATTENDANCE DETAILS ── */}
+                {activeDetailType && attDetails && (
+                    <div className={styles.modalOverlay} onClick={() => setActiveDetailType(null)}>
+                        <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+                            <div className={styles.modalHeader}>
+                                <h3>รายละเอียด: {activeDetailType === "late" ? "มาสาย" : activeDetailType === "sick" ? "ลาป่วย" : "ลากิจ"}</h3>
+                                <button 
+                                    onClick={() => setActiveDetailType(null)}
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+                                >
+                                    <XMarkIcon width={24} color="#94a3b8" />
+                                </button>
+                            </div>
+                            <div className={styles.modalBody}>
+                                {activeDetailType === "late" && (
+                                    <>
+                                        {attDetails.lates.length === 0 ? <div style={{textAlign:'center',color:'#94a3b8'}}>ไม่พบรายการสาย</div> : 
+                                            attDetails.lates.map((item: any, idx: number) => (
+                                                <div key={idx} className={styles.detailRow}>
+                                                    <div className={styles.detailDate}>{new Date(item.date).toLocaleDateString("th-TH", { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                                                    <div className={styles.detailSub}>สาย {item.minutes} นาที ({item.status})</div>
+                                                </div>
+                                            ))
+                                        }
+                                    </>
+                                )}
+                                {(activeDetailType === "sick" || activeDetailType === "personal") && (
+                                    <>
+                                        {(attDetails[activeDetailType] || []).length === 0 ? <div style={{textAlign:'center',color:'#94a3b8'}}>ไม่พบรายการลา</div> : 
+                                            attDetails[activeDetailType].map((item: any, idx: number) => (
+                                                <div key={idx} className={styles.detailRow}>
+                                                    <div className={styles.detailDate}>
+                                                        {new Date(item.start).toLocaleDateString("th-TH")} — {new Date(item.end).toLocaleDateString("th-TH")}
+                                                    </div>
+                                                    <div className={styles.detailSub}>{item.days} วัน · {item.reason || "ไม่ระบุเหตุผล"}</div>
+                                                </div>
+                                            ))
+                                        }
+                                    </>
+                                )}
+                            </div>
+                            <div className={styles.modalFooter}>
+                                <button className={styles.btnCloseModal} onClick={() => setActiveDetailType(null)}>ปิดหน้าต่าง</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
