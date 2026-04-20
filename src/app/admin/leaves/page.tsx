@@ -22,6 +22,7 @@ type LeaveRow = {
     minutes?: number;
     handover_person?: string | null;
     employees?: {
+        supervisor_id?: string | null;
         departments?: {
             name: string;
         };
