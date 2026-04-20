@@ -506,7 +506,7 @@ export default function AdminLeavesPage() {
                                                             <span className={`${styles.badge} ${styles.blue}`} style={{ fontWeight: 700 }}>{displayDuration}</span>
                                                         </td>
                                                         <td style={{ overflow: "hidden" }}>
-                                                            <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason}>
+                                                            <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason || undefined}>
                                                                 {normalizeReason(r.reason || "")}
                                                             </div>
                                                         </td>
@@ -608,7 +608,7 @@ export default function AdminLeavesPage() {
                                                         </div>
                                                     </td>
                                                     <td style={{ overflow: "hidden" }}>
-                                                        <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason}>
+                                                        <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason || undefined}>
                                                             {normalizeReason(r.reason || "")}
                                                         </div>
                                                     </td>
