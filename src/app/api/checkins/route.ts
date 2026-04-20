@@ -246,10 +246,7 @@ export async function POST(req: Request) {
         if (e.message === "DUPLICATE_TODAY") {
             return NextResponse.json({ error: "DUPLICATE_TODAY" }, { status: 409 });
         }
-        console.warn("[API/CHECKIN] POST DB Error (is_trip col missing?):", e.message);
-        // Fallback without is_trip (Not using transaction here as fallback is usually legacy)
-        row = await (prisma.checkins.create as any)({
-        console.warn("[API/CHECKIN] POST DB Error (is_trip col missing?):", e.message);
+        console.warn("[API/CHECKIN] POST DB Error:", e.message);
         // Fallback without is_trip
         row = await (prisma.checkins.create as any)({
             data: {
