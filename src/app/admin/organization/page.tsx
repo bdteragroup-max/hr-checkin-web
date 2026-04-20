@@ -245,7 +245,16 @@ export default function OrganizationPage() {
                                             <td>{p.employees[0]?.name || "ว่าง"}</td>
                                             <td className={styles.tdRight}>
                                                 <div className={styles.tdActions}>
-                                                    <button className={styles.miniBtn} onClick={() => setPosModal({ ...p, open: true, isEdit: true, department_id: p.department_id || 0, parent_id: p.parent_id || 0 })}><PencilIcon style={{width: 12}}/></button>
+                                                    <button className={styles.miniBtn} onClick={() => setPosModal({ 
+                                                        open: true, 
+                                                        isEdit: true, 
+                                                        id: p.id,
+                                                        title: p.title,
+                                                        node_type: p.node_type || "staff", 
+                                                        is_ot_eligible: p.is_ot_eligible,
+                                                        department_id: p.department_id || 0, 
+                                                        parent_id: p.parent_id || 0 
+                                                     })}><PencilIcon style={{width: 12}}/></button>
                                                     <button className={styles.miniBtnDel} onClick={() => deleteItem('pos', p.id)}><TrashIcon style={{width: 12}}/></button>
                                                 </div>
                                             </td>
