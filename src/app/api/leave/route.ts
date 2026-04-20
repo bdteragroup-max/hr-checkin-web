@@ -119,8 +119,11 @@ export async function calculateEntitlements(empId: string, hireDate: Date | null
         quotas['annual'] = 0;
     }
 
-    // Rule: Employees on trial can now take Personal/Emergency Leave
-    // Previously blocked: if (isOnTrial) quotas['personal'] = 0;
+    // Rule: Employees on trial cannot take Personal/Emergency Leave
+    if (isOnTrial) {
+        quotas['personal'] = 0;
+        quotas['emergency'] = 0;
+    }
 
     const personalQuota = quotas['personal'] ?? 0;
 
@@ -191,15 +194,26 @@ export async function GET() {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, department_id: true },
+        select: { 
+            emp_id: true, name: true, gender: true, hire_date: true, 
+            supervisor_id: true, is_on_trial: true, department_id: true,
+            salary_type: true 
+        },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
     const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
 
-    // ส่ง types ที่ “ใช้ได้” ตามเพศ
+    // ส่ง types ที่ “ใช้ได้” ตามเพศ และประเภทการจ้างงาน (Daily/Intern)
     const types = LEAVE_TYPES
-        .filter((t) => t.gender === "ANY" || t.gender === emp.gender)
+        .filter((t) => {
+            const genderMatch = t.gender === "ANY" || t.gender === emp.gender;
+            // Interns (Daily) only allowed Sick and Unpaid
+            if (emp.salary_type === "daily") {
+                return genderMatch && ["sick", "unpaid"].includes(t.id);
+            }
+            return genderMatch;
+        })
         .map((t) => ({
             id: t.id,
             name: t.name,
@@ -287,16 +301,24 @@ export async function POST(req: Request) {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true, line_user_id: true, supervisor: { select: { line_user_id: true } } },
+        select: { 
+            emp_id: true, name: true, gender: true, hire_date: true, 
+            supervisor_id: true, is_on_trial: true, line_user_id: true, 
+            salary_type: true,
+            supervisor: { select: { line_user_id: true } } 
+        },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
-    // Rule: Check probation for Leave of Absence (personal/emergency) - ALLOWED
-    /* 
+    // Rule: Check probation for Leave of Absence (personal/emergency) - NOT ALLOWED
     if ((leave_type_id === "personal" || leave_type_id === "emergency") && emp.is_on_trial) {
         return NextResponse.json({ error: "PROBATION_PERSONAL_NOT_ALLOWED" }, { status: 403 });
     }
-    */
+
+    // Rule: Interns (Daily) only allowed Sick and Unpaid
+    if (emp.salary_type === "daily" && !["sick", "unpaid"].includes(leave_type_id)) {
+        return NextResponse.json({ error: "INTERN_LEAVE_NOT_ALLOWED" }, { status: 403 });
+    }
 
     // Enforce advance notice based on Thailand timezone calendar day difference
     if (def.advance_notice && def.advance_notice > 0) {
@@ -521,7 +543,16 @@ export async function PUT(req: Request) {
 
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
-        select: { emp_id: true, name: true, gender: true, hire_date: true, supervisor_id: true, is_on_trial: true },
+        select: { 
+            emp_id: true, 
+            name: true, 
+            gender: true, 
+            hire_date: true, 
+            supervisor_id: true, 
+            is_on_trial: true,
+            line_user_id: true,
+            supervisor: { select: { line_user_id: true } }
+        },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -612,6 +643,9 @@ export async function PUT(req: Request) {
     }
 
     try {
+        const initialStatus = emp.supervisor_id ? "pending_supervisor" : "pending_hr";
+        const { quotas, used } = await calculateEntitlements(emp.emp_id, emp.hire_date, emp.is_on_trial);
+
         await prisma.leave_requests.update({
             where: { id },
             data: {
@@ -626,11 +660,140 @@ export async function PUT(req: Request) {
                 reason,
                 attachment_url,
                 handover_person,
+                status: initialStatus,
+                supervisor_id: emp.supervisor_id || null,
             },
         });
+
+        const { 
+            sendLeaveApprovalFlexMessage, 
+            sendHrLeaveNotification, 
+            sendEmployeeLeaveStatusNotification 
+        } = await import("@/utils/lineMessaging");
+
+        const supervisorLineId = emp.supervisor?.line_user_id;
+
+        // ✅ Notify Supervisor or HR (similar to POST logic)
+        if (supervisorLineId) {
+            sendLeaveApprovalFlexMessage(supervisorLineId, {
+                id,
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
+                usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
+            }, false, undefined, true).catch(console.error); // isModified = true
+
+            sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                status: "pending_supervisor",
+            }).catch(console.error);
+        } else {
+            sendHrLeaveNotification({
+                id,
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                supervisorName: "ไม่มี (ส่งตรงถึง HR)",
+                quotaMins: ["annual", "personal", "sick"].includes(leave_type_id) ? quotas[leave_type_id] : undefined,
+                usedMins: ["annual", "personal", "sick"].includes(leave_type_id) ? used[leave_type_id] : undefined
+            }).catch(console.error);
+
+            sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
+                empName: emp.name,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                handoverPerson: handover_person,
+                status: "pending_hr",
+            }).catch(console.error);
+        }
+
     } catch (e: any) {
         return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, id, days, minutes });
+}
+
+export async function DELETE(req: Request) {
+    const token = (await cookies()).get("token")?.value;
+    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
+    let p: TokenPayload;
+    try {
+        p = verifyToken(token) as TokenPayload;
+    } catch {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const id = String(body?.id || "").trim();
+    if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
+
+    const existing = await prisma.leave_requests.findUnique({ 
+        where: { id },
+        include: { employees: { select: { name: true, supervisor: { select: { line_user_id: true } } } } }
+    });
+    if (!existing) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    if (existing.emp_id !== p.emp_id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 403 });
+    if (!existing.status.startsWith("pending") && existing.status !== "approved") {
+        return NextResponse.json({ error: "CANNOT_CANCEL_COMPLETED" }, { status: 400 });
+    }
+
+    // ✅ Only allow cancelling FUTURE leave requests
+    if (existing.start_at < new Date()) {
+        return NextResponse.json({ error: "CANNOT_CANCEL_PAST_LEAVE" }, { status: 400 });
+    }
+
+    try {
+        await prisma.leave_requests.update({
+            where: { id },
+            data: { status: "cancelled" }
+        });
+
+        const { sendLeaveCancelledNotification } = await import("@/utils/lineMessaging");
+        
+        const hrLineUserId = process.env.HR_LINE_USER_ID;
+        const supervisorLineId = existing.employees?.supervisor?.line_user_id;
+
+        const noticeData = {
+            empName: existing.employees?.name || existing.name,
+            leaveType: existing.leave_type,
+            startDate: existing.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+            endDate: existing.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+            minutes: existing.minutes,
+            reason: existing.reason || "",
+        };
+
+        // Notify Supervisor
+        if (supervisorLineId) {
+            sendLeaveCancelledNotification(supervisorLineId, noticeData).catch(console.error);
+        }
+        // Notify HR
+        if (hrLineUserId) {
+            sendLeaveCancelledNotification(hrLineUserId, noticeData).catch(console.error);
+        }
+
+    } catch (e: any) {
+        return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
 }

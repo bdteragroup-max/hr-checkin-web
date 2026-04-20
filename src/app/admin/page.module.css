@@ -64,9 +64,10 @@
   font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100vh;
   margin: 0;
-  max-width: 100%;
+  max-width: 100vw;
+  overflow: hidden !important;
   box-sizing: border-box;
 }
 
@@ -161,7 +162,9 @@
 ══════════════════════════════════════════════ */
 .appLayout {
   display: flex;
-  min-height: calc(100vh - 58px);
+  height: calc(100vh - 58px);
+  overflow: hidden;
+  position: relative;
 }
 
 /* ══════════════════════════════════════════════
@@ -240,13 +243,25 @@
 ══════════════════════════════════════════════ */
 .main {
   flex: 1;
-  overflow: hidden;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
   min-width: 0;
+  max-width: 100%;
 }
 
 .content {
   padding: 26px 28px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
   animation: contentFadeIn 0.28s ease both;
+}
+
+.lockedLayout {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 @keyframes contentFadeIn {
@@ -598,6 +613,94 @@
   transform: scale(0.98);
   box-shadow: none;
 }
+
+.btnExport {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: var(--blue-lt);
+  color: var(--blue);
+  border: 1.5px solid var(--blue-bdr);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 38px;
+}
+
+.btnExport:hover:not(:disabled) {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+}
+
+.btnExport:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btnDangerGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--bad);
+  border: 1.5px solid var(--bad-bdr);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  height: 38px;
+}
+
+.btnDangerGhost:hover:not(:disabled) {
+  background: var(--bad-bg);
+  border-color: var(--bad);
+  transform: translateY(-1px);
+}
+
+.filterCard {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.filterCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.filterCardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table tr.clickableRow {
+  transition: background-color 0.15s;
+  cursor: default;
+}
+
+.table tr.clickableRow:hover {
+  background-color: var(--surface2) !important;
+}
 .btnPrimary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -802,6 +905,18 @@
 
 .tableScroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line2) transparent;
+}
+
+.tableScroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tableScroll::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 10px;
 }
 
 /* ══════════════════════════════════════════════
@@ -944,6 +1059,11 @@
   background: var(--bad-bg);
   color: var(--bad);
   border-color: var(--bad-bdr);
+}
+.badge.cancelled {
+  background: var(--surface2);
+  color: var(--text4);
+  border-color: var(--line2);
 }
 
 .typeBadge {

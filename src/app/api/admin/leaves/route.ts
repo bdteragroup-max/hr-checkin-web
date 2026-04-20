@@ -26,7 +26,9 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const status = url.searchParams.get("status") || ""; // pending/approved/rejected
         const empId = url.searchParams.get("emp_id") || "";
-        const date = url.searchParams.get("date") || ""; // YYYY-MM-DD (filter overlap)
+        const startDate = url.searchParams.get("startDate") || "";
+        const endDate = url.searchParams.get("endDate") || "";
+        const date = url.searchParams.get("date") || ""; // YYYY-MM-DD (backward compatibility)
 
         const where: any = {};
         if (status) {
@@ -38,8 +40,17 @@ export async function GET(req: Request) {
         }
         if (empId) where.emp_id = empId;
 
-        // overlap date: start_date <= d <= end_date
-        if (date) {
+        // Date range filtering
+        if (startDate && endDate) {
+            // captures any overlap with the range [startDate, endDate]
+            where.start_date = { lte: new Date(`${endDate}T23:59:59.999Z`) };
+            where.end_date = { gte: new Date(`${startDate}T00:00:00.000Z`) };
+        } else if (startDate) {
+            where.start_date = { gte: new Date(`${startDate}T00:00:00.000Z`) };
+        } else if (endDate) {
+            where.end_date = { lte: new Date(`${endDate}T23:59:59.999Z`) };
+        } else if (date) {
+            // fallback for backward compatibility: exact date overlap
             const d = new Date(`${date}T00:00:00.000Z`);
             where.start_date = { lte: d };
             where.end_date = { gte: d };
@@ -69,6 +80,7 @@ export async function GET(req: Request) {
                 handover_person: true,
                 employees: {
                     select: {
+                        supervisor_id: true,
                         departments: {
                             select: { name: true }
                         }

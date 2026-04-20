@@ -52,6 +52,7 @@ function fmtDateTime(d: string) {
 function badgeClass(status: string) {
     if (status === "approved") return `${styles.badge} ${styles.approved}`;
     if (status === "rejected") return `${styles.badge} ${styles.rejected}`;
+    if (status === "cancelled") return `${styles.badge} ${styles.cancelled}`;
     return `${styles.badge} ${styles.pending}`;
 }
 
@@ -86,7 +87,8 @@ export default function AdminLeavesPage() {
 
     // Filters
     const [status, setStatus] = useState<string>(""); // "", pending, approved, rejected
-    const [date, setDate] = useState<string>(""); // filter overlap (server filter)
+    const [startDate, setStartDate] = useState<string>(""); // From date
+    const [endDate, setEndDate] = useState<string>(""); // To date
     const [empId, setEmpId] = useState<string>("");
 
     // เพิ่ม filter เหตุผล (client filter)
@@ -97,10 +99,11 @@ export default function AdminLeavesPage() {
     const qs = useMemo(() => {
         const sp = new URLSearchParams();
         if (status) sp.set("status", status);
-        if (date) sp.set("date", date);
+        if (startDate) sp.set("startDate", startDate);
+        if (endDate) sp.set("endDate", endDate);
         if (empId.trim()) sp.set("emp_id", empId.trim());
         return sp.toString();
-    }, [status, date, empId]);
+    }, [status, startDate, endDate, empId]);
 
     async function load() {
         setLeaveLoading(true);
@@ -145,6 +148,7 @@ export default function AdminLeavesPage() {
         const pending = filteredByReason.filter((r) => r.status === "pending" || r.status === "pending_hr").length;
         const approved = filteredByReason.filter((r) => r.status === "approved").length;
         const rejected = filteredByReason.filter((r) => r.status === "rejected").length;
+        const cancelled = filteredByReason.filter((r) => r.status === "cancelled").length;
 
         // summary by leave_type
         const byTypeMap = new Map<string, number>();
@@ -154,7 +158,7 @@ export default function AdminLeavesPage() {
         }
         const byType = Array.from(byTypeMap.entries()).sort((a, b) => b[1] - a[1]);
 
-        return { total, pending, approved, rejected, byType };
+        return { total, pending, approved, rejected, cancelled, byType };
     }, [filteredByReason]);
 
     // ✅ Summary เหตุผลการลา (Top reasons)
@@ -279,6 +283,31 @@ export default function AdminLeavesPage() {
         document.body.removeChild(link);
     }
 
+    function exportListToCSV() {
+        const BOM = "\uFEFF";
+        let csvContent = "Employee ID,Name,Department,Leave Type,Start,End,Duration,Reason,Handover Person,Status\n";
+        
+        filteredByReason.forEach(r => {
+            const dept = r.employees?.departments?.name || "-";
+            const duration = formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined));
+            const startStr = fmtDateTime(r.start_at || r.start_date);
+            const endStr = fmtDateTime(r.end_at || r.end_date);
+            const statusStr = r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : r.status === "cancelled" ? "ยกเลิกแล้ว" : "รออนุมัติ";
+            
+            csvContent += `"${r.emp_id}","${r.name || ""}","${dept}","${r.leave_type || ""}","${startStr}","${endStr}","${duration}","${normalizeReason(r.reason || "")}","${r.handover_person || ""}","${statusStr}"\n`;
+        });
+
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Leaves_List_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     async function approveLeave(id: string, nextStatus: "approved" | "rejected") {
         if (processingId) return; // ✅ Block if already processing another row
 
@@ -340,6 +369,27 @@ export default function AdminLeavesPage() {
         }
     }
 
+    async function deleteLeave(id: string) {
+        if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการนี้? การลบจะไม่สามารถกู้คืนได้")) return;
+        setProcessingId(id);
+        setErr("");
+        try {
+            const res = await fetch(`/api/admin/leaves/${id}`, {
+                method: "DELETE",
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                setErr(data?.error || `DELETE_FAILED_${res.status}`);
+            } else {
+                await load();
+            }
+        } catch (e: any) {
+            setErr(e?.message || "DELETE_ERROR");
+        } finally {
+            setProcessingId(null);
+        }
+    }
+
     function renderLeave() {
         return (
             <>
@@ -349,64 +399,67 @@ export default function AdminLeavesPage() {
                         <div className={styles.pageSubtitle}>ตรวจสอบและสรุปข้อมูลการลาของพนักงาน</div>
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
-                        <div className={styles.toggleGroup}>
-                            <button 
-                                className={`${styles.toggleBtn} ${viewMode === "list" ? styles.toggleActive : ""}`}
-                                onClick={() => setViewMode("list")}
-                            >
-                                <ClipboardDocumentListIcon width={18} /> รายการคำขอ
-                            </button>
-                            <button 
-                                className={`${styles.toggleBtn} ${viewMode === "report" ? styles.toggleActive : ""}`}
-                                onClick={() => setViewMode("report")}
-                            >
-                                <ChartBarIcon width={18} /> สรุปผล (Report)
-                            </button>
-                        </div>
+                        {/* Report toggle removed as requested */}
                     </div>
                 </div>
 
                 {viewMode === "list" ? (
                     <>
-                        <div className={styles.filterBar}>
-                            <div className={styles.filterGroup}>
-                                <div className={styles.filterLabel}>STATUS</div>
-                                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                                    <option value="">ทุกสถานะ</option>
-                                    <option value="pending">รออนุมัติ</option>
-                                    <option value="approved">อนุมัติแล้ว</option>
-                                    <option value="rejected">ไม่อนุมัติ</option>
-                                </select>
+                        <div className={styles.filterCard}>
+                            <div className={styles.filterCardHeader}>
+                                <DocumentTextIcon width={18} style={{ color: "var(--red3)" }} />
+                                <span className={styles.filterCardTitle}>ตัวกรองข้อมูล (Filters)</span>
                             </div>
+                            <div className={styles.filterBar}>
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>STATUS</div>
+                                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                                        <option value="">ทุกสถานะ</option>
+                                        <option value="pending">รออนุมัติ</option>
+                                        <option value="approved">อนุมัติแล้ว</option>
+                                        <option value="rejected">ไม่อนุมัติ</option>
+                                        <option value="cancelled">ยกเลิกแล้ว</option>
+                                    </select>
+                                </div>
 
-                            <div className={styles.filterGroup}>
-                                <div className={styles.filterLabel}>DATE</div>
-                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>FROM</div>
+                                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                </div>
+
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>TO</div>
+                                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                </div>
+
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>EMP ID</div>
+                                    <input
+                                        type="text"
+                                        placeholder="รหัสพนักงาน/ชื่อ"
+                                        value={empId}
+                                        onChange={(e) => setEmpId(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>REASON</div>
+                                    <input
+                                        type="text"
+                                        placeholder="เหตุผลการลา..."
+                                        value={reasonQuery}
+                                        onChange={(e) => setReasonQuery(e.target.value)}
+                                    />
+                                </div>
+
+                                <button className={styles.btnPrimary} onClick={load} disabled={leaveLoading}>
+                                    {leaveLoading ? "Loading..." : "Refresh"}
+                                </button>
+
+                                <button className={styles.btnExport} onClick={exportListToCSV}>
+                                    <ArrowDownTrayIcon width={16} /> Export List
+                                </button>
                             </div>
-
-                            <div className={styles.filterGroup}>
-                                <div className={styles.filterLabel}>EMP ID</div>
-                                <input
-                                    type="text"
-                                    placeholder="ค้นหา emp_id"
-                                    value={empId}
-                                    onChange={(e) => setEmpId(e.target.value)}
-                                />
-                            </div>
-
-                            <div className={styles.filterGroup}>
-                                <div className={styles.filterLabel}>REASON</div>
-                                <input
-                                    type="text"
-                                    placeholder="ค้นหาเหตุผลการลา"
-                                    value={reasonQuery}
-                                    onChange={(e) => setReasonQuery(e.target.value)}
-                                />
-                            </div>
-
-                            <button className={styles.btnPrimary} onClick={load} disabled={leaveLoading}>
-                                {leaveLoading ? "Loading..." : "Refresh"}
-                            </button>
                         </div>
 
                         {err ? <div className={styles.errorMsg} style={{ display: "flex", alignItems: "center", gap: 6 }}><ExclamationTriangleIcon width={18} /> {err}</div> : null}
@@ -421,50 +474,67 @@ export default function AdminLeavesPage() {
                                 {pendingLeave.length === 0 && !leaveLoading ? (
                                     <div className={styles.emptyState} style={{ padding: 16 }}>ไม่มีรายการรออนุมัติ</div>
                                 ) : (
-                                    <table className={styles.table}>
+                                    <table className={styles.table} style={{ tableLayout: "fixed" }}>
                                         <thead>
                                             <tr>
-                                                <th>พนักงาน</th>
-                                                <th>ประเภท</th>
-                                                <th>วันที่</th>
-                                                <th>จำนวน</th>
-                                                <th>เหตุผล</th>
-                                                <th>ผู้รับผิดชอบแทน</th>
-                                                <th>จัดการ</th>
+                                                <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
+                                                <th style={{ width: "12%" }}>ประเภท (Type)</th>
+                                                <th style={{ width: "18%" }}>วันที่ (Date)</th>
+                                                <th style={{ width: "12%", textAlign: "center" }}>จำนวน (Duration)</th>
+                                                <th style={{ width: "20%" }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "12%" }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "140px", textAlign: "center" }}>จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {pendingLeave.map((r) => {
                                                 const displayDuration = formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined));
                                                 return (
-                                                    <tr key={r.id}>
-                                                        <td>
-                                                            <div style={{ fontWeight: 700 }}>{r.name || "-"}</div>
-                                                            <div className={styles.monoText} style={{ marginTop: 6 }}>{r.emp_id}</div>
+                                                    <tr key={r.id} className={styles.clickableRow}>
+                                                        <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            <div style={{ fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name || "-"}</div>
+                                                            <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: "flex", gap: 4, alignItems: "center" }}>
+                                                                <span className={styles.monoText}>{r.emp_id}</span> <span style={{ opacity: 0.5 }}>•</span> <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{r.employees?.departments?.name || "ไม่ระบุแผนก"}</span>
+                                                            </div>
                                                         </td>
-                                                        <td>{r.leave_type || "-"}</td>
-                                                        <td style={{ fontSize: 13 }}>{fmtDateTime(r.start_at || r.start_date)} - {fmtDateTime(r.end_at || r.end_date)}</td>
-                                                        <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>{displayDuration}</td>
-                                                        <td style={{ maxWidth: 300, color: "var(--text3)" }}>{normalizeReason(r.reason || "")}</td>
-                                                        <td style={{ color: "var(--text2)", fontWeight: 500 }}>{r.handover_person || "—"}</td>
-                                                        <td style={{ whiteSpace: "nowrap" }}>
-                                                            <button 
-                                                                className={styles.btnApprove} 
-                                                                onClick={() => approveLeave(r.id, "approved")} 
-                                                                disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
-                                                                style={{ marginRight: 8 }}
-                                                            >
-                                                                <CheckCircleIcon width={16} /> 
-                                                                {processingId === r.id ? "กำลังดำเนินการ..." : "อนุมัติ"}
-                                                            </button>
-                                                            <button 
-                                                                className={styles.btnReject} 
-                                                                onClick={() => approveLeave(r.id, "rejected")} 
-                                                                disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
-                                                            >
-                                                                <XCircleIcon width={16} /> 
-                                                                ไม่อนุมัติ
-                                                            </button>
+                                                        <td style={{ fontWeight: 500, color: "var(--text2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.leave_type || "-"}</td>
+                                                        <td style={{ fontSize: 12, color: "var(--text2)" }}>
+                                                            <div style={{ fontWeight: 600 }}>{fmtDateTime(r.start_at || r.start_date)}</div>
+                                                            <div style={{ opacity: 0.6 }}>ถึง {fmtDateTime(r.end_at || r.end_date)}</div>
+                                                        </td>
+                                                        <td style={{ textAlign: "center" }}>
+                                                            <span className={`${styles.badge} ${styles.blue}`} style={{ fontWeight: 700 }}>{displayDuration}</span>
+                                                        </td>
+                                                        <td style={{ overflow: "hidden" }}>
+                                                            <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason}>
+                                                                {normalizeReason(r.reason || "")}
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ color: "var(--text2)", fontSize: 11, fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
+                                                        <td>
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
+                                                                <span className={badgeClass(r.status)} style={{ fontSize: 10, padding: "2px 8px" }}>
+                                                                    {r.status === "pending_hr" ? "รอ HR อนุมัติ" : "รอหัวหน้าอนุมัติ"}
+                                                                </span>
+                                                                <div style={{ display: "flex", gap: 6 }}>
+                                                                    <button 
+                                                                        className={styles.btnApprove} 
+                                                                        onClick={() => approveLeave(r.id, "approved")} 
+                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                                        style={{ height: 28, padding: "0 8px", fontSize: 11 }}
+                                                                    >
+                                                                        <CheckCircleIcon width={12} /> อนุมัติ
+                                                                    </button>
+                                                                    <button 
+                                                                        className={styles.btnReject} 
+                                                                        onClick={() => approveLeave(r.id, "rejected")} 
+                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                                        style={{ height: 28, padding: "0 8px", fontSize: 11 }}
+                                                                    >
+                                                                        <XCircleIcon width={12} /> ไม่อนุมัติ
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );
@@ -487,45 +557,80 @@ export default function AdminLeavesPage() {
                                         <span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีประวัติการลา
                                     </div>
                                 ) : (
-                                    <table className={styles.table}>
+                                    <table className={styles.table} style={{ tableLayout: "fixed" }}>
                                         <thead>
                                             <tr>
-                                                <th>รหัส</th>
-                                                <th>ชื่อ</th>
-                                                <th>ประเภท</th>
-                                                <th>วันที่</th>
-                                                <th>เหตุผลการลา</th>
-                                                <th>ผู้รับผิดชอบแทน</th>
-                                                <th>สถานะ</th>
+                                                <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
+                                                <th style={{ width: "12%" }}>ประเภท (Type)</th>
+                                                <th style={{ width: "18%" }}>วันที่ (Date)</th>
+                                                <th style={{ width: "10%", textAlign: "center" }}>จํานวน (Days)</th>
+                                                <th style={{ width: "22%" }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "10%" }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "160px", textAlign: "center" }}>สถานะ / จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {filteredByReason.map((r) => (
-                                                <tr key={r.id}>
-                                                    <td>
-                                                        <span className={styles.monoText}>{r.emp_id}</span>
+                                                <tr key={r.id} className={styles.clickableRow}>
+                                                    <td style={{ overflow: "hidden" }}>
+                                                        <div style={{ fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {r.name || "-"}
+                                                            {!r.employees?.supervisor_id && (
+                                                                <span style={{ 
+                                                                    marginLeft: 8, 
+                                                                    fontSize: 10, 
+                                                                    color: "#f59e0b", 
+                                                                    background: "rgba(245, 158, 11, 0.1)", 
+                                                                    padding: "2px 6px", 
+                                                                    borderRadius: 4,
+                                                                    fontWeight: 600,
+                                                                    border: "1px solid rgba(245, 158, 11, 0.2)"
+                                                                }}>
+                                                                    ⚠️ ข้ามขั้นตอนหัวหน้า (ไม่มีผู้คุมงาน)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: "flex", gap: 4, alignItems: "center" }}>
+                                                            <span className={styles.monoText}>{r.emp_id}</span> <span style={{ opacity: 0.5 }}>•</span> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.employees?.departments?.name || "ไม่ระบุแผนก"}</span>
+                                                        </div>
                                                     </td>
-                                                    <td>{r.name || "-"}</td>
-                                                    <td>{r.leave_type || "-"}</td>
-                                                    <td style={{ fontSize: 12 }}>
-                                                        {fmtDateTime(r.start_at || r.start_date)} – {fmtDateTime(r.end_at || r.end_date)}
-                                                        <br />
-                                                        <span style={{ color: "var(--text4)", fontWeight: 500 }}>
+                                                    <td style={{ fontWeight: 500, color: "var(--text2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.leave_type || "-"}</td>
+                                                    <td style={{ fontSize: 12, color: "var(--text2)" }}>
+                                                        <div style={{ fontWeight: 600 }}>{fmtDateTime(r.start_at || r.start_date)}</div>
+                                                        <div style={{ opacity: 0.6 }}>ถึง {fmtDateTime(r.end_at || r.end_date)}</div>
+                                                        <div style={{ color: "var(--blue)", fontWeight: 700, marginTop: 4 }}>
                                                             ({formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined))})
-                                                        </span>
+                                                        </div>
                                                     </td>
-                                                    <td style={{ fontSize: 12, color: "var(--text3)", maxWidth: 400 }}>
-                                                        {normalizeReason(r.reason || "")}
+                                                    <td style={{ textAlign: "center" }}>
+                                                        <div style={{ fontSize: 12, color: "var(--text4)", fontWeight: 600 }}>
+                                                            {( (r.minutes || (r.days ? r.days * 480 : 0)) / 480 ).toFixed(1)} วัน
+                                                        </div>
                                                     </td>
-                                                    <td style={{ fontSize: 12, color: "var(--text2)" }}>{r.handover_person || "—"}</td>
+                                                    <td style={{ overflow: "hidden" }}>
+                                                        <div style={{ fontSize: 11, color: "var(--text3)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }} title={r.reason}>
+                                                            {normalizeReason(r.reason || "")}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ fontSize: 11, color: "var(--text2)", fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
                                                     <td>
-                                                        <span className={badgeClass(r.status)}>
-                                                            {r.status === "approved"
-                                                                ? "อนุมัติ"
-                                                                : r.status === "rejected"
-                                                                    ? "ไม่อนุมัติ"
-                                                                    : (r.status === "pending_supervisor" ? "รอหัวหน้าอนุมัติ" : "รอ HR อนุมัติ")}
-                                                        </span>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
+                                                            <span className={badgeClass(r.status)}>
+                                                                {r.status === "approved" ? "อนุมัติ" 
+                                                                  : r.status === "rejected" ? "ไม่อนุมัติ" 
+                                                                  : r.status === "cancelled" ? "ยกเลิกแล้ว" 
+                                                                  : (r.status === "pending_hr" ? "รอ HR อนุมัติ" : "รอหัวหน้าอนุมัติ")}
+                                                            </span>
+                                                            <button 
+                                                                className={styles.btnDangerGhost} 
+                                                                style={{ padding: '0 10px', height: 32, fontSize: 11 }}
+                                                                onClick={() => deleteLeave(r.id)}
+                                                                disabled={!!processingId}
+                                                                title="ลบรายการ"
+                                                            >
+                                                                <XCircleIcon width={14} /> ลบ
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -537,34 +642,67 @@ export default function AdminLeavesPage() {
                     </>
                 ) : (
                     <div className={styles.tableWrap} style={{ padding: 0 }}>
+                        <div className={styles.filterCard} style={{ margin: 20 }}>
+                            <div className={styles.filterCardHeader}>
+                                <ChartBarIcon width={18} style={{ color: "var(--red3)" }} />
+                                <span className={styles.filterCardTitle}>ตัวกรองสรุปผล (Summary Filters)</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>MONTH</div>
+                                    <select 
+                                        style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)', background: '#fff', minWidth: 140 }}
+                                        value={selectedMonth}
+                                        onChange={e => setSelectedMonth(e.target.value)}
+                                    >
+                                        <option value="">ทุกเดือน</option>
+                                        {availableMonths.map(m => (
+                                            <option key={m} value={m}>{m}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>FROM</div>
+                                    <input 
+                                        type="date" 
+                                        style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)' }}
+                                        value={startDate}
+                                        onChange={e => setStartDate(e.target.value)}
+                                    />
+                                </div>
+                                <div className={styles.filterGroup}>
+                                    <div className={styles.filterLabel}>TO</div>
+                                    <input 
+                                        type="date" 
+                                        style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)' }}
+                                        value={endDate}
+                                        onChange={e => setEndDate(e.target.value)}
+                                    />
+                                </div>
+
+                                <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+                                    <label className={styles.toggleDetail} title="แสดงรายบุคคล">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={showEmployeeDetail} 
+                                            onChange={e => setShowEmployeeDetail(e.target.checked)} 
+                                        />
+                                        <span className={styles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
+                                    </label>
+                                    <button className={styles.btnExport} onClick={exportToCSV}>
+                                        <ArrowDownTrayIcon width={16} /> Export CSV
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className={styles.tableHeader}>
                             <div className={styles.tableHeaderTitle} style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <ChartBarIcon width={20} style={{ marginRight: 8 }} />
                                     สรุปการลา แยกตามแผนกและเดือน
                                 </div>
-                                <label className={styles.toggleDetail} title="แสดงรายบุคคล">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={showEmployeeDetail} 
-                                        onChange={e => setShowEmployeeDetail(e.target.checked)} 
-                                    />
-                                    <span className={styles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
-                                </label>
-                                <select 
-                                    style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)', background: '#fff' }}
-                                    value={selectedMonth}
-                                    onChange={e => setSelectedMonth(e.target.value)}
-                                >
-                                    <option value="">ทุกเดือน</option>
-                                    {availableMonths.map(m => (
-                                        <option key={m} value={m}>{m}</option>
-                                    ))}
-                                </select>
                             </div>
-                            <button className={styles.btnGhost} onClick={exportToCSV} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <ArrowDownTrayIcon width={16} /> Export CSV
-                            </button>
                         </div>
 
                         <div className={styles.tableScroll}>

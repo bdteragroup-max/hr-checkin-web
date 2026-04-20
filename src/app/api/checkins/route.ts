@@ -206,40 +206,49 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
     }
 
-    // Duplicate Check
-    if (type === "Check-in" || type === "Check-out") {
-        const exists = todaysCheckins.find(c => c.type === type);
-        if (exists)
-            return NextResponse.json({ error: "DUPLICATE_TODAY" }, { status: 409 });
-    }
-
+    // Duplicate Check & Creation (Atomic)
     let row: any;
     try {
-        row = await (prisma.checkins.create as any)({
-            data: {
-                timestamp: getNowBangkok(),
-                date_key,
-                time_key,
-                emp_id: auth.emp.emp_id,
-                name: auth.emp.name,
-                type: type as string,
-                branch_name: branch.name,
-                lat,
-                lon,
-                accuracy,
-                distance: Math.round(distance),
-                capture_mode: "webrtc",
-                photo_url,
-                project_name,
-                customer_id,
-                remark,
-                is_trip,
-                late_status: lateInfo.status,
-                late_min: lateInfo.min ?? null,
-            },
-            select: { id: true },
+        row = await prisma.$transaction(async (tx) => {
+            if (type === "Check-in" || type === "Check-out") {
+                const count = await tx.checkins.count({
+                    where: { emp_id: auth.emp.emp_id, date_key, type }
+                });
+                if (count > 0) throw new Error("DUPLICATE_TODAY");
+            }
+
+            return await (tx.checkins.create as any)({
+                data: {
+                    timestamp: getNowBangkok(),
+                    date_key,
+                    time_key,
+                    emp_id: auth.emp.emp_id,
+                    name: auth.emp.name,
+                    type: type as string,
+                    branch_name: branch.name,
+                    lat,
+                    lon,
+                    accuracy,
+                    distance: Math.round(distance),
+                    capture_mode: "webrtc",
+                    photo_url,
+                    project_name,
+                    customer_id,
+                    remark,
+                    is_trip,
+                    late_status: lateInfo.status,
+                    late_min: lateInfo.min ?? null,
+                },
+                select: { id: true },
+            });
         });
     } catch (e: any) {
+        if (e.message === "DUPLICATE_TODAY") {
+            return NextResponse.json({ error: "DUPLICATE_TODAY" }, { status: 409 });
+        }
+        console.warn("[API/CHECKIN] POST DB Error (is_trip col missing?):", e.message);
+        // Fallback without is_trip (Not using transaction here as fallback is usually legacy)
+        row = await (prisma.checkins.create as any)({
         console.warn("[API/CHECKIN] POST DB Error (is_trip col missing?):", e.message);
         // Fallback without is_trip
         row = await (prisma.checkins.create as any)({

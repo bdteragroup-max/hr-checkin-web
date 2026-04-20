@@ -23,9 +23,13 @@ export async function GET(request: Request) {
     const endDate = new Date(year, month - 1, 25, 23, 59, 59);
 
     try {
-        // 1. Fetch all active employees
         const employees = await prisma.employees.findMany({
-            where: { is_active: true },
+            where: {
+                OR: [
+                    { is_active: true },
+                    { resignation_date: { gte: startDate } }
+                ]
+            },
             include: {
                 departments: true,
                 job_positions: true,
@@ -137,58 +141,85 @@ export async function GET(request: Request) {
 
                     // Parse times properly based on the date_for
                     const startOT = new Date(req.start_time);
+                    const isHolidayAtStart = isHoliday;
                     const endOT = new Date(req.end_time);
                     if (endOT <= startOT) endOT.setDate(endOT.getDate() + 1); // handle overnight shift
 
+                    // Helper to check holiday for a specific datetime
+                    const checkIsHoliday = (d: Date) => {
+                        const ds = fmt(d);
+                        return d.getDay() === 0 || holidayDates.has(ds);
+                    };
+
+                    const isSaturdayAtStart = startOT.getDay() === 6;
+
+                    // Split logic for overnight crossing midnight
                     const totalHrsReq = (endOT.getTime() - startOT.getTime()) / (1000 * 60 * 60);
-
-                    // --- EXCLUDE LUNCH BREAK (12:00 - 13:00) ---
-                    const lunchStart = new Date(startOT);
-                    lunchStart.setHours(12, 0, 0, 0);
-                    const lunchEnd = new Date(startOT);
-                    lunchEnd.setHours(13, 0, 0, 0);
-
+                    const lunchStart = new Date(startOT); lunchStart.setHours(12, 0, 0, 0);
+                    const lunchEnd = new Date(startOT); lunchEnd.setHours(13, 0, 0, 0);
                     const lunchOverlapStart = Math.max(startOT.getTime(), lunchStart.getTime());
                     const lunchOverlapEnd = Math.min(endOT.getTime(), lunchEnd.getTime());
                     const lunchOverlapHrs = Math.max(0, lunchOverlapEnd - lunchOverlapStart) / (1000 * 60 * 60);
-
                     const netTotalHrsReq = totalHrsReq - lunchOverlapHrs;
                     const approvedHrs = req.approved_hours !== null ? Number(req.approved_hours) : netTotalHrsReq;
-
-                    // Ratio to scale down if approved < total net request
                     const ratio = netTotalHrsReq > 0 ? approvedHrs / netTotalHrsReq : 0;
 
-                    if (!isHoliday) {
-                        normal_1_5x_hours += approvedHrs;
+                    // If it stays within the same day
+                    if (fmt(startOT) === fmt(endOT)) {
+                        if (!isHolidayAtStart) {
+                            normal_1_5x_hours += approvedHrs;
+                        } else {
+                            holiday_working_days.add(fmt(startOT));
+                            const boundaryStart = new Date(startOT); boundaryStart.setHours(8, 0, 0, 0);
+                            const boundaryEnd = new Date(startOT); boundaryEnd.setHours(isSaturdayAtStart ? 15 : 17, 0, 0, 0);
+                            const overlapStart = Math.max(startOT.getTime(), boundaryStart.getTime());
+                            const overlapEnd = Math.min(endOT.getTime(), boundaryEnd.getTime());
+                            let overlapHrsTotal = Math.max(0, overlapEnd - overlapStart) / (1000 * 60 * 60);
+                            const lunchInNormalStart = Math.max(overlapStart, lunchStart.getTime());
+                            const lunchInNormalEnd = Math.min(overlapEnd, lunchEnd.getTime());
+                            overlapHrsTotal -= Math.max(0, lunchInNormalEnd - lunchInNormalStart) / (1000 * 60 * 60);
+                            const outsideHrs = netTotalHrsReq - overlapHrsTotal;
+                            holiday_1x_hours += overlapHrsTotal * ratio;
+                            holiday_3x_hours += outsideHrs * ratio;
+                        }
                     } else {
-                        holiday_working_days.add(reqDateStr);
+                        // CROSSES MIDNIGHT - Split at 00:00:00
+                        const midnight = new Date(startOT);
+                        midnight.setDate(midnight.getDate() + 1);
+                        midnight.setHours(0, 0, 0, 0);
 
-                        const isSaturday = reqDate.getDay() === 6;
+                        const part1HrsTotal = (midnight.getTime() - startOT.getTime()) / (1000 * 60 * 60);
+                        const part1LunchStart = Math.max(startOT.getTime(), lunchStart.getTime());
+                        const part1LunchEnd = Math.min(midnight.getTime(), lunchEnd.getTime());
+                        const part1NetHrs = part1HrsTotal - Math.max(0, part1LunchEnd - part1LunchStart) / (1000 * 60 * 60);
 
-                        // Boundary for normal hours on the day of startOT
-                        const boundaryStart = new Date(startOT);
-                        boundaryStart.setHours(8, 0, 0, 0);
-                        const boundaryEnd = new Date(startOT);
-                        boundaryEnd.setHours(isSaturday ? 15 : 17, 0, 0, 0);
+                        const part2HrsTotal = (endOT.getTime() - midnight.getTime()) / (1000 * 60 * 60);
+                        const part2NetHrs = part2HrsTotal; // Usually no lunch at midnight+
 
-                        // Calculate intersect with normal hours
-                        const overlapStart = Math.max(startOT.getTime(), boundaryStart.getTime());
-                        const overlapEnd = Math.min(endOT.getTime(), boundaryEnd.getTime());
-                        let overlapHrs = Math.max(0, overlapEnd - overlapStart) / (1000 * 60 * 60);
+                        // Part 1 logic
+                        if (!isHolidayAtStart) {
+                            normal_1_5x_hours += part1NetHrs * ratio;
+                        } else {
+                            holiday_working_days.add(fmt(startOT));
+                            const bStart = new Date(startOT); bStart.setHours(8, 0, 0, 0);
+                            const bEnd = new Date(startOT); bEnd.setHours(isSaturdayAtStart ? 15 : 17, 0, 0, 0);
+                            const oStart = Math.max(startOT.getTime(), bStart.getTime());
+                            const oEnd = Math.min(midnight.getTime(), bEnd.getTime());
+                            let oHrs = Math.max(0, oEnd - oStart) / (1000 * 60 * 60);
+                            oHrs -= Math.max(0, part1LunchEnd - part1LunchStart) / (1000 * 60 * 60);
+                            holiday_1x_hours += oHrs * ratio;
+                            holiday_3x_hours += (part1NetHrs - oHrs) * ratio;
+                        }
 
-                        // Exclude lunch break from the normal hours overlap (since 12-13 is within normal hours)
-                        const lunchInNormalStart = Math.max(overlapStart, lunchStart.getTime());
-                        const lunchInNormalEnd = Math.min(overlapEnd, lunchEnd.getTime());
-                        const lunchInNormalHrs = Math.max(0, lunchInNormalEnd - lunchInNormalStart) / (1000 * 60 * 60);
-
-                        overlapHrs -= lunchInNormalHrs;
-
-                        // Outside normal hours
-                        const outsideHrs = netTotalHrsReq - overlapHrs;
-
-                        // Apply the ratio if supervisor adjusted hours
-                        holiday_1x_hours += overlapHrs * ratio;
-                        holiday_3x_hours += outsideHrs * ratio;
+                        // Part 2 logic (Next Day)
+                        const isHolidayNext = checkIsHoliday(midnight);
+                        if (!isHolidayNext) {
+                            normal_1_5x_hours += part2NetHrs * ratio;
+                        } else {
+                            holiday_working_days.add(fmt(midnight));
+                            // Usually midnight shifts are non-normal hours (3x)
+                            holiday_3x_hours += part2NetHrs * ratio;
+                        }
                     }
                 });
             }
@@ -242,19 +273,21 @@ export async function GET(request: Request) {
                     const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
                     const scansComplete = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type)) && dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
 
-                    // ✅ Check-in Exemption Logic
+                    // Check-in Exemption Logic
                     const isExempt = (emp as any).is_checkin_exempt || false;
+                    const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
+                    const isResigned = empResignationDate && curr > empResignationDate;
+
+                    if (isResigned) {
+                        // Skip days after resignation
+                        curr.setDate(curr.getDate() + 1);
+                        continue;
+                    }
+
                     const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
+                    if (!isHoliday && !scansComplete && !isExempt && !isOnLeave) missingScanInCycle = true;
 
-                    if (!isHoliday && !scansComplete) missingScanInCycle = true;
-
-                    if (scansComplete) {
-                        totalPaidDays++;
-                        if (!isOnLeave) {
-                            validWorkdaysCount++;
-                        }
-                    } else if (isExempt && !isHoliday) {
-                        // ✅ For exempt employees, count working days even without scans
+                    if (scansComplete || (isExempt && !isHoliday)) {
                         totalPaidDays++;
                         if (!isOnLeave) {
                             validWorkdaysCount++;
@@ -345,7 +378,30 @@ export async function GET(request: Request) {
             const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance;
 
             const student_loan = Number(adj?.student_loan || 0);
-            const unpaid_absenteeism = Number(adj?.unpaid_absenteeism || 0);
+
+            // 5. AUTOMATED UNPAID LEAVE DEDUCTION
+            let auto_unpaid_deduction = 0;
+            if (!isDaily) {
+                // For monthly staff, sum up approved unpaid leave days
+                const unpaidLeaves = empLeaves.filter(l => l.leave_type_id === "unpaid");
+                let unpaidDaysCount = 0;
+                unpaidLeaves.forEach(l => {
+                    // Intersection of leave dates and cycle
+                    let currL = new Date(l.start_date);
+                    const endL = new Date(l.end_date);
+                    while (currL <= endL) {
+                        if (currL >= startDate && currL <= endDate) {
+                            unpaidDaysCount++;
+                        }
+                        currL.setDate(currL.getDate() + 1);
+                    }
+                });
+                auto_unpaid_deduction = Math.round(unpaidDaysCount * (Number(emp.base_salary || 0) / 30));
+            }
+
+            const unpaid_absenteeism = adj?.unpaid_absenteeism !== null && adj?.unpaid_absenteeism !== undefined
+                ? Number(adj.unpaid_absenteeism)
+                : auto_unpaid_deduction;
 
             // --- 5. SOCIAL SECURITY (SSO) FORMULA ---
             let social_security = 0;

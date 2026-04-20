@@ -553,7 +553,23 @@ export default function AdminEmployeesPage() {
                                         {filtered.map((x) => (
                                             <tr key={x.emp_id} className={x.emp_id === newEmpId ? styles.highlightRed : undefined} style={{ opacity: x.is_active ? 1 : 0.55 }}>
                                                 <td><span className={styles.empId}>{x.emp_id}</span></td>
-                                                <td style={{ fontWeight: 600, color: "var(--text)" }}>{x.name}</td>
+                                                <td style={{ fontWeight: 600, color: "var(--text)" }}>
+                                                    {x.name}
+                                                    {!x.line_user_id && x.is_active && (
+                                                        <span style={{ 
+                                                            marginLeft: 8, 
+                                                            fontSize: 10, 
+                                                            color: "var(--red)", 
+                                                            background: "rgba(239, 68, 68, 0.1)", 
+                                                            padding: "2px 6px", 
+                                                            borderRadius: 4,
+                                                            fontWeight: 600,
+                                                            border: "1px solid rgba(239, 68, 68, 0.2)"
+                                                        }}>
+                                                            ⚠️ ยังไม่เชื่อม LINE
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 <td style={{ color: "var(--text-3)", fontSize: 12 }}>{branchName(x.branch_id)}</td>
                                                 <td style={{ color: "var(--text-3)", fontSize: 12 }}>
                                                     {x.gender ? (genderLabel[x.gender as keyof typeof genderLabel] ?? x.gender) : "—"}

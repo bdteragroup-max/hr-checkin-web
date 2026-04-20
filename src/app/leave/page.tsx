@@ -114,10 +114,11 @@ function StatusBadge({ status }: { status: string }) {
         pending_hr: { label: "รอ HR อนุมัติ", icon: ClockIcon, color: "var(--orange-500)" },
         approved: { label: "อนุมัติแล้ว", icon: CheckCircleIcon, color: "var(--green-600)" },
         rejected: { label: "ไม่อนุมัติ", icon: XCircleIcon, color: "var(--red-600)" },
+        cancelled: { label: "ยกเลิกแล้ว", icon: XCircleIcon, color: "var(--gray-500)" },
     };
     const info = map[status] ?? { label: status, icon: InformationCircleIcon, color: "var(--blue-500)" };
     const isPending = status.startsWith('pending');
-    const badgeClass = isPending ? styles.statusBadgePending : status === 'approved' ? styles.statusBadgeApproved : status === 'rejected' ? styles.statusBadgeRejected : '';
+    const badgeClass = isPending ? styles.statusBadgePending : status === 'approved' ? styles.statusBadgeApproved : status === 'rejected' ? styles.statusBadgeRejected : status === 'cancelled' ? styles.statusBadgeCancelled : '';
     const Icon = info.icon;
     return (
         <span className={`${styles.statusBadge} ${badgeClass}`} role="status" aria-label={info.label}>
@@ -356,6 +357,7 @@ export default function LeavePage() {
                 ANNUAL_FULL_DAYS_ONLY: "ลาพักร้อนต้องลาเป็นวันเต็มเท่านั้น (08:00 - 17:00)",
                 ADVANCE_NOTICE_REQUIRED: `ประเภทลานี้ต้องแจ้งล่วงหน้าอย่างน้อย ${data?.required_days} วัน`,
                 EXCEED_ENTITLEMENT: `ใช้วันลาเกินสิทธิ์ คงเหลือ ${formatLeaveMins(data?.remaining_mins || 0)} (ขอลา ${formatLeaveMins(data?.requested_mins || 0)})`,
+                PROBATION_PERSONAL_NOT_ALLOWED: "พนักงานทดลองงาน ไม่สามารถลากิจหรือลาฉุกเฉินได้",
                 CANNOT_EDIT_APPROVED: "ไม่สามารถแก้ไขใบลาที่อนุมัติแล้วได้",
             };
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
@@ -400,6 +402,34 @@ export default function LeavePage() {
         setAttachmentUrl(item.attachment_url || "");
         setFileName(item.attachment_url ? "มีไฟล์แนบอยู่แล้ว" : "");
         window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function cancelRequest(id: string) {
+        if (!window.confirm("ยืนยันการยกเลิกใบลาใบนี้? (ไม่สามารถย้อนกลับได้)")) return;
+        setLoading(true);
+        try {
+            const r = await fetch("/api/leave", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            });
+            if (!r.ok) {
+                const data = await r.json().catch(() => ({}));
+                const err = (data as any)?.error;
+                let msg = "ไม่สามารถยกเลิกได้";
+                if (err === "CANNOT_CANCEL_APPROVED") msg = "ไม่สามารถยกเลิกใบลาที่อนุมัติแล้วได้";
+                if (err === "CANNOT_CANCEL_COMPLETED") msg = "ไม่สามารถยกเลิกรายการที่ดำเนินการเสร็จสิ้นแล้วได้";
+                if (err === "CANNOT_CANCEL_PAST_LEAVE") msg = "สามารถยกเลิกได้เฉพาะใบลาในอนาคตเท่านั้น";
+                showAlert(msg, "error");
+                return;
+            }
+            showAlert("ยกเลิกใบลาสำเร็จ", "ok");
+            await load();
+        } catch {
+            showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
+        } finally {
+            setLoading(false);
+        }
     }
 
     useEffect(() => { load(); }, []);
@@ -640,7 +670,7 @@ export default function LeavePage() {
                     ) : (
                         <div className={styles.historyTable}>
                             {list.map(x => (
-                                <div key={x.id} className={`${styles.historyRow} ${x.status.startsWith('pending') ? styles.historyRowPending : x.status === 'approved' ? styles.historyRowApproved : styles.historyRowRejected}`} data-status={x.status}>
+                                <div key={x.id} className={`${styles.historyRow} ${x.status.startsWith('pending') ? styles.historyRowPending : x.status === 'approved' ? styles.historyRowApproved : x.status === 'cancelled' ? styles.historyRowCancelled : styles.historyRowRejected}`} data-status={x.status}>
                                     <div className={styles.historyRowTop}>
                                         <div className={styles.colType}>{x.leave_type}</div>
                                         <StatusBadge status={x.status} />
@@ -658,15 +688,26 @@ export default function LeavePage() {
                                     )}
                                     <div className={styles.historyRowBot}>
                                         <div className={styles.colDays}>{formatLeaveMins(x.minutes)}</div>
-                                        {x.status.startsWith('pending') && (
-                                            <button 
-                                                className={styles.btnOutlineSm} 
-                                                style={{ marginLeft: "auto", fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text2)' }}
-                                                onClick={() => startEdit(x)}
-                                            >
-                                                แก้ไข
-                                            </button>
-                                        )}
+                                        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                                            {x.status.startsWith('pending') && (
+                                                <button 
+                                                    className={styles.btnOutlineSm} 
+                                                    style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text2)' }}
+                                                    onClick={() => startEdit(x)}
+                                                >
+                                                    แก้ไข
+                                                </button>
+                                            )}
+                                            {(x.status.startsWith('pending') || x.status === 'approved') && new Date(x.start_at) > new Date() && (
+                                                <button 
+                                                    className={styles.btnOutlineSm} 
+                                                    style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--red-hover)', backgroundColor: 'white', color: 'var(--red)' }}
+                                                    onClick={() => cancelRequest(x.id)}
+                                                >
+                                                    ยกเลิก
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}

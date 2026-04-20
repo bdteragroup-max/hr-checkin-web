@@ -153,7 +153,8 @@ export async function sendLeaveApprovalFlexMessage(
     approvedBy?: string;
   },
   isProcessed: boolean = false,
-  replyToken?: string
+  replyToken?: string,
+  isModified: boolean = false
 ) {
   const bodyContents: any[] = [
     {
@@ -261,9 +262,15 @@ export async function sendLeaveApprovalFlexMessage(
       type: "box",
       layout: "vertical",
       contents: [
-        { type: "text", text: isProcessed ? "ดำเนินการแล้ว" : "คำขออนุมัติการลา", weight: "bold", size: "lg", color: isProcessed ? "#64748b" : "#1d4ed8" }
+        {
+          type: "text",
+          text: isProcessed ? "ดำเนินการแล้ว" : (isModified ? "คำขอลา (แก้ไขข้อมูล)" : "คำขออนุมัติการลา"),
+          weight: "bold",
+          size: "lg",
+          color: isProcessed ? "#64748b" : (isModified ? "#ca8a04" : "#1d4ed8")
+        }
       ],
-      backgroundColor: isProcessed ? "#f1f5f9" : "#eff6ff"
+      backgroundColor: isProcessed ? "#f1f5f9" : (isModified ? "#fefce8" : "#eff6ff")
     },
     body: {
       type: "box",
@@ -552,7 +559,7 @@ export async function sendEmployeeLeaveStatusNotification(
     minutes: number;
     reason: string;
     handoverPerson?: string;
-    status: "pending_supervisor" | "pending_hr" | "pending_management" | "approved" | "rejected";
+    status: "pending_supervisor" | "pending_hr" | "pending_management" | "approved" | "rejected" | "cancelled";
     approvedBy?: string;
     rejectionReason?: string;
   }
@@ -563,6 +570,7 @@ export async function sendEmployeeLeaveStatusNotification(
     approved: { headerText: "อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a", altText: "ใบลาของคุณได้รับการอนุมัติแล้ว" },
     rejected: { headerText: "ไม่อนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626", altText: "ใบลาของคุณไม่ได้รับการอนุมัติ" },
     pending_supervisor: { headerText: "ส่งคำขอแล้ว", headerBg: "#f0f9ff", headerColor: "#0284c7", badgeText: "รอหัวหน้าอนุมัติ", badgeColor: "#0284c7", altText: "ใบลาของคุณส่งถึงหัวหน้างานแล้ว" },
+    cancelled: { headerText: "ยกเลิกแล้ว", headerBg: "#f3f4f6", headerColor: "#6b7280", badgeText: "ยกเลิกแล้ว", badgeColor: "#6b7280", altText: "ใบลาของคุณยกเลิกแล้ว" },
   };
 
   const cfg = statusConfig[leaveData.status];
@@ -588,6 +596,46 @@ export async function sendEmployeeLeaveStatusNotification(
   };
 
   return sendLineMessage(lineUserId, [{ type: "flex", altText: cfg.altText, contents }]);
+}
+
+/**
+ * Notifies Supervisor/HR about a cancelled leave request
+ */
+export async function sendLeaveCancelledNotification(
+  lineUserId: string,
+  leaveData: {
+    empName: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    minutes: number;
+    reason: string;
+  }
+) {
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "ใบลาได้รับการยกเลิก", weight: "bold", size: "lg", color: "#64748b" }
+      ],
+      backgroundColor: "#f1f5f9"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "separator", margin: "lg" },
+        { type: "text", text: "สถานะ: ยกเลิกโดยพนักงาน", color: "#dc2626", size: "sm", weight: "bold", margin: "lg" }
+      ]
+    }
+  };
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `ยกเลิกใบลา: ${leaveData.empName}`, contents }]);
 }
 
 export async function sendEmployeeOtStatusNotification(
@@ -946,7 +994,7 @@ export async function sendAssetBorrowNotification(
   if (data.inspectionSummary) {
     const s = data.inspectionSummary;
     const checklistItems: any[] = [];
-    
+
     const addItem = (label: string, value: string, isBad: boolean) => {
       checklistItems.push({
         type: "box",
@@ -1170,10 +1218,10 @@ export async function sendPayslipNotification(lineUserId: string, data: {
   };
 
   return sendLineMessage(lineUserId, [
-    { 
-      type: "flex", 
-      altText: `สลิปเงินเดือนประจำเดือน ${monthName} ออกแล้ว`, 
-      contents 
+    {
+      type: "flex",
+      altText: `สลิปเงินเดือนประจำเดือน ${monthName} ออกแล้ว`,
+      contents
     }
   ]);
 }

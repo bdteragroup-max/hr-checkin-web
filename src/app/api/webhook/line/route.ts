@@ -125,17 +125,32 @@ export async function POST(req: Request) {
                             continue;
                         }
 
-                        // Guard: Prevent duplicate clicks
-                        if (isSupervisor && leaveReq.status !== "pending_supervisor") {
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
-                            continue;
+                        // Better Role Guard: Allow dual-role users (e.g. Supervisor who is also Management) to approve if status matches ANY of their roles.
+                        let canAct = false;
+                        let errorMsg = "";
+
+                        if (isSupervisor && leaveReq.status === "pending_supervisor") {
+                            canAct = true;
+                        } else if (isHr && ["pending_supervisor", "pending_hr"].includes(leaveReq.status)) {
+                            canAct = true;
+                        } else if (isManagement && leaveReq.status === "pending_management") {
+                            canAct = true;
+                        } else {
+                            // Determine the most helpful error message
+                            if (["approved", "rejected", "cancelled"].includes(leaveReq.status)) {
+                                const statusMap: any = { approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ", cancelled: "ยกเลิกแล้ว" };
+                                errorMsg = `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว (${statusMap[leaveReq.status]})`;
+                            } else if (leaveReq.status === "pending_supervisor" && (isHr || isManagement)) {
+                                errorMsg = `⚠️ คำขอนี้ยังไม่ผ่านการอนุมัติจากหัวหน้างาน (ปัจจุบัน: รอหัวหน้าอนุมัติ)`;
+                            } else if (leaveReq.status === "pending_hr" && isManagement) {
+                                errorMsg = `⚠️ คำขอนี้ยังไม่ผ่านการตรวจสอบจาก HR (ปัจจุบัน: รอ HR อนุมัติ)`;
+                            } else {
+                                errorMsg = `⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้ (สถานะปัจจุบัน: ${leaveReq.status})`;
+                            }
                         }
-                        if (isManagement && leaveReq.status !== "pending_management") {
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
-                            continue;
-                        }
-                        if (isHr && !["pending_supervisor", "pending_hr"].includes(leaveReq.status)) {
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
+
+                        if (!canAct) {
+                            await sendReplyMessage(replyToken, errorMsg);
                             continue;
                         }
 
@@ -297,12 +312,27 @@ export async function POST(req: Request) {
                         });
                         const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
 
-                        if (isSupervisor && otReq.status !== "pending_supervisor") {
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ไม่อยู่ในขั้นตอนของหัวหน้าแล้ว`);
-                            continue;
+                        // OT Role Guard Refactor
+                        let canActOt = false;
+                        let otErrorMsg = "";
+
+                        if (isSupervisor && otReq.status === "pending_supervisor") {
+                            canActOt = true;
+                        } else if (isHr && ["pending_supervisor", "pending_hr"].includes(otReq.status)) {
+                            canActOt = true;
+                        } else {
+                            if (["approved", "rejected"].includes(otReq.status)) {
+                                const statusMap: any = { approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ" };
+                                otErrorMsg = `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว (${statusMap[otReq.status]})`;
+                            } else if (otReq.status === "pending_supervisor" && isHr) {
+                                otErrorMsg = `⚠️ คำขอนี้ยังไม่ผ่านการอนุมัติจากหัวหน้างาน (ปัจจุบัน: รอหัวหน้าอนุมัติ)`;
+                            } else {
+                                otErrorMsg = `⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้ (สถานะปัจจุบัน: ${otReq.status})`;
+                            }
                         }
-                        if (isHr && !["pending_supervisor", "pending_hr"].includes(otReq.status)) {
-                            await sendReplyMessage(replyToken, `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว`);
+
+                        if (!canActOt) {
+                            await sendReplyMessage(replyToken, otErrorMsg);
                             continue;
                         }
 

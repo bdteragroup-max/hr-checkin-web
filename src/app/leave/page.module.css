@@ -1477,6 +1477,11 @@
   color: var(--bad);
 }
 
+.statusBadgeCancelled {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
 .statusIcon {
   display: inline-flex;
   align-items: center;
@@ -1534,6 +1539,12 @@
 
 .historyRowRejected {
   border-left: 4px solid var(--bad);
+}
+
+.historyRowCancelled {
+  border-left: 4px solid var(--gray-300);
+  background: rgba(249, 250, 251, 0.5);
+  opacity: 0.8;
 }
 
 .historyRowTop {

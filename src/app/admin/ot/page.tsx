@@ -27,6 +27,8 @@ export default function AdminOtPage() {
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     const [viewMode, setViewMode] = useState<"list" | "report">("list");
     const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
@@ -110,15 +112,44 @@ export default function AdminOtPage() {
         }
     }
 
+    async function deleteOt(id: number) {
+        if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการนี้? การลบจะไม่สามารถกู้คืนได้")) return;
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/admin/ot/${id}`, {
+                method: "DELETE",
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                setAlert({ visible: true, message: data?.error || `DELETE_FAILED_${res.status}`, type: "error" });
+            } else {
+                setAlert({ visible: true, message: "ลบรายการเรียบร้อยแล้ว", type: "ok" });
+                loadRequests();
+            }
+        } catch (e: any) {
+            setAlert({ visible: true, message: e.message || "DELETE_ERROR", type: "error" });
+        } finally {
+            setSaving(false);
+        }
+    }
+
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
             const matchesStatus = !statusFilter || req.status === statusFilter;
             const matchesSearch = !searchQuery ||
                 req.employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 req.emp_id.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesStatus && matchesSearch;
+            
+            let matchesDate = true;
+            if (startDate || endDate) {
+                const reqDate = new Date(req.date_for).toISOString().split('T')[0];
+                if (startDate && reqDate < startDate) matchesDate = false;
+                if (endDate && reqDate > endDate) matchesDate = false;
+            }
+            
+            return matchesStatus && matchesSearch && matchesDate;
         });
-    }, [requests, statusFilter, searchQuery]);
+    }, [requests, statusFilter, searchQuery, startDate, endDate]);
 
     const pendingCount = requests.filter(r => r.status === "pending_hr").length;
     
@@ -143,6 +174,11 @@ export default function AdminOtPage() {
             const date = new Date(req.date_for);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             if (selectedMonth && monthKey !== selectedMonth) return;
+            
+            const reqDate = date.toISOString().split('T')[0];
+            if (startDate && reqDate < startDate) return;
+            if (endDate && reqDate > endDate) return;
+
             const deptName = req.employee.departments?.name || "ไม่ระบุแผนก";
             
             if (!groups[monthKey]) groups[monthKey] = {};
@@ -223,6 +259,31 @@ export default function AdminOtPage() {
         document.body.removeChild(link);
     }
 
+    function exportListToCSV() {
+        const BOM = "\uFEFF";
+        let csvContent = "Employee Name,Employee ID,Department,Date,Start,End,Requested Hours,Approved Hours,Reason,Status\n";
+        
+        filteredRequests.forEach(req => {
+            const rowStatus = getStatusText(req.status);
+            const dept = req.employee.departments?.name || "-";
+            const dateStr = formatDateThai(req.date_for);
+            const startTime = formatTime24h(req.start_time);
+            const endTime = formatTime24h(req.end_time);
+            
+            csvContent += `"${req.employee.name}","${req.emp_id}","${dept}","${dateStr}","${startTime}","${endTime}",${req.total_hours},${req.approved_hours || 0},"${req.reason || ""}","${rowStatus}"\n`;
+        });
+
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `OT_List_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     function getStatusBadge(status: string) {
         if (status === "approved") return `${styles.badge} ${styles.approved}`;
         if (status === "rejected") return `${styles.badge} ${styles.rejected}`;
@@ -246,48 +307,62 @@ export default function AdminOtPage() {
                     <div className={styles.pageSubtitle}>ตรวจสอบและจัดการการทำงานล่วงเวลาของพนักงาน</div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
-                    <div className={localStyles.toggleGroup}>
-                        <button 
-                            className={`${localStyles.toggleBtn} ${viewMode === "list" ? localStyles.toggleActive : ""}`}
-                            onClick={() => setViewMode("list")}
-                        >
-                            <ClipboardDocumentListIcon width={18} /> รายการคำขอ
-                        </button>
-                        <button 
-                            className={`${localStyles.toggleBtn} ${viewMode === "report" ? localStyles.toggleActive : ""}`}
-                            onClick={() => setViewMode("report")}
-                        >
-                            <ChartBarIcon width={18} /> สรุปผล (Report)
-                        </button>
-                    </div>
+                    {/* Report toggle removed as requested */}
                 </div>
             </div>
 
             {viewMode === "list" ? (
                 <>
-                    <div className={styles.filterBar}>
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>STATUS</div>
-                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                                <option value="">ทุกสถานะ</option>
-                                <option value="pending_supervisor">รอหัวหน้าอนุมัติ</option>
-                                <option value="pending_hr">รอ HR อนุมัติ</option>
-                                <option value="approved">อนุมัติแล้ว</option>
-                                <option value="rejected">ไม่อนุมัติ</option>
-                            </select>
+                    <div className={styles.filterCard}>
+                        <div className={styles.filterCardHeader}>
+                            <ClockIcon width={18} style={{ color: "var(--red3)" }} />
+                            <span className={styles.filterCardTitle}>ตัวกรองข้อมูล OT (Filters)</span>
                         </div>
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>SEARCH</div>
-                            <input
-                                type="text"
-                                placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                        <div className={styles.filterBar}>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>STATUS</div>
+                                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                    <option value="">ทุกสถานะ</option>
+                                    <option value="pending_supervisor">รอหัวหน้าอนุมัติ</option>
+                                    <option value="pending_hr">รอ HR อนุมัติ</option>
+                                    <option value="approved">อนุมัติแล้ว</option>
+                                    <option value="rejected">ไม่อนุมัติ</option>
+                                </select>
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>SEARCH</div>
+                                <input
+                                    type="text"
+                                    placeholder="ชื่อ หรือ รหัสพนักงาน"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>FROM</div>
+                                <input
+                                    type="date"
+                                    className={styles.filterInput}
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>TO</div>
+                                <input
+                                    type="date"
+                                    className={styles.filterInput}
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
+                            </div>
+                            <button className={styles.btnPrimary} onClick={loadRequests} disabled={loading}>
+                                {loading ? "กำลังโหลด..." : "Refresh"}
+                            </button>
+                            <button className={styles.btnExport} onClick={exportListToCSV}>
+                                <ArrowDownTrayIcon width={16} /> Export List
+                            </button>
                         </div>
-                        <button className={styles.btnPrimary} onClick={loadRequests} disabled={loading}>
-                            {loading ? "กำลังโหลด..." : "Refresh"}
-                        </button>
                     </div>
 
                     <div className={styles.tableWrap}>
@@ -319,7 +394,7 @@ export default function AdminOtPage() {
                                         </tr>
                                     ) : (
                                         filteredRequests.map(req => (
-                                            <tr key={req.id}>
+                                            <tr key={req.id} className={styles.clickableRow}>
                                                 <td>
                                                     <div className={styles.empName}>{req.employee.name}</div>
                                                     <div className={styles.empId}>{req.emp_id} • {req.employee.departments?.name || "-"}</div>
@@ -368,12 +443,21 @@ export default function AdminOtPage() {
                                                             disabled={saving}
                                                             title="อนุมัติ/จัดการ"
                                                         >
-                                                            {(req.status === "approved" || req.status === "rejected") ? (
+                                                            { (req.status === "approved" || req.status === "rejected") ? (
                                                                 <>
                                                                     <PencilSquareIcon width={14} style={{ marginRight: 4 }} />
                                                                     แก้ไข
                                                                 </>
-                                                            ) : "จัดการ"}
+                                                            ) : "จัดการ" }
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => deleteOt(req.id)} 
+                                                            className={styles.btnDangerGhost} 
+                                                            disabled={saving}
+                                                            style={{ padding: '0 10px', height: 32, fontSize: 11 }}
+                                                            title="ลบรายการ"
+                                                        >
+                                                            <XCircleIcon width={14} /> ลบ
                                                         </button>
                                                     </div>
                                                 </td>
@@ -387,35 +471,70 @@ export default function AdminOtPage() {
                 </>
             ) : (
                 <div className={styles.tableWrap} style={{ padding: 0 }}>
+                    <div className={styles.filterCard} style={{ margin: 20 }}>
+                        <div className={styles.filterCardHeader}>
+                            <ChartBarIcon width={18} style={{ color: "var(--red3)" }} />
+                            <span className={styles.filterCardTitle}>ตัวกรองสรุปผล OT (Summary Filters)</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>MONTH</div>
+                                <select 
+                                    className={styles.filterInput} 
+                                    style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, minWidth: 140 }}
+                                    value={selectedMonth}
+                                    onChange={e => setSelectedMonth(e.target.value)}
+                                >
+                                    <option value="">ทุกเดือน</option>
+                                    {availableMonths.map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>FROM</div>
+                                <input 
+                                    type="date" 
+                                    className={styles.filterInput} 
+                                    style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <div className={styles.filterLabel}>TO</div>
+                                <input 
+                                    type="date" 
+                                    className={styles.filterInput} 
+                                    style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <label className={localStyles.toggleDetail} title="แสดงรายบุคคล">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={showEmployeeDetail} 
+                                        onChange={e => setShowEmployeeDetail(e.target.checked)} 
+                                    />
+                                    <span className={localStyles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
+                                </label>
+                                <button className={styles.btnExport} onClick={exportToCSV}>
+                                    <ArrowDownTrayIcon width={16} /> Export CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className={styles.tableHeader}>
                         <div className={styles.tableHeaderTitle} style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <ChartBarIcon width={20} style={{ marginRight: 8 }} />
                                 สรุป OT แยกตามแผนกและเดือน
                             </div>
-                            <label className={localStyles.toggleDetail} title="แสดงรายบุคคล">
-                                <input 
-                                    type="checkbox" 
-                                    checked={showEmployeeDetail} 
-                                    onChange={e => setShowEmployeeDetail(e.target.checked)} 
-                                />
-                                <span className={localStyles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
-                            </label>
-                            <select 
-                                className={styles.filterInput} 
-                                style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
-                                value={selectedMonth}
-                                onChange={e => setSelectedMonth(e.target.value)}
-                            >
-                                <option value="">ทุกเดือน</option>
-                                {availableMonths.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
                         </div>
-                        <button className={styles.btnGhost} onClick={exportToCSV} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <ArrowDownTrayIcon width={16} /> Export CSV
-                        </button>
                     </div>
 
                     <div className={styles.tableScroll}>
