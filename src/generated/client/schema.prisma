@@ -1,0 +1,467 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model admins {
+  id            Int        @id @default(autoincrement())
+  username      String     @unique @db.VarChar(50)
+  password_hash String
+  full_name     String?    @db.VarChar(100)
+  last_login    DateTime?  @db.Timestamptz(6)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  sessions      sessions[]
+}
+
+model branches {
+  id         String      @id @db.VarChar(10)
+  name       String      @db.VarChar(100)
+  center_lat Decimal     @db.Decimal(10, 8)
+  center_lon Decimal     @db.Decimal(11, 8)
+  radius_m   Int
+  created_at DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at DateTime    @default(now()) @db.Timestamptz(6)
+  employees  employees[]
+}
+
+model checkins {
+  id           BigInt   @id @default(autoincrement())
+  timestamp    DateTime @default(now()) @db.Timestamptz(6)
+  date_key     DateTime @db.Date
+  time_key     DateTime @db.Time(6)
+  emp_id       String   @db.VarChar(50)
+  name         String   @db.VarChar(200)
+  type         String   @db.VarChar(50)
+  branch_name  String   @db.VarChar(200)
+  lat          Decimal? @db.Decimal(10, 8)
+  lon          Decimal? @db.Decimal(11, 8)
+  accuracy     Int?
+  distance     Int?
+  capture_mode String   @default("webrtc") @db.VarChar(50)
+  late_status  String?  @db.VarChar(50)
+  late_min     Int?
+  photo_url    String?
+  project_name String?  @db.VarChar(200)
+  remark       String?
+  customer_id  Int?
+  is_trip      Boolean? @default(false)
+
+  @@index([branch_name], map: "idx_checkins_branch")
+  @@index([date_key], map: "idx_checkins_date")
+  @@index([emp_id, date_key], map: "idx_checkins_emp_date")
+}
+
+model ot_requests {
+  id                Int       @id @default(autoincrement())
+  emp_id            String    @db.VarChar(20)
+  date_for          DateTime  @db.Date
+  start_time        DateTime  @db.Timestamptz(6)
+  end_time          DateTime  @db.Timestamptz(6)
+  total_hours       Decimal   @db.Decimal(5, 2)
+  reason            String?
+  status            String    @default("pending") @db.VarChar(20)
+  supervisor_id     String?   @db.VarChar(20)
+  approved_at       DateTime? @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  approved_hours    Decimal?  @db.Decimal(5, 2)
+  supervisor_remark String?
+  actual_start_at   DateTime? @db.Timestamptz(6)
+  actual_end_at     DateTime? @db.Timestamptz(6)
+  has_discrepancy   Boolean   @default(false)
+  employee          employees @relation("EmployeeToOtRequests", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@index([emp_id, date_for])
+  @@index([status])
+}
+
+model employees {
+  emp_id                  String                  @id @db.VarChar(20)
+  name                    String                  @db.VarChar(100)
+  branch_id               String?                 @db.VarChar(10)
+  is_active               Boolean                 @default(true)
+  created_at              DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                @default(now()) @db.Timestamptz(6)
+  pin_hash                String?
+  gender                  String?                 @db.VarChar(1)
+  hire_date               DateTime?               @db.Date
+  birth_date              DateTime?               @db.Date
+  phone_number            String?                 @db.VarChar(20)
+  base_salary             Decimal?                @db.Decimal(12, 2)
+  department_id           Int?
+  job_position_id         Int?
+  otp_code                String?                 @db.VarChar(6)
+  otp_expires_at          DateTime?               @db.Timestamptz(6)
+  supervisor_id           String?                 @db.VarChar(20)
+  secondary_supervisor_id String?                 @db.VarChar(20)
+  bank_account_no         String?                 @db.VarChar(50)
+  bank_name               String?                 @db.VarChar(100)
+  is_on_trial             Boolean                 @default(false)
+  probation_end_date      DateTime?               @db.Date
+  has_telephone_allowance Boolean                 @default(false)
+  position_allowance      Decimal?                @default(0) @db.Decimal(12, 2)
+  address                 String?
+  national_id_card        String?                 @db.VarChar(20)
+  salary_type             String?                 @default("monthly") @db.VarChar(20)
+  line_user_id            String?                 @unique @db.VarChar(50)
+  is_checkin_exempt       Boolean                 @default(false)
+  birthday_claims         birthday_claims[]
+  warnings                employee_warnings[]
+  departments             departments?            @relation(fields: [department_id], references: [id], onUpdate: NoAction)
+  job_positions           job_positions?          @relation(fields: [job_position_id], references: [id], onUpdate: NoAction)
+  supervisor              employees?              @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
+  subordinates            employees[]             @relation("EmployeeToSupervisor")
+  secondary_supervisor    employees?              @relation("EmployeeToSecondarySupervisor", fields: [secondary_supervisor_id], references: [emp_id], onUpdate: NoAction)
+  secondarySubordinates   employees[]             @relation("EmployeeToSecondarySupervisor")
+  branches                branches?               @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
+  monthly_payroll_data    monthly_payroll_data[]
+  ot_requests             ot_requests[]           @relation("EmployeeToOtRequests")
+  travel_claims           travel_claims[]
+  leave_requests          leave_requests[]
+  asset_borrowings        asset_borrowings[]
+  resignation_date        DateTime?               @db.Date
+  probation_evaluations   probation_evaluations[] @relation("EmployeeToProbation")
+  submitted_evaluations   probation_evaluations[] @relation("SupervisorToProbation")
+
+  @@index([is_active], map: "idx_employees_active")
+}
+
+model holidays {
+  date       DateTime @id @db.Date
+  name       String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model leave_requests {
+  id                     String    @id @db.VarChar(30)
+  timestamp              DateTime  @default(now()) @db.Timestamptz(6)
+  emp_id                 String    @db.VarChar(20)
+  name                   String    @db.VarChar(100)
+  leave_type_id          String    @db.VarChar(20)
+  leave_type             String    @db.VarChar(50)
+  start_date             DateTime  @db.Date
+  end_date               DateTime  @db.Date
+  days                   Int
+  reason                 String?
+  status                 String    @default("pending") @db.VarChar(20)
+  approved_by            String?   @db.VarChar(100)
+  approved_at            DateTime? @db.Timestamptz(6)
+  start_at               DateTime  @db.Timestamptz(6)
+  end_at                 DateTime  @db.Timestamptz(6)
+  minutes                Int
+  attachment_url         String?
+  supervisor_approved_at DateTime? @db.Timestamptz(6)
+  supervisor_id          String?   @db.VarChar(20)
+  handover_person        String?   @db.VarChar(100)
+  employees              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@index([start_date, end_date], map: "idx_leave_dates")
+  @@index([emp_id, status], map: "idx_leave_emp_status")
+  @@index([emp_id, start_at, end_at], map: "idx_leave_emp_time")
+}
+
+model sessions {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  admins     admins   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sessions_admin")
+
+  @@index([token], map: "idx_sessions_token")
+}
+
+model admin_login_attempts {
+  id         BigInt   @id @default(autoincrement())
+  username   String   @db.VarChar(50)
+  ip         String   @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([ip, created_at], map: "idx_admin_attempts_ip_time")
+  @@index([username, created_at], map: "idx_admin_attempts_user_time")
+}
+
+model leave_entitlements {
+  id            Int         @id @default(autoincrement())
+  leave_type_id String      @db.VarChar(20)
+  min_years     Int
+  days          Int
+  leave_types   leave_types @relation(fields: [leave_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([leave_type_id, min_years])
+}
+
+model leave_types {
+  id                 String               @id @db.VarChar(20)
+  name               String               @db.VarChar(80)
+  gender_rule        String               @default("ALL") @db.VarChar(10)
+  max_days           Int?
+  count_mode         String               @default("WORK") @db.VarChar(12)
+  require_attachment Boolean              @default(false)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  leave_entitlements leave_entitlements[]
+}
+
+model divisions {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime      @default(now()) @db.Timestamptz(6)
+  departments departments[]
+}
+
+model departments {
+  id            Int             @id @default(autoincrement())
+  division_id   Int?
+  name          String          @db.VarChar(100)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  employees     employees[]
+  job_positions job_positions[]
+  divisions     divisions?      @relation(fields: [division_id], references: [id], onUpdate: NoAction)
+}
+
+model job_positions {
+  id             Int             @id @default(autoincrement())
+  department_id  Int?
+  parent_id      Int?
+  title          String          @db.VarChar(100)
+  node_type      String?         @default("staff") @db.VarChar(20) // executive, division, department, staff
+  order_index    Int?            @default(0)
+  is_ot_eligible Boolean         @default(true)
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime        @default(now()) @db.Timestamptz(6)
+  employees      employees[]
+  departments    departments?    @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  parent         job_positions?  @relation("PositionHierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children       job_positions[] @relation("PositionHierarchy")
+
+  @@index([department_id])
+  @@index([parent_id])
+}
+
+model projects {
+  id          Int      @id @default(autoincrement())
+  code        String?  @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  client_name String?  @db.VarChar(200)
+  address     String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  contact     String?  @db.VarChar(200)
+  lat         Decimal? @db.Decimal(10, 8)
+  lng         Decimal? @db.Decimal(11, 8)
+  phone       String?  @db.VarChar(50)
+  radius_m    Int      @default(200)
+  status      String   @default("CURRENT") @db.VarChar(50)
+}
+
+model employee_warnings {
+  id         Int       @id @default(autoincrement())
+  emp_id     String    @db.VarChar(20)
+  date       DateTime  @default(now()) @db.Date
+  reason     String
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  employee   employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@index([emp_id])
+  @@index([date])
+}
+
+model birthday_claims {
+  id                    String    @id @db.VarChar(30)
+  emp_id                String    @db.VarChar(20)
+  name                  String    @db.VarChar(100)
+  amount_cash           Decimal   @db.Decimal(12, 2)
+  amount_meal           Decimal   @db.Decimal(12, 2)
+  receipt_url           String?
+  transfer_slip_url     String?
+  celebration_photo_url String?
+  status                String    @default("pending") @db.VarChar(20)
+  created_at            DateTime  @default(now()) @db.Timestamptz(6)
+  approved_by           String?   @db.VarChar(100)
+  approved_at           DateTime? @db.Timestamptz(6)
+  substitute_date       DateTime? @db.Date
+  is_sales              Boolean   @default(false)
+  employees             employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+}
+
+model travel_claims {
+  id                        String    @id @default(uuid())
+  emp_id                    String    @db.VarChar(20)
+  date                      DateTime  @db.Date
+  claim_type                String    @db.VarChar(20)
+  site_name                 String    @db.VarChar(200)
+  is_overnight              Boolean   @default(false)
+  accommodation_amount      Decimal   @default(0) @db.Decimal(12, 2)
+  accommodation_receipt_url String?
+  report_url                String
+  status                    String    @default("pending_supervisor") @db.VarChar(50)
+  has_pre_approval          Boolean   @default(false)
+  is_supervisor_shared      Boolean   @default(false)
+  supervisor_id             String?   @db.VarChar(20)
+  supervisor_approved_at    DateTime? @db.Timestamptz(6)
+  supervisor_remark         String?
+  approved_by               String?   @db.VarChar(100)
+  approved_at               DateTime? @db.Timestamptz(6)
+  created_at                DateTime  @default(now()) @db.Timestamptz(6)
+  remark                    String?
+  end_date                  DateTime? @db.Date
+  employee                  employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+}
+
+model monthly_payroll_data {
+  id                               Int       @id @default(autoincrement())
+  emp_id                           String    @db.VarChar(20)
+  cycle_month                      Int
+  cycle_year                       Int
+  social_security                  Decimal?  @default(0) @db.Decimal(10, 2)
+  student_loan                     Decimal?  @default(0) @db.Decimal(10, 2)
+  insurance                        Decimal?  @default(0) @db.Decimal(10, 2)
+  insurance_income                 Decimal?  @default(0) @db.Decimal(10, 2)
+  other_deductions                 Decimal?  @default(0) @db.Decimal(10, 2)
+  other_benefits                   Decimal?  @default(0) @db.Decimal(10, 2)
+  override_salary                  Decimal?  @db.Decimal(10, 2)
+  created_at                       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime  @default(now()) @db.Timestamptz(6)
+  is_published                     Boolean   @default(false)
+  accommodation_allowance_override Decimal?  @db.Decimal(10, 2)
+  diligence_allowance_override     Decimal?  @db.Decimal(10, 2)
+  holiday_1_x_hours_override       Decimal?  @db.Decimal(10, 2)
+  holiday_3_x_hours_override       Decimal?  @db.Decimal(10, 2)
+  meal_allowance_override          Decimal?  @db.Decimal(10, 2)
+  normal_1_5x_hours_override       Decimal?  @db.Decimal(10, 2)
+  phone_allowance_override         Decimal?  @db.Decimal(10, 2)
+  position_allowance_override      Decimal?  @db.Decimal(10, 2)
+  travel_accommodation_override    Decimal?  @db.Decimal(10, 2)
+  travel_allowance_override        Decimal?  @db.Decimal(10, 2)
+  travel_site_allowance_override   Decimal?  @db.Decimal(10, 2)
+  tax                              Decimal?  @default(0) @db.Decimal(10, 2)
+  unpaid_absenteeism               Decimal?  @default(0) @db.Decimal(10, 2)
+  bonus                            Decimal?  @default(0) @db.Decimal(10, 2)
+  commissions                      Decimal?  @default(0) @db.Decimal(10, 2)
+  employee                         employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@unique([emp_id, cycle_month, cycle_year], map: "idx_monthly_payroll_unique")
+}
+
+model assets {
+  id          Int     @id @default(autoincrement())
+  asset_id    String  @unique @db.VarChar(50)
+  name        String  @db.VarChar(200)
+  category    String? @db.VarChar(100)
+  status      String  @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
+  description String?
+
+  // --- Extended Vehicle Specific Fields ---
+  company_owner String? @db.VarChar(100) // TERA GROUP, TERA POWER
+  vehicle_type  String? @db.VarChar(100) // กระบะ, เก๋ง, รถตู้
+  brand         String? @db.VarChar(100) // MITSUBISHI, ISUZU
+  vehicle_model String? @db.VarChar(200) // Xpander
+  main_user     String? @db.VarChar(200) // เอกชัย (เอก)
+  usage_remark  String? @db.Text // ใช้เมื่อออกไปหน้างาน
+
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  asset_borrowings asset_borrowings[]
+}
+
+model asset_borrowings {
+  id                   Int       @id @default(autoincrement())
+  asset_id             Int
+  emp_id               String    @db.VarChar(20)
+  borrow_date          DateTime  @db.Date
+  expected_return_date DateTime  @db.Date
+  actual_return_date   DateTime? @db.Date
+  location             String?   @db.VarChar(255)
+  condition_at_borrow  String?
+  condition_at_return  String?
+  is_damaged           Boolean   @default(false)
+  photo_url_borrow     String?
+  photo_url_return     String?
+  status               String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+
+  // New Inspection Checklist Fields (Borrow)
+  borrow_vehicle_status    String?   @db.VarChar(50)
+  borrow_is_clean          Boolean?
+  borrow_is_lights_ok      Boolean?
+  borrow_is_tires_ok       Boolean?
+  borrow_is_body_ok        Boolean?
+  borrow_is_insurance_ok   Boolean?
+  borrow_inspection_remark String?
+  assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
+  @@index([asset_id])
+  @@index([emp_id])
+  @@index([status])
+}
+
+model probation_evaluations {
+  id              Int      @id @default(autoincrement())
+  emp_id          String   @db.VarChar(20)
+  supervisor_id   String   @db.VarChar(20)
+  evaluation_no   Int      @default(1)
+  evaluation_date DateTime @default(now()) @db.Date
+  period_start    DateTime @db.Date
+  period_end      DateTime @db.Date
+
+  // Scoring (1-5)
+  score_work_quality     Int @default(0) // 1. คุณภาพงาน (4)
+  score_work_quantity    Int @default(0) // 2. ปริมาณงาน (3)
+  score_dedication       Int @default(0) // 3. ความตั้งใจ (8)
+  score_knowledge        Int @default(0) // 4. ความรอบรู้ (5)
+  score_learning         Int @default(0) // 5. การเรียนรู้ (5)
+  score_obedience        Int @default(0) // 6. การเชื่อฟัง (4)
+  score_responsibility   Int @default(0) // 7. ความรับผิดชอบ (8)
+  score_creativity       Int @default(0) // 8. ความคิดสร้างสรรค์ (6)
+  score_teamwork         Int @default(0) // 9. สัมพันธภาพ (3)
+  score_discipline       Int @default(0) // 10. การรักษาวินัย (3)
+  score_tool_maintenance Int @default(0) // 11. การใช้เครื่องมือ (3)
+  score_participation    Int @default(0) // 12. เข้าร่วมกิจกรรม (5)
+
+  // Attendance Scores (converted from counts)
+  score_late           Int @default(0) // 13. มาสาย (1)
+  score_sick_leave     Int @default(0) // 14. ลาป่วย (1)
+  score_personal_leave Int @default(0) // 15. ลากิจ (1)
+
+  // Real data counts for reference
+  count_late           Int @default(0)
+  count_sick_leave     Int @default(0)
+  count_personal_leave Int @default(0)
+  count_activity       Int @default(0)
+
+  total_score Int     @default(0)
+  grade       String? @db.VarChar(2) // A, B, C, D, E
+
+  comment_supervisor  String? @db.Text
+  comment_improvement String? @db.Text
+  comment_praise      String? @db.Text
+
+  decision           String   @db.VarChar(50) // pass, fail, extend, salary_adjust
+  salary_adjust_from Decimal? @db.Decimal(12, 2)
+  salary_adjust_to   Decimal? @db.Decimal(12, 2)
+
+  status                String  @default("submitted") @db.VarChar(20) // submitted, reviewed
+  hr_remark             String? @db.Text
+  is_sent_to_management Boolean @default(false)
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  employee   employees @relation("EmployeeToProbation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor employees @relation("SupervisorToProbation", fields: [supervisor_id], references: [emp_id])
+
+  @@index([emp_id])
+  @@index([supervisor_id])
+}

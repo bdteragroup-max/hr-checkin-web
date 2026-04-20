@@ -2,17 +2,24 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
 
-
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     try { await requireAdmin(); } catch { return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }); }
 
-    const list = await prisma.departments.findMany({
-        orderBy: { name: "asc" },
-        include: { _count: { select: { job_positions: true, employees: true } } }
-    });
-    return NextResponse.json({ ok: true, list });
+    try {
+        const list = await prisma.departments.findMany({
+            orderBy: { name: "asc" },
+            include: { 
+                divisions: { select: { name: true } },
+                _count: { select: { job_positions: true, employees: true } } 
+            }
+        });
+        return NextResponse.json({ ok: true, list });
+    } catch (e) {
+        console.error("GET Departments Error:", e);
+        return NextResponse.json({ error: "DATABASE_ERROR", details: String(e) }, { status: 500 });
+    }
 }
 
 export async function POST(req: Request) {
@@ -23,7 +30,10 @@ export async function POST(req: Request) {
 
     try {
         const item = await prisma.departments.create({
-            data: { name: body.name.trim() }
+            data: { 
+                name: body.name.trim(),
+                division_id: body.division_id ? Number(body.division_id) : null
+            }
         });
         return NextResponse.json({ ok: true, item });
     } catch {
@@ -40,7 +50,10 @@ export async function PUT(req: Request) {
     try {
         const item = await prisma.departments.update({
             where: { id: Number(body.id) },
-            data: { name: body.name.trim() }
+            data: { 
+                name: body.name.trim(),
+                division_id: body.division_id ? Number(body.division_id) : null
+            }
         });
         return NextResponse.json({ ok: true, item });
     } catch {

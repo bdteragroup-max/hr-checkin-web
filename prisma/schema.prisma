@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -208,26 +209,42 @@ model leave_types {
   leave_entitlements leave_entitlements[]
 }
 
+model divisions {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(100)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  departments   departments[]
+}
+
 model departments {
   id            Int             @id @default(autoincrement())
+  division_id   Int?
   name          String          @db.VarChar(100)
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   updated_at    DateTime        @default(now()) @db.Timestamptz(6)
   employees     employees[]
   job_positions job_positions[]
+  divisions     divisions?      @relation(fields: [division_id], references: [id], onUpdate: NoAction)
 }
 
 model job_positions {
-  id             Int         @id @default(autoincrement())
-  department_id  Int
-  title          String      @db.VarChar(100)
-  is_ot_eligible Boolean     @default(true)
-  created_at     DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime    @default(now()) @db.Timestamptz(6)
+  id             Int             @id @default(autoincrement())
+  department_id  Int?
+  parent_id      Int?
+  title          String          @db.VarChar(100)
+  node_type      String?         @default("staff") @db.VarChar(20) // executive, division, department, staff
+  order_index    Int?            @default(0)
+  is_ot_eligible Boolean         @default(true)
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime        @default(now()) @db.Timestamptz(6)
   employees      employees[]
-  departments    departments @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  departments    departments?    @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  parent         job_positions?  @relation("PositionHierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children       job_positions[] @relation("PositionHierarchy")
 
   @@index([department_id])
+  @@index([parent_id])
 }
 
 model projects {

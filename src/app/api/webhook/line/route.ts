@@ -167,7 +167,14 @@ export async function POST(req: Request) {
                             // Management: pending_management → approved directly
                             // Supervisor: pending_supervisor → pending_hr
                             // HR: pending_supervisor|pending_hr → approved
-                            const nextStatus = isManagement ? "approved" : isHr ? "approved" : "pending_hr";
+                            // Determine the next status based on who is approving and what the current stage is
+                            let nextStatus = "approved";
+                            if (leaveReq.status === "pending_supervisor" && isSupervisor) {
+                                // If acting as supervisor, move to pending_hr even if user is also Management/HR
+                                nextStatus = "pending_hr";
+                            } else if (isHr || isManagement) {
+                                nextStatus = "approved";
+                            }
                             const updated = await prisma.leave_requests.update({
                                 where: { id: targetId! },
                                 data: {
