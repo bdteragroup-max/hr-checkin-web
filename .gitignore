@@ -44,3 +44,9 @@ next-env.d.ts
 
 # Fix submodule/duplicate error
 /hr-checkin-web/
+
+# Exclude local uploads and scripts from deployment
+/public/uploads/
+/scripts/
+/scr/
+*.csv
