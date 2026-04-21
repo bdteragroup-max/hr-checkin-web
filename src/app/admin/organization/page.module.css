@@ -1,5 +1,5 @@
 /* ... previous page, header, card styles ... */
-.page { padding: 40px 50px; background: #f8fafc; min-height: 100vh; color: #0f172a; }
+.page { padding: 24px; background: #f8fafc; min-height: 100vh; color: #0f172a; }
 .header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
 .title { font-size: 26px; font-weight: 800; margin: 0; }
 .subtitle { font-size: 14px; color: #64748b; margin-top: 4px; }
@@ -31,7 +31,7 @@
   border: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  height: calc(100vh - 120px);
   overflow: hidden;
   position: relative;
 }
@@ -75,15 +75,17 @@
 .viewport {
   flex: 1;
   overflow: auto;
-  background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px);
-  background-size: 20px 20px;
+  background-image: 
+    radial-gradient(#cbd5e1 0.8px, transparent 0.8px),
+    linear-gradient(rgba(248, 250, 252, 1) 0%, rgba(255, 255, 255, 0.9) 100%);
+  background-size: 24px 24px, 100% 100%;
   position: relative;
   cursor: grab;
 }
 
 .chartWrapper {
-  padding: 100px;
-  min-width: 2000px; /* Force overflow for grand scale */
+  padding: 120px 200px;
+  min-width: 3000px;
   position: relative;
 }
 
@@ -100,87 +102,611 @@
 .connectorLine {
   stroke: #cbd5e1;
   stroke-width: 2.5;
-  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 4 2;
+  transition: all 0.3s;
 }
 
 /* STRUCTURAL LAYOUT */
 .nodeGrid {
   display: flex;
-  gap: 80px;
+  flex-direction: column;
+  align-items: center;
+  gap: 100px;
   position: relative;
   z-index: 5;
 }
 
-.deptGroup {
+.leaderSection {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 32px;
-  background: rgba(248, 250, 252, 0.4);
-  border-radius: 24px;
-  border: 2px dashed #e2e8f0;
+  align-items: center;
+  gap: 30px;
+  padding: 40px;
+  background: white;
+  border-radius: 40px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
 }
 
-.deptLabel {
+.leaderLabel {
   font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 4px 16px;
+  background: #f1f5f9;
+  border-radius: 100px;
+}
+
+.leaderRow {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+}
+
+/* INFOGRAPHIC TREE LAYOUT */
+.infoTree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 60px;
+  position: relative;
+}
+
+/* EXECUTIVE CHAIN */
+.execChain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  gap: 0;
+}
+
+.execNode {
+  position: relative;
+  z-index: 5;
+}
+
+.execCard {
+  padding: 16px 40px;
+  border-radius: 12px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  min-width: 200px;
+}
+
+.execTitle {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+.execName {
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.vLine {
+  width: 3px;
+  height: 60px;
+  background: #cbd5e1;
+  position: relative;
+}
+
+/* SIDE BRANCHING (Secretary) */
+.sideBranchContainer {
+  position: absolute;
+  top: 90px; /* Below MD card */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sideBranchItem {
+  position: absolute;
+  left: 50%;
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.sideBranchLine {
+  width: 24px;
+  height: 3px;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.secretaryCard {
+  width: 180px;
+  padding: 8px 12px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  text-align: left;
+}
+
+.secretaryTitle {
+  font-size: 8px;
   font-weight: 900;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.secretaryName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* HORIZONTAL BUS LINE */
+.hBusLine {
+  width: 90%;
+  height: 3px;
+  background: #cbd5e1;
+  border-radius: 4px;
+  margin: 0 auto;
+}
+
+/* DIVISION ROW */
+.divisionRow {
+  display: flex;
+  gap: 60px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* DIVISION COLUMN */
+.divColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 200px;
+}
+
+.divHeader {
+  padding: 12px 24px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.divHeaderTitle {
+  font-size: 11px;
+  font-weight: 900;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* DIVISION HEAD CARD */
+.divHeadCard {
+  margin-top: 16px;
+}
+
+.divHeadContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.divBusV {
+  width: 2px;
+  height: 24px;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+
+/* DEPARTMENT GROUPS — HORIZONTAL ROOT BRANCHES */
+.deptColumns {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: flex-start;
+  position: relative;
+}
+
+.deptColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  position: relative;
+}
+
+/* Root connector stub from the vertical bus to each dept column */
+.deptColumn::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -8px;
+  width: 8px;
+  height: 2px;
+  background: #cbd5e1;
+}
+
+.deptTag {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  border: 2px solid;
+  border-radius: 8px;
+  text-align: center;
+  background: white;
+}
+
+/* BRANCH ROOTS — HORIZONTAL SPREAD WITHIN EACH DEPARTMENT */
+.branchRoots {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.branchRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+  position: relative;
+}
+
+/* Root connector stub */
+.branchRoot::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: -6px;
+  width: 6px;
+  height: 2px;
+  background: #e2e8f0;
+}
+
+.branchBadge {
+  font-size: 9px;
+  font-weight: 900;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   text-align: center;
 }
 
-.secColumns {
-  display: flex;
-  gap: 40px;
-}
-
-.secColumn {
+/* STAFF CARD */
+.deptNodeStack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 6px;
 }
 
-.secLabel {
-  font-size: 12px;
+.staffCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s;
+}
+
+.staffCard:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.staffCardHead {
+  border-left: 3px solid var(--accent, #dc2626);
+  background: #fffbeb;
+}
+
+.vacantCard {
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.vacantIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.staffIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.staffInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.staffPosition {
+  font-size: 9px;
   font-weight: 800;
   color: #94a3b8;
-  border-bottom: 2px solid #f1f5f9;
-  padding-bottom: 8px;
-  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.posStack {
+.staffName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trialBadge {
+  font-size: 8px;
+  font-weight: 900;
+  color: #ea580c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.internBadge {
+  font-size: 8px;
+  font-weight: 900;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+/* SHARED UTILITY CLASSES */
+.glossyIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.glossyText {
   display: flex;
   flex-direction: column;
-  gap: 60px; /* Space for lines */
-  align-items: center;
+  gap: 2px;
 }
 
+.glossyTitle {
+  font-size: 10px;
+  font-weight: 900;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.glossyName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.glossyReflect {
+  display: none;
+}
+
+/* PREMIUM GRAPH NODE: CIRCLE ON RECTANGLE */
 .graphNode {
-  width: 180px;
-  padding: 16px;
-  background: white;
-  border-radius: 16px;
-  border: 2.5px solid #f1f5f9;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  text-align: center;
-  transition: all 0.2s;
   position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 10;
 }
 
 .graphNode:hover {
-  transform: translateY(-4px);
-  border-color: #dc2626;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  transform: scale(1.05) translateY(-5px);
 }
 
-.nodeTitle { font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 4px; text-transform: uppercase; }
-.nodeName { font-size: 14px; font-weight: 700; color: #0f172a; }
+.nodeAvatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #dc2626; /* Dynamic per branch later? */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #dc2626;
+  position: absolute;
+  top: -27px;
+  z-index: 20;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
+}
 
-/* MODALS (Simplified) */
-.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal { background: white; padding: 40px; border-radius: 24px; width: 400px; }
-.modalActions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
-.input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; margin-top: 8px; }
+.nodeCard {
+  width: 100%;
+  padding: 36px 16px 16px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  text-align: center;
+  border-bottom: 4px solid #dc2626;
+}
+
+.nodeTitle { 
+  font-size: 10px; 
+  font-weight: 800; 
+  color: #64748b; 
+  margin-bottom: 6px; 
+  text-transform: uppercase; 
+  letter-spacing: 0.05em;
+}
+
+.nodeName { 
+  font-size: 14px; 
+  font-weight: 700; 
+  color: #0f172a; 
+}
+
+.nodeLocation { 
+  font-size: 10px; 
+  font-weight: 600; 
+  color: #94a3b8; 
+  margin-top: 4px; 
+  background: #f8fafc; 
+  padding: 2px 8px; 
+  border-radius: 4px; 
+  display: inline-block; 
+}
+
+.miniLocation { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+/* MODALS */
+.modalOverlay { 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(15, 23, 42, 0.4); 
+    backdrop-filter: blur(12px); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    z-index: 1000; 
+}
+.modal { 
+    background: white; 
+    padding: 32px; 
+    border-radius: 28px; 
+    width: 440px; 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.modalHeader h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.modalHeader button {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    cursor: pointer;
+}
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.formGroup label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+.input { 
+    width: 100%; 
+    padding: 12px 16px; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 12px; 
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+.modalActions { 
+    display: flex; 
+    justify-content: flex-end; 
+    gap: 12px; 
+    margin-top: 32px; 
+}
+.btnBlue {
+    background: #2563eb;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+.btnGhost {
+    background: #f8fafc;
+    color: #475569;
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+}

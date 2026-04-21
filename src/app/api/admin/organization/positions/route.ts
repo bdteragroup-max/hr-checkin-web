@@ -14,7 +14,14 @@ export async function GET() {
             parent: { select: { title: true } },
             employees: {
                 where: { is_active: true },
-                select: { name: true, emp_id: true }
+                select: { 
+                    name: true, 
+                    emp_id: true,
+                    supervisor_id: true,
+                    is_on_trial: true,
+                    salary_type: true,
+                    branches: { select: { name: true } }
+                }
             }
         }
     });

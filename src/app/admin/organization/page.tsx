@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import styles from "./page.module.css";
+import Link from "next/link";
 import { 
     PlusIcon, PencilIcon, TrashIcon, 
     ChartBarIcon, ListBulletIcon,
     BriefcaseIcon, UserGroupIcon, BuildingOffice2Icon,
     CheckCircleIcon, XCircleIcon, XMarkIcon,
     MagnifyingGlassPlusIcon, MagnifyingGlassMinusIcon, 
-    ArrowsPointingOutIcon, ArrowDownTrayIcon
+    ArrowsPointingOutIcon, ArrowDownTrayIcon,
+    ArrowLeftIcon
 } from "@heroicons/react/24/outline";
 import { toPng } from 'html-to-image';
 
@@ -32,22 +34,51 @@ type JobPosition = {
     node_type: string | null;
     is_ot_eligible: boolean;
     departments?: SectionLayer & { divisions?: DeptLayer };
-    employees: { name: string; emp_id: string }[];
+    employees: { 
+        name: string; 
+        emp_id: string;
+        supervisor_id?: string | null;
+        is_on_trial?: boolean;
+        salary_type?: string | null;
+        branches?: { name: string } | null;
+    }[];
 };
 
 export default function OrganizationPage() {
     const [deptLayers, setDeptLayers] = useState<DeptLayer[]>([]); 
     const [secLayers, setSecLayers] = useState<SectionLayer[]>([]);
     const [positions, setPositions] = useState<JobPosition[]>([]);
+    const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<"table" | "flowchart">("table");
 
     // Charts & Viewport State
     const [zoom, setZoom] = useState(1);
-    const [offsets, setOffsets] = useState<{ [key: number]: { x: number, y: number } }>({});
+    const [offsets, setOffsets] = useState<{ [key: string]: { x: number, y: number } }>({});
     const chartRef = useRef<HTMLDivElement>(null);
 
-    // Filtering
+    // INFOGRAPHIC FILTERING
+    const boardNodes = useMemo(() => {
+        return positions.filter(p => p.node_type === 'executive' && !p.parent_id)
+            .flatMap(p => p.employees.map(e => ({ ...p, employee: e })));
+    }, [positions]);
+
+    const ceoNode = useMemo(() => {
+        // Find executive who reports to board, or top executive if no board
+        const execs = positions.filter(p => p.node_type === 'executive' && p.parent_id);
+        if (execs.length === 0) return null;
+        const p = execs[0];
+        return p.employees.map(e => ({ ...p, employee: e }))[0];
+    }, [positions]);
+
+    const staffPositions = useMemo(() => positions.filter(p => p.node_type !== 'executive'), [positions]);
+    
+    // Assign colors to departments
+    const getDeptColor = (index: number) => {
+        const colors = ['#0d9488', '#7c3aed', '#059669', '#ea580c', '#2563eb', '#e11d48'];
+        return colors[index % colors.length];
+    };
+
     const [selectedDeptId, setSelectedDeptId] = useState<number | null>(null);
     const [selectedSecId, setSelectedSecId] = useState<number | null>(null);
 
@@ -76,15 +107,19 @@ export default function OrganizationPage() {
     async function loadData() {
         setLoading(true);
         try {
-            const [divRes, deptRes, posRes] = await Promise.all([
+            const [divRes, deptRes, posRes, branchRes] = await Promise.all([
                 fetch("/api/admin/organization/divisions"),
                 fetch("/api/admin/organization/departments"),
-                fetch("/api/admin/organization/positions")
+                fetch("/api/admin/organization/positions"),
+                fetch("/api/admin/branches")
             ]);
-            const [divData, deptData, posData] = await Promise.all([divRes.json(), deptRes.json(), posRes.json()]);
+            const [divData, deptData, posData, branchData] = await Promise.all([
+                divRes.json(), deptRes.json(), posRes.json(), branchRes.json()
+            ]);
             setDeptLayers(divData.list || []);
             setSecLayers(deptData.list || []);
             setPositions(posData.list || []);
+            setBranches(branchData.list || []);
         } catch (e) { console.error(e); }
         setLoading(false);
     }
@@ -96,12 +131,12 @@ export default function OrganizationPage() {
         if (!chartRef.current) return;
         const nodes = chartRef.current.querySelectorAll('[data-node-id]');
         const containerRect = chartRef.current.getBoundingClientRect();
-        const newOffsets: { [key: number]: { x: number, y: number } } = {};
+        const newOffsets: { [key: string]: { x: number, y: number } } = {};
         
         nodes.forEach((node) => {
-            const id = Number(node.getAttribute('data-node-id'));
+            const id = node.getAttribute('data-node-id');
+            if (!id) return;
             const rect = node.getBoundingClientRect();
-            // Calculate center point relative to container (accounting for current zoom)
             newOffsets[id] = {
                 x: (rect.left + rect.width / 2 - containerRect.left) / zoom,
                 y: (rect.top + rect.height / 2 - containerRect.top) / zoom
@@ -242,7 +277,12 @@ export default function OrganizationPage() {
                                         <tr key={p.id}>
                                             <td className={styles.bold}>{p.title}</td>
                                             <td>{p.departments?.name || "Executive"}</td>
-                                            <td>{p.employees[0]?.name || "ว่าง"}</td>
+                                            <td>
+                                                <div>{p.employees[0]?.name || "ว่าง"}</div>
+                                                {p.employees[0]?.branches?.name && (
+                                                    <div className={styles.miniLocation}>{p.employees[0].branches.name}</div>
+                                                )}
+                                            </td>
                                             <td className={styles.tdRight}>
                                                 <div className={styles.tdActions}>
                                                     <button className={styles.miniBtn} onClick={() => setPosModal({ 
@@ -284,66 +324,417 @@ export default function OrganizationPage() {
                             ref={chartRef}
                             style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
                         >
-                            {/* SVG LAYER FOR CROSS-DEPARTMENT LINES */}
+                            {/* SVG LAYER FOR COMMAND HIERARCHY LINES */}
                             <svg className={styles.svgOverlay}>
-                                {positions.map(p => {
-                                    if (!p.parent_id || !offsets[p.id] || !offsets[p.parent_id]) return null;
-                                    const start = offsets[p.parent_id];
-                                    const end = offsets[p.id];
+                                {positions.flatMap(p => p.employees).map(emp => {
+                                    if (!emp?.supervisor_id) return null;
                                     
-                                    // Calculate a beautiful Bezier curve
-                                    const midY = (start.y + end.y) / 2;
-                                    const path = `M ${start.x} ${start.y} C ${start.x} ${midY}, ${end.x} ${midY}, ${end.x} ${end.y}`;
+                                    // Find node ID of supervisor (could be anywhere in the chart)
+                                    const supervisorNodeId = `emp-${emp.supervisor_id}`;
+                                    const subordinateNodeId = `emp-${emp.emp_id}`;
+                                    
+                                    if (!offsets[supervisorNodeId] || !offsets[subordinateNodeId]) return null;
+                                    const start = offsets[supervisorNodeId];
+                                    const end = offsets[subordinateNodeId];
+                                    
+                                    // Calculate Orthogonal elbow path
+                                    const midY = start.y + (end.y - start.y) * 0.5;
+                                    const path = `M ${start.x} ${start.y} L ${start.x} ${midY} L ${end.x} ${midY} L ${end.x} ${end.y}`;
                                     
                                     return (
-                                        <g key={`link-${p.id}`}>
+                                        <g key={`link-${emp.emp_id}`}>
                                             <path 
                                                 d={path} 
                                                 className={styles.connectorLine} 
                                                 fill="none" 
                                             />
-                                            <circle cx={start.x} cy={start.y} r="3" fill="#cbd5e1" />
-                                            <circle cx={end.x} cy={end.y} r="3" fill="#dc2626" />
+                                            <circle cx={end.x} cy={midY} r="3" fill="#cbd5e1" />
                                         </g>
                                     );
                                 })}
                             </svg>
 
-                            {/* NODES LAYER: STRUCTURAL GROUPING */}
-                            <div className={styles.nodeGrid}>
-                                {deptLayers.map(dept => (
-                                    <div key={dept.id} className={styles.deptGroup}>
-                                        <div className={styles.deptLabel}>{dept.name}</div>
-                                        <div className={styles.secColumns}>
-                                            {secLayers.filter(s => s.division_id === dept.id).map(sec => (
-                                                <div key={sec.id} className={styles.secColumn}>
-                                                    <div className={styles.secLabel}>{sec.name}</div>
-                                                    <div className={styles.posStack}>
-                                                        {positions.filter(p => p.department_id === sec.id).map(pos => (
-                                                            <div 
-                                                                key={pos.id} 
-                                                                className={styles.graphNode} 
-                                                                data-node-id={pos.id}
-                                                            >
-                                                                <div className={styles.nodeTitle}>{pos.title}</div>
-                                                                <div className={styles.nodeName}>{pos.employees[0]?.name || "ว่าง"}</div>
-                                                            </div>
-                                                        ))}
+                            {/* NODES LAYER: TERA ORG CHART TREE */}
+                            <div className={styles.infoTree}>
+                                
+                                {/* 1. EXECUTIVE CHAIN: MD → Asst MD → Side Roles */}
+                                {(() => {
+                                    // All executive positions
+                                    const allExecs = positions.filter(p => p.node_type === 'executive');
+                                    // Top exec: no parent_id (MD)
+                                    const topExecs = allExecs.filter(p => !p.parent_id);
+                                    // Sub execs: have parent_id  
+                                    const subExecs = allExecs.filter(p => p.parent_id);
+
+                                    // Administrative positions (Dept 8) that are NOT already in topExecs/subExecs
+                                    const adminNodes = positions.filter(p => p.department_id === 8)
+                                        .flatMap(p => {
+                                            if (p.employees.length === 0) return [{ pos: p, emp: null as any }];
+                                            return p.employees.map(e => ({ pos: p, emp: e }));
+                                        });
+
+                                    // Secretary specific nodes for side-branching
+                                    const secretaryNodes = adminNodes.filter(n => 
+                                        n.pos.title.toLowerCase().includes('เลขา') || 
+                                        n.pos.title.toLowerCase().includes('secretary')
+                                    );
+
+                                    return (
+                                        <div className={styles.execChain}>
+                                            {/* TOP: MD */}
+                                            {topExecs.map(pos => pos.employees.map(emp => (
+                                                <div key={emp.emp_id} className={styles.execNode} data-node-id={`emp-${emp.emp_id}`}>
+                                                    <div className={styles.execCard} style={{background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'}}>
+                                                        <div className={styles.execTitle}>{pos.title}</div>
+                                                        <div className={styles.execName}>{emp.name}</div>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )))}
+
+                                            {/* VERTICAL LINE */}
+                                            <div className={styles.vLine}>
+                                                {/* SECRETARY SIDE BRANCH */}
+                                                {secretaryNodes.map((n, i) => (
+                                                    <div key={n.emp?.emp_id || i} className={styles.sideBranchContainer}>
+                                                        <div className={styles.sideBranchItem}>
+                                                            <div className={styles.sideBranchLine} />
+                                                            <div className={styles.secretaryCard}>
+                                                                <div className={styles.secretaryTitle}>{n.pos.title}</div>
+                                                                <div className={styles.secretaryName}>{n.emp?.name || 'ตำแหน่งว่าง'}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* SUB: Asst MD and other sub-executives */}
+                                            {subExecs.map(pos => pos.employees.map(emp => (
+                                                <div key={emp.emp_id} className={styles.execNode} data-node-id={`emp-${emp.emp_id}`}>
+                                                    <div className={styles.execCard} style={{background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'}}>
+                                                        <div className={styles.execTitle}>{pos.title}</div>
+                                                        <div className={styles.execName}>{emp.name}</div>
+                                                    </div>
+                                                </div>
+                                            )))}
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })()}
+
+                                {/* 2. HORIZONTAL BUS LINE → DIVISION COLUMNS */}
+                                <div className={styles.hBusLine} />
+                                <div className={styles.divisionRow}>
+                                    {deptLayers.map((div, dIdx) => {
+                                        // All positions in this division, excluding Dept 8 which is now at the top
+                                        const allDivPositions = staffPositions.filter(p => 
+                                            p.departments?.division_id === div.id && p.department_id !== 8
+                                        );
+                                        if (allDivPositions.length === 0) return null;
+                                        const accent = getDeptColor(dIdx);
+
+                                        // Nodes representing either an employee in a position or a vacant position
+                                        const allDivNodes = allDivPositions.flatMap(p => {
+                                            if (p.employees.length === 0) {
+                                                return [{ pos: p, emp: null as any }];
+                                            }
+                                            return p.employees.map(e => ({ pos: p, emp: e }));
+                                        });
+                                        
+                                        // Division head = someone whose emp_id is referenced as supervisor_id by others in this division
+                                        const divHead = allDivNodes.find(({ emp }) => 
+                                            emp && allDivNodes.some(other => other.emp?.supervisor_id === emp.emp_id)
+                                        );
+
+                                        // Remaining nodes (exclude div head)
+                                        const remainingNodes = allDivNodes.filter(({ emp }) => 
+                                            !emp || emp.emp_id !== divHead?.emp?.emp_id
+                                        );
+
+                                        // Group remaining by department (secLayers)
+                                        const departments = secLayers
+                                            .filter(s => s.division_id === div.id && s.id !== 8)
+                                            .map(dept => {
+                                                const deptNodes = remainingNodes.filter(({ pos }) => pos.department_id === dept.id);
+                                                if (deptNodes.length === 0) return null;
+
+                                                // Sort: department head first
+                                                const sorted = [...deptNodes].sort((a, b) => {
+                                                    const isASup = a.emp && deptNodes.some(other => other.emp?.supervisor_id === a.emp.emp_id);
+                                                    const isBSup = b.emp && deptNodes.some(other => other.emp?.supervisor_id === b.emp.emp_id);
+                                                    return (isBSup ? 1 : 0) - (isASup ? 1 : 0);
+                                                });
+
+                                                return { dept, nodes: sorted };
+                                            })
+                                            .filter(Boolean) as { dept: SectionLayer; nodes: { pos: JobPosition; emp: any | null }[] }[];
+
+                                        return (
+                                            <div key={div.id} className={styles.divColumn}>
+                                                {/* Division Header */}
+                                                <div className={styles.divHeader} style={{background: accent}}>
+                                                    <div className={styles.divHeaderTitle}>{div.name}</div>
+                                                </div>
+
+                                                {/* Division Head Employee */}
+                                                {divHead && (
+                                                    <div className={styles.divHeadCard} data-node-id={`emp-${divHead.emp.emp_id}`}>
+                                                        <div className={styles.divHeadContent} style={{borderColor: accent}}>
+                                                            <div className={styles.glossyIcon} style={{background: accent}}>
+                                                                {divHead.emp.name?.charAt(0)}
+                                                            </div>
+                                                            <div className={styles.glossyText}>
+                                                                <div className={styles.glossyTitle}>{divHead.pos.title}</div>
+                                                                <div className={styles.glossyName}>{divHead.emp.name}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Vertical bus line */}
+                                                <div className={styles.divBusV} style={{background: accent}} />
+
+                                                {/* Department Groups */}
+                                                <div className={styles.deptColumns}>
+                                                    {departments.map(({ dept, nodes }) => {
+                                                        // Group nodes by branch
+                                                        const branchGroups = branches.map(branch => {
+                                                            const branchNodes = nodes.filter(({ emp }) => emp?.branches?.name === branch.name);
+                                                            if (branchNodes.length === 0) return null;
+
+                                                            return { branch, nodes: branchNodes };
+                                                        }).filter(Boolean) as { branch: { id: string; name: string }; nodes: { pos: JobPosition; emp: any | null }[] }[];
+
+                                                        // Also nodes without a branch (includes vacant ones)
+                                                        const noBranchNodes = nodes.filter(({ emp }) => !emp || !emp.branches?.name);
+
+                                                        return (
+                                                            <div key={dept.id} className={styles.deptColumn}>
+                                                                <div className={styles.deptTag} style={{color: accent, borderColor: accent}}>
+                                                                    {dept.name}
+                                                                </div>
+                                                                
+                                                                {/* Branch roots spread horizontally */}
+                                                                <div className={styles.branchRoots}>
+                                                                    {branchGroups.map(({ branch, nodes: brNodes }) => (
+                                                                        <div key={branch.id} className={styles.branchRoot}>
+                                                                            <div className={styles.branchBadge}>{branch.name}</div>
+                                                                            <div className={styles.deptNodeStack}>
+                                                                                {brNodes.map(({ pos, emp }, i) => {
+                                                                                    const isSupervisor = emp && nodes.some(other => other.emp?.supervisor_id === emp.emp_id);
+                                                                                    
+                                                                                    if (!emp) {
+                                                                                        return (
+                                                                                            <div key={`vacant-${pos.id}-${i}`} className={`${styles.staffCard} ${styles.vacantCard}`}>
+                                                                                                <div className={styles.vacantIcon}></div>
+                                                                                                <div className={styles.staffInfo}>
+                                                                                                    <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                                    <div className={styles.staffName}>&nbsp;</div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div 
+                                                                                            key={emp.emp_id} 
+                                                                                            className={`${styles.staffCard} ${isSupervisor ? styles.staffCardHead : ''}`}
+                                                                                            data-node-id={`emp-${emp.emp_id}`}
+                                                                                            style={{'--accent': accent} as any}
+                                                                                        >
+                                                                                            <div className={styles.staffIcon} style={{background: isSupervisor ? accent : '#f1f5f9', color: isSupervisor ? 'white' : accent}}>
+                                                                                                {emp.name?.charAt(0)}
+                                                                                            </div>
+                                                                                            <div className={styles.staffInfo}>
+                                                                                                <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                                <div className={styles.staffName}>
+                                                                                                    {emp.name}
+                                                                                                    {emp.salary_type === 'daily' && <span className={styles.internBadge}>ฝึกงาน</span>}
+                                                                                                    {emp.is_on_trial && <span className={styles.trialBadge}>ทดลองงาน</span>}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+
+                                                                    {/* Nodes without branch */}
+                                                                    {noBranchNodes.length > 0 && (
+                                                                        <div className={styles.branchRoot}>
+                                                                            <div className={styles.branchBadge}>ส่วนกลาง</div>
+                                                                            <div className={styles.deptNodeStack}>
+                                                                                {noBranchNodes.map(({ pos, emp }, i) => {
+                                                                                    if (!emp) {
+                                                                                        return (
+                                                                                            <div key={`vacant-nobr-${pos.id}-${i}`} className={`${styles.staffCard} ${styles.vacantCard}`}>
+                                                                                                <div className={styles.vacantIcon}></div>
+                                                                                                <div className={styles.staffInfo}>
+                                                                                                    <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                                    <div className={styles.staffName}>&nbsp;</div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                    return (
+                                                                                        <div 
+                                                                                            key={emp.emp_id} 
+                                                                                            className={styles.staffCard}
+                                                                                            data-node-id={`emp-${emp.emp_id}`}
+                                                                                            style={{'--accent': accent} as any}
+                                                                                        >
+                                                                                            <div className={styles.staffIcon} style={{background: '#f1f5f9', color: accent}}>
+                                                                                                {emp.name?.charAt(0)}
+                                                                                            </div>
+                                                                                            <div className={styles.staffInfo}>
+                                                                                                <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                                <div className={styles.staffName}>
+                                                                                                    {emp.name}
+                                                                                                    {emp.salary_type === 'daily' && <span className={styles.internBadge}>ฝึกงาน</span>}
+                                                                                                    {emp.is_on_trial && <span className={styles.trialBadge}>ทดลองงาน</span>}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODALS (Assume same implementations as before) */}
-            {deptModal.open && <div className={styles.modalOverlay}><div className={styles.modal}><h3>จัดการฝ่าย</h3><form onSubmit={saveDept}><input className={styles.input} required value={deptModal.name} onChange={e => setDeptModal({...deptModal, name: e.target.value})} /><div className={styles.modalActions}><button type="button" onClick={() => setDeptModal({...deptModal, open: false})}>ปิด</button><button type="submit">บันทึก</button></div></form></div></div>}
-            {/* ... other modals (secModal, posModal) omitted for space, would be identical to previous stable version */}
+            {/* MODALS */}
+            {deptModal.open && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h3>{deptModal.isEdit ? 'แก้ไขฝ่าย' : 'เพิ่มฝ่ายใหม่'}</h3>
+                            <button onClick={() => setDeptModal({...deptModal, open: false})}><XMarkIcon style={{width: 20}}/></button>
+                        </div>
+                        <form onSubmit={saveDept}>
+                            <div className={styles.formGroup}>
+                                <label>ชื่อฝ่าย (Division Name)</label>
+                                <input 
+                                    className={styles.input} 
+                                    required 
+                                    value={deptModal.name} 
+                                    onChange={e => setDeptModal({...deptModal, name: e.target.value})} 
+                                />
+                            </div>
+                            <div className={styles.modalActions}>
+                                <button type="button" className={styles.btnGhost} onClick={() => setDeptModal({...deptModal, open: false})}>ยกเลิก</button>
+                                <button type="submit" className={styles.btnBlue}>บันทึกข้อมูล</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {secModal.open && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h3>{secModal.isEdit ? 'แก้ไขแผนก' : 'เพิ่มแผนกใหม่'}</h3>
+                            <button onClick={() => setSecModal({...secModal, open: false})}><XMarkIcon style={{width: 20}}/></button>
+                        </div>
+                        <form onSubmit={saveSec}>
+                            <div className={styles.formGroup}>
+                                <label>ภายใต้ฝ่าย (Parent Division)</label>
+                                <select 
+                                    className={styles.input} 
+                                    required 
+                                    value={secModal.division_id} 
+                                    onChange={e => setSecModal({...secModal, division_id: Number(e.target.value)})}
+                                >
+                                    <option value="">เลือกฝ่าย...</option>
+                                    {deptLayers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                </select>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>ชื่อแผนก (Department Name)</label>
+                                <input 
+                                    className={styles.input} 
+                                    required 
+                                    value={secModal.name} 
+                                    onChange={e => setSecModal({...secModal, name: e.target.value})} 
+                                />
+                            </div>
+                            <div className={styles.modalActions}>
+                                <button type="button" className={styles.btnGhost} onClick={() => setSecModal({...secModal, open: false})}>ยกเลิก</button>
+                                <button type="submit" className={styles.btnBlue}>บันทึกข้อมูล</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {posModal.open && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h3>{posModal.isEdit ? 'แก้ไขตำแหน่ง' : 'เพิ่มตำแหน่งงานใหม่'}</h3>
+                            <button onClick={() => setPosModal({...posModal, open: false})}><XMarkIcon style={{width: 20}}/></button>
+                        </div>
+                        <form onSubmit={savePos}>
+                            <div className={styles.formGroup}>
+                                <label>ชื่อตำแหน่ง (Job Title)</label>
+                                <input 
+                                    className={styles.input} 
+                                    required 
+                                    value={posModal.title} 
+                                    onChange={e => setPosModal({...posModal, title: e.target.value})} 
+                                />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>แผนก (Department)</label>
+                                <select 
+                                    className={styles.input} 
+                                    required 
+                                    value={posModal.department_id} 
+                                    onChange={e => setPosModal({...posModal, department_id: Number(e.target.value)})}
+                                >
+                                    <option value="0">Executive (No Dept)</option>
+                                    {secLayers.map(s => <option key={s.id} value={s.id}>{s.name} ({deptLayers.find(d => d.id === s.division_id)?.name})</option>)}
+                                </select>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>ประเภทโหนด (Node Type)</label>
+                                <select 
+                                    className={styles.input} 
+                                    value={posModal.node_type || "staff"} 
+                                    onChange={e => setPosModal({...posModal, node_type: e.target.value})}
+                                >
+                                    <option value="staff">Staff (General)</option>
+                                    <option value="executive">Executive (Leadership)</option>
+                                </select>
+                            </div>
+                            <div className={styles.formGroup} style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={posModal.is_ot_eligible} 
+                                    onChange={e => setPosModal({...posModal, is_ot_eligible: e.target.checked})} 
+                                />
+                                <label>มีสิทธิ์ได้รับ OT (OT Eligible)</label>
+                            </div>
+                            <div className={styles.modalActions}>
+                                <button type="button" className={styles.btnGhost} onClick={() => setPosModal({...posModal, open: false})}>ยกเลิก</button>
+                                <button type="submit" className={styles.btnBlue}>บันทึกข้อมูล</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
