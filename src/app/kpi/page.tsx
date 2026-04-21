@@ -1,0 +1,136 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { 
+    ClipboardDocumentCheckIcon, 
+    CalendarDaysIcon,
+    ArrowPathIcon,
+    ChevronRightIcon,
+    AcademicCapIcon,
+    ChatBubbleLeftEllipsisIcon,
+    CheckBadgeIcon,
+    EyeIcon,
+    PencilSquareIcon
+} from "@heroicons/react/24/solid";
+import styles from "./page.module.css";
+
+interface Evaluation {
+    id: number;
+    evaluation_no: number;
+    status: string;
+    total_supervisor_score: string | number | null;
+    grade: string | null;
+    period_start: string | null;
+    period_end: string | null;
+    supervisor?: {
+        name: string;
+    };
+}
+
+export default function EmployeeKPIPage() {
+    const [list, setList] = useState<Evaluation[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch("/api/kpi")
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) setList(data.list);
+            })
+            .finally(() => setLoading(false));
+    }, []);
+
+    const getStatusInfo = (status: string) => {
+        switch (status) {
+            case "pending_employee": return { label: "รอยืนยัน / ประเมินตนเอง", color: "#f59e0b", icon: <PencilSquareIcon width={14} /> };
+            case "pending_supervisor": return { label: "รอหัวหน้าประเมิน", color: "#3b82f6", icon: <EyeIcon width={14} /> };
+            case "completed": return { label: "ประเมินเสร็จสิ้น", color: "#10b981", icon: <CheckBadgeIcon width={14} /> };
+            default: return { label: status, color: "#94a3b8", icon: null };
+        }
+    };
+
+    return (
+        <div className={styles.wrapper}>
+            <div className={styles.wrap}>
+                {/* ── HERO TITLE ── */}
+                <div className={styles.hero}>
+                    <h1 className={styles.heroH1}>KPI รายบุคคล</h1>
+                    <div className={styles.heroSubtitle}>ติดตามเป้าหมายและผลการทำงานรอบทดลองงานของคุณ</div>
+                </div>
+
+                {loading ? (
+                    <div className={styles.loading}>
+                        <ArrowPathIcon width={40} className="animate-spin mx-auto mb-4 opacity-10" />
+                        <div>กำลังรวบรวมข้อมูลของคุณ...</div>
+                    </div>
+                ) : list.length === 0 ? (
+                    <div className={styles.empty}>ยังไม่มีข้อมูล KPI ที่ได้รับมอบหมาย</div>
+                ) : (
+                    <div className={styles.list}>
+                        <div className={styles.sectionLabel}>
+                            <div className={styles.dot} />
+                            <span>My KPI Sessions ({list.length})</span>
+                        </div>
+
+                        {list.map((evalData, idx) => {
+                            const statusInfo = getStatusInfo(evalData.status);
+                            return (
+                                <div key={evalData.id} className={styles.card} style={{ animationDelay: `${idx * 0.05}s` }}>
+                                    <div className={styles.cardHeader}>
+                                        <div className={styles.evalNo}>การประเมินครั้งที่ {evalData.evaluation_no}</div>
+                                        <div className={styles.statusBadge} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
+                                            {statusInfo.icon}
+                                            <span>{statusInfo.label}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.metaGrid}>
+                                        <div className={styles.metaItem}>
+                                          <span className={styles.metaLabel}>รอบการประเมิน</span>
+                                          <span className={styles.metaVal}>
+                                            {evalData.period_start ? new Date(evalData.period_start).toLocaleDateString("th-TH") : "N/A"} - {evalData.period_end ? new Date(evalData.period_end).toLocaleDateString("th-TH") : "N/A"}
+                                          </span>
+                                        </div>
+                                        <div className={styles.metaItem}>
+                                          <span className={styles.metaLabel}>ผู้ประเมิน / หัวหน้างาน</span>
+                                          <span className={styles.metaVal}>{evalData.supervisor?.name || "N/A"}</span>
+                                        </div>
+                                    </div>
+
+                                    {evalData.status === "completed" && (
+                                        <div className={styles.resultGrid}>
+                                            <div className={styles.resultBox}>
+                                                <div className={styles.resultLabel}>คะแนนเฉลี่ย</div>
+                                                <div className={styles.resultVal} style={{ color: '#3b82f6' }}>
+                                                    {Number(evalData.total_supervisor_score).toFixed(2)}
+                                                </div>
+                                            </div>
+                                            <div className={styles.resultBox}>
+                                                <div className={styles.resultLabel}>เกรดที่ได้</div>
+                                                <div className={styles.resultVal} style={{ color: '#10b981' }}>
+                                                    {evalData.grade}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {evalData.status === "pending_employee" ? (
+                                        <Link href={`/kpi/self-rate/${evalData.id}`} className={styles.btnPrimary}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                <ClipboardDocumentCheckIcon width={18} />
+                                                <span>เริ่มประเมินตนเอง</span>
+                                            </div>
+                                        </Link>
+                                    ) : (
+                                        <div className={styles.btnDisabled}>ประมวลผลแล้ว</div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

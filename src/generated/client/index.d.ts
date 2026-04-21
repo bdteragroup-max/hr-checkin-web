@@ -123,6 +123,16 @@ export type asset_borrowings = $Result.DefaultSelection<Prisma.$asset_borrowings
  * 
  */
 export type probation_evaluations = $Result.DefaultSelection<Prisma.$probation_evaluationsPayload>
+/**
+ * Model kpi_evaluations
+ * 
+ */
+export type kpi_evaluations = $Result.DefaultSelection<Prisma.$kpi_evaluationsPayload>
+/**
+ * Model kpi_items
+ * 
+ */
+export type kpi_items = $Result.DefaultSelection<Prisma.$kpi_itemsPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -461,6 +471,26 @@ export class PrismaClient<
     * ```
     */
   get probation_evaluations(): Prisma.probation_evaluationsDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.kpi_evaluations`: Exposes CRUD operations for the **kpi_evaluations** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Kpi_evaluations
+    * const kpi_evaluations = await prisma.kpi_evaluations.findMany()
+    * ```
+    */
+  get kpi_evaluations(): Prisma.kpi_evaluationsDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.kpi_items`: Exposes CRUD operations for the **kpi_items** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Kpi_items
+    * const kpi_items = await prisma.kpi_items.findMany()
+    * ```
+    */
+  get kpi_items(): Prisma.kpi_itemsDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -923,7 +953,9 @@ export namespace Prisma {
     monthly_payroll_data: 'monthly_payroll_data',
     assets: 'assets',
     asset_borrowings: 'asset_borrowings',
-    probation_evaluations: 'probation_evaluations'
+    probation_evaluations: 'probation_evaluations',
+    kpi_evaluations: 'kpi_evaluations',
+    kpi_items: 'kpi_items'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -942,7 +974,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "admins" | "branches" | "checkins" | "ot_requests" | "employees" | "holidays" | "leave_requests" | "sessions" | "admin_login_attempts" | "leave_entitlements" | "leave_types" | "divisions" | "departments" | "job_positions" | "projects" | "employee_warnings" | "birthday_claims" | "travel_claims" | "monthly_payroll_data" | "assets" | "asset_borrowings" | "probation_evaluations"
+      modelProps: "admins" | "branches" | "checkins" | "ot_requests" | "employees" | "holidays" | "leave_requests" | "sessions" | "admin_login_attempts" | "leave_entitlements" | "leave_types" | "divisions" | "departments" | "job_positions" | "projects" | "employee_warnings" | "birthday_claims" | "travel_claims" | "monthly_payroll_data" | "assets" | "asset_borrowings" | "probation_evaluations" | "kpi_evaluations" | "kpi_items"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2574,6 +2606,154 @@ export namespace Prisma {
           }
         }
       }
+      kpi_evaluations: {
+        payload: Prisma.$kpi_evaluationsPayload<ExtArgs>
+        fields: Prisma.kpi_evaluationsFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.kpi_evaluationsFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.kpi_evaluationsFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          findFirst: {
+            args: Prisma.kpi_evaluationsFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.kpi_evaluationsFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          findMany: {
+            args: Prisma.kpi_evaluationsFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>[]
+          }
+          create: {
+            args: Prisma.kpi_evaluationsCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          createMany: {
+            args: Prisma.kpi_evaluationsCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.kpi_evaluationsCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>[]
+          }
+          delete: {
+            args: Prisma.kpi_evaluationsDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          update: {
+            args: Prisma.kpi_evaluationsUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          deleteMany: {
+            args: Prisma.kpi_evaluationsDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.kpi_evaluationsUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.kpi_evaluationsUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>[]
+          }
+          upsert: {
+            args: Prisma.kpi_evaluationsUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_evaluationsPayload>
+          }
+          aggregate: {
+            args: Prisma.Kpi_evaluationsAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateKpi_evaluations>
+          }
+          groupBy: {
+            args: Prisma.kpi_evaluationsGroupByArgs<ExtArgs>
+            result: $Utils.Optional<Kpi_evaluationsGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.kpi_evaluationsCountArgs<ExtArgs>
+            result: $Utils.Optional<Kpi_evaluationsCountAggregateOutputType> | number
+          }
+        }
+      }
+      kpi_items: {
+        payload: Prisma.$kpi_itemsPayload<ExtArgs>
+        fields: Prisma.kpi_itemsFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.kpi_itemsFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.kpi_itemsFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          findFirst: {
+            args: Prisma.kpi_itemsFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.kpi_itemsFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          findMany: {
+            args: Prisma.kpi_itemsFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>[]
+          }
+          create: {
+            args: Prisma.kpi_itemsCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          createMany: {
+            args: Prisma.kpi_itemsCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.kpi_itemsCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>[]
+          }
+          delete: {
+            args: Prisma.kpi_itemsDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          update: {
+            args: Prisma.kpi_itemsUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          deleteMany: {
+            args: Prisma.kpi_itemsDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.kpi_itemsUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.kpi_itemsUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>[]
+          }
+          upsert: {
+            args: Prisma.kpi_itemsUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$kpi_itemsPayload>
+          }
+          aggregate: {
+            args: Prisma.Kpi_itemsAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateKpi_items>
+          }
+          groupBy: {
+            args: Prisma.kpi_itemsGroupByArgs<ExtArgs>
+            result: $Utils.Optional<Kpi_itemsGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.kpi_itemsCountArgs<ExtArgs>
+            result: $Utils.Optional<Kpi_itemsCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2692,6 +2872,8 @@ export namespace Prisma {
     assets?: assetsOmit
     asset_borrowings?: asset_borrowingsOmit
     probation_evaluations?: probation_evaluationsOmit
+    kpi_evaluations?: kpi_evaluationsOmit
+    kpi_items?: kpi_itemsOmit
   }
 
   /* Types for Logging */
@@ -2845,6 +3027,8 @@ export namespace Prisma {
     asset_borrowings: number
     probation_evaluations: number
     submitted_evaluations: number
+    kpi_evaluations: number
+    kpi_submissions: number
   }
 
   export type EmployeesCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2859,6 +3043,8 @@ export namespace Prisma {
     asset_borrowings?: boolean | EmployeesCountOutputTypeCountAsset_borrowingsArgs
     probation_evaluations?: boolean | EmployeesCountOutputTypeCountProbation_evaluationsArgs
     submitted_evaluations?: boolean | EmployeesCountOutputTypeCountSubmitted_evaluationsArgs
+    kpi_evaluations?: boolean | EmployeesCountOutputTypeCountKpi_evaluationsArgs
+    kpi_submissions?: boolean | EmployeesCountOutputTypeCountKpi_submissionsArgs
   }
 
   // Custom InputTypes
@@ -2947,6 +3133,20 @@ export namespace Prisma {
    */
   export type EmployeesCountOutputTypeCountSubmitted_evaluationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: probation_evaluationsWhereInput
+  }
+
+  /**
+   * EmployeesCountOutputType without action
+   */
+  export type EmployeesCountOutputTypeCountKpi_evaluationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: kpi_evaluationsWhereInput
+  }
+
+  /**
+   * EmployeesCountOutputType without action
+   */
+  export type EmployeesCountOutputTypeCountKpi_submissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: kpi_evaluationsWhereInput
   }
 
 
@@ -3120,6 +3320,37 @@ export namespace Prisma {
    */
   export type AssetsCountOutputTypeCountAsset_borrowingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: asset_borrowingsWhereInput
+  }
+
+
+  /**
+   * Count Type Kpi_evaluationsCountOutputType
+   */
+
+  export type Kpi_evaluationsCountOutputType = {
+    items: number
+  }
+
+  export type Kpi_evaluationsCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    items?: boolean | Kpi_evaluationsCountOutputTypeCountItemsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * Kpi_evaluationsCountOutputType without action
+   */
+  export type Kpi_evaluationsCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Kpi_evaluationsCountOutputType
+     */
+    select?: Kpi_evaluationsCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * Kpi_evaluationsCountOutputType without action
+   */
+  export type Kpi_evaluationsCountOutputTypeCountItemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: kpi_itemsWhereInput
   }
 
 
@@ -8312,6 +8543,8 @@ export namespace Prisma {
     asset_borrowings?: boolean | employees$asset_borrowingsArgs<ExtArgs>
     probation_evaluations?: boolean | employees$probation_evaluationsArgs<ExtArgs>
     submitted_evaluations?: boolean | employees$submitted_evaluationsArgs<ExtArgs>
+    kpi_evaluations?: boolean | employees$kpi_evaluationsArgs<ExtArgs>
+    kpi_submissions?: boolean | employees$kpi_submissionsArgs<ExtArgs>
     _count?: boolean | EmployeesCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["employees"]>
 
@@ -8442,6 +8675,8 @@ export namespace Prisma {
     asset_borrowings?: boolean | employees$asset_borrowingsArgs<ExtArgs>
     probation_evaluations?: boolean | employees$probation_evaluationsArgs<ExtArgs>
     submitted_evaluations?: boolean | employees$submitted_evaluationsArgs<ExtArgs>
+    kpi_evaluations?: boolean | employees$kpi_evaluationsArgs<ExtArgs>
+    kpi_submissions?: boolean | employees$kpi_submissionsArgs<ExtArgs>
     _count?: boolean | EmployeesCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type employeesIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -8478,6 +8713,8 @@ export namespace Prisma {
       asset_borrowings: Prisma.$asset_borrowingsPayload<ExtArgs>[]
       probation_evaluations: Prisma.$probation_evaluationsPayload<ExtArgs>[]
       submitted_evaluations: Prisma.$probation_evaluationsPayload<ExtArgs>[]
+      kpi_evaluations: Prisma.$kpi_evaluationsPayload<ExtArgs>[]
+      kpi_submissions: Prisma.$kpi_evaluationsPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       emp_id: string
@@ -8920,6 +9157,8 @@ export namespace Prisma {
     asset_borrowings<T extends employees$asset_borrowingsArgs<ExtArgs> = {}>(args?: Subset<T, employees$asset_borrowingsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$asset_borrowingsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     probation_evaluations<T extends employees$probation_evaluationsArgs<ExtArgs> = {}>(args?: Subset<T, employees$probation_evaluationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$probation_evaluationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     submitted_evaluations<T extends employees$submitted_evaluationsArgs<ExtArgs> = {}>(args?: Subset<T, employees$submitted_evaluationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$probation_evaluationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    kpi_evaluations<T extends employees$kpi_evaluationsArgs<ExtArgs> = {}>(args?: Subset<T, employees$kpi_evaluationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    kpi_submissions<T extends employees$kpi_submissionsArgs<ExtArgs> = {}>(args?: Subset<T, employees$kpi_submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -9731,6 +9970,54 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: Probation_evaluationsScalarFieldEnum | Probation_evaluationsScalarFieldEnum[]
+  }
+
+  /**
+   * employees.kpi_evaluations
+   */
+  export type employees$kpi_evaluationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    where?: kpi_evaluationsWhereInput
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    cursor?: kpi_evaluationsWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: Kpi_evaluationsScalarFieldEnum | Kpi_evaluationsScalarFieldEnum[]
+  }
+
+  /**
+   * employees.kpi_submissions
+   */
+  export type employees$kpi_submissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    where?: kpi_evaluationsWhereInput
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    cursor?: kpi_evaluationsWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: Kpi_evaluationsScalarFieldEnum | Kpi_evaluationsScalarFieldEnum[]
   }
 
   /**
@@ -30309,6 +30596,2490 @@ export namespace Prisma {
 
 
   /**
+   * Model kpi_evaluations
+   */
+
+  export type AggregateKpi_evaluations = {
+    _count: Kpi_evaluationsCountAggregateOutputType | null
+    _avg: Kpi_evaluationsAvgAggregateOutputType | null
+    _sum: Kpi_evaluationsSumAggregateOutputType | null
+    _min: Kpi_evaluationsMinAggregateOutputType | null
+    _max: Kpi_evaluationsMaxAggregateOutputType | null
+  }
+
+  export type Kpi_evaluationsAvgAggregateOutputType = {
+    id: number | null
+    evaluation_no: number | null
+    total_employee_score: Decimal | null
+    total_supervisor_score: Decimal | null
+  }
+
+  export type Kpi_evaluationsSumAggregateOutputType = {
+    id: number | null
+    evaluation_no: number | null
+    total_employee_score: Decimal | null
+    total_supervisor_score: Decimal | null
+  }
+
+  export type Kpi_evaluationsMinAggregateOutputType = {
+    id: number | null
+    emp_id: string | null
+    supervisor_id: string | null
+    evaluation_no: number | null
+    evaluation_date: Date | null
+    period_start: Date | null
+    period_end: Date | null
+    status: string | null
+    employee_comment: string | null
+    supervisor_comment: string | null
+    total_employee_score: Decimal | null
+    total_supervisor_score: Decimal | null
+    grade: string | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type Kpi_evaluationsMaxAggregateOutputType = {
+    id: number | null
+    emp_id: string | null
+    supervisor_id: string | null
+    evaluation_no: number | null
+    evaluation_date: Date | null
+    period_start: Date | null
+    period_end: Date | null
+    status: string | null
+    employee_comment: string | null
+    supervisor_comment: string | null
+    total_employee_score: Decimal | null
+    total_supervisor_score: Decimal | null
+    grade: string | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type Kpi_evaluationsCountAggregateOutputType = {
+    id: number
+    emp_id: number
+    supervisor_id: number
+    evaluation_no: number
+    evaluation_date: number
+    period_start: number
+    period_end: number
+    status: number
+    employee_comment: number
+    supervisor_comment: number
+    total_employee_score: number
+    total_supervisor_score: number
+    grade: number
+    created_at: number
+    updated_at: number
+    _all: number
+  }
+
+
+  export type Kpi_evaluationsAvgAggregateInputType = {
+    id?: true
+    evaluation_no?: true
+    total_employee_score?: true
+    total_supervisor_score?: true
+  }
+
+  export type Kpi_evaluationsSumAggregateInputType = {
+    id?: true
+    evaluation_no?: true
+    total_employee_score?: true
+    total_supervisor_score?: true
+  }
+
+  export type Kpi_evaluationsMinAggregateInputType = {
+    id?: true
+    emp_id?: true
+    supervisor_id?: true
+    evaluation_no?: true
+    evaluation_date?: true
+    period_start?: true
+    period_end?: true
+    status?: true
+    employee_comment?: true
+    supervisor_comment?: true
+    total_employee_score?: true
+    total_supervisor_score?: true
+    grade?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type Kpi_evaluationsMaxAggregateInputType = {
+    id?: true
+    emp_id?: true
+    supervisor_id?: true
+    evaluation_no?: true
+    evaluation_date?: true
+    period_start?: true
+    period_end?: true
+    status?: true
+    employee_comment?: true
+    supervisor_comment?: true
+    total_employee_score?: true
+    total_supervisor_score?: true
+    grade?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type Kpi_evaluationsCountAggregateInputType = {
+    id?: true
+    emp_id?: true
+    supervisor_id?: true
+    evaluation_no?: true
+    evaluation_date?: true
+    period_start?: true
+    period_end?: true
+    status?: true
+    employee_comment?: true
+    supervisor_comment?: true
+    total_employee_score?: true
+    total_supervisor_score?: true
+    grade?: true
+    created_at?: true
+    updated_at?: true
+    _all?: true
+  }
+
+  export type Kpi_evaluationsAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which kpi_evaluations to aggregate.
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_evaluations to fetch.
+     */
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: kpi_evaluationsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_evaluations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_evaluations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned kpi_evaluations
+    **/
+    _count?: true | Kpi_evaluationsCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: Kpi_evaluationsAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: Kpi_evaluationsSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: Kpi_evaluationsMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: Kpi_evaluationsMaxAggregateInputType
+  }
+
+  export type GetKpi_evaluationsAggregateType<T extends Kpi_evaluationsAggregateArgs> = {
+        [P in keyof T & keyof AggregateKpi_evaluations]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateKpi_evaluations[P]>
+      : GetScalarType<T[P], AggregateKpi_evaluations[P]>
+  }
+
+
+
+
+  export type kpi_evaluationsGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: kpi_evaluationsWhereInput
+    orderBy?: kpi_evaluationsOrderByWithAggregationInput | kpi_evaluationsOrderByWithAggregationInput[]
+    by: Kpi_evaluationsScalarFieldEnum[] | Kpi_evaluationsScalarFieldEnum
+    having?: kpi_evaluationsScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: Kpi_evaluationsCountAggregateInputType | true
+    _avg?: Kpi_evaluationsAvgAggregateInputType
+    _sum?: Kpi_evaluationsSumAggregateInputType
+    _min?: Kpi_evaluationsMinAggregateInputType
+    _max?: Kpi_evaluationsMaxAggregateInputType
+  }
+
+  export type Kpi_evaluationsGroupByOutputType = {
+    id: number
+    emp_id: string
+    supervisor_id: string
+    evaluation_no: number
+    evaluation_date: Date
+    period_start: Date | null
+    period_end: Date | null
+    status: string
+    employee_comment: string | null
+    supervisor_comment: string | null
+    total_employee_score: Decimal | null
+    total_supervisor_score: Decimal | null
+    grade: string | null
+    created_at: Date
+    updated_at: Date
+    _count: Kpi_evaluationsCountAggregateOutputType | null
+    _avg: Kpi_evaluationsAvgAggregateOutputType | null
+    _sum: Kpi_evaluationsSumAggregateOutputType | null
+    _min: Kpi_evaluationsMinAggregateOutputType | null
+    _max: Kpi_evaluationsMaxAggregateOutputType | null
+  }
+
+  type GetKpi_evaluationsGroupByPayload<T extends kpi_evaluationsGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<Kpi_evaluationsGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof Kpi_evaluationsGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], Kpi_evaluationsGroupByOutputType[P]>
+            : GetScalarType<T[P], Kpi_evaluationsGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type kpi_evaluationsSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    emp_id?: boolean
+    supervisor_id?: boolean
+    evaluation_no?: boolean
+    evaluation_date?: boolean
+    period_start?: boolean
+    period_end?: boolean
+    status?: boolean
+    employee_comment?: boolean
+    supervisor_comment?: boolean
+    total_employee_score?: boolean
+    total_supervisor_score?: boolean
+    grade?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    items?: boolean | kpi_evaluations$itemsArgs<ExtArgs>
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+    _count?: boolean | Kpi_evaluationsCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_evaluations"]>
+
+  export type kpi_evaluationsSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    emp_id?: boolean
+    supervisor_id?: boolean
+    evaluation_no?: boolean
+    evaluation_date?: boolean
+    period_start?: boolean
+    period_end?: boolean
+    status?: boolean
+    employee_comment?: boolean
+    supervisor_comment?: boolean
+    total_employee_score?: boolean
+    total_supervisor_score?: boolean
+    grade?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_evaluations"]>
+
+  export type kpi_evaluationsSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    emp_id?: boolean
+    supervisor_id?: boolean
+    evaluation_no?: boolean
+    evaluation_date?: boolean
+    period_start?: boolean
+    period_end?: boolean
+    status?: boolean
+    employee_comment?: boolean
+    supervisor_comment?: boolean
+    total_employee_score?: boolean
+    total_supervisor_score?: boolean
+    grade?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_evaluations"]>
+
+  export type kpi_evaluationsSelectScalar = {
+    id?: boolean
+    emp_id?: boolean
+    supervisor_id?: boolean
+    evaluation_no?: boolean
+    evaluation_date?: boolean
+    period_start?: boolean
+    period_end?: boolean
+    status?: boolean
+    employee_comment?: boolean
+    supervisor_comment?: boolean
+    total_employee_score?: boolean
+    total_supervisor_score?: boolean
+    grade?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+  }
+
+  export type kpi_evaluationsOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "emp_id" | "supervisor_id" | "evaluation_no" | "evaluation_date" | "period_start" | "period_end" | "status" | "employee_comment" | "supervisor_comment" | "total_employee_score" | "total_supervisor_score" | "grade" | "created_at" | "updated_at", ExtArgs["result"]["kpi_evaluations"]>
+  export type kpi_evaluationsInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    items?: boolean | kpi_evaluations$itemsArgs<ExtArgs>
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+    _count?: boolean | Kpi_evaluationsCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type kpi_evaluationsIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+  }
+  export type kpi_evaluationsIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    employee?: boolean | employeesDefaultArgs<ExtArgs>
+    supervisor?: boolean | employeesDefaultArgs<ExtArgs>
+  }
+
+  export type $kpi_evaluationsPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "kpi_evaluations"
+    objects: {
+      items: Prisma.$kpi_itemsPayload<ExtArgs>[]
+      employee: Prisma.$employeesPayload<ExtArgs>
+      supervisor: Prisma.$employeesPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      emp_id: string
+      supervisor_id: string
+      evaluation_no: number
+      evaluation_date: Date
+      period_start: Date | null
+      period_end: Date | null
+      status: string
+      employee_comment: string | null
+      supervisor_comment: string | null
+      total_employee_score: Prisma.Decimal | null
+      total_supervisor_score: Prisma.Decimal | null
+      grade: string | null
+      created_at: Date
+      updated_at: Date
+    }, ExtArgs["result"]["kpi_evaluations"]>
+    composites: {}
+  }
+
+  type kpi_evaluationsGetPayload<S extends boolean | null | undefined | kpi_evaluationsDefaultArgs> = $Result.GetResult<Prisma.$kpi_evaluationsPayload, S>
+
+  type kpi_evaluationsCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<kpi_evaluationsFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: Kpi_evaluationsCountAggregateInputType | true
+    }
+
+  export interface kpi_evaluationsDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['kpi_evaluations'], meta: { name: 'kpi_evaluations' } }
+    /**
+     * Find zero or one Kpi_evaluations that matches the filter.
+     * @param {kpi_evaluationsFindUniqueArgs} args - Arguments to find a Kpi_evaluations
+     * @example
+     * // Get one Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends kpi_evaluationsFindUniqueArgs>(args: SelectSubset<T, kpi_evaluationsFindUniqueArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Kpi_evaluations that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {kpi_evaluationsFindUniqueOrThrowArgs} args - Arguments to find a Kpi_evaluations
+     * @example
+     * // Get one Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends kpi_evaluationsFindUniqueOrThrowArgs>(args: SelectSubset<T, kpi_evaluationsFindUniqueOrThrowArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Kpi_evaluations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsFindFirstArgs} args - Arguments to find a Kpi_evaluations
+     * @example
+     * // Get one Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends kpi_evaluationsFindFirstArgs>(args?: SelectSubset<T, kpi_evaluationsFindFirstArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Kpi_evaluations that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsFindFirstOrThrowArgs} args - Arguments to find a Kpi_evaluations
+     * @example
+     * // Get one Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends kpi_evaluationsFindFirstOrThrowArgs>(args?: SelectSubset<T, kpi_evaluationsFindFirstOrThrowArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Kpi_evaluations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findMany()
+     * 
+     * // Get first 10 Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const kpi_evaluationsWithIdOnly = await prisma.kpi_evaluations.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends kpi_evaluationsFindManyArgs>(args?: SelectSubset<T, kpi_evaluationsFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Kpi_evaluations.
+     * @param {kpi_evaluationsCreateArgs} args - Arguments to create a Kpi_evaluations.
+     * @example
+     * // Create one Kpi_evaluations
+     * const Kpi_evaluations = await prisma.kpi_evaluations.create({
+     *   data: {
+     *     // ... data to create a Kpi_evaluations
+     *   }
+     * })
+     * 
+     */
+    create<T extends kpi_evaluationsCreateArgs>(args: SelectSubset<T, kpi_evaluationsCreateArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Kpi_evaluations.
+     * @param {kpi_evaluationsCreateManyArgs} args - Arguments to create many Kpi_evaluations.
+     * @example
+     * // Create many Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends kpi_evaluationsCreateManyArgs>(args?: SelectSubset<T, kpi_evaluationsCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Kpi_evaluations and returns the data saved in the database.
+     * @param {kpi_evaluationsCreateManyAndReturnArgs} args - Arguments to create many Kpi_evaluations.
+     * @example
+     * // Create many Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Kpi_evaluations and only return the `id`
+     * const kpi_evaluationsWithIdOnly = await prisma.kpi_evaluations.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends kpi_evaluationsCreateManyAndReturnArgs>(args?: SelectSubset<T, kpi_evaluationsCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Kpi_evaluations.
+     * @param {kpi_evaluationsDeleteArgs} args - Arguments to delete one Kpi_evaluations.
+     * @example
+     * // Delete one Kpi_evaluations
+     * const Kpi_evaluations = await prisma.kpi_evaluations.delete({
+     *   where: {
+     *     // ... filter to delete one Kpi_evaluations
+     *   }
+     * })
+     * 
+     */
+    delete<T extends kpi_evaluationsDeleteArgs>(args: SelectSubset<T, kpi_evaluationsDeleteArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Kpi_evaluations.
+     * @param {kpi_evaluationsUpdateArgs} args - Arguments to update one Kpi_evaluations.
+     * @example
+     * // Update one Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends kpi_evaluationsUpdateArgs>(args: SelectSubset<T, kpi_evaluationsUpdateArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Kpi_evaluations.
+     * @param {kpi_evaluationsDeleteManyArgs} args - Arguments to filter Kpi_evaluations to delete.
+     * @example
+     * // Delete a few Kpi_evaluations
+     * const { count } = await prisma.kpi_evaluations.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends kpi_evaluationsDeleteManyArgs>(args?: SelectSubset<T, kpi_evaluationsDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Kpi_evaluations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends kpi_evaluationsUpdateManyArgs>(args: SelectSubset<T, kpi_evaluationsUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Kpi_evaluations and returns the data updated in the database.
+     * @param {kpi_evaluationsUpdateManyAndReturnArgs} args - Arguments to update many Kpi_evaluations.
+     * @example
+     * // Update many Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Kpi_evaluations and only return the `id`
+     * const kpi_evaluationsWithIdOnly = await prisma.kpi_evaluations.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends kpi_evaluationsUpdateManyAndReturnArgs>(args: SelectSubset<T, kpi_evaluationsUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Kpi_evaluations.
+     * @param {kpi_evaluationsUpsertArgs} args - Arguments to update or create a Kpi_evaluations.
+     * @example
+     * // Update or create a Kpi_evaluations
+     * const kpi_evaluations = await prisma.kpi_evaluations.upsert({
+     *   create: {
+     *     // ... data to create a Kpi_evaluations
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Kpi_evaluations we want to update
+     *   }
+     * })
+     */
+    upsert<T extends kpi_evaluationsUpsertArgs>(args: SelectSubset<T, kpi_evaluationsUpsertArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Kpi_evaluations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsCountArgs} args - Arguments to filter Kpi_evaluations to count.
+     * @example
+     * // Count the number of Kpi_evaluations
+     * const count = await prisma.kpi_evaluations.count({
+     *   where: {
+     *     // ... the filter for the Kpi_evaluations we want to count
+     *   }
+     * })
+    **/
+    count<T extends kpi_evaluationsCountArgs>(
+      args?: Subset<T, kpi_evaluationsCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], Kpi_evaluationsCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Kpi_evaluations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {Kpi_evaluationsAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends Kpi_evaluationsAggregateArgs>(args: Subset<T, Kpi_evaluationsAggregateArgs>): Prisma.PrismaPromise<GetKpi_evaluationsAggregateType<T>>
+
+    /**
+     * Group by Kpi_evaluations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_evaluationsGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends kpi_evaluationsGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: kpi_evaluationsGroupByArgs['orderBy'] }
+        : { orderBy?: kpi_evaluationsGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, kpi_evaluationsGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetKpi_evaluationsGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the kpi_evaluations model
+   */
+  readonly fields: kpi_evaluationsFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for kpi_evaluations.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__kpi_evaluationsClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    items<T extends kpi_evaluations$itemsArgs<ExtArgs> = {}>(args?: Subset<T, kpi_evaluations$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    employee<T extends employeesDefaultArgs<ExtArgs> = {}>(args?: Subset<T, employeesDefaultArgs<ExtArgs>>): Prisma__employeesClient<$Result.GetResult<Prisma.$employeesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    supervisor<T extends employeesDefaultArgs<ExtArgs> = {}>(args?: Subset<T, employeesDefaultArgs<ExtArgs>>): Prisma__employeesClient<$Result.GetResult<Prisma.$employeesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the kpi_evaluations model
+   */
+  interface kpi_evaluationsFieldRefs {
+    readonly id: FieldRef<"kpi_evaluations", 'Int'>
+    readonly emp_id: FieldRef<"kpi_evaluations", 'String'>
+    readonly supervisor_id: FieldRef<"kpi_evaluations", 'String'>
+    readonly evaluation_no: FieldRef<"kpi_evaluations", 'Int'>
+    readonly evaluation_date: FieldRef<"kpi_evaluations", 'DateTime'>
+    readonly period_start: FieldRef<"kpi_evaluations", 'DateTime'>
+    readonly period_end: FieldRef<"kpi_evaluations", 'DateTime'>
+    readonly status: FieldRef<"kpi_evaluations", 'String'>
+    readonly employee_comment: FieldRef<"kpi_evaluations", 'String'>
+    readonly supervisor_comment: FieldRef<"kpi_evaluations", 'String'>
+    readonly total_employee_score: FieldRef<"kpi_evaluations", 'Decimal'>
+    readonly total_supervisor_score: FieldRef<"kpi_evaluations", 'Decimal'>
+    readonly grade: FieldRef<"kpi_evaluations", 'String'>
+    readonly created_at: FieldRef<"kpi_evaluations", 'DateTime'>
+    readonly updated_at: FieldRef<"kpi_evaluations", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * kpi_evaluations findUnique
+   */
+  export type kpi_evaluationsFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_evaluations to fetch.
+     */
+    where: kpi_evaluationsWhereUniqueInput
+  }
+
+  /**
+   * kpi_evaluations findUniqueOrThrow
+   */
+  export type kpi_evaluationsFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_evaluations to fetch.
+     */
+    where: kpi_evaluationsWhereUniqueInput
+  }
+
+  /**
+   * kpi_evaluations findFirst
+   */
+  export type kpi_evaluationsFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_evaluations to fetch.
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_evaluations to fetch.
+     */
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for kpi_evaluations.
+     */
+    cursor?: kpi_evaluationsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_evaluations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_evaluations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of kpi_evaluations.
+     */
+    distinct?: Kpi_evaluationsScalarFieldEnum | Kpi_evaluationsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_evaluations findFirstOrThrow
+   */
+  export type kpi_evaluationsFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_evaluations to fetch.
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_evaluations to fetch.
+     */
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for kpi_evaluations.
+     */
+    cursor?: kpi_evaluationsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_evaluations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_evaluations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of kpi_evaluations.
+     */
+    distinct?: Kpi_evaluationsScalarFieldEnum | Kpi_evaluationsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_evaluations findMany
+   */
+  export type kpi_evaluationsFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_evaluations to fetch.
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_evaluations to fetch.
+     */
+    orderBy?: kpi_evaluationsOrderByWithRelationInput | kpi_evaluationsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing kpi_evaluations.
+     */
+    cursor?: kpi_evaluationsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_evaluations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_evaluations.
+     */
+    skip?: number
+    distinct?: Kpi_evaluationsScalarFieldEnum | Kpi_evaluationsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_evaluations create
+   */
+  export type kpi_evaluationsCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * The data needed to create a kpi_evaluations.
+     */
+    data: XOR<kpi_evaluationsCreateInput, kpi_evaluationsUncheckedCreateInput>
+  }
+
+  /**
+   * kpi_evaluations createMany
+   */
+  export type kpi_evaluationsCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many kpi_evaluations.
+     */
+    data: kpi_evaluationsCreateManyInput | kpi_evaluationsCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * kpi_evaluations createManyAndReturn
+   */
+  export type kpi_evaluationsCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * The data used to create many kpi_evaluations.
+     */
+    data: kpi_evaluationsCreateManyInput | kpi_evaluationsCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * kpi_evaluations update
+   */
+  export type kpi_evaluationsUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * The data needed to update a kpi_evaluations.
+     */
+    data: XOR<kpi_evaluationsUpdateInput, kpi_evaluationsUncheckedUpdateInput>
+    /**
+     * Choose, which kpi_evaluations to update.
+     */
+    where: kpi_evaluationsWhereUniqueInput
+  }
+
+  /**
+   * kpi_evaluations updateMany
+   */
+  export type kpi_evaluationsUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update kpi_evaluations.
+     */
+    data: XOR<kpi_evaluationsUpdateManyMutationInput, kpi_evaluationsUncheckedUpdateManyInput>
+    /**
+     * Filter which kpi_evaluations to update
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * Limit how many kpi_evaluations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * kpi_evaluations updateManyAndReturn
+   */
+  export type kpi_evaluationsUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * The data used to update kpi_evaluations.
+     */
+    data: XOR<kpi_evaluationsUpdateManyMutationInput, kpi_evaluationsUncheckedUpdateManyInput>
+    /**
+     * Filter which kpi_evaluations to update
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * Limit how many kpi_evaluations to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * kpi_evaluations upsert
+   */
+  export type kpi_evaluationsUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * The filter to search for the kpi_evaluations to update in case it exists.
+     */
+    where: kpi_evaluationsWhereUniqueInput
+    /**
+     * In case the kpi_evaluations found by the `where` argument doesn't exist, create a new kpi_evaluations with this data.
+     */
+    create: XOR<kpi_evaluationsCreateInput, kpi_evaluationsUncheckedCreateInput>
+    /**
+     * In case the kpi_evaluations was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<kpi_evaluationsUpdateInput, kpi_evaluationsUncheckedUpdateInput>
+  }
+
+  /**
+   * kpi_evaluations delete
+   */
+  export type kpi_evaluationsDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+    /**
+     * Filter which kpi_evaluations to delete.
+     */
+    where: kpi_evaluationsWhereUniqueInput
+  }
+
+  /**
+   * kpi_evaluations deleteMany
+   */
+  export type kpi_evaluationsDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which kpi_evaluations to delete
+     */
+    where?: kpi_evaluationsWhereInput
+    /**
+     * Limit how many kpi_evaluations to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * kpi_evaluations.items
+   */
+  export type kpi_evaluations$itemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    where?: kpi_itemsWhereInput
+    orderBy?: kpi_itemsOrderByWithRelationInput | kpi_itemsOrderByWithRelationInput[]
+    cursor?: kpi_itemsWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: Kpi_itemsScalarFieldEnum | Kpi_itemsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_evaluations without action
+   */
+  export type kpi_evaluationsDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_evaluations
+     */
+    select?: kpi_evaluationsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_evaluations
+     */
+    omit?: kpi_evaluationsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_evaluationsInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model kpi_items
+   */
+
+  export type AggregateKpi_items = {
+    _count: Kpi_itemsCountAggregateOutputType | null
+    _avg: Kpi_itemsAvgAggregateOutputType | null
+    _sum: Kpi_itemsSumAggregateOutputType | null
+    _min: Kpi_itemsMinAggregateOutputType | null
+    _max: Kpi_itemsMaxAggregateOutputType | null
+  }
+
+  export type Kpi_itemsAvgAggregateOutputType = {
+    id: number | null
+    kpi_evaluation_id: number | null
+    weight: Decimal | null
+    employee_score: number | null
+    supervisor_score: number | null
+  }
+
+  export type Kpi_itemsSumAggregateOutputType = {
+    id: number | null
+    kpi_evaluation_id: number | null
+    weight: Decimal | null
+    employee_score: number | null
+    supervisor_score: number | null
+  }
+
+  export type Kpi_itemsMinAggregateOutputType = {
+    id: number | null
+    kpi_evaluation_id: number | null
+    objective: string | null
+    indicator: string | null
+    weight: Decimal | null
+    target_1: string | null
+    target_2: string | null
+    target_3: string | null
+    target_4: string | null
+    target_5: string | null
+    result_description: string | null
+    employee_score: number | null
+    supervisor_score: number | null
+  }
+
+  export type Kpi_itemsMaxAggregateOutputType = {
+    id: number | null
+    kpi_evaluation_id: number | null
+    objective: string | null
+    indicator: string | null
+    weight: Decimal | null
+    target_1: string | null
+    target_2: string | null
+    target_3: string | null
+    target_4: string | null
+    target_5: string | null
+    result_description: string | null
+    employee_score: number | null
+    supervisor_score: number | null
+  }
+
+  export type Kpi_itemsCountAggregateOutputType = {
+    id: number
+    kpi_evaluation_id: number
+    objective: number
+    indicator: number
+    weight: number
+    target_1: number
+    target_2: number
+    target_3: number
+    target_4: number
+    target_5: number
+    result_description: number
+    employee_score: number
+    supervisor_score: number
+    _all: number
+  }
+
+
+  export type Kpi_itemsAvgAggregateInputType = {
+    id?: true
+    kpi_evaluation_id?: true
+    weight?: true
+    employee_score?: true
+    supervisor_score?: true
+  }
+
+  export type Kpi_itemsSumAggregateInputType = {
+    id?: true
+    kpi_evaluation_id?: true
+    weight?: true
+    employee_score?: true
+    supervisor_score?: true
+  }
+
+  export type Kpi_itemsMinAggregateInputType = {
+    id?: true
+    kpi_evaluation_id?: true
+    objective?: true
+    indicator?: true
+    weight?: true
+    target_1?: true
+    target_2?: true
+    target_3?: true
+    target_4?: true
+    target_5?: true
+    result_description?: true
+    employee_score?: true
+    supervisor_score?: true
+  }
+
+  export type Kpi_itemsMaxAggregateInputType = {
+    id?: true
+    kpi_evaluation_id?: true
+    objective?: true
+    indicator?: true
+    weight?: true
+    target_1?: true
+    target_2?: true
+    target_3?: true
+    target_4?: true
+    target_5?: true
+    result_description?: true
+    employee_score?: true
+    supervisor_score?: true
+  }
+
+  export type Kpi_itemsCountAggregateInputType = {
+    id?: true
+    kpi_evaluation_id?: true
+    objective?: true
+    indicator?: true
+    weight?: true
+    target_1?: true
+    target_2?: true
+    target_3?: true
+    target_4?: true
+    target_5?: true
+    result_description?: true
+    employee_score?: true
+    supervisor_score?: true
+    _all?: true
+  }
+
+  export type Kpi_itemsAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which kpi_items to aggregate.
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_items to fetch.
+     */
+    orderBy?: kpi_itemsOrderByWithRelationInput | kpi_itemsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: kpi_itemsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_items from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_items.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned kpi_items
+    **/
+    _count?: true | Kpi_itemsCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: Kpi_itemsAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: Kpi_itemsSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: Kpi_itemsMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: Kpi_itemsMaxAggregateInputType
+  }
+
+  export type GetKpi_itemsAggregateType<T extends Kpi_itemsAggregateArgs> = {
+        [P in keyof T & keyof AggregateKpi_items]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateKpi_items[P]>
+      : GetScalarType<T[P], AggregateKpi_items[P]>
+  }
+
+
+
+
+  export type kpi_itemsGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: kpi_itemsWhereInput
+    orderBy?: kpi_itemsOrderByWithAggregationInput | kpi_itemsOrderByWithAggregationInput[]
+    by: Kpi_itemsScalarFieldEnum[] | Kpi_itemsScalarFieldEnum
+    having?: kpi_itemsScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: Kpi_itemsCountAggregateInputType | true
+    _avg?: Kpi_itemsAvgAggregateInputType
+    _sum?: Kpi_itemsSumAggregateInputType
+    _min?: Kpi_itemsMinAggregateInputType
+    _max?: Kpi_itemsMaxAggregateInputType
+  }
+
+  export type Kpi_itemsGroupByOutputType = {
+    id: number
+    kpi_evaluation_id: number
+    objective: string
+    indicator: string
+    weight: Decimal
+    target_1: string | null
+    target_2: string | null
+    target_3: string | null
+    target_4: string | null
+    target_5: string | null
+    result_description: string | null
+    employee_score: number | null
+    supervisor_score: number | null
+    _count: Kpi_itemsCountAggregateOutputType | null
+    _avg: Kpi_itemsAvgAggregateOutputType | null
+    _sum: Kpi_itemsSumAggregateOutputType | null
+    _min: Kpi_itemsMinAggregateOutputType | null
+    _max: Kpi_itemsMaxAggregateOutputType | null
+  }
+
+  type GetKpi_itemsGroupByPayload<T extends kpi_itemsGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<Kpi_itemsGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof Kpi_itemsGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], Kpi_itemsGroupByOutputType[P]>
+            : GetScalarType<T[P], Kpi_itemsGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type kpi_itemsSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kpi_evaluation_id?: boolean
+    objective?: boolean
+    indicator?: boolean
+    weight?: boolean
+    target_1?: boolean
+    target_2?: boolean
+    target_3?: boolean
+    target_4?: boolean
+    target_5?: boolean
+    result_description?: boolean
+    employee_score?: boolean
+    supervisor_score?: boolean
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_items"]>
+
+  export type kpi_itemsSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kpi_evaluation_id?: boolean
+    objective?: boolean
+    indicator?: boolean
+    weight?: boolean
+    target_1?: boolean
+    target_2?: boolean
+    target_3?: boolean
+    target_4?: boolean
+    target_5?: boolean
+    result_description?: boolean
+    employee_score?: boolean
+    supervisor_score?: boolean
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_items"]>
+
+  export type kpi_itemsSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kpi_evaluation_id?: boolean
+    objective?: boolean
+    indicator?: boolean
+    weight?: boolean
+    target_1?: boolean
+    target_2?: boolean
+    target_3?: boolean
+    target_4?: boolean
+    target_5?: boolean
+    result_description?: boolean
+    employee_score?: boolean
+    supervisor_score?: boolean
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["kpi_items"]>
+
+  export type kpi_itemsSelectScalar = {
+    id?: boolean
+    kpi_evaluation_id?: boolean
+    objective?: boolean
+    indicator?: boolean
+    weight?: boolean
+    target_1?: boolean
+    target_2?: boolean
+    target_3?: boolean
+    target_4?: boolean
+    target_5?: boolean
+    result_description?: boolean
+    employee_score?: boolean
+    supervisor_score?: boolean
+  }
+
+  export type kpi_itemsOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "kpi_evaluation_id" | "objective" | "indicator" | "weight" | "target_1" | "target_2" | "target_3" | "target_4" | "target_5" | "result_description" | "employee_score" | "supervisor_score", ExtArgs["result"]["kpi_items"]>
+  export type kpi_itemsInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }
+  export type kpi_itemsIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }
+  export type kpi_itemsIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    evaluation?: boolean | kpi_evaluationsDefaultArgs<ExtArgs>
+  }
+
+  export type $kpi_itemsPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "kpi_items"
+    objects: {
+      evaluation: Prisma.$kpi_evaluationsPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      kpi_evaluation_id: number
+      objective: string
+      indicator: string
+      weight: Prisma.Decimal
+      target_1: string | null
+      target_2: string | null
+      target_3: string | null
+      target_4: string | null
+      target_5: string | null
+      result_description: string | null
+      employee_score: number | null
+      supervisor_score: number | null
+    }, ExtArgs["result"]["kpi_items"]>
+    composites: {}
+  }
+
+  type kpi_itemsGetPayload<S extends boolean | null | undefined | kpi_itemsDefaultArgs> = $Result.GetResult<Prisma.$kpi_itemsPayload, S>
+
+  type kpi_itemsCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<kpi_itemsFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: Kpi_itemsCountAggregateInputType | true
+    }
+
+  export interface kpi_itemsDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['kpi_items'], meta: { name: 'kpi_items' } }
+    /**
+     * Find zero or one Kpi_items that matches the filter.
+     * @param {kpi_itemsFindUniqueArgs} args - Arguments to find a Kpi_items
+     * @example
+     * // Get one Kpi_items
+     * const kpi_items = await prisma.kpi_items.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends kpi_itemsFindUniqueArgs>(args: SelectSubset<T, kpi_itemsFindUniqueArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Kpi_items that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {kpi_itemsFindUniqueOrThrowArgs} args - Arguments to find a Kpi_items
+     * @example
+     * // Get one Kpi_items
+     * const kpi_items = await prisma.kpi_items.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends kpi_itemsFindUniqueOrThrowArgs>(args: SelectSubset<T, kpi_itemsFindUniqueOrThrowArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Kpi_items that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsFindFirstArgs} args - Arguments to find a Kpi_items
+     * @example
+     * // Get one Kpi_items
+     * const kpi_items = await prisma.kpi_items.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends kpi_itemsFindFirstArgs>(args?: SelectSubset<T, kpi_itemsFindFirstArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Kpi_items that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsFindFirstOrThrowArgs} args - Arguments to find a Kpi_items
+     * @example
+     * // Get one Kpi_items
+     * const kpi_items = await prisma.kpi_items.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends kpi_itemsFindFirstOrThrowArgs>(args?: SelectSubset<T, kpi_itemsFindFirstOrThrowArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Kpi_items that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Kpi_items
+     * const kpi_items = await prisma.kpi_items.findMany()
+     * 
+     * // Get first 10 Kpi_items
+     * const kpi_items = await prisma.kpi_items.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const kpi_itemsWithIdOnly = await prisma.kpi_items.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends kpi_itemsFindManyArgs>(args?: SelectSubset<T, kpi_itemsFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Kpi_items.
+     * @param {kpi_itemsCreateArgs} args - Arguments to create a Kpi_items.
+     * @example
+     * // Create one Kpi_items
+     * const Kpi_items = await prisma.kpi_items.create({
+     *   data: {
+     *     // ... data to create a Kpi_items
+     *   }
+     * })
+     * 
+     */
+    create<T extends kpi_itemsCreateArgs>(args: SelectSubset<T, kpi_itemsCreateArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Kpi_items.
+     * @param {kpi_itemsCreateManyArgs} args - Arguments to create many Kpi_items.
+     * @example
+     * // Create many Kpi_items
+     * const kpi_items = await prisma.kpi_items.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends kpi_itemsCreateManyArgs>(args?: SelectSubset<T, kpi_itemsCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Kpi_items and returns the data saved in the database.
+     * @param {kpi_itemsCreateManyAndReturnArgs} args - Arguments to create many Kpi_items.
+     * @example
+     * // Create many Kpi_items
+     * const kpi_items = await prisma.kpi_items.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Kpi_items and only return the `id`
+     * const kpi_itemsWithIdOnly = await prisma.kpi_items.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends kpi_itemsCreateManyAndReturnArgs>(args?: SelectSubset<T, kpi_itemsCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Kpi_items.
+     * @param {kpi_itemsDeleteArgs} args - Arguments to delete one Kpi_items.
+     * @example
+     * // Delete one Kpi_items
+     * const Kpi_items = await prisma.kpi_items.delete({
+     *   where: {
+     *     // ... filter to delete one Kpi_items
+     *   }
+     * })
+     * 
+     */
+    delete<T extends kpi_itemsDeleteArgs>(args: SelectSubset<T, kpi_itemsDeleteArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Kpi_items.
+     * @param {kpi_itemsUpdateArgs} args - Arguments to update one Kpi_items.
+     * @example
+     * // Update one Kpi_items
+     * const kpi_items = await prisma.kpi_items.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends kpi_itemsUpdateArgs>(args: SelectSubset<T, kpi_itemsUpdateArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Kpi_items.
+     * @param {kpi_itemsDeleteManyArgs} args - Arguments to filter Kpi_items to delete.
+     * @example
+     * // Delete a few Kpi_items
+     * const { count } = await prisma.kpi_items.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends kpi_itemsDeleteManyArgs>(args?: SelectSubset<T, kpi_itemsDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Kpi_items.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Kpi_items
+     * const kpi_items = await prisma.kpi_items.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends kpi_itemsUpdateManyArgs>(args: SelectSubset<T, kpi_itemsUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Kpi_items and returns the data updated in the database.
+     * @param {kpi_itemsUpdateManyAndReturnArgs} args - Arguments to update many Kpi_items.
+     * @example
+     * // Update many Kpi_items
+     * const kpi_items = await prisma.kpi_items.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Kpi_items and only return the `id`
+     * const kpi_itemsWithIdOnly = await prisma.kpi_items.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends kpi_itemsUpdateManyAndReturnArgs>(args: SelectSubset<T, kpi_itemsUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Kpi_items.
+     * @param {kpi_itemsUpsertArgs} args - Arguments to update or create a Kpi_items.
+     * @example
+     * // Update or create a Kpi_items
+     * const kpi_items = await prisma.kpi_items.upsert({
+     *   create: {
+     *     // ... data to create a Kpi_items
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Kpi_items we want to update
+     *   }
+     * })
+     */
+    upsert<T extends kpi_itemsUpsertArgs>(args: SelectSubset<T, kpi_itemsUpsertArgs<ExtArgs>>): Prisma__kpi_itemsClient<$Result.GetResult<Prisma.$kpi_itemsPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Kpi_items.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsCountArgs} args - Arguments to filter Kpi_items to count.
+     * @example
+     * // Count the number of Kpi_items
+     * const count = await prisma.kpi_items.count({
+     *   where: {
+     *     // ... the filter for the Kpi_items we want to count
+     *   }
+     * })
+    **/
+    count<T extends kpi_itemsCountArgs>(
+      args?: Subset<T, kpi_itemsCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], Kpi_itemsCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Kpi_items.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {Kpi_itemsAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends Kpi_itemsAggregateArgs>(args: Subset<T, Kpi_itemsAggregateArgs>): Prisma.PrismaPromise<GetKpi_itemsAggregateType<T>>
+
+    /**
+     * Group by Kpi_items.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {kpi_itemsGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends kpi_itemsGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: kpi_itemsGroupByArgs['orderBy'] }
+        : { orderBy?: kpi_itemsGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, kpi_itemsGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetKpi_itemsGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the kpi_items model
+   */
+  readonly fields: kpi_itemsFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for kpi_items.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__kpi_itemsClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    evaluation<T extends kpi_evaluationsDefaultArgs<ExtArgs> = {}>(args?: Subset<T, kpi_evaluationsDefaultArgs<ExtArgs>>): Prisma__kpi_evaluationsClient<$Result.GetResult<Prisma.$kpi_evaluationsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the kpi_items model
+   */
+  interface kpi_itemsFieldRefs {
+    readonly id: FieldRef<"kpi_items", 'Int'>
+    readonly kpi_evaluation_id: FieldRef<"kpi_items", 'Int'>
+    readonly objective: FieldRef<"kpi_items", 'String'>
+    readonly indicator: FieldRef<"kpi_items", 'String'>
+    readonly weight: FieldRef<"kpi_items", 'Decimal'>
+    readonly target_1: FieldRef<"kpi_items", 'String'>
+    readonly target_2: FieldRef<"kpi_items", 'String'>
+    readonly target_3: FieldRef<"kpi_items", 'String'>
+    readonly target_4: FieldRef<"kpi_items", 'String'>
+    readonly target_5: FieldRef<"kpi_items", 'String'>
+    readonly result_description: FieldRef<"kpi_items", 'String'>
+    readonly employee_score: FieldRef<"kpi_items", 'Int'>
+    readonly supervisor_score: FieldRef<"kpi_items", 'Int'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * kpi_items findUnique
+   */
+  export type kpi_itemsFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_items to fetch.
+     */
+    where: kpi_itemsWhereUniqueInput
+  }
+
+  /**
+   * kpi_items findUniqueOrThrow
+   */
+  export type kpi_itemsFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_items to fetch.
+     */
+    where: kpi_itemsWhereUniqueInput
+  }
+
+  /**
+   * kpi_items findFirst
+   */
+  export type kpi_itemsFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_items to fetch.
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_items to fetch.
+     */
+    orderBy?: kpi_itemsOrderByWithRelationInput | kpi_itemsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for kpi_items.
+     */
+    cursor?: kpi_itemsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_items from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_items.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of kpi_items.
+     */
+    distinct?: Kpi_itemsScalarFieldEnum | Kpi_itemsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_items findFirstOrThrow
+   */
+  export type kpi_itemsFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_items to fetch.
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_items to fetch.
+     */
+    orderBy?: kpi_itemsOrderByWithRelationInput | kpi_itemsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for kpi_items.
+     */
+    cursor?: kpi_itemsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_items from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_items.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of kpi_items.
+     */
+    distinct?: Kpi_itemsScalarFieldEnum | Kpi_itemsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_items findMany
+   */
+  export type kpi_itemsFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter, which kpi_items to fetch.
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of kpi_items to fetch.
+     */
+    orderBy?: kpi_itemsOrderByWithRelationInput | kpi_itemsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing kpi_items.
+     */
+    cursor?: kpi_itemsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` kpi_items from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` kpi_items.
+     */
+    skip?: number
+    distinct?: Kpi_itemsScalarFieldEnum | Kpi_itemsScalarFieldEnum[]
+  }
+
+  /**
+   * kpi_items create
+   */
+  export type kpi_itemsCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * The data needed to create a kpi_items.
+     */
+    data: XOR<kpi_itemsCreateInput, kpi_itemsUncheckedCreateInput>
+  }
+
+  /**
+   * kpi_items createMany
+   */
+  export type kpi_itemsCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many kpi_items.
+     */
+    data: kpi_itemsCreateManyInput | kpi_itemsCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * kpi_items createManyAndReturn
+   */
+  export type kpi_itemsCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * The data used to create many kpi_items.
+     */
+    data: kpi_itemsCreateManyInput | kpi_itemsCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * kpi_items update
+   */
+  export type kpi_itemsUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * The data needed to update a kpi_items.
+     */
+    data: XOR<kpi_itemsUpdateInput, kpi_itemsUncheckedUpdateInput>
+    /**
+     * Choose, which kpi_items to update.
+     */
+    where: kpi_itemsWhereUniqueInput
+  }
+
+  /**
+   * kpi_items updateMany
+   */
+  export type kpi_itemsUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update kpi_items.
+     */
+    data: XOR<kpi_itemsUpdateManyMutationInput, kpi_itemsUncheckedUpdateManyInput>
+    /**
+     * Filter which kpi_items to update
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * Limit how many kpi_items to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * kpi_items updateManyAndReturn
+   */
+  export type kpi_itemsUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * The data used to update kpi_items.
+     */
+    data: XOR<kpi_itemsUpdateManyMutationInput, kpi_itemsUncheckedUpdateManyInput>
+    /**
+     * Filter which kpi_items to update
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * Limit how many kpi_items to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * kpi_items upsert
+   */
+  export type kpi_itemsUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * The filter to search for the kpi_items to update in case it exists.
+     */
+    where: kpi_itemsWhereUniqueInput
+    /**
+     * In case the kpi_items found by the `where` argument doesn't exist, create a new kpi_items with this data.
+     */
+    create: XOR<kpi_itemsCreateInput, kpi_itemsUncheckedCreateInput>
+    /**
+     * In case the kpi_items was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<kpi_itemsUpdateInput, kpi_itemsUncheckedUpdateInput>
+  }
+
+  /**
+   * kpi_items delete
+   */
+  export type kpi_itemsDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+    /**
+     * Filter which kpi_items to delete.
+     */
+    where: kpi_itemsWhereUniqueInput
+  }
+
+  /**
+   * kpi_items deleteMany
+   */
+  export type kpi_itemsDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which kpi_items to delete
+     */
+    where?: kpi_itemsWhereInput
+    /**
+     * Limit how many kpi_items to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * kpi_items without action
+   */
+  export type kpi_itemsDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the kpi_items
+     */
+    select?: kpi_itemsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the kpi_items
+     */
+    omit?: kpi_itemsOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: kpi_itemsInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -30751,6 +33522,46 @@ export namespace Prisma {
   };
 
   export type Probation_evaluationsScalarFieldEnum = (typeof Probation_evaluationsScalarFieldEnum)[keyof typeof Probation_evaluationsScalarFieldEnum]
+
+
+  export const Kpi_evaluationsScalarFieldEnum: {
+    id: 'id',
+    emp_id: 'emp_id',
+    supervisor_id: 'supervisor_id',
+    evaluation_no: 'evaluation_no',
+    evaluation_date: 'evaluation_date',
+    period_start: 'period_start',
+    period_end: 'period_end',
+    status: 'status',
+    employee_comment: 'employee_comment',
+    supervisor_comment: 'supervisor_comment',
+    total_employee_score: 'total_employee_score',
+    total_supervisor_score: 'total_supervisor_score',
+    grade: 'grade',
+    created_at: 'created_at',
+    updated_at: 'updated_at'
+  };
+
+  export type Kpi_evaluationsScalarFieldEnum = (typeof Kpi_evaluationsScalarFieldEnum)[keyof typeof Kpi_evaluationsScalarFieldEnum]
+
+
+  export const Kpi_itemsScalarFieldEnum: {
+    id: 'id',
+    kpi_evaluation_id: 'kpi_evaluation_id',
+    objective: 'objective',
+    indicator: 'indicator',
+    weight: 'weight',
+    target_1: 'target_1',
+    target_2: 'target_2',
+    target_3: 'target_3',
+    target_4: 'target_4',
+    target_5: 'target_5',
+    result_description: 'result_description',
+    employee_score: 'employee_score',
+    supervisor_score: 'supervisor_score'
+  };
+
+  export type Kpi_itemsScalarFieldEnum = (typeof Kpi_itemsScalarFieldEnum)[keyof typeof Kpi_itemsScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -31301,6 +34112,8 @@ export namespace Prisma {
     asset_borrowings?: Asset_borrowingsListRelationFilter
     probation_evaluations?: Probation_evaluationsListRelationFilter
     submitted_evaluations?: Probation_evaluationsListRelationFilter
+    kpi_evaluations?: Kpi_evaluationsListRelationFilter
+    kpi_submissions?: Kpi_evaluationsListRelationFilter
   }
 
   export type employeesOrderByWithRelationInput = {
@@ -31350,6 +34163,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsOrderByRelationAggregateInput
     probation_evaluations?: probation_evaluationsOrderByRelationAggregateInput
     submitted_evaluations?: probation_evaluationsOrderByRelationAggregateInput
+    kpi_evaluations?: kpi_evaluationsOrderByRelationAggregateInput
+    kpi_submissions?: kpi_evaluationsOrderByRelationAggregateInput
   }
 
   export type employeesWhereUniqueInput = Prisma.AtLeast<{
@@ -31402,6 +34217,8 @@ export namespace Prisma {
     asset_borrowings?: Asset_borrowingsListRelationFilter
     probation_evaluations?: Probation_evaluationsListRelationFilter
     submitted_evaluations?: Probation_evaluationsListRelationFilter
+    kpi_evaluations?: Kpi_evaluationsListRelationFilter
+    kpi_submissions?: Kpi_evaluationsListRelationFilter
   }, "emp_id" | "line_user_id">
 
   export type employeesOrderByWithAggregationInput = {
@@ -33129,6 +35946,216 @@ export namespace Prisma {
     updated_at?: DateTimeWithAggregatesFilter<"probation_evaluations"> | Date | string
   }
 
+  export type kpi_evaluationsWhereInput = {
+    AND?: kpi_evaluationsWhereInput | kpi_evaluationsWhereInput[]
+    OR?: kpi_evaluationsWhereInput[]
+    NOT?: kpi_evaluationsWhereInput | kpi_evaluationsWhereInput[]
+    id?: IntFilter<"kpi_evaluations"> | number
+    emp_id?: StringFilter<"kpi_evaluations"> | string
+    supervisor_id?: StringFilter<"kpi_evaluations"> | string
+    evaluation_no?: IntFilter<"kpi_evaluations"> | number
+    evaluation_date?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    period_start?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    period_end?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    status?: StringFilter<"kpi_evaluations"> | string
+    employee_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    supervisor_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    total_employee_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    grade?: StringNullableFilter<"kpi_evaluations"> | string | null
+    created_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    updated_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    items?: Kpi_itemsListRelationFilter
+    employee?: XOR<EmployeesScalarRelationFilter, employeesWhereInput>
+    supervisor?: XOR<EmployeesScalarRelationFilter, employeesWhereInput>
+  }
+
+  export type kpi_evaluationsOrderByWithRelationInput = {
+    id?: SortOrder
+    emp_id?: SortOrder
+    supervisor_id?: SortOrder
+    evaluation_no?: SortOrder
+    evaluation_date?: SortOrder
+    period_start?: SortOrderInput | SortOrder
+    period_end?: SortOrderInput | SortOrder
+    status?: SortOrder
+    employee_comment?: SortOrderInput | SortOrder
+    supervisor_comment?: SortOrderInput | SortOrder
+    total_employee_score?: SortOrderInput | SortOrder
+    total_supervisor_score?: SortOrderInput | SortOrder
+    grade?: SortOrderInput | SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    items?: kpi_itemsOrderByRelationAggregateInput
+    employee?: employeesOrderByWithRelationInput
+    supervisor?: employeesOrderByWithRelationInput
+  }
+
+  export type kpi_evaluationsWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: kpi_evaluationsWhereInput | kpi_evaluationsWhereInput[]
+    OR?: kpi_evaluationsWhereInput[]
+    NOT?: kpi_evaluationsWhereInput | kpi_evaluationsWhereInput[]
+    emp_id?: StringFilter<"kpi_evaluations"> | string
+    supervisor_id?: StringFilter<"kpi_evaluations"> | string
+    evaluation_no?: IntFilter<"kpi_evaluations"> | number
+    evaluation_date?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    period_start?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    period_end?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    status?: StringFilter<"kpi_evaluations"> | string
+    employee_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    supervisor_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    total_employee_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    grade?: StringNullableFilter<"kpi_evaluations"> | string | null
+    created_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    updated_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    items?: Kpi_itemsListRelationFilter
+    employee?: XOR<EmployeesScalarRelationFilter, employeesWhereInput>
+    supervisor?: XOR<EmployeesScalarRelationFilter, employeesWhereInput>
+  }, "id">
+
+  export type kpi_evaluationsOrderByWithAggregationInput = {
+    id?: SortOrder
+    emp_id?: SortOrder
+    supervisor_id?: SortOrder
+    evaluation_no?: SortOrder
+    evaluation_date?: SortOrder
+    period_start?: SortOrderInput | SortOrder
+    period_end?: SortOrderInput | SortOrder
+    status?: SortOrder
+    employee_comment?: SortOrderInput | SortOrder
+    supervisor_comment?: SortOrderInput | SortOrder
+    total_employee_score?: SortOrderInput | SortOrder
+    total_supervisor_score?: SortOrderInput | SortOrder
+    grade?: SortOrderInput | SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    _count?: kpi_evaluationsCountOrderByAggregateInput
+    _avg?: kpi_evaluationsAvgOrderByAggregateInput
+    _max?: kpi_evaluationsMaxOrderByAggregateInput
+    _min?: kpi_evaluationsMinOrderByAggregateInput
+    _sum?: kpi_evaluationsSumOrderByAggregateInput
+  }
+
+  export type kpi_evaluationsScalarWhereWithAggregatesInput = {
+    AND?: kpi_evaluationsScalarWhereWithAggregatesInput | kpi_evaluationsScalarWhereWithAggregatesInput[]
+    OR?: kpi_evaluationsScalarWhereWithAggregatesInput[]
+    NOT?: kpi_evaluationsScalarWhereWithAggregatesInput | kpi_evaluationsScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"kpi_evaluations"> | number
+    emp_id?: StringWithAggregatesFilter<"kpi_evaluations"> | string
+    supervisor_id?: StringWithAggregatesFilter<"kpi_evaluations"> | string
+    evaluation_no?: IntWithAggregatesFilter<"kpi_evaluations"> | number
+    evaluation_date?: DateTimeWithAggregatesFilter<"kpi_evaluations"> | Date | string
+    period_start?: DateTimeNullableWithAggregatesFilter<"kpi_evaluations"> | Date | string | null
+    period_end?: DateTimeNullableWithAggregatesFilter<"kpi_evaluations"> | Date | string | null
+    status?: StringWithAggregatesFilter<"kpi_evaluations"> | string
+    employee_comment?: StringNullableWithAggregatesFilter<"kpi_evaluations"> | string | null
+    supervisor_comment?: StringNullableWithAggregatesFilter<"kpi_evaluations"> | string | null
+    total_employee_score?: DecimalNullableWithAggregatesFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: DecimalNullableWithAggregatesFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    grade?: StringNullableWithAggregatesFilter<"kpi_evaluations"> | string | null
+    created_at?: DateTimeWithAggregatesFilter<"kpi_evaluations"> | Date | string
+    updated_at?: DateTimeWithAggregatesFilter<"kpi_evaluations"> | Date | string
+  }
+
+  export type kpi_itemsWhereInput = {
+    AND?: kpi_itemsWhereInput | kpi_itemsWhereInput[]
+    OR?: kpi_itemsWhereInput[]
+    NOT?: kpi_itemsWhereInput | kpi_itemsWhereInput[]
+    id?: IntFilter<"kpi_items"> | number
+    kpi_evaluation_id?: IntFilter<"kpi_items"> | number
+    objective?: StringFilter<"kpi_items"> | string
+    indicator?: StringFilter<"kpi_items"> | string
+    weight?: DecimalFilter<"kpi_items"> | Decimal | DecimalJsLike | number | string
+    target_1?: StringNullableFilter<"kpi_items"> | string | null
+    target_2?: StringNullableFilter<"kpi_items"> | string | null
+    target_3?: StringNullableFilter<"kpi_items"> | string | null
+    target_4?: StringNullableFilter<"kpi_items"> | string | null
+    target_5?: StringNullableFilter<"kpi_items"> | string | null
+    result_description?: StringNullableFilter<"kpi_items"> | string | null
+    employee_score?: IntNullableFilter<"kpi_items"> | number | null
+    supervisor_score?: IntNullableFilter<"kpi_items"> | number | null
+    evaluation?: XOR<Kpi_evaluationsScalarRelationFilter, kpi_evaluationsWhereInput>
+  }
+
+  export type kpi_itemsOrderByWithRelationInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    objective?: SortOrder
+    indicator?: SortOrder
+    weight?: SortOrder
+    target_1?: SortOrderInput | SortOrder
+    target_2?: SortOrderInput | SortOrder
+    target_3?: SortOrderInput | SortOrder
+    target_4?: SortOrderInput | SortOrder
+    target_5?: SortOrderInput | SortOrder
+    result_description?: SortOrderInput | SortOrder
+    employee_score?: SortOrderInput | SortOrder
+    supervisor_score?: SortOrderInput | SortOrder
+    evaluation?: kpi_evaluationsOrderByWithRelationInput
+  }
+
+  export type kpi_itemsWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: kpi_itemsWhereInput | kpi_itemsWhereInput[]
+    OR?: kpi_itemsWhereInput[]
+    NOT?: kpi_itemsWhereInput | kpi_itemsWhereInput[]
+    kpi_evaluation_id?: IntFilter<"kpi_items"> | number
+    objective?: StringFilter<"kpi_items"> | string
+    indicator?: StringFilter<"kpi_items"> | string
+    weight?: DecimalFilter<"kpi_items"> | Decimal | DecimalJsLike | number | string
+    target_1?: StringNullableFilter<"kpi_items"> | string | null
+    target_2?: StringNullableFilter<"kpi_items"> | string | null
+    target_3?: StringNullableFilter<"kpi_items"> | string | null
+    target_4?: StringNullableFilter<"kpi_items"> | string | null
+    target_5?: StringNullableFilter<"kpi_items"> | string | null
+    result_description?: StringNullableFilter<"kpi_items"> | string | null
+    employee_score?: IntNullableFilter<"kpi_items"> | number | null
+    supervisor_score?: IntNullableFilter<"kpi_items"> | number | null
+    evaluation?: XOR<Kpi_evaluationsScalarRelationFilter, kpi_evaluationsWhereInput>
+  }, "id">
+
+  export type kpi_itemsOrderByWithAggregationInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    objective?: SortOrder
+    indicator?: SortOrder
+    weight?: SortOrder
+    target_1?: SortOrderInput | SortOrder
+    target_2?: SortOrderInput | SortOrder
+    target_3?: SortOrderInput | SortOrder
+    target_4?: SortOrderInput | SortOrder
+    target_5?: SortOrderInput | SortOrder
+    result_description?: SortOrderInput | SortOrder
+    employee_score?: SortOrderInput | SortOrder
+    supervisor_score?: SortOrderInput | SortOrder
+    _count?: kpi_itemsCountOrderByAggregateInput
+    _avg?: kpi_itemsAvgOrderByAggregateInput
+    _max?: kpi_itemsMaxOrderByAggregateInput
+    _min?: kpi_itemsMinOrderByAggregateInput
+    _sum?: kpi_itemsSumOrderByAggregateInput
+  }
+
+  export type kpi_itemsScalarWhereWithAggregatesInput = {
+    AND?: kpi_itemsScalarWhereWithAggregatesInput | kpi_itemsScalarWhereWithAggregatesInput[]
+    OR?: kpi_itemsScalarWhereWithAggregatesInput[]
+    NOT?: kpi_itemsScalarWhereWithAggregatesInput | kpi_itemsScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"kpi_items"> | number
+    kpi_evaluation_id?: IntWithAggregatesFilter<"kpi_items"> | number
+    objective?: StringWithAggregatesFilter<"kpi_items"> | string
+    indicator?: StringWithAggregatesFilter<"kpi_items"> | string
+    weight?: DecimalWithAggregatesFilter<"kpi_items"> | Decimal | DecimalJsLike | number | string
+    target_1?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    target_2?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    target_3?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    target_4?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    target_5?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    result_description?: StringNullableWithAggregatesFilter<"kpi_items"> | string | null
+    employee_score?: IntNullableWithAggregatesFilter<"kpi_items"> | number | null
+    supervisor_score?: IntNullableWithAggregatesFilter<"kpi_items"> | number | null
+  }
+
   export type adminsCreateInput = {
     username: string
     password_hash: string
@@ -33606,6 +36633,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateInput = {
@@ -33650,6 +36679,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUpdateInput = {
@@ -33694,6 +36725,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateInput = {
@@ -33738,6 +36771,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesCreateManyInput = {
@@ -35705,6 +38740,239 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type kpi_evaluationsCreateInput = {
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsCreateNestedManyWithoutEvaluationInput
+    employee: employeesCreateNestedOneWithoutKpi_evaluationsInput
+    supervisor: employeesCreateNestedOneWithoutKpi_submissionsInput
+  }
+
+  export type kpi_evaluationsUncheckedCreateInput = {
+    id?: number
+    emp_id: string
+    supervisor_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsUncheckedCreateNestedManyWithoutEvaluationInput
+  }
+
+  export type kpi_evaluationsUpdateInput = {
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUpdateManyWithoutEvaluationNestedInput
+    employee?: employeesUpdateOneRequiredWithoutKpi_evaluationsNestedInput
+    supervisor?: employeesUpdateOneRequiredWithoutKpi_submissionsNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    emp_id?: StringFieldUpdateOperationsInput | string
+    supervisor_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUncheckedUpdateManyWithoutEvaluationNestedInput
+  }
+
+  export type kpi_evaluationsCreateManyInput = {
+    id?: number
+    emp_id: string
+    supervisor_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type kpi_evaluationsUpdateManyMutationInput = {
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type kpi_evaluationsUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    emp_id?: StringFieldUpdateOperationsInput | string
+    supervisor_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type kpi_itemsCreateInput = {
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+    evaluation: kpi_evaluationsCreateNestedOneWithoutItemsInput
+  }
+
+  export type kpi_itemsUncheckedCreateInput = {
+    id?: number
+    kpi_evaluation_id: number
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+  }
+
+  export type kpi_itemsUpdateInput = {
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+    evaluation?: kpi_evaluationsUpdateOneRequiredWithoutItemsNestedInput
+  }
+
+  export type kpi_itemsUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    kpi_evaluation_id?: IntFieldUpdateOperationsInput | number
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+  }
+
+  export type kpi_itemsCreateManyInput = {
+    id?: number
+    kpi_evaluation_id: number
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+  }
+
+  export type kpi_itemsUpdateManyMutationInput = {
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+  }
+
+  export type kpi_itemsUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    kpi_evaluation_id?: IntFieldUpdateOperationsInput | number
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -36318,6 +39586,12 @@ export namespace Prisma {
     none?: probation_evaluationsWhereInput
   }
 
+  export type Kpi_evaluationsListRelationFilter = {
+    every?: kpi_evaluationsWhereInput
+    some?: kpi_evaluationsWhereInput
+    none?: kpi_evaluationsWhereInput
+  }
+
   export type birthday_claimsOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -36347,6 +39621,10 @@ export namespace Prisma {
   }
 
   export type probation_evaluationsOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type kpi_evaluationsOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -37582,6 +40860,153 @@ export namespace Prisma {
     salary_adjust_to?: SortOrder
   }
 
+  export type Kpi_itemsListRelationFilter = {
+    every?: kpi_itemsWhereInput
+    some?: kpi_itemsWhereInput
+    none?: kpi_itemsWhereInput
+  }
+
+  export type kpi_itemsOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type kpi_evaluationsCountOrderByAggregateInput = {
+    id?: SortOrder
+    emp_id?: SortOrder
+    supervisor_id?: SortOrder
+    evaluation_no?: SortOrder
+    evaluation_date?: SortOrder
+    period_start?: SortOrder
+    period_end?: SortOrder
+    status?: SortOrder
+    employee_comment?: SortOrder
+    supervisor_comment?: SortOrder
+    total_employee_score?: SortOrder
+    total_supervisor_score?: SortOrder
+    grade?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type kpi_evaluationsAvgOrderByAggregateInput = {
+    id?: SortOrder
+    evaluation_no?: SortOrder
+    total_employee_score?: SortOrder
+    total_supervisor_score?: SortOrder
+  }
+
+  export type kpi_evaluationsMaxOrderByAggregateInput = {
+    id?: SortOrder
+    emp_id?: SortOrder
+    supervisor_id?: SortOrder
+    evaluation_no?: SortOrder
+    evaluation_date?: SortOrder
+    period_start?: SortOrder
+    period_end?: SortOrder
+    status?: SortOrder
+    employee_comment?: SortOrder
+    supervisor_comment?: SortOrder
+    total_employee_score?: SortOrder
+    total_supervisor_score?: SortOrder
+    grade?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type kpi_evaluationsMinOrderByAggregateInput = {
+    id?: SortOrder
+    emp_id?: SortOrder
+    supervisor_id?: SortOrder
+    evaluation_no?: SortOrder
+    evaluation_date?: SortOrder
+    period_start?: SortOrder
+    period_end?: SortOrder
+    status?: SortOrder
+    employee_comment?: SortOrder
+    supervisor_comment?: SortOrder
+    total_employee_score?: SortOrder
+    total_supervisor_score?: SortOrder
+    grade?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type kpi_evaluationsSumOrderByAggregateInput = {
+    id?: SortOrder
+    evaluation_no?: SortOrder
+    total_employee_score?: SortOrder
+    total_supervisor_score?: SortOrder
+  }
+
+  export type Kpi_evaluationsScalarRelationFilter = {
+    is?: kpi_evaluationsWhereInput
+    isNot?: kpi_evaluationsWhereInput
+  }
+
+  export type kpi_itemsCountOrderByAggregateInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    objective?: SortOrder
+    indicator?: SortOrder
+    weight?: SortOrder
+    target_1?: SortOrder
+    target_2?: SortOrder
+    target_3?: SortOrder
+    target_4?: SortOrder
+    target_5?: SortOrder
+    result_description?: SortOrder
+    employee_score?: SortOrder
+    supervisor_score?: SortOrder
+  }
+
+  export type kpi_itemsAvgOrderByAggregateInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    weight?: SortOrder
+    employee_score?: SortOrder
+    supervisor_score?: SortOrder
+  }
+
+  export type kpi_itemsMaxOrderByAggregateInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    objective?: SortOrder
+    indicator?: SortOrder
+    weight?: SortOrder
+    target_1?: SortOrder
+    target_2?: SortOrder
+    target_3?: SortOrder
+    target_4?: SortOrder
+    target_5?: SortOrder
+    result_description?: SortOrder
+    employee_score?: SortOrder
+    supervisor_score?: SortOrder
+  }
+
+  export type kpi_itemsMinOrderByAggregateInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    objective?: SortOrder
+    indicator?: SortOrder
+    weight?: SortOrder
+    target_1?: SortOrder
+    target_2?: SortOrder
+    target_3?: SortOrder
+    target_4?: SortOrder
+    target_5?: SortOrder
+    result_description?: SortOrder
+    employee_score?: SortOrder
+    supervisor_score?: SortOrder
+  }
+
+  export type kpi_itemsSumOrderByAggregateInput = {
+    id?: SortOrder
+    kpi_evaluation_id?: SortOrder
+    weight?: SortOrder
+    employee_score?: SortOrder
+    supervisor_score?: SortOrder
+  }
+
   export type sessionsCreateNestedManyWithoutAdminsInput = {
     create?: XOR<sessionsCreateWithoutAdminsInput, sessionsUncheckedCreateWithoutAdminsInput> | sessionsCreateWithoutAdminsInput[] | sessionsUncheckedCreateWithoutAdminsInput[]
     connectOrCreate?: sessionsCreateOrConnectWithoutAdminsInput | sessionsCreateOrConnectWithoutAdminsInput[]
@@ -37851,6 +41276,20 @@ export namespace Prisma {
     connect?: probation_evaluationsWhereUniqueInput | probation_evaluationsWhereUniqueInput[]
   }
 
+  export type kpi_evaluationsCreateNestedManyWithoutEmployeeInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput> | kpi_evaluationsCreateWithoutEmployeeInput[] | kpi_evaluationsUncheckedCreateWithoutEmployeeInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutEmployeeInput | kpi_evaluationsCreateOrConnectWithoutEmployeeInput[]
+    createMany?: kpi_evaluationsCreateManyEmployeeInputEnvelope
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+  }
+
+  export type kpi_evaluationsCreateNestedManyWithoutSupervisorInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput> | kpi_evaluationsCreateWithoutSupervisorInput[] | kpi_evaluationsUncheckedCreateWithoutSupervisorInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutSupervisorInput | kpi_evaluationsCreateOrConnectWithoutSupervisorInput[]
+    createMany?: kpi_evaluationsCreateManySupervisorInputEnvelope
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+  }
+
   export type birthday_claimsUncheckedCreateNestedManyWithoutEmployeesInput = {
     create?: XOR<birthday_claimsCreateWithoutEmployeesInput, birthday_claimsUncheckedCreateWithoutEmployeesInput> | birthday_claimsCreateWithoutEmployeesInput[] | birthday_claimsUncheckedCreateWithoutEmployeesInput[]
     connectOrCreate?: birthday_claimsCreateOrConnectWithoutEmployeesInput | birthday_claimsCreateOrConnectWithoutEmployeesInput[]
@@ -37926,6 +41365,20 @@ export namespace Prisma {
     connectOrCreate?: probation_evaluationsCreateOrConnectWithoutSupervisorInput | probation_evaluationsCreateOrConnectWithoutSupervisorInput[]
     createMany?: probation_evaluationsCreateManySupervisorInputEnvelope
     connect?: probation_evaluationsWhereUniqueInput | probation_evaluationsWhereUniqueInput[]
+  }
+
+  export type kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput> | kpi_evaluationsCreateWithoutEmployeeInput[] | kpi_evaluationsUncheckedCreateWithoutEmployeeInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutEmployeeInput | kpi_evaluationsCreateOrConnectWithoutEmployeeInput[]
+    createMany?: kpi_evaluationsCreateManyEmployeeInputEnvelope
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+  }
+
+  export type kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput> | kpi_evaluationsCreateWithoutSupervisorInput[] | kpi_evaluationsUncheckedCreateWithoutSupervisorInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutSupervisorInput | kpi_evaluationsCreateOrConnectWithoutSupervisorInput[]
+    createMany?: kpi_evaluationsCreateManySupervisorInputEnvelope
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
   }
 
   export type birthday_claimsUpdateManyWithoutEmployeesNestedInput = {
@@ -38132,6 +41585,34 @@ export namespace Prisma {
     deleteMany?: probation_evaluationsScalarWhereInput | probation_evaluationsScalarWhereInput[]
   }
 
+  export type kpi_evaluationsUpdateManyWithoutEmployeeNestedInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput> | kpi_evaluationsCreateWithoutEmployeeInput[] | kpi_evaluationsUncheckedCreateWithoutEmployeeInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutEmployeeInput | kpi_evaluationsCreateOrConnectWithoutEmployeeInput[]
+    upsert?: kpi_evaluationsUpsertWithWhereUniqueWithoutEmployeeInput | kpi_evaluationsUpsertWithWhereUniqueWithoutEmployeeInput[]
+    createMany?: kpi_evaluationsCreateManyEmployeeInputEnvelope
+    set?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    disconnect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    delete?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    update?: kpi_evaluationsUpdateWithWhereUniqueWithoutEmployeeInput | kpi_evaluationsUpdateWithWhereUniqueWithoutEmployeeInput[]
+    updateMany?: kpi_evaluationsUpdateManyWithWhereWithoutEmployeeInput | kpi_evaluationsUpdateManyWithWhereWithoutEmployeeInput[]
+    deleteMany?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
+  }
+
+  export type kpi_evaluationsUpdateManyWithoutSupervisorNestedInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput> | kpi_evaluationsCreateWithoutSupervisorInput[] | kpi_evaluationsUncheckedCreateWithoutSupervisorInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutSupervisorInput | kpi_evaluationsCreateOrConnectWithoutSupervisorInput[]
+    upsert?: kpi_evaluationsUpsertWithWhereUniqueWithoutSupervisorInput | kpi_evaluationsUpsertWithWhereUniqueWithoutSupervisorInput[]
+    createMany?: kpi_evaluationsCreateManySupervisorInputEnvelope
+    set?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    disconnect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    delete?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    update?: kpi_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput | kpi_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput[]
+    updateMany?: kpi_evaluationsUpdateManyWithWhereWithoutSupervisorInput | kpi_evaluationsUpdateManyWithWhereWithoutSupervisorInput[]
+    deleteMany?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
+  }
+
   export type birthday_claimsUncheckedUpdateManyWithoutEmployeesNestedInput = {
     create?: XOR<birthday_claimsCreateWithoutEmployeesInput, birthday_claimsUncheckedCreateWithoutEmployeesInput> | birthday_claimsCreateWithoutEmployeesInput[] | birthday_claimsUncheckedCreateWithoutEmployeesInput[]
     connectOrCreate?: birthday_claimsCreateOrConnectWithoutEmployeesInput | birthday_claimsCreateOrConnectWithoutEmployeesInput[]
@@ -38284,6 +41765,34 @@ export namespace Prisma {
     update?: probation_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput | probation_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput[]
     updateMany?: probation_evaluationsUpdateManyWithWhereWithoutSupervisorInput | probation_evaluationsUpdateManyWithWhereWithoutSupervisorInput[]
     deleteMany?: probation_evaluationsScalarWhereInput | probation_evaluationsScalarWhereInput[]
+  }
+
+  export type kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput> | kpi_evaluationsCreateWithoutEmployeeInput[] | kpi_evaluationsUncheckedCreateWithoutEmployeeInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutEmployeeInput | kpi_evaluationsCreateOrConnectWithoutEmployeeInput[]
+    upsert?: kpi_evaluationsUpsertWithWhereUniqueWithoutEmployeeInput | kpi_evaluationsUpsertWithWhereUniqueWithoutEmployeeInput[]
+    createMany?: kpi_evaluationsCreateManyEmployeeInputEnvelope
+    set?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    disconnect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    delete?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    update?: kpi_evaluationsUpdateWithWhereUniqueWithoutEmployeeInput | kpi_evaluationsUpdateWithWhereUniqueWithoutEmployeeInput[]
+    updateMany?: kpi_evaluationsUpdateManyWithWhereWithoutEmployeeInput | kpi_evaluationsUpdateManyWithWhereWithoutEmployeeInput[]
+    deleteMany?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
+  }
+
+  export type kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput> | kpi_evaluationsCreateWithoutSupervisorInput[] | kpi_evaluationsUncheckedCreateWithoutSupervisorInput[]
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutSupervisorInput | kpi_evaluationsCreateOrConnectWithoutSupervisorInput[]
+    upsert?: kpi_evaluationsUpsertWithWhereUniqueWithoutSupervisorInput | kpi_evaluationsUpsertWithWhereUniqueWithoutSupervisorInput[]
+    createMany?: kpi_evaluationsCreateManySupervisorInputEnvelope
+    set?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    disconnect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    delete?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    connect?: kpi_evaluationsWhereUniqueInput | kpi_evaluationsWhereUniqueInput[]
+    update?: kpi_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput | kpi_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput[]
+    updateMany?: kpi_evaluationsUpdateManyWithWhereWithoutSupervisorInput | kpi_evaluationsUpdateManyWithWhereWithoutSupervisorInput[]
+    deleteMany?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
   }
 
   export type employeesCreateNestedOneWithoutLeave_requestsInput = {
@@ -38782,6 +42291,90 @@ export namespace Prisma {
     update?: XOR<XOR<employeesUpdateToOneWithWhereWithoutSubmitted_evaluationsInput, employeesUpdateWithoutSubmitted_evaluationsInput>, employeesUncheckedUpdateWithoutSubmitted_evaluationsInput>
   }
 
+  export type kpi_itemsCreateNestedManyWithoutEvaluationInput = {
+    create?: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput> | kpi_itemsCreateWithoutEvaluationInput[] | kpi_itemsUncheckedCreateWithoutEvaluationInput[]
+    connectOrCreate?: kpi_itemsCreateOrConnectWithoutEvaluationInput | kpi_itemsCreateOrConnectWithoutEvaluationInput[]
+    createMany?: kpi_itemsCreateManyEvaluationInputEnvelope
+    connect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+  }
+
+  export type employeesCreateNestedOneWithoutKpi_evaluationsInput = {
+    create?: XOR<employeesCreateWithoutKpi_evaluationsInput, employeesUncheckedCreateWithoutKpi_evaluationsInput>
+    connectOrCreate?: employeesCreateOrConnectWithoutKpi_evaluationsInput
+    connect?: employeesWhereUniqueInput
+  }
+
+  export type employeesCreateNestedOneWithoutKpi_submissionsInput = {
+    create?: XOR<employeesCreateWithoutKpi_submissionsInput, employeesUncheckedCreateWithoutKpi_submissionsInput>
+    connectOrCreate?: employeesCreateOrConnectWithoutKpi_submissionsInput
+    connect?: employeesWhereUniqueInput
+  }
+
+  export type kpi_itemsUncheckedCreateNestedManyWithoutEvaluationInput = {
+    create?: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput> | kpi_itemsCreateWithoutEvaluationInput[] | kpi_itemsUncheckedCreateWithoutEvaluationInput[]
+    connectOrCreate?: kpi_itemsCreateOrConnectWithoutEvaluationInput | kpi_itemsCreateOrConnectWithoutEvaluationInput[]
+    createMany?: kpi_itemsCreateManyEvaluationInputEnvelope
+    connect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+  }
+
+  export type kpi_itemsUpdateManyWithoutEvaluationNestedInput = {
+    create?: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput> | kpi_itemsCreateWithoutEvaluationInput[] | kpi_itemsUncheckedCreateWithoutEvaluationInput[]
+    connectOrCreate?: kpi_itemsCreateOrConnectWithoutEvaluationInput | kpi_itemsCreateOrConnectWithoutEvaluationInput[]
+    upsert?: kpi_itemsUpsertWithWhereUniqueWithoutEvaluationInput | kpi_itemsUpsertWithWhereUniqueWithoutEvaluationInput[]
+    createMany?: kpi_itemsCreateManyEvaluationInputEnvelope
+    set?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    disconnect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    delete?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    connect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    update?: kpi_itemsUpdateWithWhereUniqueWithoutEvaluationInput | kpi_itemsUpdateWithWhereUniqueWithoutEvaluationInput[]
+    updateMany?: kpi_itemsUpdateManyWithWhereWithoutEvaluationInput | kpi_itemsUpdateManyWithWhereWithoutEvaluationInput[]
+    deleteMany?: kpi_itemsScalarWhereInput | kpi_itemsScalarWhereInput[]
+  }
+
+  export type employeesUpdateOneRequiredWithoutKpi_evaluationsNestedInput = {
+    create?: XOR<employeesCreateWithoutKpi_evaluationsInput, employeesUncheckedCreateWithoutKpi_evaluationsInput>
+    connectOrCreate?: employeesCreateOrConnectWithoutKpi_evaluationsInput
+    upsert?: employeesUpsertWithoutKpi_evaluationsInput
+    connect?: employeesWhereUniqueInput
+    update?: XOR<XOR<employeesUpdateToOneWithWhereWithoutKpi_evaluationsInput, employeesUpdateWithoutKpi_evaluationsInput>, employeesUncheckedUpdateWithoutKpi_evaluationsInput>
+  }
+
+  export type employeesUpdateOneRequiredWithoutKpi_submissionsNestedInput = {
+    create?: XOR<employeesCreateWithoutKpi_submissionsInput, employeesUncheckedCreateWithoutKpi_submissionsInput>
+    connectOrCreate?: employeesCreateOrConnectWithoutKpi_submissionsInput
+    upsert?: employeesUpsertWithoutKpi_submissionsInput
+    connect?: employeesWhereUniqueInput
+    update?: XOR<XOR<employeesUpdateToOneWithWhereWithoutKpi_submissionsInput, employeesUpdateWithoutKpi_submissionsInput>, employeesUncheckedUpdateWithoutKpi_submissionsInput>
+  }
+
+  export type kpi_itemsUncheckedUpdateManyWithoutEvaluationNestedInput = {
+    create?: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput> | kpi_itemsCreateWithoutEvaluationInput[] | kpi_itemsUncheckedCreateWithoutEvaluationInput[]
+    connectOrCreate?: kpi_itemsCreateOrConnectWithoutEvaluationInput | kpi_itemsCreateOrConnectWithoutEvaluationInput[]
+    upsert?: kpi_itemsUpsertWithWhereUniqueWithoutEvaluationInput | kpi_itemsUpsertWithWhereUniqueWithoutEvaluationInput[]
+    createMany?: kpi_itemsCreateManyEvaluationInputEnvelope
+    set?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    disconnect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    delete?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    connect?: kpi_itemsWhereUniqueInput | kpi_itemsWhereUniqueInput[]
+    update?: kpi_itemsUpdateWithWhereUniqueWithoutEvaluationInput | kpi_itemsUpdateWithWhereUniqueWithoutEvaluationInput[]
+    updateMany?: kpi_itemsUpdateManyWithWhereWithoutEvaluationInput | kpi_itemsUpdateManyWithWhereWithoutEvaluationInput[]
+    deleteMany?: kpi_itemsScalarWhereInput | kpi_itemsScalarWhereInput[]
+  }
+
+  export type kpi_evaluationsCreateNestedOneWithoutItemsInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutItemsInput, kpi_evaluationsUncheckedCreateWithoutItemsInput>
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutItemsInput
+    connect?: kpi_evaluationsWhereUniqueInput
+  }
+
+  export type kpi_evaluationsUpdateOneRequiredWithoutItemsNestedInput = {
+    create?: XOR<kpi_evaluationsCreateWithoutItemsInput, kpi_evaluationsUncheckedCreateWithoutItemsInput>
+    connectOrCreate?: kpi_evaluationsCreateOrConnectWithoutItemsInput
+    upsert?: kpi_evaluationsUpsertWithoutItemsInput
+    connect?: kpi_evaluationsWhereUniqueInput
+    update?: XOR<XOR<kpi_evaluationsUpdateToOneWithWhereWithoutItemsInput, kpi_evaluationsUpdateWithoutItemsInput>, kpi_evaluationsUncheckedUpdateWithoutItemsInput>
+  }
+
   export type NestedIntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -39168,6 +42761,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutBranchesInput = {
@@ -39211,6 +42806,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutBranchesInput = {
@@ -39316,6 +42913,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutOt_requestsInput = {
@@ -39359,6 +42958,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutOt_requestsInput = {
@@ -39418,6 +43019,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutOt_requestsInput = {
@@ -39461,6 +43064,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type birthday_claimsCreateWithoutEmployeesInput = {
@@ -39621,6 +43226,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutSubordinatesInput = {
@@ -39664,6 +43271,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutSubordinatesInput = {
@@ -39712,6 +43321,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutSupervisorInput = {
@@ -39755,6 +43366,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutSupervisorInput = {
@@ -39808,6 +43421,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutSecondarySubordinatesInput = {
@@ -39851,6 +43466,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutSecondarySubordinatesInput = {
@@ -39899,6 +43516,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutSecondary_supervisorInput = {
@@ -39942,6 +43561,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutSecondary_supervisorInput = {
@@ -40444,6 +44065,96 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type kpi_evaluationsCreateWithoutEmployeeInput = {
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsCreateNestedManyWithoutEvaluationInput
+    supervisor: employeesCreateNestedOneWithoutKpi_submissionsInput
+  }
+
+  export type kpi_evaluationsUncheckedCreateWithoutEmployeeInput = {
+    id?: number
+    supervisor_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsUncheckedCreateNestedManyWithoutEvaluationInput
+  }
+
+  export type kpi_evaluationsCreateOrConnectWithoutEmployeeInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    create: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput>
+  }
+
+  export type kpi_evaluationsCreateManyEmployeeInputEnvelope = {
+    data: kpi_evaluationsCreateManyEmployeeInput | kpi_evaluationsCreateManyEmployeeInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type kpi_evaluationsCreateWithoutSupervisorInput = {
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsCreateNestedManyWithoutEvaluationInput
+    employee: employeesCreateNestedOneWithoutKpi_evaluationsInput
+  }
+
+  export type kpi_evaluationsUncheckedCreateWithoutSupervisorInput = {
+    id?: number
+    emp_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    items?: kpi_itemsUncheckedCreateNestedManyWithoutEvaluationInput
+  }
+
+  export type kpi_evaluationsCreateOrConnectWithoutSupervisorInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    create: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput>
+  }
+
+  export type kpi_evaluationsCreateManySupervisorInputEnvelope = {
+    data: kpi_evaluationsCreateManySupervisorInput | kpi_evaluationsCreateManySupervisorInput[]
+    skipDuplicates?: boolean
+  }
+
   export type birthday_claimsUpsertWithWhereUniqueWithoutEmployeesInput = {
     where: birthday_claimsWhereUniqueInput
     update: XOR<birthday_claimsUpdateWithoutEmployeesInput, birthday_claimsUncheckedUpdateWithoutEmployeesInput>
@@ -40623,6 +44334,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutSubordinatesInput = {
@@ -40666,6 +44379,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUpsertWithWhereUniqueWithoutSupervisorInput = {
@@ -40736,6 +44451,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutSecondarySubordinatesInput = {
@@ -40779,6 +44496,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUpsertWithWhereUniqueWithoutSecondary_supervisorInput = {
@@ -41123,6 +44842,59 @@ export namespace Prisma {
     data: XOR<probation_evaluationsUpdateManyMutationInput, probation_evaluationsUncheckedUpdateManyWithoutSupervisorInput>
   }
 
+  export type kpi_evaluationsUpsertWithWhereUniqueWithoutEmployeeInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    update: XOR<kpi_evaluationsUpdateWithoutEmployeeInput, kpi_evaluationsUncheckedUpdateWithoutEmployeeInput>
+    create: XOR<kpi_evaluationsCreateWithoutEmployeeInput, kpi_evaluationsUncheckedCreateWithoutEmployeeInput>
+  }
+
+  export type kpi_evaluationsUpdateWithWhereUniqueWithoutEmployeeInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    data: XOR<kpi_evaluationsUpdateWithoutEmployeeInput, kpi_evaluationsUncheckedUpdateWithoutEmployeeInput>
+  }
+
+  export type kpi_evaluationsUpdateManyWithWhereWithoutEmployeeInput = {
+    where: kpi_evaluationsScalarWhereInput
+    data: XOR<kpi_evaluationsUpdateManyMutationInput, kpi_evaluationsUncheckedUpdateManyWithoutEmployeeInput>
+  }
+
+  export type kpi_evaluationsScalarWhereInput = {
+    AND?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
+    OR?: kpi_evaluationsScalarWhereInput[]
+    NOT?: kpi_evaluationsScalarWhereInput | kpi_evaluationsScalarWhereInput[]
+    id?: IntFilter<"kpi_evaluations"> | number
+    emp_id?: StringFilter<"kpi_evaluations"> | string
+    supervisor_id?: StringFilter<"kpi_evaluations"> | string
+    evaluation_no?: IntFilter<"kpi_evaluations"> | number
+    evaluation_date?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    period_start?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    period_end?: DateTimeNullableFilter<"kpi_evaluations"> | Date | string | null
+    status?: StringFilter<"kpi_evaluations"> | string
+    employee_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    supervisor_comment?: StringNullableFilter<"kpi_evaluations"> | string | null
+    total_employee_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: DecimalNullableFilter<"kpi_evaluations"> | Decimal | DecimalJsLike | number | string | null
+    grade?: StringNullableFilter<"kpi_evaluations"> | string | null
+    created_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+    updated_at?: DateTimeFilter<"kpi_evaluations"> | Date | string
+  }
+
+  export type kpi_evaluationsUpsertWithWhereUniqueWithoutSupervisorInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    update: XOR<kpi_evaluationsUpdateWithoutSupervisorInput, kpi_evaluationsUncheckedUpdateWithoutSupervisorInput>
+    create: XOR<kpi_evaluationsCreateWithoutSupervisorInput, kpi_evaluationsUncheckedCreateWithoutSupervisorInput>
+  }
+
+  export type kpi_evaluationsUpdateWithWhereUniqueWithoutSupervisorInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    data: XOR<kpi_evaluationsUpdateWithoutSupervisorInput, kpi_evaluationsUncheckedUpdateWithoutSupervisorInput>
+  }
+
+  export type kpi_evaluationsUpdateManyWithWhereWithoutSupervisorInput = {
+    where: kpi_evaluationsScalarWhereInput
+    data: XOR<kpi_evaluationsUpdateManyMutationInput, kpi_evaluationsUncheckedUpdateManyWithoutSupervisorInput>
+  }
+
   export type employeesCreateWithoutLeave_requestsInput = {
     emp_id: string
     name: string
@@ -41164,6 +44936,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutLeave_requestsInput = {
@@ -41207,6 +44981,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutLeave_requestsInput = {
@@ -41266,6 +45042,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutLeave_requestsInput = {
@@ -41309,6 +45087,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type adminsCreateWithoutSessionsInput = {
@@ -41563,6 +45343,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutDepartmentsInput = {
@@ -41606,6 +45388,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutDepartmentsInput = {
@@ -41783,6 +45567,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutJob_positionsInput = {
@@ -41826,6 +45612,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutJob_positionsInput = {
@@ -42062,6 +45850,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutWarningsInput = {
@@ -42105,6 +45895,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutWarningsInput = {
@@ -42164,6 +45956,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutWarningsInput = {
@@ -42207,6 +46001,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesCreateWithoutBirthday_claimsInput = {
@@ -42250,6 +46046,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutBirthday_claimsInput = {
@@ -42293,6 +46091,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutBirthday_claimsInput = {
@@ -42352,6 +46152,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutBirthday_claimsInput = {
@@ -42395,6 +46197,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesCreateWithoutTravel_claimsInput = {
@@ -42438,6 +46242,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutTravel_claimsInput = {
@@ -42481,6 +46287,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutTravel_claimsInput = {
@@ -42540,6 +46348,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutTravel_claimsInput = {
@@ -42583,6 +46393,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesCreateWithoutMonthly_payroll_dataInput = {
@@ -42626,6 +46438,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutMonthly_payroll_dataInput = {
@@ -42669,6 +46483,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutMonthly_payroll_dataInput = {
@@ -42728,6 +46544,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutMonthly_payroll_dataInput = {
@@ -42771,6 +46589,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type asset_borrowingsCreateWithoutAssetsInput = {
@@ -42925,6 +46745,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsCreateNestedManyWithoutEmployeesInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutAsset_borrowingsInput = {
@@ -42968,6 +46790,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedCreateNestedManyWithoutEmployeesInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutAsset_borrowingsInput = {
@@ -43071,6 +46895,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUpdateManyWithoutEmployeesNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutAsset_borrowingsInput = {
@@ -43114,6 +46940,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedUpdateManyWithoutEmployeesNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesCreateWithoutProbation_evaluationsInput = {
@@ -43157,6 +46985,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsCreateNestedManyWithoutEmployeesInput
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutProbation_evaluationsInput = {
@@ -43200,6 +47030,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedCreateNestedManyWithoutEmployeesInput
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutProbation_evaluationsInput = {
@@ -43248,6 +47080,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsCreateNestedManyWithoutEmployeesInput
     asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesUncheckedCreateWithoutSubmitted_evaluationsInput = {
@@ -43291,6 +47125,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedCreateNestedManyWithoutEmployeesInput
     asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
     probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
   }
 
   export type employeesCreateOrConnectWithoutSubmitted_evaluationsInput = {
@@ -43350,6 +47186,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUpdateManyWithoutEmployeesNestedInput
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutProbation_evaluationsInput = {
@@ -43393,6 +47231,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedUpdateManyWithoutEmployeesNestedInput
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUpsertWithoutSubmitted_evaluationsInput = {
@@ -43447,6 +47287,8 @@ export namespace Prisma {
     leave_requests?: leave_requestsUpdateManyWithoutEmployeesNestedInput
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutSubmitted_evaluationsInput = {
@@ -43490,6 +47332,560 @@ export namespace Prisma {
     leave_requests?: leave_requestsUncheckedUpdateManyWithoutEmployeesNestedInput
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+  }
+
+  export type kpi_itemsCreateWithoutEvaluationInput = {
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+  }
+
+  export type kpi_itemsUncheckedCreateWithoutEvaluationInput = {
+    id?: number
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+  }
+
+  export type kpi_itemsCreateOrConnectWithoutEvaluationInput = {
+    where: kpi_itemsWhereUniqueInput
+    create: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput>
+  }
+
+  export type kpi_itemsCreateManyEvaluationInputEnvelope = {
+    data: kpi_itemsCreateManyEvaluationInput | kpi_itemsCreateManyEvaluationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type employeesCreateWithoutKpi_evaluationsInput = {
+    emp_id: string
+    name: string
+    is_active?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    pin_hash?: string | null
+    gender?: string | null
+    hire_date?: Date | string | null
+    birth_date?: Date | string | null
+    phone_number?: string | null
+    base_salary?: Decimal | DecimalJsLike | number | string | null
+    otp_code?: string | null
+    otp_expires_at?: Date | string | null
+    bank_account_no?: string | null
+    bank_name?: string | null
+    is_on_trial?: boolean
+    probation_end_date?: Date | string | null
+    has_telephone_allowance?: boolean
+    position_allowance?: Decimal | DecimalJsLike | number | string | null
+    address?: string | null
+    national_id_card?: string | null
+    salary_type?: string | null
+    line_user_id?: string | null
+    is_checkin_exempt?: boolean
+    resignation_date?: Date | string | null
+    birthday_claims?: birthday_claimsCreateNestedManyWithoutEmployeesInput
+    warnings?: employee_warningsCreateNestedManyWithoutEmployeeInput
+    departments?: departmentsCreateNestedOneWithoutEmployeesInput
+    job_positions?: job_positionsCreateNestedOneWithoutEmployeesInput
+    supervisor?: employeesCreateNestedOneWithoutSubordinatesInput
+    subordinates?: employeesCreateNestedManyWithoutSupervisorInput
+    secondary_supervisor?: employeesCreateNestedOneWithoutSecondarySubordinatesInput
+    secondarySubordinates?: employeesCreateNestedManyWithoutSecondary_supervisorInput
+    branches?: branchesCreateNestedOneWithoutEmployeesInput
+    monthly_payroll_data?: monthly_payroll_dataCreateNestedManyWithoutEmployeeInput
+    ot_requests?: ot_requestsCreateNestedManyWithoutEmployeeInput
+    travel_claims?: travel_claimsCreateNestedManyWithoutEmployeeInput
+    leave_requests?: leave_requestsCreateNestedManyWithoutEmployeesInput
+    asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
+    probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
+    submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_submissions?: kpi_evaluationsCreateNestedManyWithoutSupervisorInput
+  }
+
+  export type employeesUncheckedCreateWithoutKpi_evaluationsInput = {
+    emp_id: string
+    name: string
+    branch_id?: string | null
+    is_active?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    pin_hash?: string | null
+    gender?: string | null
+    hire_date?: Date | string | null
+    birth_date?: Date | string | null
+    phone_number?: string | null
+    base_salary?: Decimal | DecimalJsLike | number | string | null
+    department_id?: number | null
+    job_position_id?: number | null
+    otp_code?: string | null
+    otp_expires_at?: Date | string | null
+    supervisor_id?: string | null
+    secondary_supervisor_id?: string | null
+    bank_account_no?: string | null
+    bank_name?: string | null
+    is_on_trial?: boolean
+    probation_end_date?: Date | string | null
+    has_telephone_allowance?: boolean
+    position_allowance?: Decimal | DecimalJsLike | number | string | null
+    address?: string | null
+    national_id_card?: string | null
+    salary_type?: string | null
+    line_user_id?: string | null
+    is_checkin_exempt?: boolean
+    resignation_date?: Date | string | null
+    birthday_claims?: birthday_claimsUncheckedCreateNestedManyWithoutEmployeesInput
+    warnings?: employee_warningsUncheckedCreateNestedManyWithoutEmployeeInput
+    subordinates?: employeesUncheckedCreateNestedManyWithoutSupervisorInput
+    secondarySubordinates?: employeesUncheckedCreateNestedManyWithoutSecondary_supervisorInput
+    monthly_payroll_data?: monthly_payroll_dataUncheckedCreateNestedManyWithoutEmployeeInput
+    ot_requests?: ot_requestsUncheckedCreateNestedManyWithoutEmployeeInput
+    travel_claims?: travel_claimsUncheckedCreateNestedManyWithoutEmployeeInput
+    leave_requests?: leave_requestsUncheckedCreateNestedManyWithoutEmployeesInput
+    asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
+    probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_submissions?: kpi_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+  }
+
+  export type employeesCreateOrConnectWithoutKpi_evaluationsInput = {
+    where: employeesWhereUniqueInput
+    create: XOR<employeesCreateWithoutKpi_evaluationsInput, employeesUncheckedCreateWithoutKpi_evaluationsInput>
+  }
+
+  export type employeesCreateWithoutKpi_submissionsInput = {
+    emp_id: string
+    name: string
+    is_active?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    pin_hash?: string | null
+    gender?: string | null
+    hire_date?: Date | string | null
+    birth_date?: Date | string | null
+    phone_number?: string | null
+    base_salary?: Decimal | DecimalJsLike | number | string | null
+    otp_code?: string | null
+    otp_expires_at?: Date | string | null
+    bank_account_no?: string | null
+    bank_name?: string | null
+    is_on_trial?: boolean
+    probation_end_date?: Date | string | null
+    has_telephone_allowance?: boolean
+    position_allowance?: Decimal | DecimalJsLike | number | string | null
+    address?: string | null
+    national_id_card?: string | null
+    salary_type?: string | null
+    line_user_id?: string | null
+    is_checkin_exempt?: boolean
+    resignation_date?: Date | string | null
+    birthday_claims?: birthday_claimsCreateNestedManyWithoutEmployeesInput
+    warnings?: employee_warningsCreateNestedManyWithoutEmployeeInput
+    departments?: departmentsCreateNestedOneWithoutEmployeesInput
+    job_positions?: job_positionsCreateNestedOneWithoutEmployeesInput
+    supervisor?: employeesCreateNestedOneWithoutSubordinatesInput
+    subordinates?: employeesCreateNestedManyWithoutSupervisorInput
+    secondary_supervisor?: employeesCreateNestedOneWithoutSecondarySubordinatesInput
+    secondarySubordinates?: employeesCreateNestedManyWithoutSecondary_supervisorInput
+    branches?: branchesCreateNestedOneWithoutEmployeesInput
+    monthly_payroll_data?: monthly_payroll_dataCreateNestedManyWithoutEmployeeInput
+    ot_requests?: ot_requestsCreateNestedManyWithoutEmployeeInput
+    travel_claims?: travel_claimsCreateNestedManyWithoutEmployeeInput
+    leave_requests?: leave_requestsCreateNestedManyWithoutEmployeesInput
+    asset_borrowings?: asset_borrowingsCreateNestedManyWithoutEmployeeInput
+    probation_evaluations?: probation_evaluationsCreateNestedManyWithoutEmployeeInput
+    submitted_evaluations?: probation_evaluationsCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsCreateNestedManyWithoutEmployeeInput
+  }
+
+  export type employeesUncheckedCreateWithoutKpi_submissionsInput = {
+    emp_id: string
+    name: string
+    branch_id?: string | null
+    is_active?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    pin_hash?: string | null
+    gender?: string | null
+    hire_date?: Date | string | null
+    birth_date?: Date | string | null
+    phone_number?: string | null
+    base_salary?: Decimal | DecimalJsLike | number | string | null
+    department_id?: number | null
+    job_position_id?: number | null
+    otp_code?: string | null
+    otp_expires_at?: Date | string | null
+    supervisor_id?: string | null
+    secondary_supervisor_id?: string | null
+    bank_account_no?: string | null
+    bank_name?: string | null
+    is_on_trial?: boolean
+    probation_end_date?: Date | string | null
+    has_telephone_allowance?: boolean
+    position_allowance?: Decimal | DecimalJsLike | number | string | null
+    address?: string | null
+    national_id_card?: string | null
+    salary_type?: string | null
+    line_user_id?: string | null
+    is_checkin_exempt?: boolean
+    resignation_date?: Date | string | null
+    birthday_claims?: birthday_claimsUncheckedCreateNestedManyWithoutEmployeesInput
+    warnings?: employee_warningsUncheckedCreateNestedManyWithoutEmployeeInput
+    subordinates?: employeesUncheckedCreateNestedManyWithoutSupervisorInput
+    secondarySubordinates?: employeesUncheckedCreateNestedManyWithoutSecondary_supervisorInput
+    monthly_payroll_data?: monthly_payroll_dataUncheckedCreateNestedManyWithoutEmployeeInput
+    ot_requests?: ot_requestsUncheckedCreateNestedManyWithoutEmployeeInput
+    travel_claims?: travel_claimsUncheckedCreateNestedManyWithoutEmployeeInput
+    leave_requests?: leave_requestsUncheckedCreateNestedManyWithoutEmployeesInput
+    asset_borrowings?: asset_borrowingsUncheckedCreateNestedManyWithoutEmployeeInput
+    probation_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+    submitted_evaluations?: probation_evaluationsUncheckedCreateNestedManyWithoutSupervisorInput
+    kpi_evaluations?: kpi_evaluationsUncheckedCreateNestedManyWithoutEmployeeInput
+  }
+
+  export type employeesCreateOrConnectWithoutKpi_submissionsInput = {
+    where: employeesWhereUniqueInput
+    create: XOR<employeesCreateWithoutKpi_submissionsInput, employeesUncheckedCreateWithoutKpi_submissionsInput>
+  }
+
+  export type kpi_itemsUpsertWithWhereUniqueWithoutEvaluationInput = {
+    where: kpi_itemsWhereUniqueInput
+    update: XOR<kpi_itemsUpdateWithoutEvaluationInput, kpi_itemsUncheckedUpdateWithoutEvaluationInput>
+    create: XOR<kpi_itemsCreateWithoutEvaluationInput, kpi_itemsUncheckedCreateWithoutEvaluationInput>
+  }
+
+  export type kpi_itemsUpdateWithWhereUniqueWithoutEvaluationInput = {
+    where: kpi_itemsWhereUniqueInput
+    data: XOR<kpi_itemsUpdateWithoutEvaluationInput, kpi_itemsUncheckedUpdateWithoutEvaluationInput>
+  }
+
+  export type kpi_itemsUpdateManyWithWhereWithoutEvaluationInput = {
+    where: kpi_itemsScalarWhereInput
+    data: XOR<kpi_itemsUpdateManyMutationInput, kpi_itemsUncheckedUpdateManyWithoutEvaluationInput>
+  }
+
+  export type kpi_itemsScalarWhereInput = {
+    AND?: kpi_itemsScalarWhereInput | kpi_itemsScalarWhereInput[]
+    OR?: kpi_itemsScalarWhereInput[]
+    NOT?: kpi_itemsScalarWhereInput | kpi_itemsScalarWhereInput[]
+    id?: IntFilter<"kpi_items"> | number
+    kpi_evaluation_id?: IntFilter<"kpi_items"> | number
+    objective?: StringFilter<"kpi_items"> | string
+    indicator?: StringFilter<"kpi_items"> | string
+    weight?: DecimalFilter<"kpi_items"> | Decimal | DecimalJsLike | number | string
+    target_1?: StringNullableFilter<"kpi_items"> | string | null
+    target_2?: StringNullableFilter<"kpi_items"> | string | null
+    target_3?: StringNullableFilter<"kpi_items"> | string | null
+    target_4?: StringNullableFilter<"kpi_items"> | string | null
+    target_5?: StringNullableFilter<"kpi_items"> | string | null
+    result_description?: StringNullableFilter<"kpi_items"> | string | null
+    employee_score?: IntNullableFilter<"kpi_items"> | number | null
+    supervisor_score?: IntNullableFilter<"kpi_items"> | number | null
+  }
+
+  export type employeesUpsertWithoutKpi_evaluationsInput = {
+    update: XOR<employeesUpdateWithoutKpi_evaluationsInput, employeesUncheckedUpdateWithoutKpi_evaluationsInput>
+    create: XOR<employeesCreateWithoutKpi_evaluationsInput, employeesUncheckedCreateWithoutKpi_evaluationsInput>
+    where?: employeesWhereInput
+  }
+
+  export type employeesUpdateToOneWithWhereWithoutKpi_evaluationsInput = {
+    where?: employeesWhereInput
+    data: XOR<employeesUpdateWithoutKpi_evaluationsInput, employeesUncheckedUpdateWithoutKpi_evaluationsInput>
+  }
+
+  export type employeesUpdateWithoutKpi_evaluationsInput = {
+    emp_id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    pin_hash?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    hire_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birth_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phone_number?: NullableStringFieldUpdateOperationsInput | string | null
+    base_salary?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    otp_code?: NullableStringFieldUpdateOperationsInput | string | null
+    otp_expires_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    bank_account_no?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_name?: NullableStringFieldUpdateOperationsInput | string | null
+    is_on_trial?: BoolFieldUpdateOperationsInput | boolean
+    probation_end_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    has_telephone_allowance?: BoolFieldUpdateOperationsInput | boolean
+    position_allowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    national_id_card?: NullableStringFieldUpdateOperationsInput | string | null
+    salary_type?: NullableStringFieldUpdateOperationsInput | string | null
+    line_user_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_checkin_exempt?: BoolFieldUpdateOperationsInput | boolean
+    resignation_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birthday_claims?: birthday_claimsUpdateManyWithoutEmployeesNestedInput
+    warnings?: employee_warningsUpdateManyWithoutEmployeeNestedInput
+    departments?: departmentsUpdateOneWithoutEmployeesNestedInput
+    job_positions?: job_positionsUpdateOneWithoutEmployeesNestedInput
+    supervisor?: employeesUpdateOneWithoutSubordinatesNestedInput
+    subordinates?: employeesUpdateManyWithoutSupervisorNestedInput
+    secondary_supervisor?: employeesUpdateOneWithoutSecondarySubordinatesNestedInput
+    secondarySubordinates?: employeesUpdateManyWithoutSecondary_supervisorNestedInput
+    branches?: branchesUpdateOneWithoutEmployeesNestedInput
+    monthly_payroll_data?: monthly_payroll_dataUpdateManyWithoutEmployeeNestedInput
+    ot_requests?: ot_requestsUpdateManyWithoutEmployeeNestedInput
+    travel_claims?: travel_claimsUpdateManyWithoutEmployeeNestedInput
+    leave_requests?: leave_requestsUpdateManyWithoutEmployeesNestedInput
+    asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
+    probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
+    submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
+  }
+
+  export type employeesUncheckedUpdateWithoutKpi_evaluationsInput = {
+    emp_id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    branch_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    pin_hash?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    hire_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birth_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phone_number?: NullableStringFieldUpdateOperationsInput | string | null
+    base_salary?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    department_id?: NullableIntFieldUpdateOperationsInput | number | null
+    job_position_id?: NullableIntFieldUpdateOperationsInput | number | null
+    otp_code?: NullableStringFieldUpdateOperationsInput | string | null
+    otp_expires_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    supervisor_id?: NullableStringFieldUpdateOperationsInput | string | null
+    secondary_supervisor_id?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_account_no?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_name?: NullableStringFieldUpdateOperationsInput | string | null
+    is_on_trial?: BoolFieldUpdateOperationsInput | boolean
+    probation_end_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    has_telephone_allowance?: BoolFieldUpdateOperationsInput | boolean
+    position_allowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    national_id_card?: NullableStringFieldUpdateOperationsInput | string | null
+    salary_type?: NullableStringFieldUpdateOperationsInput | string | null
+    line_user_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_checkin_exempt?: BoolFieldUpdateOperationsInput | boolean
+    resignation_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birthday_claims?: birthday_claimsUncheckedUpdateManyWithoutEmployeesNestedInput
+    warnings?: employee_warningsUncheckedUpdateManyWithoutEmployeeNestedInput
+    subordinates?: employeesUncheckedUpdateManyWithoutSupervisorNestedInput
+    secondarySubordinates?: employeesUncheckedUpdateManyWithoutSecondary_supervisorNestedInput
+    monthly_payroll_data?: monthly_payroll_dataUncheckedUpdateManyWithoutEmployeeNestedInput
+    ot_requests?: ot_requestsUncheckedUpdateManyWithoutEmployeeNestedInput
+    travel_claims?: travel_claimsUncheckedUpdateManyWithoutEmployeeNestedInput
+    leave_requests?: leave_requestsUncheckedUpdateManyWithoutEmployeesNestedInput
+    asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
+    probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+  }
+
+  export type employeesUpsertWithoutKpi_submissionsInput = {
+    update: XOR<employeesUpdateWithoutKpi_submissionsInput, employeesUncheckedUpdateWithoutKpi_submissionsInput>
+    create: XOR<employeesCreateWithoutKpi_submissionsInput, employeesUncheckedCreateWithoutKpi_submissionsInput>
+    where?: employeesWhereInput
+  }
+
+  export type employeesUpdateToOneWithWhereWithoutKpi_submissionsInput = {
+    where?: employeesWhereInput
+    data: XOR<employeesUpdateWithoutKpi_submissionsInput, employeesUncheckedUpdateWithoutKpi_submissionsInput>
+  }
+
+  export type employeesUpdateWithoutKpi_submissionsInput = {
+    emp_id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    pin_hash?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    hire_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birth_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phone_number?: NullableStringFieldUpdateOperationsInput | string | null
+    base_salary?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    otp_code?: NullableStringFieldUpdateOperationsInput | string | null
+    otp_expires_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    bank_account_no?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_name?: NullableStringFieldUpdateOperationsInput | string | null
+    is_on_trial?: BoolFieldUpdateOperationsInput | boolean
+    probation_end_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    has_telephone_allowance?: BoolFieldUpdateOperationsInput | boolean
+    position_allowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    national_id_card?: NullableStringFieldUpdateOperationsInput | string | null
+    salary_type?: NullableStringFieldUpdateOperationsInput | string | null
+    line_user_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_checkin_exempt?: BoolFieldUpdateOperationsInput | boolean
+    resignation_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birthday_claims?: birthday_claimsUpdateManyWithoutEmployeesNestedInput
+    warnings?: employee_warningsUpdateManyWithoutEmployeeNestedInput
+    departments?: departmentsUpdateOneWithoutEmployeesNestedInput
+    job_positions?: job_positionsUpdateOneWithoutEmployeesNestedInput
+    supervisor?: employeesUpdateOneWithoutSubordinatesNestedInput
+    subordinates?: employeesUpdateManyWithoutSupervisorNestedInput
+    secondary_supervisor?: employeesUpdateOneWithoutSecondarySubordinatesNestedInput
+    secondarySubordinates?: employeesUpdateManyWithoutSecondary_supervisorNestedInput
+    branches?: branchesUpdateOneWithoutEmployeesNestedInput
+    monthly_payroll_data?: monthly_payroll_dataUpdateManyWithoutEmployeeNestedInput
+    ot_requests?: ot_requestsUpdateManyWithoutEmployeeNestedInput
+    travel_claims?: travel_claimsUpdateManyWithoutEmployeeNestedInput
+    leave_requests?: leave_requestsUpdateManyWithoutEmployeesNestedInput
+    asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
+    probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
+    submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+  }
+
+  export type employeesUncheckedUpdateWithoutKpi_submissionsInput = {
+    emp_id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    branch_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    pin_hash?: NullableStringFieldUpdateOperationsInput | string | null
+    gender?: NullableStringFieldUpdateOperationsInput | string | null
+    hire_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birth_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phone_number?: NullableStringFieldUpdateOperationsInput | string | null
+    base_salary?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    department_id?: NullableIntFieldUpdateOperationsInput | number | null
+    job_position_id?: NullableIntFieldUpdateOperationsInput | number | null
+    otp_code?: NullableStringFieldUpdateOperationsInput | string | null
+    otp_expires_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    supervisor_id?: NullableStringFieldUpdateOperationsInput | string | null
+    secondary_supervisor_id?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_account_no?: NullableStringFieldUpdateOperationsInput | string | null
+    bank_name?: NullableStringFieldUpdateOperationsInput | string | null
+    is_on_trial?: BoolFieldUpdateOperationsInput | boolean
+    probation_end_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    has_telephone_allowance?: BoolFieldUpdateOperationsInput | boolean
+    position_allowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    national_id_card?: NullableStringFieldUpdateOperationsInput | string | null
+    salary_type?: NullableStringFieldUpdateOperationsInput | string | null
+    line_user_id?: NullableStringFieldUpdateOperationsInput | string | null
+    is_checkin_exempt?: BoolFieldUpdateOperationsInput | boolean
+    resignation_date?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    birthday_claims?: birthday_claimsUncheckedUpdateManyWithoutEmployeesNestedInput
+    warnings?: employee_warningsUncheckedUpdateManyWithoutEmployeeNestedInput
+    subordinates?: employeesUncheckedUpdateManyWithoutSupervisorNestedInput
+    secondarySubordinates?: employeesUncheckedUpdateManyWithoutSecondary_supervisorNestedInput
+    monthly_payroll_data?: monthly_payroll_dataUncheckedUpdateManyWithoutEmployeeNestedInput
+    ot_requests?: ot_requestsUncheckedUpdateManyWithoutEmployeeNestedInput
+    travel_claims?: travel_claimsUncheckedUpdateManyWithoutEmployeeNestedInput
+    leave_requests?: leave_requestsUncheckedUpdateManyWithoutEmployeesNestedInput
+    asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
+    probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+  }
+
+  export type kpi_evaluationsCreateWithoutItemsInput = {
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    employee: employeesCreateNestedOneWithoutKpi_evaluationsInput
+    supervisor: employeesCreateNestedOneWithoutKpi_submissionsInput
+  }
+
+  export type kpi_evaluationsUncheckedCreateWithoutItemsInput = {
+    id?: number
+    emp_id: string
+    supervisor_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type kpi_evaluationsCreateOrConnectWithoutItemsInput = {
+    where: kpi_evaluationsWhereUniqueInput
+    create: XOR<kpi_evaluationsCreateWithoutItemsInput, kpi_evaluationsUncheckedCreateWithoutItemsInput>
+  }
+
+  export type kpi_evaluationsUpsertWithoutItemsInput = {
+    update: XOR<kpi_evaluationsUpdateWithoutItemsInput, kpi_evaluationsUncheckedUpdateWithoutItemsInput>
+    create: XOR<kpi_evaluationsCreateWithoutItemsInput, kpi_evaluationsUncheckedCreateWithoutItemsInput>
+    where?: kpi_evaluationsWhereInput
+  }
+
+  export type kpi_evaluationsUpdateToOneWithWhereWithoutItemsInput = {
+    where?: kpi_evaluationsWhereInput
+    data: XOR<kpi_evaluationsUpdateWithoutItemsInput, kpi_evaluationsUncheckedUpdateWithoutItemsInput>
+  }
+
+  export type kpi_evaluationsUpdateWithoutItemsInput = {
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    employee?: employeesUpdateOneRequiredWithoutKpi_evaluationsNestedInput
+    supervisor?: employeesUpdateOneRequiredWithoutKpi_submissionsNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateWithoutItemsInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    emp_id?: StringFieldUpdateOperationsInput | string
+    supervisor_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type sessionsCreateManyAdminsInput = {
@@ -43592,6 +47988,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutBranchesInput = {
@@ -43635,6 +48033,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateManyWithoutBranchesInput = {
@@ -43956,6 +48356,40 @@ export namespace Prisma {
     updated_at?: Date | string
   }
 
+  export type kpi_evaluationsCreateManyEmployeeInput = {
+    id?: number
+    supervisor_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type kpi_evaluationsCreateManySupervisorInput = {
+    id?: number
+    emp_id: string
+    evaluation_no?: number
+    evaluation_date?: Date | string
+    period_start?: Date | string | null
+    period_end?: Date | string | null
+    status?: string
+    employee_comment?: string | null
+    supervisor_comment?: string | null
+    total_employee_score?: Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: Decimal | DecimalJsLike | number | string | null
+    grade?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
   export type birthday_claimsUpdateWithoutEmployeesInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
@@ -44065,6 +48499,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutSupervisorInput = {
@@ -44108,6 +48544,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateManyWithoutSupervisorInput = {
@@ -44183,6 +48621,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutSecondary_supervisorInput = {
@@ -44226,6 +48666,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateManyWithoutSecondary_supervisorInput = {
@@ -44855,6 +49297,110 @@ export namespace Prisma {
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type kpi_evaluationsUpdateWithoutEmployeeInput = {
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUpdateManyWithoutEvaluationNestedInput
+    supervisor?: employeesUpdateOneRequiredWithoutKpi_submissionsNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateWithoutEmployeeInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    supervisor_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUncheckedUpdateManyWithoutEvaluationNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateManyWithoutEmployeeInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    supervisor_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type kpi_evaluationsUpdateWithoutSupervisorInput = {
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUpdateManyWithoutEvaluationNestedInput
+    employee?: employeesUpdateOneRequiredWithoutKpi_evaluationsNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateWithoutSupervisorInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    emp_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: kpi_itemsUncheckedUpdateManyWithoutEvaluationNestedInput
+  }
+
+  export type kpi_evaluationsUncheckedUpdateManyWithoutSupervisorInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    emp_id?: StringFieldUpdateOperationsInput | string
+    evaluation_no?: IntFieldUpdateOperationsInput | number
+    evaluation_date?: DateTimeFieldUpdateOperationsInput | Date | string
+    period_start?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    period_end?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    employee_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    supervisor_comment?: NullableStringFieldUpdateOperationsInput | string | null
+    total_employee_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    total_supervisor_score?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    grade?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type leave_entitlementsCreateManyLeave_typesInput = {
     id?: number
     min_years: number
@@ -44993,6 +49539,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutDepartmentsInput = {
@@ -45036,6 +49584,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateManyWithoutDepartmentsInput = {
@@ -45190,6 +49740,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateWithoutJob_positionsInput = {
@@ -45233,6 +49785,8 @@ export namespace Prisma {
     asset_borrowings?: asset_borrowingsUncheckedUpdateManyWithoutEmployeeNestedInput
     probation_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
     submitted_evaluations?: probation_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
+    kpi_evaluations?: kpi_evaluationsUncheckedUpdateManyWithoutEmployeeNestedInput
+    kpi_submissions?: kpi_evaluationsUncheckedUpdateManyWithoutSupervisorNestedInput
   }
 
   export type employeesUncheckedUpdateManyWithoutJob_positionsInput = {
@@ -45396,6 +49950,65 @@ export namespace Prisma {
     borrow_is_body_ok?: NullableBoolFieldUpdateOperationsInput | boolean | null
     borrow_is_insurance_ok?: NullableBoolFieldUpdateOperationsInput | boolean | null
     borrow_inspection_remark?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type kpi_itemsCreateManyEvaluationInput = {
+    id?: number
+    objective: string
+    indicator: string
+    weight: Decimal | DecimalJsLike | number | string
+    target_1?: string | null
+    target_2?: string | null
+    target_3?: string | null
+    target_4?: string | null
+    target_5?: string | null
+    result_description?: string | null
+    employee_score?: number | null
+    supervisor_score?: number | null
+  }
+
+  export type kpi_itemsUpdateWithoutEvaluationInput = {
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+  }
+
+  export type kpi_itemsUncheckedUpdateWithoutEvaluationInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
+  }
+
+  export type kpi_itemsUncheckedUpdateManyWithoutEvaluationInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    objective?: StringFieldUpdateOperationsInput | string
+    indicator?: StringFieldUpdateOperationsInput | string
+    weight?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    target_1?: NullableStringFieldUpdateOperationsInput | string | null
+    target_2?: NullableStringFieldUpdateOperationsInput | string | null
+    target_3?: NullableStringFieldUpdateOperationsInput | string | null
+    target_4?: NullableStringFieldUpdateOperationsInput | string | null
+    target_5?: NullableStringFieldUpdateOperationsInput | string | null
+    result_description?: NullableStringFieldUpdateOperationsInput | string | null
+    employee_score?: NullableIntFieldUpdateOperationsInput | number | null
+    supervisor_score?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
 

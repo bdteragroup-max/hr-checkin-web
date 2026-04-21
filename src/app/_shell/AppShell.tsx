@@ -22,7 +22,8 @@ import {
     MapPinIcon,
     CubeIcon,
     DocumentTextIcon,
-    BuildingOffice2Icon
+    BuildingOffice2Icon,
+    PresentationChartLineIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
@@ -36,6 +37,7 @@ const NAV_MAIN_BASE = [
     { id: "car-borrow", href: "/car-borrow", icon: TruckIcon, label: "จองรถยนต์", sub: "Car Booking" },
     { id: "assets", href: "/assets/borrow", icon: CubeIcon, label: "ยืมอุปกรณ์", sub: "Borrow" },
     { id: "payslip", href: "/payslip", icon: DocumentTextIcon, label: "สลิปเงินเดือน", sub: "My Payslips" },
+    { id: "kpi", href: "/kpi", icon: PresentationChartLineIcon, label: "KPI ของฉัน", sub: "My KPIs" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
@@ -87,6 +89,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-ot", href: "/team-ot", icon: CalendarDaysIcon, label: "อนุมัติ OT", sub: "Team OT" });
         navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
         navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
+        navMain.push({ id: "team-kpi", href: "/team/kpi", icon: PresentationChartLineIcon, label: "จัดการ KPI ทีม", sub: "KPI Management" });
     }
 
     // NOTE: Do not show Sidebar on Login or Admin pages

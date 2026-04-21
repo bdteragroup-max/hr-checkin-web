@@ -154,6 +154,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className={styles.navIcon}><DocumentCheckIcon width={20} /></span>ประเมินทดลองงาน
                             </Link>
 
+                            {/* ✅ KPI Evaluations */}
+                            <Link
+                                href="/admin/kpi"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/kpi") ? styles.active : ""}`}
+                            >
+                                <span className={styles.navIcon}><ChartBarIcon width={20} /></span>ประเมิน KPI
+                            </Link>
+
                             {/* ✅ Birthday Claims */}
                             <Link
                                 href="/admin/birthday-claims"

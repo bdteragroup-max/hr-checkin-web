@@ -1,0 +1,435 @@
+/* ============================================
+   KPI SYSTEM — TERA GROUP
+   Matches the probation dashboard aesthetic
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+:root {
+  --red: #d93025;
+  --red-dark: #b71c1c;
+  --red-dim: rgba(217, 48, 37, 0.08);
+  --red-border: rgba(217, 48, 37, 0.22);
+  --bg: #f4f6f9;
+  --white: #ffffff;
+  --gray-200: #e5e8ef;
+  --gray-300: #d1d5dc;
+  --gray-500: #6b7280;
+  --text: #111827;
+  --text3: #6b7280;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font-th: "Sarabun", sans-serif;
+  --font-display: "Prompt", sans-serif;
+}
+
+.wrapper {
+  font-family: var(--font-th);
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  position: relative;
+  padding-bottom: 120px;
+}
+
+.wrapper::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(217, 48, 37, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 14px 40px;
+}
+
+.hero {
+  padding: 28px 0 20px;
+  position: relative;
+}
+
+.heroH1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.btnBack {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--gray-300);
+    background: white;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text3);
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: fit-content;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.35s ease both;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--red), #fa6400, transparent);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.sectionLabel span {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px var(--red-dim);
+  flex-shrink: 0;
+}
+
+.divider {
+    margin: 20px 0;
+    border-top: 1px dashed var(--gray-200);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.inputGroup label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+}
+
+.inputGroup input, .inputGroup select, .inputGroup textarea {
+    width: 100%;
+    font-family: var(--font-th);
+    font-size: 15px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--gray-300);
+    background: #f9fafb;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.inputGroup input:focus, .inputGroup textarea:focus {
+    border-color: var(--red);
+    background: white;
+    box-shadow: 0 0 0 3px var(--red-dim);
+}
+
+.probationTip {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --- List Styling --- */
+.itemsList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.itemCard {
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid var(--gray-200);
+}
+
+.itemHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.itemNo {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--red);
+    text-transform: uppercase;
+}
+
+.btnRemove {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.btnRemove:hover {
+    color: var(--red);
+}
+
+.weightInput {
+    margin-top: 12px;
+    max-width: 120px;
+}
+
+.weightInput label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.weightInput input {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--red);
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    background: white;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.weightInput input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px var(--red-dim);
+}
+
+.rubricSection {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--gray-200);
+}
+
+.rubricHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.rubricLabel {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.templateButtons {
+    display: flex;
+    gap: 6px;
+}
+
+.templateButtons button {
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.templateButtons button:hover {
+    background: var(--red-dim);
+    color: var(--red);
+    border-color: var(--red);
+}
+
+.rubricTable {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.rubricTHead {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: #475569;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.rubricTHead div {
+    padding: 8px 4px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rubricTBody {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: white;
+}
+
+.rubricTBody input {
+    width: 100%;
+    border: none;
+    border-right: 1px solid var(--gray-200);
+    padding: 8px 6px;
+    font-size: 12px;
+    text-align: center;
+    background: transparent;
+    outline: none;
+}
+
+.rubricTBody input:focus {
+    background: var(--red-dim);
+}
+
+.rubricTBody input:last-child {
+    border-right: none;
+}
+
+.btnAddFull {
+    width: 100%;
+    padding: 16px;
+    background: #f8fafc;
+    border: 2px dashed var(--gray-300);
+    border-radius: 16px;
+    color: var(--text3);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.btnAddFull:hover {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+}
+
+/* --- Sticky Shelf --- */
+.summarySticky {
+    position: fixed;
+    bottom: 24px;
+    left: 14px;
+    right: 14px;
+    max-width: 492px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--gray-300);
+    border-radius: 24px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+}
+
+.totalVal {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.textError {
+    color: var(--red);
+}
+
+.btnSubmit {
+    flex: 1;
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+.btnSubmit:disabled {
+    background: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.loading {
+    padding: 100px;
+    text-align: center;
+    color: var(--text3);
+}

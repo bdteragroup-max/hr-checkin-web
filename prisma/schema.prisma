@@ -128,6 +128,8 @@ model employees {
   resignation_date        DateTime?              @db.Date
   probation_evaluations   probation_evaluations[] @relation("EmployeeToProbation")
   submitted_evaluations   probation_evaluations[] @relation("SupervisorToProbation")
+  kpi_evaluations         kpi_evaluations[]       @relation("EmployeeToKPI")
+  kpi_submissions         kpi_evaluations[]       @relation("SupervisorToKPI")
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -464,4 +466,54 @@ model probation_evaluations {
 
   @@index([emp_id])
   @@index([supervisor_id])
+}
+
+model kpi_evaluations {
+  id                    Int      @id @default(autoincrement())
+  emp_id                String   @db.VarChar(20)
+  supervisor_id         String   @db.VarChar(20)
+  evaluation_no         Int      @default(1)
+  evaluation_date       DateTime @default(now()) @db.Date
+  period_start          DateTime? @db.Date
+  period_end            DateTime? @db.Date
+
+  status                String   @default("draft") @db.VarChar(50) // draft, pending_employee, pending_supervisor, completed
+  
+  employee_comment      String?  @db.Text
+  supervisor_comment    String?  @db.Text
+  
+  total_employee_score  Decimal? @db.Decimal(5, 2)
+  total_supervisor_score Decimal? @db.Decimal(5, 2)
+  grade                 String?  @db.VarChar(2)
+
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+
+  items                 kpi_items[]
+  employee              employees @relation("EmployeeToKPI", fields: [emp_id], references: [emp_id])
+  supervisor            employees @relation("SupervisorToKPI", fields: [supervisor_id], references: [emp_id])
+
+  @@index([emp_id])
+  @@index([supervisor_id])
+}
+
+model kpi_items {
+  id                Int      @id @default(autoincrement())
+  kpi_evaluation_id Int
+  objective         String   @db.Text
+  indicator         String   @db.Text
+  weight            Decimal  @db.Decimal(5, 2) // Percentage (e.g. 20.00)
+  
+  // Scoring Metrics (Rubric)
+  target_1          String?  @db.Text
+  target_2          String?  @db.Text
+  target_3          String?  @db.Text
+  target_4          String?  @db.Text
+  target_5          String?  @db.Text
+
+  result_description String? @db.Text
+  employee_score    Int?     // 1-5
+  supervisor_score  Int?     // 1-5
+
+  evaluation        kpi_evaluations @relation(fields: [kpi_evaluation_id], references: [id], onDelete: Cascade)
 }

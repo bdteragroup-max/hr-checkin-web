@@ -193,6 +193,10 @@ export default function AdminProbationPage() {
                 <div>
                     <h1 className={styles.title}>ประเมินผลพนักงานทดลองงาน</h1>
                     <div className={styles.subtitle}>รายการประเมินทั้งหมดที่หัวหน้างานส่งเข้ามาเพื่อขออนุมัติ</div>
+                    <div className={styles.legend}>
+                        <b>เกณฑ์คะแนน:</b> A (280-300), B (260-279), C (240-259), D (220-239), E (&lt;220) 
+                        <span style={{ color: '#dc2626', marginLeft: 12, fontWeight: 800 }}>* ต้องได้เกรด C ขึ้นไปเพื่อผ่านการประเมิน</span>
+                    </div>
                 </div>
                 <div className={styles.headerActions}>
                     <button className={styles.btnRefresh} onClick={refresh} disabled={loading}>

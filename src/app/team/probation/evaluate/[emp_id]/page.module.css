@@ -429,6 +429,13 @@
     border-color: var(--red);
 }
 
+.choiceDisabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f1f5f9;
+    border-color: var(--gray-200);
+}
+
 .summarySticky {
     position: fixed;
     bottom: 24px;

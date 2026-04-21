@@ -85,8 +85,10 @@ export default function SupervisorProbationPage() {
                                         </span>
                                     </div>
                                     <div className={styles.metaItem}>
-                                        <span className={styles.metaLabel}>จำนวนที่ประเมินแล้ว</span>
-                                        <span className={styles.metaVal}>{emp.last_evaluation_no} ครั้ง</span>
+                                        <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
+                                        <span className={styles.metaVal} style={{ color: '#d93025', fontWeight: 800 }}>
+                                            ครั้งที่ {emp.last_evaluation_no + 1}
+                                        </span>
                                     </div>
                                 </div>
 

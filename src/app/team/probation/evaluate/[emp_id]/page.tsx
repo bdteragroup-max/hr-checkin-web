@@ -142,6 +142,13 @@ export default function EvaluatePage() {
 
     const grade = useMemo(() => calculateGrade(totalScore), [totalScore]);
 
+    // --- POLICY ENFORCEMENT: Reset decision if grade is D or E ---
+    useEffect(() => {
+        if ((grade === "D" || grade === "E") && (decision === "pass" || decision === "salary_adjust")) {
+            setDecision("extend"); // Default to extend if grade is too low
+        }
+    }, [grade, decision]);
+
     async function handleSubmit() {
         if (submitting) return;
         setSubmitting(true);
@@ -378,11 +385,32 @@ export default function EvaluatePage() {
                     <div className={styles.divider} style={{ margin: '20px 0', borderTop: '1px dashed #E2E8F0' }} />
 
                     <div className={styles.decisionGrid}>
-                        <button className={`${styles.choice} ${decision === "pass" ? styles.choiceActive : ""}`} onClick={() => setDecision("pass")}>ผ่านทดลองงาน</button>
+                        <button 
+                            className={`${styles.choice} ${decision === "pass" ? styles.choiceActive : ""} ${(grade === "D" || grade === "E") ? styles.choiceDisabled : ""}`} 
+                            onClick={() => (grade !== "D" && grade !== "E") && setDecision("pass")}
+                            disabled={grade === "D" || grade === "E"}
+                        >
+                            ผ่านทดลองงาน
+                        </button>
                         <button className={`${styles.choice} ${decision === "fail" ? styles.choiceActive : ""}`} onClick={() => setDecision("fail")}>ไม่ผ่านทดลองงาน</button>
                         <button className={`${styles.choice} ${decision === "extend" ? styles.choiceActive : ""}`} onClick={() => setDecision("extend")}>ขยายเวลา</button>
-                        <button className={`${styles.choice} ${decision === "salary_adjust" ? styles.choiceActive : ""}`} onClick={() => setDecision("salary_adjust")}>ปรับเงินเดือน</button>
+                        <button 
+                            className={`${styles.choice} ${decision === "salary_adjust" ? styles.choiceActive : ""} ${(grade === "D" || grade === "E") ? styles.choiceDisabled : ""}`} 
+                            onClick={() => (grade !== "D" && grade !== "E") && setDecision("salary_adjust")}
+                            disabled={grade === "D" || grade === "E"}
+                        >
+                            ปรับเงินเดือน
+                        </button>
                     </div>
+
+                    {(grade === "D" || grade === "E") && (
+                        <div style={{ marginTop: 16, padding: 12, background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <ExclamationTriangleIcon width={20} color="#dc2626" />
+                            <div style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>
+                                นโยบาย: เกรด {grade} ไม่สามารถเลือกผ่านทดลองงานได้ (ต้องได้เกรด C ขึ้นไป)
+                            </div>
+                        </div>
+                    )}
 
                     {decision === "salary_adjust" && (
                         <div className={styles.row} style={{ marginTop: 20 }}>
@@ -404,7 +432,10 @@ export default function EvaluatePage() {
                         <div className={styles.totalVal}>{totalScore} <span style={{ fontSize: 13, color: '#94a3b8' }}>/300</span></div>
                         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#94A3B8' }}>คะแนนรวม</div>
                     </div>
-                    <div className={styles.gradeVal}>{grade}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div className={styles.gradeVal} style={{ color: (grade === "D" || grade === "E") ? "#dc2626" : "#16a34a" }}>{grade}</div>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', marginTop: -4 }}>GRADE</div>
+                    </div>
                     <button 
                         className={styles.btnSubmit}
                         onClick={handleSubmit}

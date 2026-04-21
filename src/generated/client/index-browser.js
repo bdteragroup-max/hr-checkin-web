@@ -486,6 +486,40 @@ exports.Prisma.Probation_evaluationsScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
+exports.Prisma.Kpi_evaluationsScalarFieldEnum = {
+  id: 'id',
+  emp_id: 'emp_id',
+  supervisor_id: 'supervisor_id',
+  evaluation_no: 'evaluation_no',
+  evaluation_date: 'evaluation_date',
+  period_start: 'period_start',
+  period_end: 'period_end',
+  status: 'status',
+  employee_comment: 'employee_comment',
+  supervisor_comment: 'supervisor_comment',
+  total_employee_score: 'total_employee_score',
+  total_supervisor_score: 'total_supervisor_score',
+  grade: 'grade',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.Kpi_itemsScalarFieldEnum = {
+  id: 'id',
+  kpi_evaluation_id: 'kpi_evaluation_id',
+  objective: 'objective',
+  indicator: 'indicator',
+  weight: 'weight',
+  target_1: 'target_1',
+  target_2: 'target_2',
+  target_3: 'target_3',
+  target_4: 'target_4',
+  target_5: 'target_5',
+  result_description: 'result_description',
+  employee_score: 'employee_score',
+  supervisor_score: 'supervisor_score'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -524,7 +558,9 @@ exports.Prisma.ModelName = {
   monthly_payroll_data: 'monthly_payroll_data',
   assets: 'assets',
   asset_borrowings: 'asset_borrowings',
-  probation_evaluations: 'probation_evaluations'
+  probation_evaluations: 'probation_evaluations',
+  kpi_evaluations: 'kpi_evaluations',
+  kpi_items: 'kpi_items'
 };
 
 /**

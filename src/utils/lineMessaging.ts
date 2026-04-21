@@ -1375,3 +1375,204 @@ export async function sendProbationSummaryToManagement(data: {
 
   return sendLineMessage(managementId, [{ type: "flex", altText: `สรุปผลประเมิน: ${data.empName}`, contents }]);
 }
+
+/**
+ * KPI Notification Helpers
+ */
+
+/**
+ * 1. Notify Employee when Supervisor sets KPI
+ */
+export async function sendKpiDefineNotification(
+    lineUserId: string,
+    data: {
+        evaluationNo: number;
+        supervisorName: string;
+    }
+) {
+    if (!lineUserId) return false;
+    const contents: any = {
+        type: "bubble",
+        header: {
+            type: "box",
+            layout: "vertical",
+            contents: [{ type: "text", text: "แจ้งเตือนการกำหนด KPI", weight: "bold", size: "lg", color: "#ffffff" }],
+            backgroundColor: "#d93025"
+        },
+        body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+                { type: "text", text: `หัวหน้างานได้กำหนดตัวชี้วัด KPI ของคุณแล้ว`, size: "sm", color: "#111111", wrap: true },
+                {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "xs",
+                    contents: [
+                        { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", weight: "bold" },
+                        { type: "text", text: `ผู้กำหนด: ${data.supervisorName}`, size: "sm", color: "#64748b" }
+                    ]
+                },
+                { type: "separator", margin: "md" },
+                { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินตนเอง' ในขั้นตอนต่อไป", size: "xs", color: "#d93025", weight: "bold", wrap: true }
+            ]
+        }
+    };
+    return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนการกำหนด KPI", contents }]);
+}
+
+/**
+ * 2. Notify Supervisor when Employee self-rates
+ */
+export async function sendKpiSelfRateNotification(
+    lineUserId: string,
+    data: {
+        empName: string;
+        evaluationNo: number;
+    }
+) {
+    if (!lineUserId) return false;
+    const contents: any = {
+        type: "bubble",
+        header: {
+            type: "box",
+            layout: "vertical",
+            contents: [{ type: "text", text: "แจ้งเตือนการประเมินตนเองเสร็จสิ้น", weight: "bold", size: "lg", color: "#ffffff" }],
+            backgroundColor: "#fa6400"
+        },
+        body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+                { type: "text", text: `พนักงานใต้บังคับบัญชาของคุณดำเนินการประเมินตนเองเสร็จแล้ว`, size: "sm", color: "#111111", wrap: true },
+                {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "xs",
+                    contents: [
+                        { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
+                        { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+                    ]
+                },
+                { type: "separator", margin: "md" },
+                { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินผล' ขั้นสุดท้าย", size: "xs", color: "#fa6400", weight: "bold", wrap: true }
+            ]
+        }
+    };
+    return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการประเมินตนเอง: ${data.empName}`, contents }]);
+}
+
+/**
+ * 3. Notify HR when Supervisor evaluates
+ */
+export async function sendKpiEvaluateHrAlert(data: {
+    empName: string;
+    supervisorName: string;
+    evaluationNo: number;
+    totalScore: number;
+    grade: string;
+}) {
+    const hrLineUserId = process.env.HR_LINE_USER_ID;
+    if (!hrLineUserId) return false;
+
+    const contents: any = {
+        type: "bubble",
+        header: {
+            type: "box",
+            layout: "vertical",
+            contents: [{ type: "text", text: "แจ้งเตือนผลการประเมิน KPI (ส่งถึง HR)", weight: "bold", size: "lg", color: "#ffffff" }],
+            backgroundColor: "#0369a1"
+        },
+        body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+                { type: "text", text: `หัวหน้างานได้ส่งผลการประเมิน KPI มายังฝ่ายบุคคลแล้ว`, size: "sm", color: "#111111", wrap: true },
+                {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "xs",
+                    contents: [
+                        { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
+                        { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
+                        { type: "text", text: `ประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+                    ]
+                },
+                {
+                    type: "box",
+                    layout: "horizontal",
+                    margin: "md",
+                    contents: [
+                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
+                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
+                    ]
+                },
+                {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                        { type: "text", text: "เกรดที่ได้:", size: "sm", color: "#64748b", flex: 4 },
+                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 6 }
+                    ]
+                }
+            ]
+        }
+    };
+
+    return sendLineMessage(hrLineUserId, [{ type: "flex", altText: `ผลการประเมิน KPI: ${data.empName}`, contents }]);
+}
+
+/**
+ * 4. Notify Management with Summary
+ */
+export async function sendKpiManagementSummary(data: {
+    empName: string;
+    supervisorName: string;
+    totalScore: number;
+    grade: string;
+}) {
+    const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+    if (!managementId) return false;
+
+    const contents: any = {
+        type: "bubble",
+        header: {
+            type: "box",
+            layout: "vertical",
+            contents: [{ type: "text", text: "สรุปผลการประเมิน KPI (ฝ่ายบริหาร)", weight: "bold", size: "md", color: "#1e293b" }],
+            backgroundColor: "#f8fafc"
+        },
+        body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+                {
+                    type: "box", layout: "horizontal", contents: [
+                        { type: "text", text: "พนักงาน:", size: "sm", color: "#64748b", flex: 3 },
+                        { type: "text", text: data.empName, size: "sm", weight: "bold", flex: 7 }
+                    ]
+                },
+                {
+                    type: "box", layout: "horizontal", contents: [
+                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 3 },
+                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 7 }
+                    ]
+                },
+                {
+                    type: "box", layout: "horizontal", contents: [
+                        { type: "text", text: "เกรดสรุป:", size: "sm", color: "#64748b", flex: 3 },
+                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 7 }
+                    ]
+                },
+                { type: "separator", margin: "sm" },
+                { type: "text", text: `ผู้รับผิดชอบการประเมิน: ${data.supervisorName}`, size: "xxs", color: "#94a3b8", align: "end", margin: "md" }
+            ]
+        }
+    };
+
+    return sendLineMessage(managementId, [{ type: "flex", altText: `สรุป KPI: ${data.empName}`, contents }]);
+}
