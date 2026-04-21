@@ -24,6 +24,16 @@ export async function GET() {
                 }
             }
         }
+    }).catch(async (e) => {
+        // Fallback to raw query if findMany fails due to unexpected type validation
+        return prisma.$queryRaw`
+            SELECT jp.*, 
+                   json_agg(e.*) as employees
+            FROM job_positions jp
+            LEFT JOIN employees e ON e.job_position_id = jp.id AND e.is_active = true
+            GROUP BY jp.id
+            ORDER BY jp.order_index ASC, jp.title ASC
+        ` as any;
     });
     return NextResponse.json({ ok: true, list });
 }

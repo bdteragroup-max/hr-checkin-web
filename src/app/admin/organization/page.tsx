@@ -56,6 +56,37 @@ export default function OrganizationPage() {
     const [zoom, setZoom] = useState(1);
     const [offsets, setOffsets] = useState<{ [key: string]: { x: number, y: number } }>({});
     const chartRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
+
+    // Panning state
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [startY, setStartY] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+    const [scrollTop, setScrollTop] = useState(0);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (!viewportRef.current) return;
+        setIsDragging(true);
+        setStartX(e.pageX - viewportRef.current.offsetLeft);
+        setStartY(e.pageY - viewportRef.current.offsetTop);
+        setScrollLeft(viewportRef.current.scrollLeft);
+        setScrollTop(viewportRef.current.scrollTop);
+    };
+
+    const handleMouseLeave = () => setIsDragging(false);
+    const handleMouseUp = () => setIsDragging(false);
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging || !viewportRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - viewportRef.current.offsetLeft;
+        const y = e.pageY - viewportRef.current.offsetTop;
+        const walkX = (x - startX) * 1.5;
+        const walkY = (y - startY) * 1.5;
+        viewportRef.current.scrollLeft = scrollLeft - walkX;
+        viewportRef.current.scrollTop = scrollTop - walkY;
+    };
 
     // INFOGRAPHIC FILTERING
     const boardNodes = useMemo(() => {
@@ -78,6 +109,37 @@ export default function OrganizationPage() {
         const colors = ['#0d9488', '#7c3aed', '#059669', '#ea580c', '#2563eb', '#e11d48'];
         return colors[index % colors.length];
     };
+
+    // --- Card Rendering Helper (Standardized for Executive & Engineering) ---
+    function renderApexCard(node: {pos: any, emp: any} | null, isManager = true, customAccent?: string) {
+        if (!node) return null;
+        const { pos, emp } = node;
+        const accent = customAccent || '#dc2626'; // Default Executive Red
+        return (
+            <div className={`${styles.staffCard} ${isManager ? styles.staffCardHead : ''}`} style={{'--accent': accent} as any}>
+                {emp ? (
+                    <>
+                        <div className={styles.staffIcon} style={{background: accent, color: 'white'}}>
+                            {emp.name.charAt(0)}
+                        </div>
+                        <div className={styles.staffInfo}>
+                            <div className={styles.staffPosition}>{pos.title}</div>
+                            <div className={styles.staffName}>{emp.name}</div>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className={styles.vacantIcon}>?</div>
+                        <div className={styles.staffInfo}>
+                            <div className={styles.staffPosition}>{pos.title}</div>
+                            <div className={styles.staffName} style={{color: '#ef4444', fontWeight: 900}}>VACANT</div>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    }
+
 
     const [selectedDeptId, setSelectedDeptId] = useState<number | null>(null);
     const [selectedSecId, setSelectedSecId] = useState<number | null>(null);
@@ -125,6 +187,14 @@ export default function OrganizationPage() {
     }
 
     useEffect(() => { loadData(); }, []);
+
+    // AUTO-CENTER ON VIEW CHANGE
+    useEffect(() => {
+        if (viewMode === 'flowchart' && viewportRef.current) {
+            const v = viewportRef.current;
+            v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
+        }
+    }, [viewMode]);
 
     // COORDINATE CALCULATION
     const refreshCoordinates = useCallback(() => {
@@ -318,7 +388,14 @@ export default function OrganizationPage() {
                     </div>
 
                     {/* CHART VIEWPORT */}
-                    <div className={styles.viewport}>
+                    <div 
+                        className={`${styles.viewport} ${isDragging ? styles.grabbing : ''}`}
+                        ref={viewportRef}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                    >
                         <div 
                             className={styles.chartWrapper} 
                             ref={chartRef}
@@ -359,63 +436,56 @@ export default function OrganizationPage() {
                                 
                                 {/* 1. EXECUTIVE CHAIN: MD → Asst MD → Side Roles */}
                                 {(() => {
-                                    // All executive positions
-                                    const allExecs = positions.filter(p => p.node_type === 'executive');
-                                    // Top exec: no parent_id (MD)
-                                    const topExecs = allExecs.filter(p => !p.parent_id);
-                                    // Sub execs: have parent_id  
-                                    const subExecs = allExecs.filter(p => p.parent_id);
+                                    // 1. MD: Find Mr. Teerawat (by name/ID) OR the top Managing Director title
+                                    const mdPos = positions.find(p => p.employees.some(e => e.name.includes('ธีรวัฒน์') || e.emp_id === 'TE63001')) ||
+                                                  positions.find(p => p.title.toLowerCase().includes('managing director') && !p.title.toLowerCase().includes('asst'));
+                                    
+                                    // 2. Asst MD: Find Mrs. Penchan (by name/ID) OR the Asst Managing Director title
+                                    // Ensure it's DIFFERENT from the MD position found above
+                                    const asstMdPos = positions.find(p => p.id !== mdPos?.id && p.employees.some(e => e.name.includes('เพ็ญจันทร์') || e.emp_id === 'TP62010')) ||
+                                                      positions.find(p => p.id !== mdPos?.id && p.title.toLowerCase().includes('managing director') && p.title.toLowerCase().includes('asst'));
+                                    
+                                    const mdNode = mdPos ? { pos: mdPos, emp: mdPos.employees.find(e => e.name.includes('ธีรวัฒน์')) || mdPos.employees[0] || null } : null;
+                                    const asstMdNode = asstMdPos ? { pos: asstMdPos, emp: asstMdPos.employees.find(e => e.name.includes('เพ็ญจันทร์')) || asstMdPos.employees[0] || null } : null;
 
-                                    // Administrative positions (Dept 8) that are NOT already in topExecs/subExecs
-                                    const adminNodes = positions.filter(p => p.department_id === 8)
-                                        .flatMap(p => {
-                                            if (p.employees.length === 0) return [{ pos: p, emp: null as any }];
-                                            return p.employees.map(e => ({ pos: p, emp: e }));
-                                        });
+                                    const secretaryPos = positions.find(p => p.title.toLowerCase().includes('secretary'));
+                                    const secretaryNode = secretaryPos ? { pos: secretaryPos, emp: secretaryPos.employees[0] || null } : null;
+                                    
+                                    const safetyPos = positions.find(p => p.title.toLowerCase().includes('safety'));
+                                    const safetyNode = safetyPos ? { pos: safetyPos, emp: safetyPos.employees[0] || null } : null;
 
-                                    // Secretary specific nodes for side-branching
-                                    const secretaryNodes = adminNodes.filter(n => 
-                                        n.pos.title.toLowerCase().includes('เลขา') || 
-                                        n.pos.title.toLowerCase().includes('secretary')
-                                    );
+                                    const accent = '#dc2626'; // Executive Red
+
+
 
                                     return (
                                         <div className={styles.execChain}>
                                             {/* TOP: MD */}
-                                            {topExecs.map(pos => pos.employees.map(emp => (
-                                                <div key={emp.emp_id} className={styles.execNode} data-node-id={`emp-${emp.emp_id}`}>
-                                                    <div className={styles.execCard} style={{background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'}}>
-                                                        <div className={styles.execTitle}>{pos.title}</div>
-                                                        <div className={styles.execName}>{emp.name}</div>
-                                                    </div>
-                                                </div>
-                                            )))}
-
-                                            {/* VERTICAL LINE */}
-                                            <div className={styles.vLine}>
-                                                {/* SECRETARY SIDE BRANCH */}
-                                                {secretaryNodes.map((n, i) => (
-                                                    <div key={n.emp?.emp_id || i} className={styles.sideBranchContainer}>
-                                                        <div className={styles.sideBranchItem}>
-                                                            <div className={styles.sideBranchLine} />
-                                                            <div className={styles.secretaryCard}>
-                                                                <div className={styles.secretaryTitle}>{n.pos.title}</div>
-                                                                <div className={styles.secretaryName}>{n.emp?.name || 'ตำแหน่งว่าง'}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                            <div className={styles.execNode} data-node-id={mdNode?.emp ? `emp-${mdNode.emp.emp_id}` : 'md-vacant'}>
+                                                {renderApexCard(mdNode)}
                                             </div>
 
-                                            {/* SUB: Asst MD and other sub-executives */}
-                                            {subExecs.map(pos => pos.employees.map(emp => (
-                                                <div key={emp.emp_id} className={styles.execNode} data-node-id={`emp-${emp.emp_id}`}>
-                                                    <div className={styles.execCard} style={{background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'}}>
-                                                        <div className={styles.execTitle}>{pos.title}</div>
-                                                        <div className={styles.execName}>{emp.name}</div>
-                                                    </div>
+                                            <div className={styles.vLine} />
+
+                                            {/* CENTER: ASST MD */}
+                                            <div className={styles.execNode} data-node-id={asstMdNode?.emp ? `emp-${asstMdNode.emp.emp_id}` : 'asst-vacant'}>
+                                                {renderApexCard(asstMdNode)}
+                                            </div>
+
+                                            {/* BOTTOM: SIDE BRANCHES */}
+                                            <div className={styles.apexLateralRow}>
+                                                <div className={styles.sideBranchLeft}>
+                                                    {renderApexCard(secretaryNode)}
+                                                    <div className={styles.sideLineDashed} />
                                                 </div>
-                                            )))}
+
+                                                <div className={styles.vLineShort} />
+
+                                                <div className={styles.sideBranchRight}>
+                                                    <div className={styles.sideLineDashed} />
+                                                    {renderApexCard(safetyNode)}
+                                                </div>
+                                            </div>
                                         </div>
                                     );
                                 })()}
@@ -424,9 +494,9 @@ export default function OrganizationPage() {
                                 <div className={styles.hBusLine} />
                                 <div className={styles.divisionRow}>
                                     {deptLayers.map((div, dIdx) => {
-                                        // All positions in this division, excluding Dept 8 which is now at the top
+                                        // All positions in this division, excluding Dept 18 (Engineering Management) which is handled at division level if needed
                                         const allDivPositions = staffPositions.filter(p => 
-                                            p.departments?.division_id === div.id && p.department_id !== 8
+                                            p.departments?.division_id === div.id
                                         );
                                         if (allDivPositions.length === 0) return null;
                                         const accent = getDeptColor(dIdx);
@@ -440,9 +510,11 @@ export default function OrganizationPage() {
                                         });
                                         
                                         // Division head = someone whose emp_id is referenced as supervisor_id by others in this division
-                                        const divHead = allDivNodes.find(({ emp }) => 
-                                            emp && allDivNodes.some(other => other.emp?.supervisor_id === emp.emp_id)
+                                        // Specific Override: Ms. Natthinee (TE65001) is the overseer for Sales & Marketing
+                                        const divHeadCandidates = allDivNodes.filter(({ emp }) => 
+                                            emp && (emp.emp_id === 'TE65001' || allDivNodes.some(other => other.emp?.supervisor_id === emp.emp_id))
                                         );
+                                        const divHead = divHeadCandidates.find(n => n.emp?.emp_id === 'TE65001') || divHeadCandidates[0];
 
                                         // Remaining nodes (exclude div head)
                                         const remainingNodes = allDivNodes.filter(({ emp }) => 
@@ -458,6 +530,20 @@ export default function OrganizationPage() {
 
                                                 // Sort: department head first
                                                 const sorted = [...deptNodes].sort((a, b) => {
+                                                    const getRank = (p: JobPosition) => {
+                                                        const t = p.title.toLowerCase();
+                                                        const isAsst = t.includes('asst') || t.includes('assistant') || t.includes('รอง') || t.includes('as.') || t.includes('ast');
+                                                        if (t.includes('mgr') || t.includes('manager') || t.includes('ผู้จัดการ')) {
+                                                            return isAsst ? 2.5 : 3;
+                                                        }
+                                                        if (t.includes('head') || t.includes('หัวหน้า')) return 2;
+                                                        if (t.includes('sup')) return 1;
+                                                        return 0;
+                                                    };
+                                                    const rA = getRank(a.pos);
+                                                    const rB = getRank(b.pos);
+                                                    if (rA !== rB) return rB - rA;
+
                                                     const isASup = a.emp && deptNodes.some(other => other.emp?.supervisor_id === a.emp.emp_id);
                                                     const isBSup = b.emp && deptNodes.some(other => other.emp?.supervisor_id === b.emp.emp_id);
                                                     return (isBSup ? 1 : 0) - (isASup ? 1 : 0);
@@ -469,10 +555,12 @@ export default function OrganizationPage() {
 
                                         return (
                                             <div key={div.id} className={styles.divColumn}>
-                                                {/* Division Header */}
-                                                <div className={styles.divHeader} style={{background: accent}}>
-                                                    <div className={styles.divHeaderTitle}>{div.name}</div>
-                                                </div>
+                                                {/* Division Header (Hidden for Management) */}
+                                                {div.id !== 1 && (
+                                                    <div className={styles.divHeader} style={{background: accent}}>
+                                                        <div className={styles.divHeaderTitle}>{div.name}</div>
+                                                    </div>
+                                                )}
 
                                                 {/* Division Head Employee */}
                                                 {divHead && (
@@ -488,29 +576,81 @@ export default function OrganizationPage() {
                                                         </div>
                                                     </div>
                                                 )}
-
-                                                {/* Vertical bus line */}
-                                                <div className={styles.divBusV} style={{background: accent}} />
+                                                {/* Vertical bus line (Hidden for Management) */}
+                                                {div.id !== 1 && <div className={styles.divBusV} style={{background: accent}} />}
 
                                                 {/* Department Groups */}
                                                 <div className={styles.deptColumns}>
                                                     {departments.map(({ dept, nodes }) => {
-                                                        // Group nodes by branch
-                                                        const branchGroups = branches.map(branch => {
-                                                            const branchNodes = nodes.filter(({ emp }) => emp?.branches?.name === branch.name);
-                                                            if (branchNodes.length === 0) return null;
+                                                        // 1. Extract Apex nodes (Division Managers) to lead the department
+                                                        const apexNodes = nodes.filter(n => {
+                                                            const t = n.pos.title.toLowerCase();
+                                                            // Exclude branch-specific managers from the top Apex
+                                                            if (t.includes('branch')) return false;
+                                                            return t.includes('mgr') || t.includes('manager') || t.includes('ผู้จัดการ') || t.includes('head') || t.includes('หัวหน้า');
+                                                        });
+                                                        const leafNodes = nodes.filter(n => !apexNodes.includes(n));
 
+                                                        // 2. Group LEAF nodes by branch
+                                                        const branchGroups = branches.map(branch => {
+                                                            const branchNodes = leafNodes.filter(({ emp }) => emp?.branches?.name === branch.name);
+                                                            if (branchNodes.length === 0) return null;
                                                             return { branch, nodes: branchNodes };
                                                         }).filter(Boolean) as { branch: { id: string; name: string }; nodes: { pos: JobPosition; emp: any | null }[] }[];
 
-                                                        // Also nodes without a branch (includes vacant ones)
-                                                        const noBranchNodes = nodes.filter(({ emp }) => !emp || !emp.branches?.name);
+                                                        // 3. Leaf nodes without a branch (Central)
+                                                        const noBranchLeafNodes = leafNodes.filter(({ emp }) => !emp || !emp.branches?.name);
 
                                                         return (
                                                             <div key={dept.id} className={styles.deptColumn}>
-                                                                <div className={styles.deptTag} style={{color: accent, borderColor: accent}}>
-                                                                    {dept.name}
-                                                                </div>
+                                                                {/* Department Tag (Hidden for Management) */}
+                                                                {div.id !== 1 && (
+                                                                    <div className={styles.deptTag} style={{color: accent, borderColor: accent}}>
+                                                                        {dept.name}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* APEX NODES: Always at the top center */}
+                                                                {apexNodes.length > 0 && (
+                                                                    <div className={styles.apexStack}>
+                                                                        {apexNodes.map(({ pos, emp }, i) => (
+                                                                            <div key={`apex-${pos.id}-${i}`} className={styles.apexItem}>
+                                                                                {!emp ? (
+                                                                                    <div className={`${styles.staffCard} ${styles.vacantCard}`}>
+                                                                                        <div className={styles.vacantIcon}></div>
+                                                                                        <div className={styles.staffInfo}>
+                                                                                            <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                            <div className={styles.staffName}>&nbsp;</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div 
+                                                                                        className={styles.staffCard}
+                                                                                        data-node-id={`emp-${emp.emp_id}`}
+                                                                                        style={{
+                                                                                            '--accent': accent,
+                                                                                            borderColor: accent,
+                                                                                            borderWidth: '2px'
+                                                                                        } as any}
+                                                                                    >
+                                                                                        <div className={styles.staffIcon} style={{background: accent, color: 'white'}}>
+                                                                                            {emp.name?.charAt(0)}
+                                                                                        </div>
+                                                                                        <div className={styles.staffInfo}>
+                                                                                            <div className={styles.staffPosition}>{pos.title}</div>
+                                                                                            <div className={styles.staffName}>
+                                                                                                {emp.name}
+                                                                                                {emp.salary_type === 'daily' && <span className={styles.internBadge}>ฝึกงาน</span>}
+                                                                                                {emp.is_on_trial && <span className={styles.trialBadge}>ทดลองงาน</span>}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                        <div className={styles.apexLinkV} style={{background: accent}} />
+                                                                    </div>
+                                                                )}
                                                                 
                                                                 {/* Branch roots spread horizontally */}
                                                                 <div className={styles.branchRoots}>
@@ -519,8 +659,6 @@ export default function OrganizationPage() {
                                                                             <div className={styles.branchBadge}>{branch.name}</div>
                                                                             <div className={styles.deptNodeStack}>
                                                                                 {brNodes.map(({ pos, emp }, i) => {
-                                                                                    const isSupervisor = emp && nodes.some(other => other.emp?.supervisor_id === emp.emp_id);
-                                                                                    
                                                                                     if (!emp) {
                                                                                         return (
                                                                                             <div key={`vacant-${pos.id}-${i}`} className={`${styles.staffCard} ${styles.vacantCard}`}>
@@ -532,15 +670,19 @@ export default function OrganizationPage() {
                                                                                             </div>
                                                                                         );
                                                                                     }
-
+                                                                                    const isMgmt = pos.title.toLowerCase().includes('mgr') || pos.title.toLowerCase().includes('manager') || pos.title.toLowerCase().includes('ผู้จัดการ') || pos.title.toLowerCase().includes('head') || pos.title.toLowerCase().includes('sup');
                                                                                     return (
                                                                                         <div 
                                                                                             key={emp.emp_id} 
-                                                                                            className={`${styles.staffCard} ${isSupervisor ? styles.staffCardHead : ''}`}
+                                                                                            className={styles.staffCard}
                                                                                             data-node-id={`emp-${emp.emp_id}`}
-                                                                                            style={{'--accent': accent} as any}
+                                                                                            style={{
+                                                                                                '--accent': accent,
+                                                                                                borderColor: isMgmt ? accent : '#e2e8f0',
+                                                                                                borderWidth: isMgmt ? '2px' : '1px'
+                                                                                            } as any}
                                                                                         >
-                                                                                            <div className={styles.staffIcon} style={{background: isSupervisor ? accent : '#f1f5f9', color: isSupervisor ? 'white' : accent}}>
+                                                                                            <div className={styles.staffIcon} style={{background: isMgmt ? accent : '#f1f5f9', color: isMgmt ? 'white' : accent}}>
                                                                                                 {emp.name?.charAt(0)}
                                                                                             </div>
                                                                                             <div className={styles.staffInfo}>
@@ -557,13 +699,12 @@ export default function OrganizationPage() {
                                                                             </div>
                                                                         </div>
                                                                     ))}
-
-                                                                    {/* Nodes without branch */}
-                                                                    {noBranchNodes.length > 0 && (
+                                                                    
+                                                                    {noBranchLeafNodes.length > 0 && (
                                                                         <div className={styles.branchRoot}>
-                                                                            <div className={styles.branchBadge}>ส่วนกลาง</div>
+                                                                            {noBranchLeafNodes.some(n => !!n.emp) && <div className={styles.branchBadge}>ส่วนกลาง</div>}
                                                                             <div className={styles.deptNodeStack}>
-                                                                                {noBranchNodes.map(({ pos, emp }, i) => {
+                                                                                {noBranchLeafNodes.map(({ pos, emp }, i) => {
                                                                                     if (!emp) {
                                                                                         return (
                                                                                             <div key={`vacant-nobr-${pos.id}-${i}`} className={`${styles.staffCard} ${styles.vacantCard}`}>
@@ -575,14 +716,19 @@ export default function OrganizationPage() {
                                                                                             </div>
                                                                                         );
                                                                                     }
+                                                                                    const isMgmt = pos.title.toLowerCase().includes('mgr') || pos.title.toLowerCase().includes('manager') || pos.title.toLowerCase().includes('ผู้จัดการ') || pos.title.toLowerCase().includes('head') || pos.title.toLowerCase().includes('sup');
                                                                                     return (
                                                                                         <div 
                                                                                             key={emp.emp_id} 
                                                                                             className={styles.staffCard}
                                                                                             data-node-id={`emp-${emp.emp_id}`}
-                                                                                            style={{'--accent': accent} as any}
+                                                                                            style={{
+                                                                                                '--accent': accent,
+                                                                                                borderColor: isMgmt ? accent : '#e2e8f0',
+                                                                                                borderWidth: isMgmt ? '2px' : '1px'
+                                                                                            } as any}
                                                                                         >
-                                                                                            <div className={styles.staffIcon} style={{background: '#f1f5f9', color: accent}}>
+                                                                                            <div className={styles.staffIcon} style={{background: isMgmt ? accent : '#f1f5f9', color: isMgmt ? 'white' : accent}}>
                                                                                                 {emp.name?.charAt(0)}
                                                                                             </div>
                                                                                             <div className={styles.staffInfo}>
