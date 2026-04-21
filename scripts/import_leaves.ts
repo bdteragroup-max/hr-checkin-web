@@ -90,7 +90,7 @@ async function main() {
     console.log(`[IMPORT] Found ${lines.length - 1} records. Mode: ${DRY_RUN ? "DRY RUN (No changes)" : "LIVE IMPORT"}`);
 
     const leaveTypes = await prisma.leave_types.findMany();
-    const typeMap = new Map(leaveTypes.map(t => [t.id, t.name]));
+    const typeMap = new Map(leaveTypes.map((t: any) => [t.id, t.name]));
 
     for (let i = 1; i < lines.length; i++) {
         const values = parseCsvLine(lines[i]);
