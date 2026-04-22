@@ -194,6 +194,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                  <span className={styles.navIcon}><TruckIcon width={20} /></span>ระบบพาหนะ (Cars)
                              </Link>
 
+                             {/* ✅ Meeting Room Management */}
+                             <Link
+                                 href="/admin/meeting-rooms"
+                                 className={`${styles.navItem} ${pathname.startsWith("/admin/meeting-rooms") ? styles.active : ""}`}
+                             >
+                                 <span className={styles.navIcon}><BuildingOfficeIcon width={20} /></span>ระบบห้องประชุม
+                             </Link>
+
                             {/* ✅ Holiday -> link to /admin/holiday */}
                             <Link
                                 href="/admin/holiday"

@@ -349,41 +349,90 @@ export default function AdminProbationPage() {
                             <button onClick={() => setSelectedId(null)} className={styles.btnAction}><XMarkIcon width={20} /></button>
                         </div>
                         <div className={styles.modalBody}>
-                            <div className={styles.section}>
-                                <div className={styles.grid}>
-                                    <div className={styles.infoBox}>
-                                        <div className={styles.label}>พนักงาน</div>
-                                        <div className={styles.value}>{list.find(it => it.id === selectedId)?.employee?.name}</div>
-                                    </div>
-                                    <div className={styles.infoBox}>
-                                        <div className={styles.label}>ผู้ประเมิน</div>
-                                        <div className={styles.value}>{list.find(it => it.id === selectedId)?.supervisor?.name}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className={styles.section}>
-                                <div className={styles.sectionTitle}>สถิติการมาทำงาน</div>
-                                <div className={styles.statRow}>
-                                    <div className={styles.statInfo}>
-                                        <div className={styles.statName}>มาสาย</div>
-                                        <div className={styles.statSub}>{realtimeStats ? `${realtimeStats.stats?.late} ครั้ง` : 'กำลังโหลด...'}</div>
-                                    </div>
-                                    <input type="number" className={styles.inputSmall} value={editData.attendance_counts.late} onChange={e => setEditData({...editData, attendance_counts: {...editData.attendance_counts, late: Number(e.target.value)}})} />
-                                </div>
-                            </div>
-
-                            <div className={styles.section}>
-                                <div className={styles.sectionTitle}>คะแนน (1-5)</div>
-                                <div className={styles.scoreGrid}>
-                                    {CATEGORIES.map(cat => (
-                                        <div key={cat.key} className={styles.scoreItem}>
-                                            <div className={styles.scoreLabel}>{cat.label}</div>
-                                            <input type="number" min="1" max="5" className={styles.scoreInput} value={editData.scores[cat.key]} onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} />
+                            {/* --- EMPLOYEE INFO CARD --- */}
+                            <div className={styles.reviewCard} style={{ marginBottom: 24 }}>
+                                <div className={styles.reviewGrid}>
+                                    <div className={styles.reviewInfoItem}>
+                                        <div className={styles.reviewLabel}>พนักงาน</div>
+                                        <div className={styles.reviewValue}>
+                                            <UserIcon width={16} />
+                                            {list.find(it => it.id === selectedId)?.employee?.name}
                                         </div>
-                                    ))}
+                                    </div>
+                                    <div className={styles.reviewInfoItem}>
+                                        <div className={styles.reviewLabel}>ผู้ประเมิน</div>
+                                        <div className={styles.reviewValue}>
+                                            <DocumentCheckIcon width={16} />
+                                            {list.find(it => it.id === selectedId)?.supervisor?.name}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* --- ATTENDANCE SECTION --- */}
+                            <div className={styles.reviewSectionTitle}>
+                                <ArrowPathIcon width={18} /> สถิติการมาทำงาน (Attendance Statistics)
+                            </div>
+                            <div className={styles.attendanceGrid} style={{ marginBottom: 32 }}>
+                                {[
+                                    { label: "มาสาย (ครั้ง)", key: "late", icon: <ArrowPathIcon width={14} />, statsKey: "late" },
+                                    { label: "ลาป่วย (วัน)", key: "sick", icon: <ArrowPathIcon width={14} />, statsKey: "sickLeaveCount" },
+                                    { label: "ลากิจ / ไม่รับค่าจ้าง (วัน)", key: "personal", icon: <ArrowPathIcon width={14} />, statsKey: "personalLeaveCount" }
+                                ].map(att => (
+                                    <div key={att.key} className={styles.attendanceCard}>
+                                        <div className={styles.attIcon}>{att.icon}</div>
+                                        <div className={styles.attInfo}>
+                                            <div className={styles.attLabel}>{att.label}</div>
+                                            <div className={styles.attStats}>
+                                                จากระบบ: <b>{realtimeStats ? (realtimeStats.stats as any)[att.statsKey] || 0 : '...'}</b>
+                                            </div>
+                                        </div>
+                                        <input 
+                                            type="number" 
+                                            className={styles.attInput} 
+                                            value={editData.attendance_counts[att.key]} 
+                                            onChange={e => setEditData({...editData, attendance_counts: {...editData.attendance_counts, [att.key]: Number(e.target.value)}})} 
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* --- SCORING SECTION --- */}
+                            <div className={styles.reviewSectionTitle}>
+                                <CheckCircleIcon width={18} /> คะแนนการปฏิบัติงาน (1 - 5)
+                            </div>
+                            <div className={styles.scoreGrid}>
+                                {CATEGORIES.map(cat => (
+                                    <div key={cat.key} className={styles.scoreCard}>
+                                        <div className={styles.scoreInfo}>
+                                            <div className={styles.scoreCatLabel}>{cat.label}</div>
+                                            <div className={styles.scoreWeight}>น้ำหนัก: {cat.weight}</div>
+                                        </div>
+                                        <div className={styles.scoreInputWrap}>
+                                            <input 
+                                                type="number" 
+                                                min="1" 
+                                                max="5" 
+                                                className={styles.scoreInput} 
+                                                value={editData.scores[cat.key]} 
+                                                onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
+                                            />
+                                            <span className={styles.scoreMax}>/ 5</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* --- REMARK SECTION --- */}
+                            <div className={styles.reviewSectionTitle} style={{ marginTop: 32 }}>
+                                <ChatBubbleLeftEllipsisIcon width={18} /> ความเห็นเพิ่มเติมของ HR (Remark)
+                            </div>
+                            <textarea 
+                                className={styles.remarkArea}
+                                placeholder="ระบุความเห็นหรือหมายเหตุสำหรับการพิจารณา..."
+                                value={editData.hr_remark}
+                                onChange={e => setEditData({...editData, hr_remark: e.target.value})}
+                            />
                         </div>
 
                         <div className={styles.modalFooter}>

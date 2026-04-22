@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { 
     ClipboardDocumentListIcon,
     ArrowPathIcon,
@@ -12,7 +12,8 @@ import {
     BriefcaseIcon,
     EyeIcon,
     XMarkIcon,
-    ChatBubbleLeftEllipsisIcon
+    PencilSquareIcon,
+    CheckIcon
 } from "@heroicons/react/24/outline";
 import styles from "./page.module.css";
 
@@ -23,6 +24,10 @@ export default function AdminKPIPage() {
     
     // Modal State
     const [selectedEval, setSelectedEval] = useState<any>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editData, setEditData] = useState<any>(null);
+    const [saving, setSaving] = useState(false);
+    const [attendance, setAttendance] = useState<any>(null);
 
     const refresh = () => {
         setLoading(true);
@@ -58,8 +63,77 @@ export default function AdminKPIPage() {
         window.open(`/api/admin/kpi/pdf/${id}`, "_blank");
     };
 
-    const openView = (evalData: any) => {
+    const openView = async (evalData: any) => {
         setSelectedEval(evalData);
+        setEditData(JSON.parse(JSON.stringify(evalData))); // Deep copy for editing
+        setIsEditMode(false);
+        setAttendance(null);
+
+        if (evalData.category === 'ANNUAL') {
+            try {
+                const aRes = await fetch(`/api/team/kpi/attendance?emp_id=${evalData.emp_id}&start=${evalData.period_start}&end=${evalData.period_end}`);
+                if (aRes.ok) {
+                    const aData = await aRes.json();
+                    setAttendance(aData.stats);
+                }
+            } catch (err) {
+                console.error("Failed to fetch attendance:", err);
+            }
+        }
+    };
+
+    const updateEditItem = (index: number, field: string, value: any) => {
+        const newItems = [...editData.items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        
+        // --- SECTION-BASED CALCULATION ---
+        const p1Items = newItems.filter(it => it.section === "KPI");
+        const p2Items = newItems.filter(it => it.section === "CORE_VALUE");
+        const p3Items = newItems.filter(it => it.section === "COMPETENCY");
+
+        const hasP3 = p3Items.length > 0;
+        const w1 = hasP3 ? 0.70 : 0.80;
+        const w2 = 0.20;
+        const w3 = hasP3 ? 0.10 : 0;
+
+        // Part 1: Weighted sum (p1 weight sums to 100)
+        const s1 = p1Items.reduce((sum, it) => sum + (Number(it.weight) / 100) * (Number(it.supervisor_score) || 0), 0);
+        // Part 2: Average
+        const s2 = p2Items.length > 0 ? (p2Items.reduce((sum, it) => sum + (Number(it.supervisor_score) || 0), 0) / p2Items.length) : 0;
+        // Part 3: Average
+        const s3 = p3Items.length > 0 ? (p3Items.reduce((sum, it) => sum + (Number(it.supervisor_score) || 0), 0) / p3Items.length) : 0;
+
+        const total = (s1 * w1) + (s2 * w2) + (s3 * w3);
+        
+        let grade = "E";
+        if (total >= 4.5) grade = "A";
+        else if (total >= 3.5) grade = "B";
+        else if (total >= 2.5) grade = "C";
+        else if (total >= 1.5) grade = "D";
+
+        setEditData({ ...editData, items: newItems, total_supervisor_score: total, grade });
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const res = await fetch("/api/admin/kpi", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editData)
+            });
+            if (res.ok) {
+                refresh();
+                setSelectedEval(editData);
+                setIsEditMode(false);
+            } else {
+                alert("บันทึกไม่สำเร็จ");
+            }
+        } catch (e) {
+            alert("เกิดข้อผิดพลาด");
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -109,7 +183,7 @@ export default function AdminKPIPage() {
                                 <th>พนักงาน</th>
                                 <th>หน่วยงาน / ตำแหน่ง</th>
                                 <th>ผู้ประเมิน</th>
-                                <th>ครั้งที่</th>
+                                <th>ครั้งที่ / รอบ</th>
                                 <th>สถานะ</th>
                                 <th>คะแนน / เกรด</th>
                                 <th style={{ textAlign: "right" }}>จัดการ</th>
@@ -147,7 +221,12 @@ export default function AdminKPIPage() {
                                         </div>
                                     </td>
                                     <td>{item.supervisor?.name || "-"}</td>
-                                    <td><span className={styles.evalNo}>{item.evaluation_no}</span></td>
+                                    <td>
+                                        <div className={styles.evalNo}>
+                                            {item.category === 'ANNUAL' ? (item.session_name === 'Mid-Year' ? 'Mid-Year Assessment' : item.session_name) : `ครั้งที่ ${item.evaluation_no}`}
+                                        </div>
+                                        {item.category === 'ANNUAL' && <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{item.year}</div>}
+                                    </td>
                                     <td>
                                         <span className={`${styles.badge} ${styles['badge_' + item.status]}`}>
                                             {getStatusLabel(item.status)}
@@ -191,116 +270,152 @@ export default function AdminKPIPage() {
 
             {/* --- MODAL: VIEW DETAILS --- */}
             {selectedEval && (
-                <div className={styles.modalOverlay} onClick={() => setSelectedEval(null)}>
+                <div className={styles.modalOverlay} onClick={() => { if(!saving) setSelectedEval(null); }}>
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2><ClipboardDocumentListIcon width={24} color="#D93025" /> รายละเอียดการประเมิน KPI</h2>
-                            <button onClick={() => setSelectedEval(null)} className={styles.btnAction}><XMarkIcon width={20} /></button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <ClipboardDocumentListIcon width={24} color="#D93025" />
+                                <h2>{isEditMode ? "แก้ไขข้อมูลการประเมิน (Admin Override)" : "รายละเอียดการประเมิน KPI"}</h2>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                {!isEditMode ? (
+                                    <button onClick={() => setIsEditMode(true)} className={styles.btnAction} title="แก้ไข"><PencilSquareIcon width={20} /></button>
+                                ) : (
+                                    <button onClick={handleSave} disabled={saving} className={styles.btnAction} style={{ color: '#10b981' }} title="บันทึก">
+                                        {saving ? <ArrowPathIcon width={20} className="animate-spin" /> : <CheckIcon width={20} />}
+                                    </button>
+                                )}
+                                <button onClick={() => setSelectedEval(null)} className={styles.btnAction}><XMarkIcon width={20} /></button>
+                            </div>
                         </div>
                         <div className={styles.modalBody}>
-                            {/* Employee Info Header */}
+                            {/* Score Summary */}
                             <div className={styles.section}>
                                 <div className={styles.grid}>
-                                    <div className={styles.infoBox}>
-                                        <div className={styles.label}>พนักงานที่รับการประเมิน</div>
-                                        <div className={styles.value}>{selectedEval.employee?.name} ({selectedEval.employee?.emp_id})</div>
-                                    </div>
-                                    <div className={styles.infoBox}>
-                                        <div className={styles.label}>ผู้ประเมิน (หัวหน้างาน)</div>
-                                        <div className={styles.value}>{selectedEval.supervisor?.name || "N/A"}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Evaluation Result if completed */}
-                            {selectedEval.status === "completed" && (
-                                <div className={styles.section}>
-                                    <div className={styles.sectionTitle}>สรุปผลการประเมิน</div>
-                                    <div className={styles.grid}>
-                                        <div className={styles.infoBox} style={{ borderLeft: '4px solid #3b82f6' }}>
-                                            <div className={styles.label}>คะแนนเฉลี่ยรวม</div>
-                                            <div className={styles.value} style={{ fontSize: 24, color: '#3b82f6' }}>
-                                                {Number(selectedEval.total_supervisor_score).toFixed(2)} / 5.00
-                                            </div>
+                                    <div className={styles.infoBox} style={{ borderLeft: '4px solid #3b82f6' }}>
+                                        <div className={styles.label}>คะแนนรวม (สุทธิ)</div>
+                                        <div className={styles.value} style={{ fontSize: 24, color: '#3b82f6' }}>
+                                            {Number(isEditMode ? editData.total_supervisor_score : selectedEval.total_supervisor_score).toFixed(2)}
                                         </div>
-                                        <div className={styles.infoBox} style={{ borderLeft: '4px solid #16a34a' }}>
-                                            <div className={styles.label}>เกรดที่ได้รับ</div>
-                                            <div className={styles.value} style={{ fontSize: 24, color: '#16a34a' }}>
-                                                {selectedEval.grade}
-                                            </div>
+                                    </div>
+                                    <div className={styles.infoBox} style={{ borderLeft: '4px solid #16a34a' }}>
+                                        <div className={styles.label}>เกรด</div>
+                                        <div className={styles.value} style={{ fontSize: 24, color: '#16a34a' }}>
+                                            {isEditMode ? editData.grade : selectedEval.grade}
                                         </div>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Rubric Items Table */}
-                            <div className={styles.section}>
-                                <div className={styles.sectionTitle}>หัวข้อการประเมินและเกณฑ์คะแนน</div>
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table className={styles.rubricTable}>
-                                        <thead>
-                                            <tr>
-                                                <th style={{ width: '40%' }}>หัวข้อ / ตัวชี้วัด</th>
-                                                <th>น้ำหนัก</th>
-                                                <th style={{ textAlign: 'center' }}>คะแนนพนักงาน</th>
-                                                <th style={{ textAlign: 'center' }}>คะแนนหัวหน้า</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {selectedEval.items?.map((it: any) => (
-                                                <tr key={it.id}>
-                                                    <td>
-                                                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{it.objective}</div>
-                                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{it.indicator}</div>
-                                                    </td>
-                                                    <td><span className={styles.weightTag}>{it.weight}%</span></td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        {it.employee_score ? (
-                                                            <span className={styles.scoreBadge} style={{ background: '#fffbeb', color: '#d97706' }}>
-                                                                {it.employee_score}
-                                                            </span>
-                                                        ) : "-"}
-                                                    </td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        {it.supervisor_score ? (
-                                                            <span className={styles.scoreBadge} style={{ background: '#eff6ff', color: '#3b82f6' }}>
-                                                                {it.supervisor_score}
-                                                            </span>
-                                                        ) : "-"}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
                             </div>
 
-                            {/* Comments Section */}
+                            {/* Items Table */}
+                            <div className={styles.section}>
+                                {["KPI", "CORE_VALUE", "COMPETENCY"].map((sec) => {
+                                    const items = (isEditMode ? editData.items : selectedEval.items)?.filter((it: any) => it.section === sec);
+                                    if (!items || items.length === 0) return null;
+
+                                    return (
+                                        <div key={sec} style={{ marginBottom: 24 }}>
+                                            <div style={{ fontSize: 11, fontWeight: 900, color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderLeft: '3px solid #D93025', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                {sec === "KPI" ? "Part 1: Performance KPIs" : sec === "CORE_VALUE" ? "Part 2: Core Values / Attributes" : "Part 3: Competencies"}
+                                            </div>
+                                            <table className={styles.rubricTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>หัวข้อ / ตัวชี้วัด</th>
+                                                        <th style={{ width: 80, textAlign: 'center' }}>น้ำหนัก</th>
+                                                        <th>ผลลัพธ์ (Actual)</th>
+                                                        <th style={{ width: 100, textAlign: 'center' }}>คะแนน (1-5)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {items.map((it: any, idx: number) => {
+                                                        const globalIdx = (isEditMode ? editData.items : selectedEval.items).findIndex((x: any) => x.id === it.id);
+                                                        return (
+                                                            <tr key={it.id}>
+                                                                <td>
+                                                                    <div style={{ fontWeight: 700, fontSize: 13 }}>{it.objective}</div>
+                                                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{it.indicator}</div>
+                                                                    {(it.objective.includes("มาสาย") || it.objective.includes("ลาป่วย") || it.objective.includes("ลากิจ")) && attendance && (
+                                                                        <div style={{ fontSize: 10, color: '#D93025', fontWeight: 800, marginTop: 4, background: '#FEF2F2', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
+                                                                            สถิติ: {
+                                                                                it.objective.includes("มาสาย") ? `${attendance.latenessCount} ครั้ง` :
+                                                                                it.objective.includes("ลาป่วย") ? `${attendance.sickLeaveCount} วัน` :
+                                                                                it.objective.includes("ลากิจ") ? `${attendance.personalLeaveCount} วัน` : ""
+                                                                            }
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ textAlign: 'center' }}>
+                                                                    {isEditMode ? (
+                                                                        <input 
+                                                                            type="number" 
+                                                                            value={it.weight} 
+                                                                            onChange={e => updateEditItem(globalIdx, 'weight', e.target.value)}
+                                                                            className={styles.modalInput}
+                                                                            style={{ width: 60, textAlign: 'center' }}
+                                                                        />
+                                                                    ) : `${it.weight}%`}
+                                                                </td>
+                                                                <td>
+                                                                    {isEditMode ? (
+                                                                        <input 
+                                                                            value={it.result_description || ""} 
+                                                                            onChange={e => updateEditItem(globalIdx, 'result_description', e.target.value)}
+                                                                            className={styles.modalInput}
+                                                                        />
+                                                                    ) : (it.result_description || "-")}
+                                                                </td>
+                                                                <td style={{ textAlign: 'center' }}>
+                                                                    {isEditMode ? (
+                                                                        <input 
+                                                                            type="number" 
+                                                                            min="1" max="5" step="0.5"
+                                                                            value={it.supervisor_score} 
+                                                                            onChange={e => updateEditItem(globalIdx, 'supervisor_score', e.target.value)}
+                                                                            className={styles.modalInput}
+                                                                            style={{ width: 60, textAlign: 'center' }}
+                                                                        />
+                                                                    ) : Number(it.supervisor_score || 0).toFixed(1)}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Comments */}
                             <div className={styles.section}>
                                 <div className={styles.grid}>
-                                    <div>
-                                        <div className={styles.sectionTitle}><ChatBubbleLeftEllipsisIcon width={16} /> ความเห็นของพนักงาน</div>
-                                        {selectedEval.employee_comment ? (
-                                            <div className={styles.comment}>{selectedEval.employee_comment}</div>
-                                        ) : (
-                                            <div style={{ color: '#94a3b8', fontSize: 12, fontStyle: 'italic' }}>ไม่มีความเห็น</div>
-                                        )}
+                                    <div className={styles.infoBox}>
+                                        <div className={styles.label}>ความเห็นพนักงาน</div>
+                                        <div className={styles.value} style={{ fontStyle: 'italic', fontSize: 13 }}>
+                                            {isEditMode ? (
+                                                <textarea 
+                                                    value={editData.employee_comment || ""} 
+                                                    onChange={e => setEditData({...editData, employee_comment: e.target.value})}
+                                                    className={styles.modalTextarea}
+                                                />
+                                            ) : (selectedEval.employee_comment || "-")}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div className={styles.sectionTitle}><ChatBubbleLeftEllipsisIcon width={16} /> ความเห็นของหัวหน้างาน</div>
-                                        {selectedEval.supervisor_comment ? (
-                                            <div className={styles.comment} style={{ background: '#f0f9ff', borderColor: '#bae6fd' }}>
-                                                {selectedEval.supervisor_comment}
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: '#94a3b8', fontSize: 12, fontStyle: 'italic' }}>ไม่มีความเห็น</div>
-                                        )}
+                                    <div className={styles.infoBox}>
+                                        <div className={styles.label}>ความเห็นหัวหน้างาน</div>
+                                        <div className={styles.value} style={{ fontStyle: 'italic', fontSize: 13 }}>
+                                            {isEditMode ? (
+                                                <textarea 
+                                                    value={editData.supervisor_comment || ""} 
+                                                    onChange={e => setEditData({...editData, supervisor_comment: e.target.value})}
+                                                    className={styles.modalTextarea}
+                                                />
+                                            ) : (selectedEval.supervisor_comment || "-")}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className={styles.modalFooter}>
-                             <button className={styles.btnCancel} onClick={() => setSelectedEval(null)}>ปิดหน้าต่าง</button>
                         </div>
                     </div>
                 </div>

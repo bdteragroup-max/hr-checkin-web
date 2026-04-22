@@ -8,7 +8,9 @@ import {
     UserCircleIcon,
     PencilSquareIcon,
     CheckBadgeIcon,
-    EyeIcon
+    EyeIcon,
+    AcademicCapIcon,
+    UsersIcon
 } from "@heroicons/react/24/solid";
 import styles from "./page.module.css";
 
@@ -26,12 +28,14 @@ interface Subordinate {
     hire_date: string;
     position: string;
     department: string;
+    is_on_trial: boolean;
     evaluations: KPIEvaluation[];
 }
 
 export default function SupervisorKPIPage() {
     const [list, setList] = useState<Subordinate[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'trial' | 'regular'>('trial');
 
     useEffect(() => {
         fetch("/api/team/kpi/employees")
@@ -57,8 +61,26 @@ export default function SupervisorKPIPage() {
             <div className={styles.wrap}>
                 {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
-                    <h1 className={styles.heroH1}>จัดการ KPI พนักงานทดลองงาน</h1>
-                    <div className={styles.heroSubtitle}>นิยามเป้าหมายและประเมินผลสำหรับรอบการทดลองงาน</div>
+                    <h1 className={styles.heroH1}>จัดการ KPI รายบุคคล</h1>
+                    <div className={styles.heroSubtitle}>นิยามเป้าหมายและประเมินผลสำหรับพนักงานในทีมของคุณ</div>
+                </div>
+
+                {/* ── TABS ── */}
+                <div className={styles.tabs}>
+                    <div 
+                        className={`${styles.tab} ${activeTab === 'trial' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('trial')}
+                    >
+                        <UsersIcon width={18} />
+                        <span>พนักงานทดลองงาน</span>
+                    </div>
+                    <div 
+                        className={`${styles.tab} ${activeTab === 'regular' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('regular')}
+                    >
+                        <AcademicCapIcon width={18} />
+                        <span>พนักงานประจำ</span>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -66,85 +88,126 @@ export default function SupervisorKPIPage() {
                         <ArrowPathIcon width={40} className="animate-spin mx-auto mb-4 opacity-10" />
                         <div>กำลังรวบรวมข้อมูลพนักงาน...</div>
                     </div>
-                ) : list.length === 0 ? (
-                    <div className={styles.emptyState}>
-                        <UserCircleIcon width={48} className="mx-auto mb-4 text-slate-300" />
-                        <h3 style={{ fontWeight: 700, color: "#475569" }}>ไม่พบคิวรี่พนักงานทดลองงาน</h3>
-                        <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>คุณไม่มีพนักงานในทีมที่อยู่ระหว่างทดลองงานที่ต้องจัดการ KPI</p>
-                    </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div className={styles.sectionLabel}>
-                            <div className={styles.dot} />
-                            <span>Team Members ({list.length})</span>
-                        </div>
+                        {(() => {
+                            const filtered = list.filter(e => activeTab === 'trial' ? e.is_on_trial : !e.is_on_trial);
 
-                        {list.map((emp, i) => {
-                            const currentEval = emp.evaluations[0];
-                            const statusInfo = currentEval ? getStatusInfo(currentEval.status) : null;
+                            if (filtered.length === 0) {
+                                return (
+                                    <div className={styles.emptyState}>
+                                        <UserCircleIcon width={48} className="mx-auto mb-4 text-slate-300" />
+                                        <h3 style={{ fontWeight: 700, color: "#475569" }}>
+                                            {activeTab === 'trial' ? "ไม่พบพนักงานทดลองงาน" : "ไม่พบพนักงานประจำ"}
+                                        </h3>
+                                        <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
+                                            คุณไม่มีพนักงานในทีมกลุ่มนี้ที่ต้องจัดการ KPI
+                                        </p>
+                                    </div>
+                                );
+                            }
 
                             return (
-                                <div key={emp.emp_id} className={styles.card} style={{ animationDelay: `${i * 0.05}s` }}>
-                                    <div className={styles.empInfo}>
-                                        <div className={styles.avatar}>
-                                            <UserIcon width={24} />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                <div className={styles.empName}>{emp.name}</div>
-                                                {statusInfo && (
-                                                    <div className={styles.statusBadge} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
-                                                        {statusInfo.icon}
-                                                        <span>{statusInfo.label}</span>
+                                <>
+                                    <div className={styles.sectionLabel}>
+                                        <div className={styles.dot} />
+                                        <span>{activeTab === 'trial' ? 'Trial Period' : 'Regular Staff'} ({filtered.length})</span>
+                                    </div>
+
+                                    {filtered.map((emp, i) => {
+                                        // Priority Logic: Find the latest evaluation for the CURRENT track
+                                        const categoryToFind = activeTab === 'trial' ? 'PROBATION' : 'ANNUAL';
+                                        // Priority: 1. Active evaluation of the correct category, 2. Latest evaluation of correct category, 3. Any latest
+                                        let currentEval = emp.evaluations.find(ev => (ev as any).category === categoryToFind && ev.status !== 'completed');
+                                        if (!currentEval) {
+                                            currentEval = emp.evaluations.find(ev => (ev as any).category === categoryToFind);
+                                        }
+                                        if (!currentEval) currentEval = emp.evaluations[0];
+
+                                        const isMidYearDone = currentEval && 
+                                                              (currentEval as any).category === 'ANNUAL' && 
+                                                              (currentEval as any).session_name?.includes('Mid-Year') && 
+                                                              currentEval.status === 'completed';
+
+                                        const statusInfo = currentEval ? getStatusInfo(currentEval.status) : null;
+                                        const isMismatch = currentEval && (currentEval as any).category !== categoryToFind;
+
+                                        return (
+                                            <div key={emp.emp_id} className={styles.card} style={{ animationDelay: `${i * 0.05}s` }}>
+                                                <div className={styles.empInfo}>
+                                                    <div className={styles.avatar}>
+                                                        <UserIcon width={24} />
                                                     </div>
-                                                )}
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                            <div className={styles.empName}>{emp.name}</div>
+                                                            {statusInfo && (
+                                                                <div className={styles.statusBadge} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
+                                                                    {statusInfo.icon}
+                                                                    <span>{statusInfo.label}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className={styles.empDetails}>{emp.emp_id} · {emp.position || "Staff"}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className={styles.metaGrid}>
+                                                    <div className={styles.metaItem}>
+                                                        <span className={styles.metaLabel}>วันที่เริ่มงาน</span>
+                                                        <span className={styles.metaVal}>
+                                                            {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
+                                                        </span>
+                                                    </div>
+                                                    <div className={styles.metaItem}>
+                                                        <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
+                                                        <span className={styles.metaVal} style={{ color: isMidYearDone ? 'var(--blue)' : '#d93025', fontWeight: 800 }}>
+                                                            {isMidYearDone ? (
+                                                                "Ready for Year-End Assessment"
+                                                            ) : currentEval && !isMismatch ? (
+                                                                <>
+                                                                    {(currentEval as any).category === 'ANNUAL' ? (currentEval as any).session_name || 'Annual' : `ครั้งที่ ${currentEval.evaluation_no}`}
+                                                                    <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>
+                                                                        {(currentEval as any).year || ''}
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                `ยังไม่ได้เริ่ม (ครั้งที่ ${activeTab === 'trial' ? (emp.evaluations.filter(ev => (ev as any).category === 'PROBATION').length + 1) : 1})`
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className={styles.actions}>
+                                                    {(!currentEval || isMismatch || currentEval.status === "completed") ? (
+                                                        <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnPrimary}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                                <PencilSquareIcon width={18} />
+                                                                <span>เริ่มกำหนดเป้าหมาย {activeTab === 'trial' ? 'KPI' : 'ประจำปี'}</span>
+                                                            </div>
+                                                        </Link>
+                                                    ) : currentEval.status === "pending_supervisor" ? (
+                                                        <Link href={`/team/kpi/evaluate/${currentEval.id}`} className={styles.btnPrimary} style={{ background: '#3b82f6', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                                <CheckBadgeIcon width={18} />
+                                                                <span>ประเมินคะแนน KPI</span>
+                                                            </div>
+                                                        </Link>
+                                                    ) : (
+                                                        <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnSecondary}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                                <EyeIcon width={18} />
+                                                                <span>ดูรายละเอียด / แก้ไข</span>
+                                                            </div>
+                                                        </Link>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className={styles.empDetails}>{emp.emp_id} · {emp.position || "Staff"}</div>
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.metaGrid}>
-                                        <div className={styles.metaItem}>
-                                            <span className={styles.metaLabel}>วันที่เริ่มงาน</span>
-                                            <span className={styles.metaVal}>
-                                                {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
-                                            </span>
-                                        </div>
-                                        <div className={styles.metaItem}>
-                                            <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
-                                            <span className={styles.metaVal} style={{ color: '#d93025', fontWeight: 800 }}>
-                                                {currentEval ? `ครั้งที่ ${currentEval.evaluation_no}` : `ครั้งที่ ${(emp.evaluations?.length || 0) + 1}`}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.actions}>
-                                        {!currentEval || currentEval.status === "completed" ? (
-                                            <Link href={`/team/kpi/define/${emp.emp_id}`} className={styles.btnPrimary}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                    <PencilSquareIcon width={18} />
-                                                    <span>เริ่มกำหนดเป้าหมาย KPI</span>
-                                                </div>
-                                            </Link>
-                                        ) : currentEval.status === "pending_supervisor" ? (
-                                            <Link href={`/team/kpi/evaluate/${currentEval.id}`} className={styles.btnPrimary} style={{ background: '#3b82f6', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                    <CheckBadgeIcon width={18} />
-                                                    <span>ประเมินคะแนน KPI</span>
-                                                </div>
-                                            </Link>
-                                        ) : (
-                                            <Link href={`/team/kpi/define/${emp.emp_id}`} className={styles.btnSecondary}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                    <EyeIcon width={18} />
-                                                    <span>ดูรายละเอียด / แก้ไข</span>
-                                                </div>
-                                            </Link>
-                                        )}
-                                    </div>
-                                </div>
+                                        );
+                                    })}
+                                </>
                             );
-                        })}
+                        })()}
                     </div>
                 )}
             </div>

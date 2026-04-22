@@ -270,7 +270,7 @@ export default function EvaluatePage() {
                             </div>
                             <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.personal}</div>
-                                <div className={styles.attLabel}>ลากิจ</div>
+                                <div className={styles.attLabel}>ลากิจ / ลาไม่รับค่าจ้าง</div>
                                 <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("personal")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                         </div>
@@ -302,7 +302,7 @@ export default function EvaluatePage() {
                                 />
                             </div>
                             <div className={styles.correctionInputGroup}>
-                                <label>ลากิจ (วัน)</label>
+                                <label>ลากิจ / ไม่รับค่าจ้าง (วัน)</label>
                                 <input 
                                     type="number" 
                                     step="0.1"
@@ -450,7 +450,7 @@ export default function EvaluatePage() {
                     <div className={styles.modalOverlay} onClick={() => setActiveDetailType(null)}>
                         <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                             <div className={styles.modalHeader}>
-                                <h3>รายละเอียด: {activeDetailType === "late" ? "มาสาย" : activeDetailType === "sick" ? "ลาป่วย" : "ลากิจ"}</h3>
+                                <h3>รายละเอียด: {activeDetailType === "late" ? "มาสาย" : activeDetailType === "sick" ? "ลาป่วย" : "ลากิจ / ลาไม่รับค่าจ้าง"}</h3>
                                 <button 
                                     onClick={() => setActiveDetailType(null)}
                                     style={{ border: 'none', background: 'none', cursor: 'pointer' }}

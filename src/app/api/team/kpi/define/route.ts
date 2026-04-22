@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         const supervisorId = decoded.emp_id;
 
         const body = await req.json();
-        const { emp_id, items, period_start, period_end } = body;
+        const { emp_id, items, period_start, period_end, category, year, session_name } = body;
 
         if (!emp_id || !items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json({ error: "INVALID_DATA" }, { status: 400 });
@@ -27,11 +27,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "TOTAL_WEIGHT_MUST_BE_100" }, { status: 400 });
         }
 
-        // Check if there's an ongoing evaluation
+        const currentCategory = category || "PROBATION";
+        const currentYear = year || new Date().getFullYear();
+
+        // Check if there's an ongoing evaluation for THIS category/year
         const existing = await prisma.kpi_evaluations.findFirst({
             where: {
                 emp_id,
-                status: { not: "completed" }
+                status: { not: "completed" },
+                category: currentCategory,
+                year: currentYear
             }
         });
 
@@ -49,6 +54,7 @@ export async function POST(req: Request) {
                     data: {
                         period_start: period_start ? new Date(period_start) : null,
                         period_end: period_end ? new Date(period_end) : null,
+                        session_name: session_name || existing.session_name,
                         status: "pending_employee",
                         items: {
                             create: items.map(it => ({
@@ -59,7 +65,8 @@ export async function POST(req: Request) {
                                 target_2: it.target_2,
                                 target_3: it.target_3,
                                 target_4: it.target_4,
-                                target_5: it.target_5
+                                target_5: it.target_5,
+                                section: it.section || "KPI"
                             }))
                         }
                     }
@@ -86,9 +93,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: true, id: existing.id });
         }
 
-        // Get latest evaluation no
+        // Get latest evaluation no FOR THIS CATEGORY
         const lastEval = await prisma.kpi_evaluations.findFirst({
-            where: { emp_id },
+            where: { 
+                emp_id,
+                category: currentCategory 
+            },
             orderBy: { evaluation_no: "desc" }
         });
         const nextNo = (lastEval?.evaluation_no || 0) + 1;
@@ -98,6 +108,9 @@ export async function POST(req: Request) {
                 emp_id,
                 supervisor_id: supervisorId,
                 evaluation_no: nextNo,
+                category: currentCategory,
+                year: currentYear,
+                session_name: session_name || null,
                 period_start: period_start ? new Date(period_start) : null,
                 period_end: period_end ? new Date(period_end) : null,
                 status: "pending_employee",
@@ -110,7 +123,8 @@ export async function POST(req: Request) {
                         target_2: it.target_2,
                         target_3: it.target_3,
                         target_4: it.target_4,
-                        target_5: it.target_5
+                        target_5: it.target_5,
+                        section: it.section || "KPI"
                     }))
                 }
             }

@@ -56,7 +56,7 @@ export default function EmployeeKPIPage() {
                 {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
                     <h1 className={styles.heroH1}>KPI รายบุคคล</h1>
-                    <div className={styles.heroSubtitle}>ติดตามเป้าหมายและผลการทำงานรอบทดลองงานของคุณ</div>
+                    <div className={styles.heroSubtitle}>ติดตามเป้าหมายและผลการทำงานรายบุคคลของคุณ</div>
                 </div>
 
                 {loading ? (
@@ -78,7 +78,10 @@ export default function EmployeeKPIPage() {
                             return (
                                 <div key={evalData.id} className={styles.card} style={{ animationDelay: `${idx * 0.05}s` }}>
                                     <div className={styles.cardHeader}>
-                                        <div className={styles.evalNo}>การประเมินครั้งที่ {evalData.evaluation_no}</div>
+                                        <div className={styles.evalNo}>
+                                            {(evalData as any).category === 'ANNUAL' ? (evalData as any).session_name : `การประเมินครั้งที่ ${evalData.evaluation_no}`}
+                                            {(evalData as any).category === 'ANNUAL' && <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>({(evalData as any).year})</span>}
+                                        </div>
                                         <div className={styles.statusBadge} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
                                             {statusInfo.icon}
                                             <span>{statusInfo.label}</span>

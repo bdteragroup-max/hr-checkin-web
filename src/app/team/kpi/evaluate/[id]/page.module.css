@@ -213,6 +213,20 @@
     margin-bottom: 16px;
 }
 
+.lockedBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--red);
+    color: white;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    width: fit-content;
+}
+
 .indicatorLabel {
     font-size: 10px;
     font-weight: 700;
@@ -445,6 +459,97 @@
 .btnSubmit:disabled {
     background: var(--gray-300);
     box-shadow: none;
+}
+
+.summarySticky {
+  display: none;
+}
+
+/* --- Part 5 Table Styles --- */
+.part5Table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 16px;
+    border: 1px solid var(--gray-200);
+}
+
+.part5Table th, .part5Table td {
+    padding: 10px;
+    border: 1px solid var(--gray-200);
+    text-align: center;
+}
+
+.part5Table th {
+    background: #475569;
+    color: white;
+    font-weight: 800;
+}
+
+.part5Table .colTitle {
+    text-align: left;
+    font-weight: 700;
+    width: 35%;
+}
+
+.part5Table tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.part5Table .totalRow {
+    background: #f1f5f9;
+    font-weight: 800;
+}
+
+.gradeMapping {
+    background: #fef2f2;
+    padding: 12px;
+    border: 1px solid var(--red-border);
+    border-radius: 8px;
+    font-size: 10px;
+    color: var(--red);
+    font-weight: 700;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.recommendSection {
+    margin-top: 24px;
+}
+
+.checkGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.checkItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: #f9fafb;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.checkItem.active {
+    border-color: var(--red);
+    background: var(--red-dim);
+}
+
+.checkItem input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.checkItem span {
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .loading {

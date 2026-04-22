@@ -37,14 +37,38 @@ export async function POST(req: Request) {
         await prisma.$transaction(async (tx) => {
             let totalEmployeeScore = 0;
             for (const it of items) {
-                const item = await tx.kpi_items.update({
-                    where: { id: it.id },
-                    data: {
-                        result_description: it.result_description,
-                        employee_score: it.employee_score
+                if (it.id) {
+                    // Update existing item
+                    const item = await tx.kpi_items.update({
+                        where: { id: it.id },
+                        data: {
+                            result_description: it.result_description,
+                            employee_score: it.employee_score,
+                            objective: it.objective, // Part 4 fields
+                            indicator: it.indicator,
+                            target_1: it.target_1
+                        }
+                    });
+
+                    // Only calculate weight for non-development items (Part 1-3)
+                    if (item.section !== "DEVELOPMENT") {
+                        totalEmployeeScore += (Number(item.weight) / 100) * (it.employee_score || 0);
                     }
-                });
-                totalEmployeeScore += (Number(item.weight) / 100) * (it.employee_score || 0);
+                } else {
+                    // Create new item (usually Part 4: DEVELOPMENT)
+                    await tx.kpi_items.create({
+                        data: {
+                            kpi_evaluation_id: evaluation_id,
+                            objective: it.objective || "",
+                            indicator: it.indicator || "",
+                            target_1: it.target_1 || "",
+                            result_description: it.result_description || "",
+                            employee_score: it.employee_score || 0,
+                            section: it.section || "DEVELOPMENT",
+                            weight: 0
+                        }
+                    });
+                }
             }
 
             await tx.kpi_evaluations.update({

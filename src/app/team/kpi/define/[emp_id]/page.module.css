@@ -1,6 +1,6 @@
 /* ============================================
-   KPI SYSTEM — TERA GROUP
-   Matches the probation dashboard aesthetic
+   KPI DEFINE — APP SHELL FORMAT
+   Matches /app exactly
    ============================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
@@ -10,13 +10,19 @@
   --red-dark: #b71c1c;
   --red-dim: rgba(217, 48, 37, 0.08);
   --red-border: rgba(217, 48, 37, 0.22);
+  --orange: #e8450a;
   --bg: #f4f6f9;
   --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
   --gray-200: #e5e8ef;
   --gray-300: #d1d5dc;
+  --gray-400: #9ca3af;
   --gray-500: #6b7280;
   --text: #111827;
+  --text2: #374151;
   --text3: #6b7280;
+  --text4: #9ca3af;
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
   --radius: 16px;
@@ -31,7 +37,7 @@
   min-height: 100vh;
   color: var(--text);
   position: relative;
-  padding-bottom: 120px;
+  padding-bottom: 60px;
 }
 
 .wrapper::before {
@@ -47,9 +53,9 @@
 .wrap {
   position: relative;
   z-index: 1;
-  max-width: 520px;
+  max-width: 520px; /* EXACT APP FRAME */
   margin: 0 auto;
-  padding: 0 14px 40px;
+  padding: 0 14px 80px;
 }
 
 .hero {
@@ -67,28 +73,34 @@
 }
 
 .btnBack {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--gray-300);
-    background: white;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text3);
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--text3);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-display);
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.btnBack:hover {
+  background: #f1f5f9;
+  color: var(--text);
 }
 
 .card {
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
-  padding: 22px;
-  margin-bottom: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
   box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
@@ -102,7 +114,8 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--red), #fa6400, transparent);
+  background: linear-gradient(90deg, var(--red), var(--orange), transparent);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 @keyframes slideUp {
@@ -135,301 +148,194 @@
   flex-shrink: 0;
 }
 
-.divider {
-    margin: 20px 0;
-    border-top: 1px dashed var(--gray-200);
-}
-
 .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .inputGroup {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .inputGroup label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--text3);
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text3);
 }
 
-.inputGroup input, .inputGroup select, .inputGroup textarea {
-    width: 100%;
-    font-family: var(--font-th);
-    font-size: 15px;
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--gray-300);
-    background: #f9fafb;
-    outline: none;
-    transition: all 0.2s;
+.inputGroup input, .inputGroup select {
+  width: 100%;
+  font-family: var(--font-th);
+  font-size: 15px;
+  font-weight: 400;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: var(--gray-50);
+  color: var(--text);
+  outline: none;
+  transition: all 0.18s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.inputGroup input:focus, .inputGroup textarea:focus {
-    border-color: var(--red);
-    background: white;
-    box-shadow: 0 0 0 3px var(--red-dim);
+.inputGroup input:focus, .inputGroup select:focus {
+  border-color: var(--red);
+  background: var(--white);
+  box-shadow: 0 0 0 3px var(--red-dim);
 }
 
-.probationTip {
-    font-size: 11px;
-    color: #94a3b8;
-    background: #f8fafc;
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* --- List Styling --- */
-.itemsList {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.itemCard {
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid var(--gray-200);
+.divider {
+  height: 1px;
+  background: var(--gray-200);
+  margin: 20px 0;
+  border-top: 1px dashed var(--gray-200);
 }
 
 .itemHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--gray-200);
 }
 
-.itemNo {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--red);
-    text-transform: uppercase;
+.itemTitle {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text2);
 }
 
 .btnRemove {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 4px;
+  padding: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
 .btnRemove:hover {
-    color: var(--red);
+  background: #fee2e2;
+  color: #ef4444;
 }
 
-.weightInput {
-    margin-top: 12px;
-    max-width: 120px;
+/* Optimized for narrow frame: Stack items vertically */
+.grid3 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.weightInput label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text3);
-    display: block;
-    margin-bottom: 4px;
+.rubricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 cols instead of 5 for narrow width */
+  gap: 10px;
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--gray-50);
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
 }
 
-.weightInput input {
-    width: 100%;
-    padding: 10px;
-    text-align: center;
-    font-weight: 800;
-    font-size: 16px;
-    color: var(--red);
-    border: 2px solid var(--gray-300);
-    border-radius: 12px;
-    background: white;
-    outline: none;
-    transition: all 0.2s;
-}
-
-.weightInput input:focus {
-    border-color: var(--red);
-    box-shadow: 0 0 0 3px var(--red-dim);
-}
-
-.rubricSection {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px dashed var(--gray-200);
-}
-
-.rubricHeaderRow {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.rubricLabel {
-    font-size: 11px;
-    font-weight: 800;
-    color: var(--text);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.templateButtons {
-    display: flex;
-    gap: 6px;
-}
-
-.templateButtons button {
-    padding: 4px 8px;
-    background: #f1f5f9;
-    border: 1px solid var(--gray-300);
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text3);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.templateButtons button:hover {
-    background: var(--red-dim);
-    color: var(--red);
-    border-color: var(--red);
-}
-
-.rubricTable {
-    border: 1px solid var(--gray-200);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.rubricTHead {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    background: #475569;
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    text-align: center;
-}
-
-.rubricTHead div {
-    padding: 8px 4px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rubricTBody {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    background: white;
-}
-
-.rubricTBody input {
-    width: 100%;
-    border: none;
-    border-right: 1px solid var(--gray-200);
-    padding: 8px 6px;
-    font-size: 12px;
-    text-align: center;
-    background: transparent;
-    outline: none;
-}
-
-.rubricTBody input:focus {
-    background: var(--red-dim);
-}
-
-.rubricTBody input:last-child {
-    border-right: none;
+@media (max-width: 400px) {
+    .rubricGrid {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 .btnAddFull {
-    width: 100%;
-    padding: 16px;
-    background: #f8fafc;
-    border: 2px dashed var(--gray-300);
-    border-radius: 16px;
-    color: var(--text3);
-    font-size: 15px;
-    font-weight: 800;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s;
-    margin-top: 8px;
+  width: 100%;
+  padding: 16px;
+  background: var(--white);
+  color: var(--text3);
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font-display);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 32px;
+  transition: all 0.2s;
 }
 
 .btnAddFull:hover {
-    background: var(--red-dim);
-    border-color: var(--red);
-    color: var(--red);
-}
-
-/* --- Sticky Shelf --- */
-.summarySticky {
-    position: fixed;
-    bottom: 24px;
-    left: 14px;
-    right: 14px;
-    max-width: 492px;
-    margin: 0 auto;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--gray-300);
-    border-radius: 24px;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    z-index: 100;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.12);
-}
-
-.totalVal {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text);
-}
-
-.textError {
-    color: var(--red);
+  background: var(--gray-50);
+  border-color: var(--red);
+  color: var(--red);
 }
 
 .btnSubmit {
-    flex: 1;
-    background: #16a34a;
-    color: white;
-    border: none;
-    padding: 16px 24px;
-    border-radius: 16px;
-    font-size: 16px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+  width: 100%;
+  padding: 16px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  box-shadow: var(--shadow-red);
+  transition: all 0.3s;
+  margin-top: 20px;
+}
+
+.btnSubmit:hover:not(:disabled) {
+  background: var(--red-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(217, 48, 37, 0.4);
 }
 
 .btnSubmit:disabled {
-    background: #94a3b8;
-    box-shadow: none;
-    cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .loading {
-    padding: 100px;
-    text-align: center;
-    color: var(--text3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  font-family: var(--font-display);
+  color: var(--text3);
+}
+
+.weightSummary {
+  padding: 16px;
+  background: var(--red-dim);
+  border-radius: 12px;
+  border: 1px solid var(--red-border);
+}
+
+.weightRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.weightWarning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 700;
 }

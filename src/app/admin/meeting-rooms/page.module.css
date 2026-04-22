@@ -1,0 +1,355 @@
+/* ============================================
+   ADMIN MEETING ROOMS — TERA GROUP
+   Red · White · Gray · Premium Modern
+   Matches the corporate identity (KPI/Probation)
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+:root {
+    --red: #d93025;
+    --red-dark: #b71c1c;
+    --red-dim: rgba(217, 48, 37, 0.08);
+    --red-border: rgba(217, 48, 37, 0.22);
+    --bg: #f4f6f9;
+    --white: #ffffff;
+    --gray-100: #f8fafc;
+    --gray-200: #e5e8ef;
+    --gray-300: #d1d5dc;
+    --gray-500: #6b7280;
+    --text: #111827;
+    --text3: #6b7280;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font-th: "Sarabun", sans-serif;
+    --font-display: "Prompt", sans-serif;
+}
+
+.container {
+    padding: 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: var(--font-th);
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    color: var(--text);
+}
+
+.container::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(217, 48, 37, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+    position: relative;
+    z-index: 1;
+}
+
+.titleSection h1 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.titleSection p {
+    color: var(--text3);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.addBtn {
+    background: var(--red);
+    color: #ffffff;
+    border: none;
+    padding: 1rem 1.75rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: var(--shadow-red);
+    font-family: var(--font-display);
+}
+
+.addBtn:hover {
+    background: var(--red-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(217, 48, 37, 0.35);
+}
+
+.adminGrid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 3rem;
+    position: relative;
+    z-index: 1;
+}
+
+.sectionTitle {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.roomList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.roomCard {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: 20px;
+    border: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow);
+}
+
+.roomCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.roomInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.roomName {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text);
+}
+
+.roomMeta {
+    font-size: 0.9rem;
+    color: var(--text3);
+    margin-top: 0.4rem;
+    font-weight: 500;
+}
+
+.roomActions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.25rem;
+    border-top: 1px dashed var(--gray-200);
+}
+
+.roomActions button {
+    background: transparent;
+    border: none;
+    color: var(--red);
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: var(--font-display);
+}
+
+.statusBadge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 1rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-family: var(--font-display);
+}
+
+.statusBadge[data-active="true"] {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* Booking Table */
+.bookingTableWrapper {
+    background: var(--white);
+    border-radius: 24px;
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.bookingTable {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.bookingTable th {
+    background: var(--gray-100);
+    padding: 1.25rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text3);
+    border-bottom: 1px solid var(--gray-200);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bookingTable td {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+}
+
+.dateTime {
+    display: flex;
+    flex-direction: column;
+}
+
+.dateTime strong {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.dateTime span {
+    font-size: 0.85rem;
+    color: var(--text3);
+    font-weight: 500;
+}
+
+.cancelBtnSmall {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+}
+
+.cancelBtnSmall:hover {
+    background: #fecaca;
+    transform: scale(1.05);
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background: var(--white);
+    padding: 2.5rem;
+    border-radius: 28px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    position: relative;
+    border: 1px solid var(--gray-200);
+}
+
+.modalContent::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--red), #fa6400, transparent);
+    border-radius: 28px 28px 0 0;
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--text3);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 0.8rem 1.2rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 14px;
+    font-family: var(--font-th);
+    font-size: 1rem;
+    background: #f8fafc;
+    transition: all 0.25s;
+}
+
+.formGroup input:focus {
+    border-color: var(--red);
+    background: white;
+    outline: none;
+    box-shadow: 0 0 0 4px var(--red-dim);
+}
+
+.modalActions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.5rem;
+}
+
+.submitBtn {
+    flex: 1;
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-display);
+    box-shadow: var(--shadow-red);
+}
+
+.cancelBtn {
+    flex: 1;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-display);
+}
+
+@media (max-width: 1024px) {
+    .adminGrid {
+        grid-template-columns: 1fr;
+    }
+}

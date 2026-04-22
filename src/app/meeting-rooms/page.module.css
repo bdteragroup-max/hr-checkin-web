@@ -1,0 +1,467 @@
+/* ============================================
+   MEETING ROOM BOOKING SYSTEM — TERA GROUP
+   Red · White · Gray · Premium Modern
+   Matches the corporate identity (KPI/Probation)
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+:root {
+    --red: #d93025;
+    --red-dark: #b71c1c;
+    --red-dim: rgba(217, 48, 37, 0.08);
+    --red-border: rgba(217, 48, 37, 0.22);
+    --bg: #f4f6f9;
+    --white: #ffffff;
+    --gray-100: #f8fafc;
+    --gray-200: #e5e8ef;
+    --gray-300: #d1d5dc;
+    --gray-500: #6b7280;
+    --text: #111827;
+    --text3: #6b7280;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font-th: "Sarabun", sans-serif;
+    --font-display: "Prompt", sans-serif;
+}
+
+.container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: var(--font-th);
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+}
+
+.container::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(217, 48, 37, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.titleSection h1 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.titleSection p {
+    color: var(--text3);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.controls {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+/* Floor Filter */
+.floorFilter {
+    display: flex;
+    background: #f1f5f9;
+    padding: 0.4rem;
+    border-radius: 14px;
+    gap: 0.4rem;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
+}
+
+.floorBtn {
+    padding: 0.6rem 1.2rem;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    color: #64748b;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+}
+
+.floorBtn.active {
+    background: #ffffff;
+    color: var(--red);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+/* Date Navigation */
+.dateNav {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    padding: 0.4rem;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+}
+
+.dateNav button {
+    padding: 0.6rem 1rem;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-family: var(--font-display);
+}
+
+.dateNav button:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.todayBtn {
+    background: #ffffff !important;
+    color: var(--red) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0 !important;
+}
+
+.submitBtn {
+    background: var(--red);
+    color: #ffffff;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: var(--shadow-red);
+    font-family: var(--font-display);
+}
+
+.submitBtn:hover {
+    background: var(--red-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(217, 48, 37, 0.35);
+}
+
+/* Calendar Grid */
+.calendarContainer {
+    background: var(--white);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.calendarHeader {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.dayLabel {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text3);
+    border-left: 1px solid var(--gray-200);
+    font-family: var(--font-display);
+}
+
+.dayLabel:first-child {
+    border-left: none;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+    height: 700px;
+    overflow-y: auto;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
+}
+
+.timeCol {
+    display: flex;
+    flex-direction: column;
+}
+
+.timeLabel {
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dayCol {
+    border-left: 1px solid #f1f5f9;
+    position: relative;
+    background: #ffffff;
+}
+
+.slot {
+    height: 60px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.slot:hover {
+    background: rgba(217, 48, 37, 0.03);
+}
+
+/* Bookings */
+.bookingCard {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-radius: 10px;
+    padding: 0.6rem;
+    color: #ffffff;
+    font-size: 0.8rem;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
+    background-color: var(--red); /* Fallback */
+}
+
+.bookingCard:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+}
+
+.bookingHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 4px;
+}
+
+.avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    object-fit: cover;
+}
+
+.bookingName {
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+}
+
+.bookingPurpose {
+    opacity: 0.95;
+    font-weight: 500;
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+.cancelBookingBtn {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.cancelBookingBtn:hover {
+    background: rgba(255, 255, 255, 0.45);
+    transform: rotate(90deg);
+}
+
+/* Floor Colors - Using Corporate Gradients */
+.floor1 { background: linear-gradient(135deg, #d93025, #b71c1c); }
+.floor2 { background: linear-gradient(135deg, #1e293b, #0f172a); }
+.floor3 { background: linear-gradient(135deg, #475569, #1e293b); }
+.floor4 { background: linear-gradient(135deg, #fa6400, #d93025); }
+
+/* Current Time Line */
+.currentTimeLine {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--red);
+    z-index: 30;
+    pointer-events: none;
+}
+
+.timeDot {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+    width: 12px;
+    height: 12px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(217, 48, 37, 0.2);
+}
+
+/* Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background: var(--white);
+    padding: 2.5rem;
+    border-radius: 28px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    position: relative;
+    border: 1px solid var(--gray-200);
+}
+
+.modalContent::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--red), #fa6400, transparent);
+    border-radius: 28px 28px 0 0;
+}
+
+.modalHeader h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    font-family: var(--font-display);
+    margin-bottom: 1.5rem;
+}
+
+.formGroup {
+    margin-bottom: 1.25rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--text3);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.formGroup input, .formGroup select, .formGroup textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 14px;
+    font-family: var(--font-th);
+    font-size: 1rem;
+    transition: all 0.25s;
+    background: #f8fafc;
+    color: var(--text);
+}
+
+.formGroup input:focus, .formGroup select:focus, .formGroup textarea:focus {
+    border-color: var(--red);
+    background: white;
+    outline: none;
+    box-shadow: 0 0 0 4px var(--red-dim);
+}
+
+.modalActions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.5rem;
+}
+
+.cancelBtn {
+    flex: 1;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-display);
+}
+
+.cancelBtn:hover {
+    background: #e2e8f0;
+    color: var(--text);
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    font-weight: 700;
+    color: var(--text3);
+    font-family: var(--font-display);
+}
+
+.timeGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .calendarHeader, .grid {
+        grid-template-columns: 60px repeat(7, 140px);
+    }
+}

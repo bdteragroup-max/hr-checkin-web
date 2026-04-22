@@ -354,12 +354,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             page.drawText(opt.l, { x: dx + 11, y: y - 7, size: 7.5, font: fontRegular, color: BLACK });
         });
 
-        y -= 18; // More space for salary detail
+        y -= 18; 
         const salaryX = ML + 2.4 * COL_QX;
         page.drawText("จาก", { x: salaryX, y: y - 2, size: 7, font: fontRegular, color: BLACK });
         page.drawLine({ start: { x: salaryX + 14, y: y - 3 }, end: { x: salaryX + 60, y: y - 3 }, thickness: 0.6, color: BLACK });
+        if (evalData.salary_adjust_from) {
+            page.drawText(evalData.salary_adjust_from.toLocaleString(), { x: salaryX + 16, y: y - 2, size: 7, font: fontBold });
+        }
         page.drawText("บาท เป็น", { x: salaryX + 62, y: y - 2, size: 7, font: fontRegular, color: BLACK });
         page.drawLine({ start: { x: salaryX + 100, y: y - 3 }, end: { x: salaryX + 145, y: y - 3 }, thickness: 0.6, color: BLACK });
+        if (evalData.salary_adjust_to) {
+            page.drawText(evalData.salary_adjust_to.toLocaleString(), { x: salaryX + 102, y: y - 2, size: 7, font: fontBold });
+        }
         page.drawText("บาท", { x: salaryX + 147, y: y - 2, size: 7, font: fontRegular, color: BLACK });
 
         y -= 14;

@@ -17,9 +17,17 @@ export async function GET() {
             where: { emp_id: empId },
             include: {
                 items: true,
-                supervisor: { select: { name: true } }
+                supervisor: { select: { name: true } },
+                employee: {
+                    include: {
+                        _count: {
+                            select: { subordinates: true }
+                        },
+                        job_positions: { select: { title: true } }
+                    }
+                }
             },
-            orderBy: { evaluation_no: "desc" }
+            orderBy: { created_at: "desc" }
         });
 
         return NextResponse.json({ ok: true, list });

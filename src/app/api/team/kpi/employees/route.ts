@@ -19,13 +19,20 @@ export async function GET() {
                     { supervisor_id: supervisorId },
                     { secondary_supervisor_id: supervisorId }
                 ],
-                is_on_trial: true,
-                is_active: true
+                is_active: true,
+                NOT: {
+                    job_positions: {
+                        title: {
+                            contains: "ฝึกงาน"
+                        }
+                    }
+                }
             },
             select: {
                 emp_id: true,
                 name: true,
                 hire_date: true,
+                is_on_trial: true,
                 job_positions: { select: { title: true } },
                 departments: { select: { name: true } },
                 kpi_evaluations: {
@@ -34,17 +41,21 @@ export async function GET() {
                         evaluation_no: true,
                         status: true,
                         total_supervisor_score: true,
-                        evaluation_date: true
+                        evaluation_date: true,
+                        category: true,
+                        year: true,
+                        session_name: true
                     },
-                    orderBy: { evaluation_no: "desc" }
+                    orderBy: { created_at: "desc" }
                 }
             }
         });
 
-        const results = employees.map(emp => ({
+        const results = employees.map((emp: any) => ({
             emp_id: emp.emp_id,
             name: emp.name,
             hire_date: emp.hire_date,
+            is_on_trial: emp.is_on_trial,
             position: emp.job_positions?.title || "Staff",
             department: emp.departments?.name || "N/A",
             evaluations: emp.kpi_evaluations

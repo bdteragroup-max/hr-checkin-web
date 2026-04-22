@@ -6,6 +6,44 @@ import { sendKpiEvaluateHrAlert, sendKpiManagementSummary } from "@/utils/lineMe
 
 export const runtime = "nodejs";
 
+export async function GET(req: Request) {
+    const token = (await cookies()).get("token")?.value;
+    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
+    try {
+        const decoded = verifyToken(token);
+        const supervisorId = decoded.emp_id;
+
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+
+        if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
+
+        const evaluation = await prisma.kpi_evaluations.findUnique({
+            where: { id: Number(id) },
+            include: {
+                items: true,
+                employee: {
+                    include: {
+                        job_positions: { select: { title: true } },
+                        departments: { select: { name: true } },
+                        _count: { select: { subordinates: true } }
+                    }
+                }
+            }
+        });
+
+        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId)) {
+            return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+        }
+
+        return NextResponse.json({ ok: true, evaluation });
+    } catch (e: any) {
+        console.error("[API/KPI/EVALUATE/GET] Error:", e);
+        return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+    }
+}
+
 export async function POST(req: Request) {
     const token = (await cookies()).get("token")?.value;
     if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -35,7 +73,7 @@ export async function POST(req: Request) {
 
         // Update items and evaluation status
         await prisma.$transaction(async (tx) => {
-            let totalSupervisorScore = 0;
+            const allItems = [];
             for (const it of items) {
                 const item = await tx.kpi_items.update({
                     where: { id: it.id },
@@ -43,24 +81,50 @@ export async function POST(req: Request) {
                         supervisor_score: it.supervisor_score
                     }
                 });
-                totalSupervisorScore += (Number(item.weight) / 100) * (it.supervisor_score || 0);
+                allItems.push(item);
             }
 
-            // Calculate Grade based on totalSupervisorScore (1-5)
-            // A: 4.5-5.0, B: 3.5-4.49, C: 2.5-3.49, D: 1.5-2.49, E: <1.5
+            const p1 = allItems.filter(it => it.section === "KPI");
+            const p2 = allItems.filter(it => it.section === "CORE_VALUE");
+            const p3 = allItems.filter(it => it.section === "COMPETENCY");
+
+            const isProbation = evaluation.category === 'PROBATION';
+            const hasP3 = p3.length > 0;
+            
+            let totalScore = 0;
+            if (isProbation) {
+                // Probation: 100% Part 1 (KPI)
+                totalScore = p1.reduce((sum, it) => sum + (Number(it.weight) / 100) * (it.supervisor_score || 0), 0);
+            } else {
+                // Annual: 70 / 20 / 10 or 70 / 30
+                const w1 = 0.70;
+                const w2 = hasP3 ? 0.20 : 0.30;
+                const w3 = hasP3 ? 0.10 : 0;
+
+                const s1 = p1.reduce((sum, it) => sum + (Number(it.weight) / 100) * (it.supervisor_score || 0), 0);
+                const s2 = p2.length > 0 ? (p2.reduce((sum, it) => sum + (it.supervisor_score || 0), 0) / p2.length) : 0;
+                const s3 = p3.length > 0 ? (p3.reduce((sum, it) => sum + (it.supervisor_score || 0), 0) / p3.length) : 0;
+
+                totalScore = (s1 * w1) + (s2 * w2) + (s3 * w3);
+            }
+
             let grade = "E";
-            if (totalSupervisorScore >= 4.5) grade = "A";
-            else if (totalSupervisorScore >= 3.5) grade = "B";
-            else if (totalSupervisorScore >= 2.5) grade = "C";
-            else if (totalSupervisorScore >= 1.5) grade = "D";
+            if (totalScore >= 4.5) grade = "A";
+            else if (totalScore >= 3.5) grade = "B";
+            else if (totalScore >= 2.5) grade = "C";
+            else if (totalScore >= 1.5) grade = "D";
+
+            const isPassing = ["A", "B", "C"].includes(grade);
 
             await tx.kpi_evaluations.update({
                 where: { id: evaluation_id },
                 data: {
                     status: "completed",
                     supervisor_comment: supervisor_comment,
-                    total_supervisor_score: totalSupervisorScore,
+                    total_supervisor_score: totalScore,
                     grade: grade,
+                    recommend_salary: body.recommend_salary || false,
+                    is_passing: isPassing,
                     updated_at: new Date()
                 }
             });

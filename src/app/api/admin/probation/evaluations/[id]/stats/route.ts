@@ -63,14 +63,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             select: { start_date: true, end_date: true, days: true, reason: true, leave_type: true }
         });
 
-        // 3. Fetch Personal Leaves
+        // 3. Fetch Personal Leaves (Including Unpaid Leave for probationers)
         const personalLeaves = await prisma.leave_requests.findMany({
             where: {
                 emp_id,
                 status: "approved",
                 OR: [
                     { leave_type: { contains: "กิจ" } },
-                    { leave_type_id: "personal" }
+                    { leave_type_id: "personal" },
+                    { leave_type: { contains: "ไม่รับค่าจ้าง" } },
+                    { leave_type_id: "unpaid" }
                 ],
                 start_date: { lte: end },
                 end_date: { gte: start }

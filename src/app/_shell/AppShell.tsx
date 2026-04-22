@@ -37,6 +37,7 @@ const NAV_MAIN_BASE = [
     { id: "car-borrow", href: "/car-borrow", icon: TruckIcon, label: "จองรถยนต์", sub: "Car Booking" },
     { id: "assets", href: "/assets/borrow", icon: CubeIcon, label: "ยืมอุปกรณ์", sub: "Borrow" },
     { id: "payslip", href: "/payslip", icon: DocumentTextIcon, label: "สลิปเงินเดือน", sub: "My Payslips" },
+    { id: "meeting-rooms", href: "/meeting-rooms", icon: BuildingOffice2Icon, label: "จองห้องประชุม", sub: "Meeting Rooms" },
     { id: "kpi", href: "/kpi", icon: PresentationChartLineIcon, label: "KPI ของฉัน", sub: "My KPIs" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
