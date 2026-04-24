@@ -12,16 +12,25 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month"); // e.g. "2026-01"
         const endMonth = url.searchParams.get("end_month");     // e.g. "2026-03"
+        const paramStartDate = url.searchParams.get("start_date"); // e.g. "2026-03-26"
+        const paramEndDate = url.searchParams.get("end_date");     // e.g. "2026-04-25"
 
-        if (!startMonth || !endMonth) {
+        let startDate: Date;
+        let endDate: Date;
+
+        if (paramStartDate && paramEndDate) {
+            const [sy, sm, sd] = paramStartDate.split("-").map(Number);
+            const [ey, em, ed] = paramEndDate.split("-").map(Number);
+            startDate = new Date(Date.UTC(sy, sm - 1, sd));
+            endDate = new Date(Date.UTC(ey, em - 1, ed));
+        } else if (startMonth && endMonth) {
+            const [sy, sm] = startMonth.split("-").map(Number);
+            const [ey, em] = endMonth.split("-").map(Number);
+            startDate = new Date(Date.UTC(sy, sm - 1, 1));
+            endDate = new Date(Date.UTC(ey, em, 0));
+        } else {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
-
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [ey, em] = endMonth.split("-").map(Number);
-
-        const startDate = new Date(Date.UTC(sy, sm - 1, 1));
-        const endDate = new Date(Date.UTC(ey, em, 0));
 
         const emps = await prisma.employees.findMany({
             where: { is_active: true, is_checkin_exempt: false } as any, 

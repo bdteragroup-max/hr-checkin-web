@@ -22,8 +22,8 @@ export async function GET(req: Request) {
 
         const bookings = await prisma.room_bookings.findMany({
             where: {
-                start_time: { gte: new Date(start) },
-                end_time: { lte: new Date(end) },
+                start_time: { lt: new Date(end) },
+                end_time: { gt: new Date(start) },
                 ...(roomId ? { room_id: Number(roomId) } : {}),
                 status: "approved"
             },
@@ -33,6 +33,13 @@ export async function GET(req: Request) {
                 },
                 room: {
                     select: { name: true, floor: true }
+                },
+                attendees: {
+                    include: {
+                        employee: {
+                            select: { name: true, emp_id: true }
+                        }
+                    }
                 }
             },
             orderBy: { start_time: "asc" }
@@ -55,9 +62,11 @@ export async function POST(req: Request) {
         const emp_id = decoded.emp_id;
 
         const body = await req.json();
-        const { room_id, start_time, end_time, purpose } = body;
+        const { room_id, start_time, end_time, purpose, attendee_ids } = body;
 
-        if (!room_id) {
+        console.log("[API/BOOKINGS/POST] Data:", { room_id, start_time, end_time, attendee_ids });
+
+        if (!room_id || isNaN(Number(room_id))) {
             return NextResponse.json({ error: "MISSING_ROOM", message: "Please select a meeting room." }, { status: 400 });
         }
         if (!start_time || !end_time) {
@@ -106,6 +115,24 @@ export async function POST(req: Request) {
             }, { status: 409 });
         }
 
+        // Verify all attendees exist to avoid foreign key errors
+        if (attendee_ids && attendee_ids.length > 0) {
+            const existingEmployees = await prisma.employees.findMany({
+                where: { emp_id: { in: attendee_ids } },
+                select: { emp_id: true }
+            });
+            const existingIds = existingEmployees.map(e => e.emp_id);
+            const invalidIds = attendee_ids.filter((id: string) => !existingIds.includes(id));
+            
+            if (invalidIds.length > 0) {
+                return NextResponse.json({ 
+                    error: "INVALID_ATTENDEES", 
+                    message: `Invalid employee IDs: ${invalidIds.join(", ")}` 
+                }, { status: 400 });
+            }
+        }
+
+        console.log("[API/BOOKINGS/POST] Creating booking in Prisma...");
         const booking = await prisma.room_bookings.create({
             data: {
                 room_id: Number(room_id),
@@ -113,14 +140,60 @@ export async function POST(req: Request) {
                 start_time: start,
                 end_time: end,
                 purpose,
-                status: "approved"
+                status: "approved",
+                attendees: {
+                    create: (attendee_ids || []).map((id: string) => ({
+                        emp_id: id
+                    }))
+                }
+            },
+            include: {
+                employee: true,
+                room: true,
+                attendees: {
+                    include: { employee: true }
+                }
             }
         });
+
+        // --- LINE NOTIFICATION ---
+        try {
+            const { sendMeetingBookingNotification } = await import("@/utils/lineMessaging");
+            const attendeeNames = booking.attendees.map(a => a.employee.name);
+            const attendeeLineIds = booking.attendees
+                .map(a => a.employee.line_user_id)
+                .filter(id => !!id) as string[];
+
+            const startTimeStr = new Date(booking.start_time).toLocaleString("th-TH", { 
+                timeZone: "Asia/Bangkok", 
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit' 
+            });
+            const endTimeStr = new Date(booking.end_time).toLocaleString("th-TH", { 
+                timeZone: "Asia/Bangkok", 
+                hour: '2-digit', minute: '2-digit' 
+            });
+
+            await sendMeetingBookingNotification({
+                roomName: booking.room.name,
+                floor: booking.room.floor,
+                startTime: startTimeStr,
+                endTime: endTimeStr,
+                purpose: booking.purpose || "-",
+                bookerName: booking.employee.name,
+                attendees: attendeeNames
+            }, attendeeLineIds);
+        } catch (error) {
+            console.error("[API/BOOKINGS/POST] Notification failed:", error);
+        }
 
         return NextResponse.json(booking);
     } catch (error: any) {
         console.error("[API/BOOKINGS/POST] Error:", error);
-        return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+        return NextResponse.json({ 
+            error: "INTERNAL_ERROR", 
+            message: error.message || "An unexpected error occurred." 
+        }, { status: 500 });
     }
 }
 
@@ -159,5 +232,82 @@ export async function DELETE(req: Request) {
     } catch (error: any) {
         console.error("[API/BOOKINGS/DELETE] Error:", error);
         return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+    }
+}
+
+// PATCH: Update meeting booking details
+export async function PATCH(req: Request) {
+    const token = (await cookies()).get("token")?.value;
+    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
+    try {
+        const decoded = verifyToken(token);
+        const emp_id = decoded.emp_id;
+        const isAdmin = decoded.role === "admin";
+
+        const body = await req.json();
+        const { id, room_id, start_time, end_time, purpose, attendee_ids, minutes } = body;
+
+        if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
+
+        const booking = await prisma.room_bookings.findUnique({
+            where: { id: Number(id) }
+        });
+
+        if (!booking) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+
+        // Booker or Admin can update
+        if (booking.emp_id !== emp_id && !isAdmin) {
+            return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+        }
+
+        const start = new Date(start_time);
+        const end = new Date(end_time);
+
+        // Check overlap if time or room changed
+        if (room_id || start_time || end_time) {
+            const overlap = await prisma.room_bookings.findFirst({
+                where: {
+                    id: { not: Number(id) },
+                    room_id: room_id ? Number(room_id) : booking.room_id,
+                    status: "approved",
+                    OR: [
+                        { start_time: { lte: start }, end_time: { gt: start } },
+                        { start_time: { lt: end }, end_time: { gte: end } },
+                        { start_time: { gte: start }, end_time: { lte: end } }
+                    ]
+                }
+            });
+
+            if (overlap) {
+                return NextResponse.json({ 
+                    error: "OVERLAP", 
+                    message: "The new time slot overlaps with an existing booking." 
+                }, { status: 409 });
+            }
+        }
+
+        const updated = await prisma.room_bookings.update({
+            where: { id: Number(id) },
+            data: {
+                room_id: room_id ? Number(room_id) : undefined,
+                start_time: start_time ? start : undefined,
+                end_time: end_time ? end : undefined,
+                purpose: purpose !== undefined ? purpose : undefined,
+                minutes: minutes !== undefined ? minutes : undefined,
+                attendees: attendee_ids ? {
+                    deleteMany: {},
+                    create: attendee_ids.map((id: string) => ({ emp_id: id }))
+                } : undefined
+            }
+        });
+
+        return NextResponse.json(updated);
+    } catch (error: any) {
+        console.error("[API/BOOKINGS/PATCH] Error:", error);
+        return NextResponse.json({ 
+            error: "INTERNAL_ERROR", 
+            message: error.message || "An unexpected error occurred." 
+        }, { status: 500 });
     }
 }

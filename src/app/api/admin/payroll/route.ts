@@ -31,7 +31,11 @@ export async function GET(request: Request) {
                 ]
             },
             include: {
-                departments: true,
+                departments: {
+                    include: {
+                        divisions: true
+                    }
+                },
                 job_positions: true,
             }
         });
@@ -241,6 +245,7 @@ export async function GET(request: Request) {
             let position_allowance = 0;
             let diligence_failed_reason = "";
             let missingScanInCycle = false;
+            const hasWarnings = empWarnings.length > 0;
 
             // 4.1 ACCOMMODATION (Auto-calc only if not overridden)
             if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) {
@@ -259,83 +264,133 @@ export async function GET(request: Request) {
                 else accommodation_allowance = 3000;
             }
 
-            // 4.2 Diligence, Meal, Travel (Auto-calc only if not overridden)
-            if (!isOnTrial && empWarnings.length === 0) {
-                const hasLate = empCheckins.some(c => c.late_status === "late");
-                const hasLeave = empLeaves.length > 0;
-                let totalPaidDays = 0;
-                let validWorkdaysCount = 0;
+            // 4.2 Attendance, Meal, Travel (Calculated for all active employees)
+            let totalPaidDays = 0;
+            let mealWorkdays = 0;
+            let travelWorkdays = 0;
 
-                let curr = new Date(startDate);
-                while (curr <= endDate) {
-                    const dateStr = fmt(curr);
-                    const isHoliday = curr.getDay() === 0 || holidayDates.has(dateStr);
-                    const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
-                    const scansComplete = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type)) && dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
+            let curr = new Date(startDate);
+            while (curr <= endDate) {
+                const dateStr = fmt(curr);
+                const isHoliday = curr.getDay() === 0 || holidayDates.has(dateStr);
+                const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
+                
+                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type));
+                const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
+                const scansComplete = hasIn && hasOut;
 
-                    // Check-in Exemption Logic
-                    const isExempt = (emp as any).is_checkin_exempt || false;
-                    const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
-                    const isResigned = empResignationDate && curr > empResignationDate;
+                const isExempt = (emp as any).is_checkin_exempt || false;
+                const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
+                const isResigned = empResignationDate && curr > empResignationDate;
 
-                    if (isResigned) {
-                        // Skip days after resignation
-                        curr.setDate(curr.getDate() + 1);
-                        continue;
-                    }
-
-                    const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
-                    if (!isHoliday && !scansComplete && !isExempt && !isOnLeave) missingScanInCycle = true;
-
-                    if (scansComplete || (isExempt && !isHoliday)) {
-                        totalPaidDays++;
-                        if (!isOnLeave) {
-                            validWorkdaysCount++;
-                        }
-                    }
+                if (isResigned) {
                     curr.setDate(curr.getDate() + 1);
+                    continue;
                 }
 
-                if (isDaily && !isOverridden) {
-                    baseSalary = totalPaidDays * baseSalaryInput;
+                const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
+                
+                if (scansComplete || (isExempt && !isHoliday)) {
+                    totalPaidDays++;
                 }
 
+                // Meal and Travel should be paid for ANY day worked, even holidays
+                if (!isOnLeave) {
+                    if (scansComplete) {
+                        if (!isOnTrial && !hasWarnings) {
+                            mealWorkdays++;
+                            travelWorkdays++;
+                        }
+                    } else if (isExempt) {
+                        if (!isOnTrial && !hasWarnings) {
+                            mealWorkdays++;
+                            travelWorkdays++;
+                        }
+                    } else if (!isHoliday && !scansComplete) {
+                        missingScanInCycle = true;
+                    }
+                }
+
+                curr.setDate(curr.getDate() + 1);
+            }
+
+            if (isDaily && !isOverridden) {
+                baseSalary = totalPaidDays * baseSalaryInput;
+            }
+
+            // 4.2.1 Diligence Allowance (Requires passing probation and NO warnings)
+            if (!isOnTrial && empWarnings.length === 0) {
                 if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) {
                     diligence_allowance = Number(adj.diligence_allowance_override);
-                } else if (!isDaily && !hasLate && !hasLeave && !missingScanInCycle) {
+                } else if (!isDaily && mealWorkdays >= 20 && !missingScanInCycle) {
                     diligence_allowance = Number((emp as any).diligence_allowance || 0) || 0;
-                }
-
-                if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
-                    meal_allowance = Number(adj.meal_allowance_override);
-                } else if (!isDaily) {
-                    meal_allowance = validWorkdaysCount * 100;
-                }
-
-                if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
-                    travel_allowance = Number(adj.travel_allowance_override);
-                } else if (!isDaily) {
-                    travel_allowance = validWorkdaysCount * 60;
                 }
             } else {
                 if (isOnTrial) diligence_failed_reason = "อยู่ระหว่างทดลองงาน";
-                else if (empWarnings.length > 0) diligence_failed_reason = "มีใบเตือน";
-
-                // Still allow overrides even if probation/warning
-                if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) diligence_allowance = Number(adj.diligence_allowance_override);
-                if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) meal_allowance = Number(adj.meal_allowance_override);
-                if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) travel_allowance = Number(adj.travel_allowance_override);
-                if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) accommodation_allowance = Number(adj.accommodation_allowance_override);
+                else if (empWarnings.length > 0) diligence_failed_reason = "มีใบเตือนในรอบเดือนนี้";
             }
 
+            if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
+                meal_allowance = Number(adj.meal_allowance_override);
+            } else if (!isDaily) {
+                meal_allowance = mealWorkdays * 100;
+            }
+
+            if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
+                travel_allowance = Number(adj.travel_allowance_override);
+            } else if (!isDaily) {
+                travel_allowance = travelWorkdays * 60;
+            }
             // 4.3 Position & Phone & Travel Claims
             position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined
                 ? Number(adj.position_allowance_override)
                 : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
 
+            // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (New Rules) ---
+            let calculatedPhoneAllowance = 0;
+            if (!isDaily && emp.has_telephone_allowance) {
+                const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
+                let yearsOfService = 0;
+                if (hireDate) {
+                    yearsOfService = endDate.getFullYear() - hireDate.getFullYear();
+                    const mDiff = endDate.getMonth() - hireDate.getMonth();
+                    if (mDiff < 0 || (mDiff === 0 && endDate.getDate() < hireDate.getDate())) yearsOfService--;
+                }
+
+                const posName = (emp.job_positions?.title || "").toLowerCase();
+                const divName = (emp.departments?.divisions?.name || "").toLowerCase();
+
+                // 1. Driver (Day 1)
+                if (posName.includes("ขับรถ") || posName.includes("driver")) {
+                    calculatedPhoneAllowance = 300;
+                } 
+                // 2. Others (After Probation)
+                else if (!isOnTrial) {
+                    if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
+                        calculatedPhoneAllowance = 800;
+                    } else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) {
+                        calculatedPhoneAllowance = 300;
+                    } else if (posName.includes("วิศวกร") || posName.includes("engineer")) {
+                        calculatedPhoneAllowance = 500;
+                    } else if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
+                        calculatedPhoneAllowance = 1000;
+                    } else {
+                        // General Staff
+                        if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                        else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                        else calculatedPhoneAllowance = 300;
+                    }
+                }
+            }
+
+            // Warning Letter Rule: No allowances if warned in this month
+            if (empWarnings.length > 0) {
+                calculatedPhoneAllowance = 0;
+            }
+
             telephone_allowance = adj?.phone_allowance_override !== null && adj?.phone_allowance_override !== undefined
                 ? Number(adj.phone_allowance_override)
-                : ((!isDaily && empWarnings.length === 0 && emp.has_telephone_allowance) ? 300 : 0);
+                : calculatedPhoneAllowance;
 
             if (adj?.travel_site_allowance_override !== null && adj?.travel_site_allowance_override !== undefined) {
                 travel_site_allowance = Number(adj.travel_site_allowance_override);
@@ -430,6 +485,7 @@ export async function GET(request: Request) {
                 emp_id: emp.emp_id,
                 name: emp.name,
                 department: emp.departments?.name || "N/A",
+                division: emp.departments?.divisions?.name || "N/A",
                 position: emp.job_positions?.title || "N/A",
                 base_salary: baseSalary,
                 hourly_wage: hourlyWage,

@@ -31,7 +31,7 @@ export async function generateMetadata(
 
         if (!checkin) return { title: "Check-in Report" };
 
-        const typeStr = checkin.type.includes("In") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
+        const typeStr = checkin.type.toLowerCase().includes("-in") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
         const location = checkin.project_name || checkin.branch_name || "สถานที่ปฏิบัติงาน";
         
         // 🚀 Encode data into URL to avoid DB hits in the OG route
@@ -116,7 +116,7 @@ export default async function SharePage({ params }: Props) {
             );
         }
 
-        const typeStr = checkin.type.includes("In") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
+        const typeStr = checkin.type.toLowerCase().includes("-in") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
         const isProject = checkin.type.includes("Project");
         const isOffsite = checkin.type.includes("Offsite");
         const title = isOffsite ? "รายงานการเช็กอินนอกสถานที่" : (isProject ? "รายงานการปฏิบัติงานในโครงการ" : "รายงานการเช็กอินพนักงาน");
@@ -139,7 +139,7 @@ export default async function SharePage({ params }: Props) {
                 }}>
                     {/* Header Section */}
                     <div style={{
-                        background: checkin.type.includes("Out") ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                        background: checkin.type.toLowerCase().includes("-out") ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                         padding: "32px 24px",
                         color: "white",
                         textAlign: "center"
@@ -191,7 +191,7 @@ export default async function SharePage({ params }: Props) {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 500 }}>ประเภท</div>
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 700, color: checkin.type.includes("Out") ? "#ef4444" : "#10b981" }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 700, color: checkin.type.toLowerCase().includes("-out") ? "#ef4444" : "#10b981" }}>
                                         {typeStr}
                                     </div>
                                 </div>

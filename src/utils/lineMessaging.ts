@@ -1576,3 +1576,69 @@ export async function sendKpiManagementSummary(data: {
 
     return sendLineMessage(managementId, [{ type: "flex", altText: `สรุป KPI: ${data.empName}`, contents }]);
 }
+
+/**
+ * 5. Notify Meeting Room Booking
+ */
+export async function sendMeetingBookingNotification(
+  data: {
+    roomName: string;
+    floor: number;
+    startTime: string;
+    endTime: string;
+    purpose: string;
+    bookerName: string;
+    attendees: string[]; // Names
+  },
+  targetLineIds: string[]
+) {
+  const hrId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  
+  // Combine all recipients, removing duplicates and nulls
+  const allTargets = Array.from(new Set([...targetLineIds, hrId, managementId].filter(id => !!id)));
+
+  const bodyContents: any[] = [
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ห้องประชุม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.roomName} (ชั้น ${data.floor})`, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เวลา:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.startTime} - ${data.endTime}`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "หัวข้อ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.purpose || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ผู้จอง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.bookerName, color: "#111111", size: "sm", flex: 7 }] },
+  ];
+
+  if (data.attendees.length > 0) {
+    bodyContents.push({
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      contents: [
+        { type: "text", text: "ผู้เข้าร่วม:", color: "#888888", size: "sm" },
+        { type: "text", text: data.attendees.join(", "), color: "#111111", size: "sm", wrap: true, margin: "xs" }
+      ]
+    });
+  }
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "แจ้งเตือนการจองห้องประชุม", weight: "bold", size: "lg", color: "#ffffff" }
+      ],
+      backgroundColor: "#0ea5e9"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: bodyContents
+    }
+  };
+
+  // Send to all targets
+  const results = await Promise.all(
+    allTargets.map(id => sendLineMessage(id!, [{ type: "flex", altText: `จองห้องประชุม: ${data.purpose}`, contents }]))
+  );
+  
+  return results.every(r => r);
+}

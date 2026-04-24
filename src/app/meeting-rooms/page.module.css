@@ -168,151 +168,172 @@
     border-radius: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--gray-200);
-    overflow: hidden;
+    overflow: auto;
     position: relative;
     z-index: 1;
 }
 
 .calendarHeader {
     display: grid;
-    grid-template-columns: 80px repeat(7, 1fr);
     background: var(--gray-100);
     border-bottom: 1px solid var(--gray-200);
+    min-width: 1200px;
 }
 
 .dayLabel {
-    padding: 1.5rem 1rem;
+    padding: 1rem;
     text-align: center;
     font-weight: 700;
     font-size: 0.9rem;
-    color: var(--text3);
-    border-left: 1px solid var(--gray-200);
-    font-family: var(--font-display);
+    color: var(--text);
+    background: var(--gray-100);
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    border-right: 1px solid var(--gray-200);
 }
 
-.dayLabel:first-child {
-    border-left: none;
+.timeHeaderLabel {
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text3);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: 80px repeat(7, 1fr);
-    height: 700px;
+    max-height: 700px;
     overflow-y: auto;
-    position: relative;
+    min-width: 1200px;
     scrollbar-width: thin;
-    scrollbar-color: var(--gray-300) transparent;
 }
 
-.timeCol {
-    display: flex;
-    flex-direction: column;
-}
-
-.timeLabel {
-    height: 60px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    font-weight: 600;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.dayCol {
-    border-left: 1px solid #f1f5f9;
-    position: relative;
+.dateCol {
+    padding: 0 1rem;
     background: #ffffff;
-}
-
-.slot {
-    height: 60px;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background 0.2s;
-    cursor: pointer;
-}
-
-.slot:hover {
-    background: rgba(217, 48, 37, 0.03);
-}
-
-/* Bookings */
-.bookingCard {
-    position: absolute;
-    left: 4px;
-    right: 4px;
-    border-radius: 10px;
-    padding: 0.6rem;
-    color: #ffffff;
-    font-size: 0.8rem;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200);
+    position: sticky;
+    left: 0;
     z-index: 10;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
-    background-color: var(--red); /* Fallback */
+    height: 80px; /* Fixed height for all rows */
 }
 
-.bookingCard:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    z-index: 20;
-}
-
-.bookingHeader {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 4px;
-}
-
-.avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.5);
-    object-fit: cover;
-}
-
-.bookingName {
+.dateText {
+    font-size: 0.85rem;
     font-weight: 800;
+    color: var(--red);
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+
+.roomNameText {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: var(--font-display);
-    font-size: 0.85rem;
 }
 
-.bookingPurpose {
-    opacity: 0.95;
-    font-weight: 500;
-    font-size: 0.7rem;
-    line-height: 1.2;
+.timeRow {
+    display: flex;
+    position: relative;
+    border-bottom: 1px solid var(--gray-200);
+    height: 80px; /* Match dateCol */
+    background: #ffffff;
 }
 
-.cancelBookingBtn {
-    margin-left: auto;
-    background: rgba(255, 255, 255, 0.25);
+.timeSlotCell {
+    flex: 1;
+    border-right: 1px solid var(--gray-200);
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.timeSlotCell:hover {
+    background: rgba(217, 48, 37, 0.02);
+}
+
+.bookingCardHoriz {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #ffffff;
+    font-size: 0.75rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.bookingCardHoriz:hover {
+    transform: scale(1.01);
+    z-index: 10;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.bookingHeaderHoriz {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.bookingNameHoriz {
+    font-weight: 800;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookingPurposeHoriz {
+    font-size: 0.65rem;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cancelBookingBtnSmall {
+    background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s;
+    font-size: 12px;
 }
 
-.cancelBookingBtn:hover {
-    background: rgba(255, 255, 255, 0.45);
-    transform: rotate(90deg);
+.noRooms {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-style: italic;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--gray-200);
+    background: #fafafa;
 }
 
 /* Floor Colors - Using Corporate Gradients */
@@ -360,13 +381,17 @@
 
 .modalContent {
     background: var(--white);
-    padding: 2.5rem;
+    padding: 0;
     border-radius: 28px;
     width: 100%;
     max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
     position: relative;
     border: 1px solid var(--gray-200);
+    overflow: hidden;
 }
 
 .modalContent::before {
@@ -380,12 +405,40 @@
     border-radius: 28px 28px 0 0;
 }
 
+.modalHeader {
+    padding: 2rem 2.5rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .modalHeader h2 {
     font-size: 1.8rem;
     font-weight: 800;
     color: var(--text);
     font-family: var(--font-display);
-    margin-bottom: 1.5rem;
+    margin: 0;
+}
+
+.closeModalBtn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.closeModalBtn:hover {
+    color: var(--red);
+}
+
+.modalBody {
+    padding: 0 2.5rem;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
 }
 
 .formGroup {
@@ -424,7 +477,9 @@
 .modalActions {
     display: flex;
     gap: 1rem;
-    margin-top: 2.5rem;
+    padding: 1.5rem 2.5rem 2rem;
+    background: #f8fafc;
+    border-top: 1px solid var(--gray-200);
 }
 
 .cancelBtn {
@@ -444,6 +499,26 @@
     color: var(--text);
 }
 
+.pdfBtn {
+    flex: 1;
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 1rem;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-display);
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.pdfBtn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+}
+
 .loading {
     display: flex;
     justify-content: center;
@@ -460,8 +535,219 @@
     gap: 1rem;
 }
 
+.bookingRoomName {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 4px;
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    align-self: flex-start;
+}
+
+.bookingAttendees {
+    font-size: 0.65rem;
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdownContainer {
+    position: relative;
+    width: 100%;
+}
+
+.dropdownHeader {
+    background: #f8fafc;
+    border: 2px solid var(--gray-200);
+    padding: 0.8rem 1rem;
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.25s;
+}
+
+.dropdownHeader:hover {
+    border-color: var(--gray-300);
+}
+
+.chevron {
+    font-size: 0.7rem;
+    color: var(--gray-500);
+}
+
+.dropdownMenu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    padding: 0.5rem;
+}
+
+.searchInput {
+    margin-bottom: 0.5rem;
+}
+
+.optionsList {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.optionItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.optionItem:hover {
+    background: #f1f5f9;
+}
+
+.optionItem.selected {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.optionItem input {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.selectedBadges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.badge {
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid #c7d2fe;
+}
+
+.badge button {
+    background: none;
+    border: none;
+    color: #4338ca;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.badge button:hover {
+    color: #d93025;
+}
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
 @media (max-width: 1024px) {
-    .calendarHeader, .grid {
-        grid-template-columns: 60px repeat(7, 140px);
+    .container {
+        padding: 1.5rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+    }
+
+    .controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .titleSection h1 {
+        font-size: 1.8rem;
+    }
+
+    .controls {
+        gap: 1rem;
+    }
+
+    .floorFilter, .dateNav {
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .submitBtn {
+        width: 100%;
+        padding: 1rem;
+    }
+
+    .modalContent {
+        border-radius: 0;
+        max-height: 100vh;
+        height: 100%;
+    }
+
+    .modalHeader {
+        padding: 1.5rem;
+    }
+
+    .modalBody {
+        padding: 0 1.5rem;
+    }
+
+    .modalActions {
+        padding: 1.5rem;
+    }
+
+    .timeGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .dateText {
+        font-size: 0.75rem;
+    }
+    
+    .roomNameText {
+        font-size: 0.65rem;
+    }
+
+    .timeHeaderLabel {
+        font-size: 0.75rem;
+        padding: 0.75rem 0.5rem;
     }
 }

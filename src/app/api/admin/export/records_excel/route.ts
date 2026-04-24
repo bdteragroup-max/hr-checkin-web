@@ -22,16 +22,29 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month");
         const endMonth = url.searchParams.get("end_month");
+        const paramStartDate = url.searchParams.get("start_date");
+        const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
 
-        if (!startMonth || !endMonth) {
+        let start: Date;
+        let end: Date;
+        let periodLabel = "";
+
+        if (paramStartDate && paramEndDate) {
+            const [sy, sm, sd] = paramStartDate.split("-").map(Number);
+            const [ey, em, ed] = paramEndDate.split("-").map(Number);
+            start = new Date(Date.UTC(sy, sm - 1, sd, 0, 0, 0));
+            end = new Date(Date.UTC(ey, em - 1, ed, 23, 59, 59, 999));
+            periodLabel = `${paramStartDate}_to_${paramEndDate}`;
+        } else if (startMonth && endMonth) {
+            const [sy, sm] = startMonth.split("-").map(Number);
+            const [ey, em] = endMonth.split("-").map(Number);
+            start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
+            end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
+            periodLabel = `${startMonth}_to_${endMonth}`;
+        } else {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
-
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [ey, em] = endMonth.split("-").map(Number);
-        const start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
-        const end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
 
         if (emp_id) {
             // ================== DETAILED INDIVIDUAL EXPORT ==================
@@ -74,23 +87,38 @@ export async function GET(req: Request) {
                 const isLeave = leaveDays.has(dateStr);
 
                 const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
-                const inRecord = dayCheckins.find(c => c.type.includes("In"));
-                const outRecord = dayCheckins.find(c => c.type.includes("Out"));
+                const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
+                const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
 
-                if (isSunday && !inRecord && !outRecord) continue;
+                if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
 
                 let status = "ขาด";
                 if (isSunday) status = "วันหยุด";
                 if (holName) status = `หยุดพิเศษ (${holName})`;
                 if (isLeave) status = "ลา";
+                
+                const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
+                const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
+
                 if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+
+                const inLocs = new Set<string>();
+                inRecords.forEach(c => {
+                    const loc = c.project_name || c.remark || c.branch_name;
+                    if (loc) inLocs.add(loc);
+                });
+                const outLocs = new Set<string>();
+                outRecords.forEach(c => {
+                    const loc = c.project_name || c.remark || c.branch_name;
+                    if (loc) outLocs.add(loc);
+                });
 
                 lines.push([
                     dateStr,
                     inRecord ? formatTime(inRecord.timestamp) : "-",
-                    inRecord ? (inRecord.project_name || inRecord.remark || inRecord.branch_name || "") : "-",
+                    inLocs.size > 0 ? Array.from(inLocs).join(" → ") : "-",
                     outRecord ? formatTime(outRecord.timestamp) : "-",
-                    outRecord ? (outRecord.project_name || outRecord.remark || outRecord.branch_name || "") : "-",
+                    outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
                     inRecord?.late_min || 0,
                     status,
                     isSunday ? "YES" : "NO"
@@ -102,7 +130,7 @@ export async function GET(req: Request) {
             return new Response(bom + csv, {
                 headers: {
                     "Content-Type": "text/csv; charset=utf-8",
-                    "Content-Disposition": `attachment; filename="${emp_id}_records_${startMonth}_to_${endMonth}.csv"`,
+                    "Content-Disposition": `attachment; filename="${emp_id}_records_${periodLabel}.csv"`,
                 },
             });
 
@@ -186,7 +214,7 @@ export async function GET(req: Request) {
             return new Response(bom + csv, {
                 headers: {
                     "Content-Type": "text/csv; charset=utf-8",
-                    "Content-Disposition": `attachment; filename="historical_records_ALL_${startMonth}_to_${endMonth}.csv"`,
+                    "Content-Disposition": `attachment; filename="historical_records_ALL_${periodLabel}.csv"`,
                 },
             });
         }

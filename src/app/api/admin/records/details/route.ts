@@ -17,19 +17,29 @@ export async function GET(req: Request) {
         const emp_id = url.searchParams.get("emp_id");
         const startMonth = url.searchParams.get("start_month");
         const endMonth = url.searchParams.get("end_month");
+        const paramStartDate = url.searchParams.get("start_date");
+        const paramEndDate = url.searchParams.get("end_date");
 
-        if (!emp_id || !startMonth || !endMonth) {
-            return NextResponse.json({ ok: false, error: "MISSING_PARAMS" }, { status: 400 });
+        if (!emp_id) {
+            return NextResponse.json({ ok: false, error: "MISSING_EMP_ID" }, { status: 400 });
         }
 
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [ey, em] = endMonth.split("-").map(Number);
+        let startDate: Date;
+        let endDate: Date;
 
-        // Start of month (00:00 local Bangkok, stored as UTC in Prisma for @db.Date if handled correctly)
-        // More robust: use strings for @db.Date comparisons in Prisma if possible, 
-        // or ensure the Date object represents midnight UTC.
-        const startDate = new Date(Date.UTC(sy, sm - 1, 1));
-        const endDate = new Date(Date.UTC(ey, em, 0)); // Last day of endMonth
+        if (paramStartDate && paramEndDate) {
+            const [sy, sm, sd] = paramStartDate.split("-").map(Number);
+            const [ey, em, ed] = paramEndDate.split("-").map(Number);
+            startDate = new Date(Date.UTC(sy, sm - 1, sd));
+            endDate = new Date(Date.UTC(ey, em - 1, ed));
+        } else if (startMonth && endMonth) {
+            const [sy, sm] = startMonth.split("-").map(Number);
+            const [ey, em] = endMonth.split("-").map(Number);
+            startDate = new Date(Date.UTC(sy, sm - 1, 1));
+            endDate = new Date(Date.UTC(ey, em, 0));
+        } else {
+            return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
+        }
 
         const emp = await prisma.employees.findUnique({ where: { emp_id } });
         if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
@@ -90,10 +100,10 @@ export async function GET(req: Request) {
                 return checkInDateStr === dateStr;
             });
 
-            const inRecord = dayCheckins.find(c => c.type.includes("In"));
-            const outRecord = dayCheckins.find(c => c.type.includes("Out"));
+            const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
+            const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
 
-            const hasActivity = !!inRecord || !!outRecord;
+            const hasActivity = inRecords.length > 0 || outRecords.length > 0;
 
             // Skip Sunday if NO activity
             if (isSunday && !hasActivity) continue; 
@@ -110,6 +120,9 @@ export async function GET(req: Request) {
                 status = "ลา";
             }
 
+            const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
+            const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
+
             if (inRecord) {
                 status = "มาทำงาน";
                 if (inRecord.late_status === "late") {
@@ -117,12 +130,24 @@ export async function GET(req: Request) {
                 }
             }
 
+            const inLocs = new Set<string>();
+            inRecords.forEach(c => {
+                const loc = c.project_name || c.remark || c.branch_name;
+                if (loc) inLocs.add(loc);
+            });
+
+            const outLocs = new Set<string>();
+            outRecords.forEach(c => {
+                const loc = c.project_name || c.remark || c.branch_name;
+                if (loc) outLocs.add(loc);
+            });
+
             reports.push({
                 date: dateStr,
                 in_time: inRecord ? formatTime(inRecord.timestamp) : null,
-                in_loc: inRecord ? (inRecord.project_name || inRecord.remark || inRecord.branch_name) : null,
+                in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : null,
                 out_time: outRecord ? formatTime(outRecord.timestamp) : null,
-                out_loc: outRecord ? (outRecord.project_name || outRecord.remark || outRecord.branch_name) : null,
+                out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : null,
                 late_mins: inRecord?.late_min || 0,
                 status,
                 is_weekend: isSunday,

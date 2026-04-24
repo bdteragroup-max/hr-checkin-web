@@ -37,14 +37,39 @@ export async function GET() {
             }
         });
 
-        const results = employees.map(emp => ({
-            emp_id: emp.emp_id,
-            name: emp.name,
-            hire_date: emp.hire_date,
-            position: emp.job_positions?.title || "N/A",
-            department: emp.departments?.name || "N/A",
-            last_evaluation_no: emp.probation_evaluations[0]?.evaluation_no || 0
-        }));
+        const now = new Date();
+        const results = employees.map(emp => {
+            const nextRound = (emp.probation_evaluations[0]?.evaluation_no || 0) + 1;
+            
+            // Calculate due date based on round
+            let dueDays = 0;
+            if (nextRound === 1) dueDays = 30;
+            else if (nextRound === 2) dueDays = 60;
+            else if (nextRound === 3) dueDays = 90;
+            else dueDays = 119;
+            
+            const dueDate = new Date(emp.hire_date);
+            dueDate.setDate(dueDate.getDate() + dueDays);
+            
+            // Unlock 7 days in advance
+            const unlockDate = new Date(dueDate);
+            unlockDate.setDate(unlockDate.getDate() - 7);
+            
+            const isUnlocked = now >= unlockDate;
+
+            return {
+                emp_id: emp.emp_id,
+                name: emp.name,
+                hire_date: emp.hire_date,
+                position: emp.job_positions?.title || "N/A",
+                department: emp.departments?.name || "N/A",
+                last_evaluation_no: nextRound - 1,
+                next_round: nextRound,
+                due_date: dueDate.toISOString(),
+                unlock_date: unlockDate.toISOString(),
+                is_unlocked: isUnlocked
+            };
+        });
 
         return NextResponse.json({ ok: true, list: results });
     } catch (e: any) {

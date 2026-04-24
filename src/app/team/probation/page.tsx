@@ -16,9 +16,12 @@ interface Subordinate {
     emp_id: string;
     name: string;
     hire_date: string;
-    position: string;
     department: string;
     last_evaluation_no: number;
+    next_round: number;
+    due_date: string;
+    unlock_date: string;
+    is_unlocked: boolean;
 }
 
 export default function SupervisorProbationPage() {
@@ -87,20 +90,41 @@ export default function SupervisorProbationPage() {
                                     <div className={styles.metaItem}>
                                         <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
                                         <span className={styles.metaVal} style={{ color: '#d93025', fontWeight: 800 }}>
-                                            ครั้งที่ {emp.last_evaluation_no + 1}
+                                            ครั้งที่ {emp.next_round}
                                         </span>
                                     </div>
                                 </div>
 
-                                <Link 
-                                    href={`/team/probation/evaluate/${emp.emp_id}`}
-                                    className={styles.btnPrimary}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                        <span>เริ่มการประเมินผล</span>
-                                        <ChevronRightIcon width={16} />
+                                {emp.is_unlocked ? (
+                                    <Link 
+                                        href={`/team/probation/evaluate/${emp.emp_id}`}
+                                        className={styles.btnPrimary}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                            <span>เริ่มการประเมินผล</span>
+                                            <ChevronRightIcon width={16} />
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <div style={{
+                                        background: '#f1f5f9',
+                                        border: '1px dashed #cbd5e1',
+                                        borderRadius: '8px',
+                                        padding: '12px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                                            เปิดให้ประเมินวันที่ {new Date(emp.unlock_date).toLocaleDateString("th-TH")}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                            (กำหนดครบ {emp.next_round === 1 ? 30 : emp.next_round === 2 ? 60 : emp.next_round === 3 ? 90 : 119} วัน: {new Date(emp.due_date).toLocaleDateString("th-TH")})
+                                        </div>
                                     </div>
-                                </Link>
+                                )}
                             </div>
                         ))}
                     </div>

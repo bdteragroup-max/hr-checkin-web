@@ -51,15 +51,38 @@ export async function GET() {
             }
         });
 
-        const results = employees.map((emp: any) => ({
-            emp_id: emp.emp_id,
-            name: emp.name,
-            hire_date: emp.hire_date,
-            is_on_trial: emp.is_on_trial,
-            position: emp.job_positions?.title || "Staff",
-            department: emp.departments?.name || "N/A",
-            evaluations: emp.kpi_evaluations
-        }));
+        const now = new Date();
+        const results = employees.map((emp: any) => {
+            const probEvals = emp.kpi_evaluations.filter((ev: any) => ev.category === "PROBATION");
+            const nextRound = probEvals.length + 1;
+            
+            let dueDays = 0;
+            if (nextRound === 1) dueDays = 30;
+            else if (nextRound === 2) dueDays = 60;
+            else if (nextRound === 3) dueDays = 90;
+            else dueDays = 119;
+            
+            const dueDate = new Date(emp.hire_date);
+            dueDate.setDate(dueDate.getDate() + dueDays);
+            
+            const unlockDate = new Date(dueDate);
+            unlockDate.setDate(unlockDate.getDate() - 7);
+
+            return {
+                emp_id: emp.emp_id,
+                name: emp.name,
+                hire_date: emp.hire_date,
+                is_on_trial: emp.is_on_trial,
+                position: emp.job_positions?.title || "Staff",
+                department: emp.departments?.name || "N/A",
+                evaluations: emp.kpi_evaluations,
+                
+                prob_next_round: nextRound,
+                prob_due_date: dueDate.toISOString(),
+                prob_unlock_date: unlockDate.toISOString(),
+                prob_is_unlocked: now >= unlockDate
+            };
+        });
 
         return NextResponse.json({ ok: true, list: results });
     } catch (e: any) {

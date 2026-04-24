@@ -46,15 +46,17 @@ export default function RecordsPage() {
     // Helper to get YYYY-MM formatted string
     const formatMonth = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 
-    const [rangeType, setRangeType] = useState<"1" | "3" | "6" | "12" | "custom">("3");
+    const formatDate = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+    const [rangeType, setRangeType] = useState<"1" | "3" | "6" | "12" | "custom" | "single">("1");
     
-    const [startMonth, setStartMonth] = useState(() => {
-        let m = currentMonth - 2;
+    const [startDate, setStartDate] = useState(() => {
+        let m = currentMonth - 1;
         let y = currentYear;
         if (m <= 0) { m += 12; y -= 1; }
-        return formatMonth(y, m);
+        return formatDate(y, m, 26);
     });
-    const [endMonth, setEndMonth] = useState(() => formatMonth(currentYear, currentMonth));
+    const [endDate, setEndDate] = useState(() => formatDate(currentYear, currentMonth, 25));
 
     const [data, setData] = useState<RecordSummary[]>([]);
     const [details, setDetails] = useState<any[]>([]);
@@ -96,28 +98,34 @@ export default function RecordsPage() {
     const calcRange = (monthsBack: number) => {
         const eMonth = currentMonth;
         const eYear = currentYear;
-        let sMonth = currentMonth - (monthsBack - 1);
+        // The end date is always the 25th of the current month
+        // The start date is the 26th of the month (monthsBack) ago
+        let sMonth = currentMonth - monthsBack;
         let sYear = currentYear;
         while (sMonth <= 0) { sMonth += 12; sYear -= 1; }
-        setStartMonth(formatMonth(sYear, sMonth));
-        setEndMonth(formatMonth(eYear, eMonth));
+        setStartDate(formatDate(sYear, sMonth, 26));
+        setEndDate(formatDate(eYear, eMonth, 25));
     };
 
     useEffect(() => {
-        if (rangeType !== "custom") calcRange(Number(rangeType));
+        if (rangeType === "single") {
+            setEndDate(startDate);
+        } else if (rangeType !== "custom") {
+            calcRange(Number(rangeType));
+        }
     }, [rangeType]);
 
     async function loadData() {
-        if (!startMonth || !endMonth) return;
+        if (!startDate || !endDate) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/records?start_month=${startMonth}&end_month=${endMonth}`);
+            const res = await fetch(`/api/admin/records?start_date=${startDate}&end_date=${endDate}`);
             const json = await res.json();
             if (json.ok) setData(json.summary || []);
             else showToast(json.error || "Failed to load records", "bad");
 
             if (filterEmpId !== "all") {
-                const resDet = await fetch(`/api/admin/records/details?emp_id=${filterEmpId}&start_month=${startMonth}&end_month=${endMonth}`);
+                const resDet = await fetch(`/api/admin/records/details?emp_id=${filterEmpId}&start_date=${startDate}&end_date=${endDate}`);
                 const jsonDet = await resDet.json();
                 if (jsonDet.ok) setDetails(jsonDet.details || []);
             }
@@ -130,11 +138,11 @@ export default function RecordsPage() {
 
     useEffect(() => {
         loadData();
-    }, [startMonth, endMonth, filterEmpId]);
+    }, [startDate, endDate, filterEmpId]);
 
     function exportFile(type: "pdf" | "excel") {
         showToast("กำลังเตรียมไฟล์...");
-        const p = new URLSearchParams({ start_month: startMonth, end_month: endMonth });
+        const p = new URLSearchParams({ start_date: startDate, end_date: endDate });
         if (filterEmpId !== "all") p.set("emp_id", filterEmpId);
         window.location.href = `/api/admin/export/records_${type}?${p.toString()}`;
     }
@@ -207,15 +215,30 @@ export default function RecordsPage() {
                         <option value="3">3 เดือนล่าสุด</option>
                         <option value="6">6 เดือนล่าสุด</option>
                         <option value="12">1 ปีล่าสุด</option>
-                        <option value="custom">กำหนดเอง...</option>
+                        <option value="custom">กำหนดช่วงเวลา...</option>
+                        <option value="single">เลือกวันเดียว</option>
                     </select>
                 </div>
 
                 {rangeType === "custom" && (
                     <div className={styles.filterGroup} style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 20 }}>
-                        <input type="month" className={styles.input} value={startMonth} onChange={e => setStartMonth(e.target.value)} />
+                        <input type="date" className={styles.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
                         <span style={{ color: "var(--text4)", fontSize: 13, fontWeight: 600 }}>ถึง</span>
-                        <input type="month" className={styles.input} value={endMonth} onChange={e => setEndMonth(e.target.value)} />
+                        <input type="date" className={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    </div>
+                )}
+
+                {rangeType === "single" && (
+                    <div className={styles.filterGroup} style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 20 }}>
+                        <input 
+                            type="date" 
+                            className={styles.input} 
+                            value={startDate} 
+                            onChange={e => {
+                                setStartDate(e.target.value);
+                                setEndDate(e.target.value);
+                            }} 
+                        />
                     </div>
                 )}
 

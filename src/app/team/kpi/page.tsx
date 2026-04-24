@@ -30,6 +30,10 @@ interface Subordinate {
     department: string;
     is_on_trial: boolean;
     evaluations: KPIEvaluation[];
+    prob_next_round: number;
+    prob_due_date: string;
+    prob_unlock_date: string;
+    prob_is_unlocked: boolean;
 }
 
 export default function SupervisorKPIPage() {
@@ -180,12 +184,27 @@ export default function SupervisorKPIPage() {
 
                                                 <div className={styles.actions}>
                                                     {(!currentEval || isMismatch || currentEval.status === "completed") ? (
-                                                        <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnPrimary}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                                <PencilSquareIcon width={18} />
-                                                                <span>เริ่มกำหนดเป้าหมาย {activeTab === 'trial' ? 'KPI' : 'ประจำปี'}</span>
+                                                        (activeTab === 'trial' && !emp.prob_is_unlocked) ? (
+                                                            <div style={{
+                                                                background: '#f1f5f9', border: '1px dashed #cbd5e1', borderRadius: '8px',
+                                                                padding: '8px 12px', display: 'flex', flexDirection: 'column',
+                                                                alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%'
+                                                            }}>
+                                                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+                                                                    เปิดให้ทำ KPI วันที่ {new Date(emp.prob_unlock_date).toLocaleDateString("th-TH")}
+                                                                </div>
+                                                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                                                    (กำหนด {emp.prob_next_round === 1 ? 30 : emp.prob_next_round === 2 ? 60 : emp.prob_next_round === 3 ? 90 : 119} วัน: {new Date(emp.prob_due_date).toLocaleDateString("th-TH")})
+                                                                </div>
                                                             </div>
-                                                        </Link>
+                                                        ) : (
+                                                            <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnPrimary}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                                    <PencilSquareIcon width={18} />
+                                                                    <span>เริ่มกำหนดเป้าหมาย {activeTab === 'trial' ? 'KPI' : 'ประจำปี'}</span>
+                                                                </div>
+                                                            </Link>
+                                                        )
                                                     ) : currentEval.status === "pending_supervisor" ? (
                                                         <Link href={`/team/kpi/evaluate/${currentEval.id}`} className={styles.btnPrimary} style={{ background: '#3b82f6', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

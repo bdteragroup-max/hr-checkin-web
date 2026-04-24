@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styles from "./page.module.css";
 import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 
@@ -8,6 +8,7 @@ type PayrollResult = {
     emp_id: string;
     name: string;
     department: string;
+    division: string;
     position: string;
     base_salary: number;
     hourly_wage: number;
@@ -246,12 +247,38 @@ export default function PayrollPage() {
 
     const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num));
 
-    const groupedData = [
-        { title: "บริษัท เทอรา กรุ้ป จำกัด (TG)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TG")) },
-        { title: "บริษัท เทอรา อิเล็กทริค จำกัด (TE)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TE")) },
-        { title: "บริษัท เทอรา พาวเวอร์ จำกัด (TP)", items: data.filter(d => d.emp_id.toUpperCase().startsWith("TP")) },
-        { title: "บริษัทอื่นๆ", items: data.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2))) }
-    ].filter(g => g.items.length > 0);
+    const groupedData = useMemo(() => {
+        const companies = [
+            { key: "TG", title: "บริษัท เทอรา กรุ้ป จำกัด (TG)" },
+            { key: "TE", title: "บริษัท เทอรา อิเล็กทริค จำกัด (TE)" },
+            { key: "TP", title: "บริษัท เทอรา พาวเวอร์ จำกัด (TP)" },
+            { key: "OTHER", title: "บริษัทอื่นๆ" }
+        ];
+
+        return companies.map(comp => {
+            let filtered = [];
+            if (comp.key === "OTHER") {
+                filtered = data.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2)));
+            } else {
+                filtered = data.filter(d => d.emp_id.toUpperCase().startsWith(comp.key));
+            }
+
+            // Sub-group by Division
+            const divGroups: { [key: string]: PayrollResult[] } = {};
+            filtered.forEach(item => {
+                const divName = item.division || "ไม่ระบุฝ่าย (Unassigned)";
+                if (!divGroups[divName]) divGroups[divName] = [];
+                divGroups[divName].push(item);
+            });
+
+            const divisions = Object.entries(divGroups).map(([name, items]) => ({
+                name,
+                items: items.sort((a, b) => a.emp_id.localeCompare(b.emp_id))
+            })).sort((a, b) => a.name.localeCompare(b.name));
+
+            return { title: comp.title, divisions, totalCount: filtered.length };
+        }).filter(g => g.totalCount > 0);
+    }, [data]);
 
     if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูลเงินเดือน...</div>;
 
@@ -288,21 +315,34 @@ export default function PayrollPage() {
                         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--gray-50)", display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)" }}></div>
                             <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{group.title}</h2>
-                            <span style={{ color: "var(--text3)", fontSize: 14, fontWeight: 500 }}>({group.items.length} คน)</span>
+                            <span style={{ color: "var(--text3)", fontSize: 14, fontWeight: 500 }}>({group.totalCount} คน)</span>
                             <div style={{ flex: 1 }}></div>
-                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => handlePublishBatch(group.title, group.items, false)} disabled={publishing || loading}>
+                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => {
+                                const allItems = group.divisions.flatMap(d => d.items);
+                                handlePublishBatch(group.title, allItems, false);
+                            }} disabled={publishing || loading}>
                                 ยกเลิก Publish ทั้งหมด
                             </button>
-                            <button className={styles.btnPrimary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => handlePublishBatch(group.title, group.items, true)} disabled={publishing || loading}>
+                            <button className={styles.btnPrimary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => {
+                                const allItems = group.divisions.flatMap(d => d.items);
+                                handlePublishBatch(group.title, allItems, true);
+                            }} disabled={publishing || loading}>
                                 <PaperAirplaneIcon width={14} /> Publish ทั้งหมด
                             </button>
                         </div>
-                        <div className={styles.tableWrap}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>พนักงาน (ID)</th>
-                                        <th>ตำแหน่ง & แผนก</th>
+                        {group.divisions.map((div, dIdx) => (
+                            <div key={dIdx} style={{ padding: "0 20px 20px 20px" }}>
+                                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--line)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                                    <AcademicCapIcon width={16} style={{ color: "var(--blue)" }} />
+                                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "var(--text2)" }}>ฝ่าย: {div.name}</h3>
+                                    <span style={{ fontSize: 12, color: "var(--text4)" }}>({div.items.length} คน)</span>
+                                </div>
+                                <div className={styles.tableWrap}>
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>พนักงาน (ID)</th>
+                                                <th>ตำแหน่ง & แผนก</th>
                                         <th className={styles.thRight} title="หากมีการปรับฐานเงินเดือนรอบนี้ จะแสดงเป็นสีส้ม">เงินเดือน (฿)</th>
                                         <th className={styles.thRight} style={{ minWidth: 100 }}>เงินประจำตำแหน่ง</th>
                                         <th>เงื่อนไข OT</th>
@@ -335,8 +375,8 @@ export default function PayrollPage() {
                                         <th>จัดการ</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {group.items.map(p => (
+                                        <tbody>
+                                            {div.items.map(p => (
                                         <tr key={p.emp_id}>
                                             <td style={{ whiteSpace: "nowrap" }}>
                                                 <span className={styles.bold}>{p.name}</span> <span style={{ fontSize: 12, color: "var(--text3)" }}>({p.emp_id})</span>
@@ -517,8 +557,10 @@ export default function PayrollPage() {
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
-                        </div>
+                                    </table>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ))
             )}

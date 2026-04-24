@@ -25,14 +25,29 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month");
         const endMonth = url.searchParams.get("end_month");
+        const paramStartDate = url.searchParams.get("start_date");
+        const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
 
-        if (!startMonth || !endMonth) return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
+        let start: Date;
+        let end: Date;
+        let periodLabel = "";
 
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [ey, em] = endMonth.split("-").map(Number);
-        const start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
-        const end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
+        if (paramStartDate && paramEndDate) {
+            const [sy, sm, sd] = paramStartDate.split("-").map(Number);
+            const [ey, em, ed] = paramEndDate.split("-").map(Number);
+            start = new Date(Date.UTC(sy, sm - 1, sd, 0, 0, 0));
+            end = new Date(Date.UTC(ey, em - 1, ed, 23, 59, 59, 999));
+            periodLabel = `${paramStartDate} to ${paramEndDate}`;
+        } else if (startMonth && endMonth) {
+            const [sy, sm] = startMonth.split("-").map(Number);
+            const [ey, em] = endMonth.split("-").map(Number);
+            start = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
+            end = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
+            periodLabel = `${startMonth} to ${endMonth}`;
+        } else {
+            return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
+        }
 
         const pdf = await PDFDocument.create();
         pdf.registerFontkit(fontkit);
@@ -61,7 +76,7 @@ export async function GET(req: Request) {
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
             draw(`Detailed Attendance Log: ${emp.name} (${emp_id})`, 16, true);
-            draw(`Period: ${startMonth} to ${endMonth}`, 12);
+            draw(`Period: ${periodLabel}`, 12);
             y -= 10;
 
             const checkins = await prisma.checkins.findMany({
@@ -93,19 +108,34 @@ export async function GET(req: Request) {
                 const isLeave = leaveDays.has(dateStr);
 
                 const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
-                const inRecord = dayCheckins.find(c => c.type.includes("In"));
-                const outRecord = dayCheckins.find(c => c.type.includes("Out"));
+                const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
+                const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
 
-                if (isSunday && !inRecord && !outRecord) continue;
+                if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
 
                 let status = "ขาด";
                 if (isSunday) status = "วันหยุด";
                 if (holName) status = `หยุดพิเศษ (${holName})`;
                 if (isLeave) status = "ลา";
+                
+                const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
+                const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
+
                 if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
 
-                const inStr = inRecord ? `${formatTime(inRecord.timestamp)} (${inRecord.project_name || inRecord.remark || inRecord.branch_name})` : "-";
-                const outStr = outRecord ? `${formatTime(outRecord.timestamp)} (${outRecord.project_name || outRecord.remark || outRecord.branch_name})` : "-";
+                const inLocs = new Set<string>();
+                inRecords.forEach(c => {
+                    const loc = c.project_name || c.remark || c.branch_name;
+                    if (loc) inLocs.add(loc);
+                });
+                const outLocs = new Set<string>();
+                outRecords.forEach(c => {
+                    const loc = c.project_name || c.remark || c.branch_name;
+                    if (loc) outLocs.add(loc);
+                });
+
+                const inStr = inRecord ? `${formatTime(inRecord.timestamp)} (${Array.from(inLocs).join(" → ") || "-"})` : "-";
+                const outStr = outRecord ? `${formatTime(outRecord.timestamp)} (${Array.from(outLocs).join(" → ") || "-"})` : "-";
                 const lateStr = (inRecord?.late_min || 0) > 0 ? ` [สาย ${inRecord?.late_min} นาที]` : "";
 
                 draw(`${dateStr} | ${status}${lateStr}`, 11, true);
@@ -116,7 +146,7 @@ export async function GET(req: Request) {
         } else {
             // ================== AGGREGATE SUMMARY EXPORT ==================
             // (Same as original code)
-            draw(`Historical Records: ${startMonth} to ${endMonth}`, 18, true);
+            draw(`Historical Records: ${periodLabel}`, 18, true);
             
             const emps = await prisma.employees.findMany({
                 where: { is_active: true },
@@ -186,7 +216,7 @@ export async function GET(req: Request) {
         const saved = await pdf.save();
         const bytes = Uint8Array.from(saved as unknown as Uint8Array);
         const body = Buffer.from(bytes) as unknown as BodyInit;
-        let filename = emp_id ? `${emp_id}_records_${startMonth}_to_${endMonth}.pdf` : `historical_records_ALL_${startMonth}_to_${endMonth}.pdf`;
+        let filename = emp_id ? `${emp_id}_records_${periodLabel.replace(/ to /g, "_")}.pdf` : `historical_records_ALL_${periodLabel.replace(/ to /g, "_")}.pdf`;
 
         return new Response(body, {
             headers: {
