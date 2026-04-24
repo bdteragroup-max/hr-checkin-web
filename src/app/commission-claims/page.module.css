@@ -1,0 +1,427 @@
+/* ============================================
+   COMMISSION SYSTEM — TERA GROUP
+   Red · White · Gray · Premium Modern
+   Consistent with /app
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
+
+:root {
+  --red: #d93025;
+  --red-dark: #b71c1c;
+  --red-light: #ef5350;
+  --red-dim: rgba(217, 48, 37, 0.08);
+  --red-border: rgba(217, 48, 37, 0.22);
+  --orange: #e8450a;
+
+  --bg: #f4f6f9;
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e8ef;
+  --gray-300: #d1d5dc;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+
+  --text: #111827;
+  --text2: #374151;
+  --text3: #6b7280;
+  --text4: #9ca3af;
+
+  --ok: #16a34a;
+  --ok-bg: #f0fdf4;
+  --ok-bdr: #bbf7d0;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --warn-bdr: #fde68a;
+  --bad: #dc2626;
+  --bad-bg: #fef2f2;
+  --bad-bdr: #fecaca;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
+  
+  --radius: 16px;
+  --radius-sm: 10px;
+
+  --font-th: "Sarabun", sans-serif;
+  --font-display: "Prompt", sans-serif;
+}
+
+.wrapper {
+  font-family: var(--font-th);
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  position: relative;
+  padding-bottom: 60px;
+}
+
+.wrapper::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle,
+      rgba(217, 48, 37, 0.045) 1px,
+      transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 14px;
+}
+
+.hero {
+  padding: 28px 0 20px;
+  position: relative;
+}
+
+.heroH1 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.heroMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+  font-family: var(--font-display);
+}
+
+.heroMetaDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--red), var(--orange), transparent);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.sectionLabel span {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px var(--red-dim);
+  flex-shrink: 0;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+}
+
+.input, .select {
+  width: 100%;
+  font-family: var(--font-th);
+  font-size: 15px;
+  font-weight: 400;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: var(--gray-50);
+  color: var(--text);
+  outline: none;
+  transition: all 0.18s;
+}
+
+.input:focus, .select:focus {
+  border-color: var(--red);
+  background: var(--white);
+  box-shadow: 0 0 0 3px var(--red-dim);
+}
+
+.companionSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selectedList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border: 1px dashed var(--gray-300);
+}
+
+.companionChip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--red-dim);
+    color: var(--red);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--red-border);
+}
+
+.companionChip button {
+    background: var(--red);
+    color: white;
+    border: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.hint {
+    font-size: 11px;
+    color: var(--text4);
+    font-style: italic;
+}
+
+.searchWrapper {
+    position: relative;
+}
+
+.dropdownList {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.dropdownItem {
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.dropdownItem:last-child {
+    border-bottom: none;
+}
+
+.dropdownItem:hover {
+    background: var(--red-dim);
+    color: var(--red);
+}
+
+.dropdownNoResult {
+    padding: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text4);
+}
+
+.summaryBox {
+    background: var(--gray-50);
+    border-radius: 10px;
+    padding: 14px;
+    border: 1px solid var(--gray-200);
+}
+
+.kv {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 8px 12px;
+}
+
+.kvKey {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text4);
+}
+
+.kvVal {
+    font-size: 14px;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.highlight {
+    color: var(--ok);
+    font-size: 18px;
+}
+
+.btnPrimary {
+    width: 100%;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    background: var(--red);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: var(--shadow-red);
+    transition: all 0.2s;
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--red-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(217, 48, 37, 0.3);
+}
+
+.btnPrimary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.historyList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.historyItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-100);
+    position: relative;
+}
+
+.historyIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--gray-100);
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.historyInfo {
+    flex: 1;
+}
+
+.historyType {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.historyMeta {
+    font-size: 12px;
+    color: var(--text4);
+}
+
+.historyAmount {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 4px;
+}
+
+.historyTag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.tagOntime { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-bdr); }
+.tagPending { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-bdr); }
+.tagLate { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad-bdr); }
+
+.historyEmpty {
+    text-align: center;
+    padding: 30px;
+    color: var(--text4);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}

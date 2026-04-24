@@ -1,0 +1,302 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import styles from "./page.module.css";
+import AlertModal, { AlertState } from "@/components/AlertModal";
+import { 
+    BanknotesIcon, 
+    CheckCircleIcon, 
+    XCircleIcon, 
+    ArrowDownTrayIcon, 
+    ArrowPathIcon,
+    FolderOpenIcon,
+    MagnifyingGlassIcon,
+    CheckIcon,
+    ClockIcon,
+    UserGroupIcon,
+    ShieldCheckIcon
+} from "@heroicons/react/24/outline";
+
+type CommissionClaim = {
+    id: string;
+    emp_id: string;
+    date: string;
+    customer_name: string;
+    selling_price?: number;
+    total_commission?: number;
+    per_person_commission?: number;
+    status: string;
+    created_at: string;
+    employee: {
+        name: string;
+    };
+};
+
+export default function AdminCommissionClaimsPage() {
+    const [claims, setClaims] = useState<CommissionClaim[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
+    const [pendingAction, setPendingAction] = useState<{ id: string, action: "approve" | "reject", sellingPrice?: number } | null>(null);
+
+    const closeAlert = () => {
+        setAlert(p => ({ ...p, visible: false }));
+        setPendingAction(null);
+    };
+
+    useEffect(() => {
+        fetchClaims();
+    }, []);
+
+    const fetchClaims = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/admin/commission-claims");
+            const data = await res.json();
+            if (data.ok) setClaims(data.list);
+        } catch (error) {
+            console.error("Fetch error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleActionClick = (id: string, action: "approve" | "reject", sellingPrice?: number) => {
+        setPendingAction({ id, action, sellingPrice });
+        setAlert({
+            visible: true,
+            message: `ยืนยันการ${action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ'} รายการนี้?`,
+            type: "ok"
+        });
+    };
+
+    const executeAction = async () => {
+        if (!pendingAction) return;
+        const { id, action, sellingPrice } = pendingAction;
+
+        setLoading(true);
+        try {
+            const res = await fetch("/api/admin/commission-claims", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, action, selling_price: sellingPrice })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                setAlert({ visible: true, message: "ดำเนินการเรียบร้อยแล้ว", type: "ok" });
+                fetchClaims();
+            } else {
+                setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
+                setLoading(false);
+            }
+        } catch (error) {
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+            setLoading(false);
+        } finally {
+            setPendingAction(null);
+        }
+    };
+
+    const handleExport = (id: string) => {
+        window.open(`/api/admin/commission-claims/export?id=${id}`, "_blank");
+    };
+
+    const filteredClaims = useMemo(() => {
+        return claims.filter(c => {
+            const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+            const matchesSearch = !searchQuery ||
+                c.employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.emp_id.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesStatus && matchesSearch;
+        });
+    }, [claims, statusFilter, searchQuery]);
+
+    const pendingCount = claims.filter(c => c.status === "pending_admin").length;
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case "pending_supervisor": return "รอหัวหน้า";
+            case "pending_admin": return "รอ HR";
+            case "completed": return "อนุมัติแล้ว";
+            case "rejected": return "ไม่อนุมัติ";
+            default: return status;
+        }
+    };
+
+    return (
+        <div className={styles.wrap}>
+            <AlertModal
+                alert={alert}
+                onClose={closeAlert}
+                onConfirm={pendingAction ? executeAction : undefined}
+                confirmText={pendingAction ? "ยืนยัน" : "ตกลง"}
+            />
+
+            <header className={styles.header}>
+                <div>
+                    <h1 className={styles.h1}>จัดการค่าคอมมิชชั่น</h1>
+                    <p className={styles.sub}>ตรวจสอบและอนุมัติรายการเบิกค่าคอมมิชชั่น (Inverter)</p>
+                </div>
+            </header>
+
+            <div className={styles.filterBar}>
+                <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>STATUS</label>
+                    <select 
+                        className={styles.select}
+                        value={statusFilter} 
+                        onChange={e => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">ทุกสถานะ</option>
+                        <option value="pending_supervisor">รอหัวหน้า</option>
+                        <option value="pending_admin">รอ HR</option>
+                        <option value="completed">อนุมัติแล้ว</option>
+                        <option value="rejected">ไม่อนุมัติ</option>
+                    </select>
+                </div>
+                <div className={styles.filterGroup} style={{ flex: 1, minWidth: 250 }}>
+                    <label className={styles.filterLabel}>SEARCH</label>
+                    <div style={{ position: 'relative' }}>
+                        <input 
+                            className={styles.input}
+                            style={{ width: '100%', paddingLeft: 35 }}
+                            type="text" 
+                            placeholder="ค้นหาชื่อ, รหัสพนักงาน, ลูกค้า..." 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                        <MagnifyingGlassIcon width={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text5)' }} />
+                    </div>
+                </div>
+                <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading}>
+                    <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> Refresh
+                </button>
+            </div>
+
+            <div className={styles.tableCard}>
+                <div className={styles.tableHeader}>
+                    <div className={styles.tableHeaderTitle}>
+                        <FolderOpenIcon width={20} /> รายการเบิกค่าคอมมิชชั่น
+                        {pendingCount > 0 && (
+                            <span style={{
+                                background: "var(--red)",
+                                color: "white",
+                                padding: "1px 7px",
+                                borderRadius: 10,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                marginLeft: 8
+                            }}>
+                                {pendingCount} PENDING
+                            </span>
+                        )}
+                    </div>
+                    <span className={styles.rowCount}>{filteredClaims.length} รายการ</span>
+                </div>
+
+                <div className={styles.tableScroll}>
+                    {loading ? (
+                        <div className={styles.loader}>
+                            <div className={styles.spinner} />
+                            กำลังโหลดข้อมูล...
+                        </div>
+                    ) : (
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>พนักงาน</th>
+                                    <th>วันที่</th>
+                                    <th>ลูกค้า</th>
+                                    <th>ราคาขาย (ก่อน VAT)</th>
+                                    <th>คอมมิชชั่น/คน</th>
+                                    <th>สถานะ</th>
+                                    <th style={{ textAlign: "right" }}>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredClaims.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} style={{ textAlign: "center", padding: 60, color: "var(--text4)" }}>
+                                            ไม่พบรายการเบิกค่าคอมมิชชั่น
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredClaims.map(claim => (
+                                        <tr key={claim.id}>
+                                            <td>
+                                                <div className={styles.empName}>{claim.employee.name}</div>
+                                                <div className={styles.empId}>{claim.emp_id}</div>
+                                            </td>
+                                            <td>{new Date(claim.date).toLocaleDateString("th-TH")}</td>
+                                            <td style={{ fontWeight: 500 }}>{claim.customer_name}</td>
+                                            <td>
+                                                {claim.status === "pending_admin" || claim.status === "pending_supervisor" ? (
+                                                    <input 
+                                                        type="number" 
+                                                        className={styles.inlineInput}
+                                                        placeholder="ใส่ราคาขาย..."
+                                                        defaultValue={claim.selling_price ? Number(claim.selling_price) : ""}
+                                                        onBlur={(e) => {
+                                                            const val = parseFloat(e.target.value);
+                                                            if (!isNaN(val)) claim.selling_price = val;
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontWeight: 700 }}>฿{claim.total_commission?.toLocaleString() || "—"}</span>
+                                                )}
+                                            </td>
+                                            <td style={{ color: "var(--red)", fontWeight: 700 }}>
+                                                {claim.per_person_commission ? `฿${claim.per_person_commission.toLocaleString()}` : "—"}
+                                            </td>
+                                            <td>
+                                                <span className={`${styles.statusBadge} ${styles["status_" + claim.status]}`}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        {claim.status === "pending_admin" ? <><ShieldCheckIcon width={14} /> รอ HR</> :
+                                                         claim.status === "pending_supervisor" ? <><UserGroupIcon width={14} /> รอหัวหน้า</> :
+                                                         claim.status === "completed" ? <><CheckCircleIcon width={14} /> สำเร็จ</> : <><XCircleIcon width={14} /> ไม่อนุมัติ</>}
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style={{ textAlign: "right" }}>
+                                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                                    {(claim.status === "pending_supervisor" || claim.status === "pending_admin") && (
+                                                        <>
+                                                            <button 
+                                                                className={styles.btnApprove} 
+                                                                onClick={() => handleActionClick(claim.id, "approve", Number(claim.selling_price))}
+                                                                title="อนุมัติ"
+                                                            >
+                                                                <CheckIcon width={16} />
+                                                            </button>
+                                                            <button 
+                                                                className={styles.btnReject} 
+                                                                onClick={() => handleActionClick(claim.id, "reject")}
+                                                                title="ไม่อนุมัติ"
+                                                            >
+                                                                <XCircleIcon width={16} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button 
+                                                        className={styles.btnExport} 
+                                                        onClick={() => handleExport(claim.id)}
+                                                        title="ส่งออก PDF"
+                                                    >
+                                                        <ArrowDownTrayIcon width={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

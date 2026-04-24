@@ -589,6 +589,152 @@ export async function POST(req: Request) {
                                 }, [claim.employee.line_user_id]);
                             }
                         }
+                    } else if (action === "approve_commission" || action === "reject_commission") {
+                        console.log(`[LINE WEBHOOK] Querying commission claim: ${targetId}`);
+                        const claim = await prisma.commission_claims.findUnique({
+                            where: { id: targetId! },
+                            include: { employee: true }
+                        });
+
+                        if (!claim) {
+                            await sendReplyMessage(replyToken, "❌ ไม่พบข้อมูลคำขอค่าคอมมิชชั่น");
+                            continue;
+                        }
+
+                        // Auth Check
+                        const hrLineConfig = process.env.HR_LINE_USER_ID || "";
+                        const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
+                        const isHr = hrLineIds.includes(lineUserId || "");
+                        
+                        const supervisor = await prisma.employees.findUnique({
+                            where: { emp_id: claim.supervisor_id || "" }
+                        });
+                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
+
+                        if (!isHr && !isSupervisor) {
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
+                            continue;
+                        }
+
+                        let canAct = false;
+                        if (isSupervisor && claim.status === "pending_supervisor") canAct = true;
+                        else if (isHr) {
+                            if (action === "approve_commission") {
+                                if (claim.status === "pending_admin") canAct = true;
+                            } else {
+                                if (["pending_supervisor", "pending_admin"].includes(claim.status)) canAct = true;
+                            }
+                        }
+
+                        if (!canAct) {
+                            await sendReplyMessage(replyToken, `⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้ (สถานะปัจจุบัน: ${claim.status})`);
+                            continue;
+                        }
+
+                        const { sendCommissionClaimNotification, sendManagementCommissionSummary } = await import("@/utils/lineMessaging");
+
+                        // Look up approver name for summary
+                        const approver = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { name: true }
+                        });
+                        const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
+
+                        if (action === "approve_commission") {
+                            const nextStatus = isHr ? "completed" : "pending_admin";
+                            const updated = await prisma.commission_claims.update({
+                                where: { id: targetId! },
+                                data: {
+                                    status: nextStatus,
+                                    supervisor_approved_at: isSupervisor ? new Date() : claim.supervisor_approved_at,
+                                    approved_at: isHr ? new Date() : claim.approved_at,
+                                    approved_by: isHr ? "HR_LINE" : claim.approved_by
+                                },
+                                include: { employee: true }
+                            });
+
+                            // Card reply to Approver
+                            await sendCommissionClaimNotification({
+                                id: claim.id,
+                                employeeName: claim.employee.name,
+                                customerName: claim.customer_name,
+                                date: claim.date.toLocaleDateString("th-TH"),
+                                totalAmount: claim.total_commission?.toLocaleString() || "0",
+                                perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                status: nextStatus,
+                                hideButtons: true
+                            }, [], replyToken);
+
+                            // Notify Employee
+                            if (claim.employee.line_user_id) {
+                                await sendCommissionClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    customerName: claim.customer_name,
+                                    date: claim.date.toLocaleDateString("th-TH"),
+                                    totalAmount: claim.total_commission?.toLocaleString() || "0",
+                                    perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                    status: nextStatus,
+                                    hideButtons: true
+                                }, [claim.employee.line_user_id]);
+                            }
+
+                            // If Supervisor approved -> Notify HR
+                            if (isSupervisor && nextStatus === "pending_admin" && hrLineConfig) {
+                                await sendCommissionClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    customerName: claim.customer_name,
+                                    date: claim.date.toLocaleDateString("th-TH"),
+                                    totalAmount: claim.total_commission?.toLocaleString() || "0",
+                                    perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                    status: "pending_admin"
+                                }, hrLineIds);
+                            }
+
+                            // If HR approved -> Notify Management
+                            if (isHr && nextStatus === "completed") {
+                                await sendManagementCommissionSummary({
+                                    empName: claim.employee.name,
+                                    customerName: claim.customer_name,
+                                    date: claim.date.toLocaleDateString("th-TH"),
+                                    amount: claim.total_commission?.toLocaleString() || "0",
+                                    perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                    hrName: approverName
+                                });
+                            }
+                        } else {
+                            // Reject
+                            await prisma.commission_claims.update({
+                                where: { id: targetId! },
+                                data: { status: "rejected" }
+                            });
+
+                            // Card reply to Approver
+                            await sendCommissionClaimNotification({
+                                id: claim.id,
+                                employeeName: claim.employee.name,
+                                customerName: claim.customer_name,
+                                date: claim.date.toLocaleDateString("th-TH"),
+                                totalAmount: claim.total_commission?.toLocaleString() || "0",
+                                perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                status: "rejected",
+                                hideButtons: true
+                            }, [], replyToken);
+
+                            if (claim.employee.line_user_id) {
+                                await sendCommissionClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    customerName: claim.customer_name,
+                                    date: claim.date.toLocaleDateString("th-TH"),
+                                    totalAmount: claim.total_commission?.toLocaleString() || "0",
+                                    perPerson: claim.per_person_commission?.toLocaleString() || "0",
+                                    status: "rejected",
+                                    hideButtons: true
+                                }, [claim.employee.line_user_id]);
+                            }
+                        }
                     }
                 } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;

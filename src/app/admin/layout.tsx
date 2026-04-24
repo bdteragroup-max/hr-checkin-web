@@ -171,12 +171,20 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                             </Link>
 
                              {/* ✅ Travel & Off-Site Claims */}
-                             <Link
-                                 href="/admin/travel-claims"
-                                 className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
-                             >
-                                 <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
-                             </Link>
+                              <Link
+                                  href="/admin/travel-claims"
+                                  className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
+                              >
+                                  <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
+                              </Link>
+
+                              {/* ✅ Commission Claims */}
+                              <Link
+                                  href="/admin/commission-claims"
+                                  className={`${styles.navItem} ${pathname.startsWith("/admin/commission-claims") ? styles.active : ""}`}
+                              >
+                                  <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ค่าคอมมิชชั่น
+                              </Link>
  
                              {/* ✅ Asset Management */}
                              <Link

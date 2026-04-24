@@ -1909,3 +1909,247 @@ export async function sendManagementTravelSummary(data: {
 
   return sendLineMessage(managementId, [flexMessage]);
 }
+
+/**
+ * Send Commission Claim Notification
+ */
+export async function sendCommissionClaimNotification(data: {
+  id: string;
+  employeeName: string;
+  customerName: string;
+  date: string;
+  totalAmount: string;
+  perPerson: string;
+  status: string;
+  hideButtons?: boolean;
+}, lineUserIds: string[], replyToken?: string) {
+  if (lineUserIds.length === 0 && !replyToken) return false;
+
+  const statusColor = data.status === "completed" 
+    ? "#059669" 
+    : data.status === "rejected" ? "#dc2626" : "#7c3aed";
+
+  const statusText = data.status === "pending_supervisor" ? "รออนุมัติ (หัวหน้า)" :
+                     data.status === "pending_admin" ? "รออนุมัติ (HR)" :
+                     data.status === "completed" ? "อนุมัติแล้ว" :
+                     data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
+
+  const totalText = data.totalAmount === "0" || data.totalAmount === "0.00" ? "รอ HR คำนวณ" : `${data.totalAmount} THB`;
+  const perPersonText = data.perPerson === "0" || data.perPerson === "0.00" ? "รอ HR คำนวณ" : `${data.perPerson} THB`;
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `แจ้งเตือนคำขอค่าคอมมิชชั่น: ${data.employeeName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: statusColor,
+        contents: [
+          { type: "text", text: "คำขอเบิกค่าคอมมิชชั่น", color: "#ffffff", weight: "bold", size: "md" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: data.employeeName, weight: "bold", size: "xl", color: "#111827" },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "สถานะ:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: statusText, color: statusColor, size: "sm", weight: "bold", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ลูกค้า:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.customerName, color: "#111827", size: "sm", flex: 4, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "วันที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.date, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ยอดรวม:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: totalText, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ต่อคน:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: perPersonText, color: "#059669", size: "sm", weight: "bold", flex: 4 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: []
+      }
+    }
+  };
+
+  if (!data.hideButtons && (data.status === "pending_supervisor" || data.status === "pending_admin")) {
+    flexMessage.contents.footer.contents.push({
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      margin: "md",
+      contents: [
+        {
+          type: "button",
+          action: {
+            type: "postback",
+            label: "อนุมัติ",
+            data: `action=approve_commission&id=${data.id}`,
+            displayText: "ดำเนินการอนุมัติค่าคอมฯ"
+          },
+          style: "primary",
+          color: "#059669",
+          height: "sm"
+        },
+        {
+          type: "button",
+          action: {
+            type: "postback",
+            label: "ไม่อนุมัติ",
+            data: `action=reject_commission&id=${data.id}`,
+            displayText: "ไม่อนุมัติค่าคอมฯ"
+          },
+          style: "primary",
+          color: "#dc2626",
+          height: "sm"
+        }
+      ]
+    });
+  }
+
+  if (replyToken) {
+    return sendLineMessage("", [flexMessage], replyToken);
+  }
+  const results = await Promise.all(lineUserIds.map(id => sendLineMessage(id, [flexMessage])));
+  return results.some(r => r === true);
+}
+
+export async function sendHrCommissionNotification(data: {
+  id: string;
+  employeeName: string;
+  customerName: string;
+  date: string;
+  totalAmount: string;
+  perPerson: string;
+}) {
+  const hrLineUserId = process.env.HR_LINE_USER_ID;
+  if (!hrLineUserId) return false;
+  return sendCommissionClaimNotification({ ...data, status: "pending_admin" }, [hrLineUserId]);
+}
+
+export async function sendManagementCommissionSummary(data: {
+  empName: string;
+  customerName: string;
+  date: string;
+  amount: string;
+  perPerson: string;
+  hrName: string;
+}) {
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  if (!managementId) return false;
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `สรุปค่าคอมมิชชั่น: ${data.empName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1e293b",
+        contents: [
+          { type: "text", text: "สรุปการเบิกค่าคอมมิชชั่น (ฝ่ายบริหาร)", color: "#ffffff", weight: "bold", size: "md" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: data.empName, weight: "bold", size: "xl", color: "#111827" },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ลูกค้า:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.customerName, color: "#111827", size: "sm", flex: 4, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "วันที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.date, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ยอดรวม:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: `${data.amount} THB`, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ต่อคน:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: `${data.perPerson} THB`, color: "#059669", size: "sm", weight: "bold", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ผู้อนุมัติ (HR):", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.hrName, color: "#111827", size: "sm", flex: 4 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+
+  return sendLineMessage(managementId, [flexMessage]);
+}
