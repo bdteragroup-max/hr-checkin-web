@@ -1649,3 +1649,171 @@ export async function sendMeetingBookingNotification(
   
   return results.every(r => r);
 }
+
+/**
+ * Notify about Travel Allowance Claim
+ */
+export async function sendTravelClaimNotification(data: {
+  employeeName: string;
+  claimType: string;
+  siteName: string;
+  dateRange: string;
+  amount: string;
+  status: string;
+  remark?: string;
+  reportUrl?: string;
+}, lineUserIds: string[]) {
+  if (lineUserIds.length === 0) return false;
+
+  const statusColor = data.status === "approved" || data.status === "completed" 
+    ? "#059669" 
+    : data.status === "rejected" ? "#dc2626" : "#2563eb";
+
+  const statusText = data.status === "pending_supervisor" ? "รออนุมัติ (หัวหน้า)" :
+                     data.status === "pending_admin" ? "รออนุมัติ (HR)" :
+                     data.status === "completed" ? "อนุมัติแล้ว" :
+                     data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `แจ้งเตือนคำขอเบี้ยเลี้ยง: ${data.employeeName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: statusColor,
+        contents: [
+          { type: "text", text: "คำขอเบิกเบี้ยเลี้ยง/ค่าที่พัก", color: "#ffffff", weight: "bold", size: "md" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: data.employeeName, weight: "bold", size: "xl", color: "#111827" },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "สถานะ:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: statusText, color: statusColor, size: "sm", weight: "bold", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ประเภท:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.claimType, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "สถานที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.siteName, color: "#111827", size: "sm", flex: 4, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "วันที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.dateRange, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ค่าที่พัก:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.amount, color: "#111827", size: "sm", flex: 4 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: []
+      }
+    }
+  };
+
+  if (data.remark) {
+    flexMessage.contents.body.contents.push({
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      contents: [
+        { type: "text", text: "หมายเหตุ:", color: "#6b7280", size: "sm" },
+        { type: "text", text: data.remark, color: "#4b5563", size: "sm", wrap: true }
+      ]
+    });
+  }
+
+  if (data.reportUrl) {
+    flexMessage.contents.footer.contents.push({
+      type: "button",
+      action: {
+        type: "uri",
+        label: "ดูรายงานการปฏิบัติงาน",
+        uri: data.reportUrl
+      },
+      style: "secondary",
+      height: "sm",
+      margin: "sm"
+    });
+  }
+
+  // Add Approve/Disapprove buttons if pending
+  if (data.status === "pending_supervisor" || data.status === "pending_admin") {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://hr.teragroup.com";
+    
+    flexMessage.contents.footer.contents.push({
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      margin: "md",
+      contents: [
+        {
+          type: "button",
+          action: {
+            type: "uri",
+            label: "อนุมัติ",
+            uri: `${baseUrl}/travel-allowance` // Ideally we would deep link to the specific claim ID
+          },
+          style: "primary",
+          color: "#059669",
+          height: "sm"
+        },
+        {
+          type: "button",
+          action: {
+            type: "uri",
+            label: "ไม่อนุมัติ",
+            uri: `${baseUrl}/travel-allowance`
+          },
+          style: "primary",
+          color: "#dc2626",
+          height: "sm"
+        }
+      ]
+    });
+  }
+
+  // Final notification logic
+  const results = await Promise.all(lineUserIds.map(id => sendLineMessage(id, [flexMessage])));
+  return results.some(r => r === true);
+}

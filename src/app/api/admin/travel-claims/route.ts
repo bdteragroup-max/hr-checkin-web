@@ -35,8 +35,28 @@ export async function POST(request: Request) {
                 remark,
                 approved_by: admin.emp_id,
                 approved_at: new Date()
-            }
+            },
+            include: { employee: true }
         });
+
+        // Notify Employee of Final Decision
+        try {
+            if (claim.employee.line_user_id) {
+                const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
+                await sendTravelClaimNotification({
+                    employeeName: claim.employee.name,
+                    claimType: claim.claim_type,
+                    siteName: claim.site_name,
+                    dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,
+                    amount: `${claim.accommodation_amount} THB`,
+                    status: status === "approved" ? "completed" : "rejected",
+                    remark: remark,
+                    reportUrl: claim.report_url
+                }, [claim.employee.line_user_id]);
+            }
+        } catch (error) {
+            console.error("Admin final decision notification error:", error);
+        }
 
         return NextResponse.json({ ok: true, data: claim });
     } catch (e: any) {

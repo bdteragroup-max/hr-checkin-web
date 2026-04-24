@@ -88,6 +88,56 @@ export async function POST(request: Request) {
             } as any
         });
 
+        // Notify Supervisor
+        try {
+            const employeeData = await prisma.employees.findUnique({
+                where: { emp_id: user.emp_id },
+                select: { name: true, supervisor_id: true }
+            });
+
+            if (employeeData) {
+                const supervisor = await prisma.employees.findUnique({
+                    where: { emp_id: employeeData.supervisor_id || "" },
+                    select: { line_user_id: true }
+                });
+
+                const employeeWithLine = await prisma.employees.findUnique({
+                    where: { emp_id: user.emp_id },
+                    select: { line_user_id: true }
+                });
+
+                const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
+                
+                // 1. Notify Supervisor (Action required)
+                if (supervisor?.line_user_id) {
+                    await sendTravelClaimNotification({
+                        employeeName: employeeData.name,
+                        claimType: body.claim_type,
+                        siteName: body.site_name,
+                        dateRange: `${body.date}${body.end_date ? ` - ${body.end_date}` : ""}`,
+                        amount: `${body.accommodation_amount || 0} THB`,
+                        status: "pending_supervisor",
+                        reportUrl: body.report_url
+                    }, [supervisor.line_user_id]);
+                }
+
+                // 2. Notify Employee (Submission confirmation)
+                if (employeeWithLine?.line_user_id) {
+                    await sendTravelClaimNotification({
+                        employeeName: employeeData.name,
+                        claimType: body.claim_type,
+                        siteName: body.site_name,
+                        dateRange: `${body.date}${body.end_date ? ` - ${body.end_date}` : ""}`,
+                        amount: `${body.accommodation_amount || 0} THB`,
+                        status: "pending_supervisor",
+                        reportUrl: body.report_url
+                    }, [employeeWithLine.line_user_id]);
+                }
+            }
+        } catch (error) {
+            console.error("Travel claim notification error:", error);
+        }
+
         return NextResponse.json({ ok: true, data: claim });
     } catch (e: any) {
         console.error("Travel claim error:", e);

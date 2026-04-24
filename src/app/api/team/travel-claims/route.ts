@@ -52,8 +52,46 @@ export async function POST(request: Request) {
                 status: updateStatus,
                 supervisor_remark: remark,
                 supervisor_approved_at: new Date()
-            }
+            },
+            include: { employee: true }
         });
+
+        // Notify Employee and HR
+        try {
+            const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
+            
+            // 1. Notify Employee
+            if (claim.employee.line_user_id) {
+                await sendTravelClaimNotification({
+                    employeeName: claim.employee.name,
+                    claimType: claim.claim_type,
+                    siteName: claim.site_name,
+                    dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,
+                    amount: `${claim.accommodation_amount} THB`,
+                    status: updateStatus === "pending_admin" ? "approved" : "rejected",
+                    remark: remark,
+                    reportUrl: claim.report_url
+                }, [claim.employee.line_user_id]);
+            }
+
+            // 2. Notify HR (if approved by supervisor)
+            if (updateStatus === "pending_admin") {
+                const hrLineId = process.env.HR_LINE_USER_ID;
+                if (hrLineId) {
+                    await sendTravelClaimNotification({
+                        employeeName: claim.employee.name,
+                        claimType: claim.claim_type,
+                        siteName: claim.site_name,
+                        dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,
+                        amount: `${claim.accommodation_amount} THB`,
+                        status: "pending_admin",
+                        reportUrl: claim.report_url
+                    }, [hrLineId]);
+                }
+            }
+        } catch (error) {
+            console.error("Supervisor decision notification error:", error);
+        }
 
         return NextResponse.json({ ok: true, data: claim });
     } catch (e: any) {
