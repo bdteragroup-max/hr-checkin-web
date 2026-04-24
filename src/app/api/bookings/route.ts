@@ -73,8 +73,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MISSING_TIME", message: "Please select both start and end times." }, { status: 400 });
         }
 
-        const start = new Date(start_time);
-        const end = new Date(end_time);
+        const start = new Date(start_time.includes("Z") || start_time.includes("+") ? start_time : `${start_time}+07:00`);
+        const end = new Date(end_time.includes("Z") || end_time.includes("+") ? end_time : `${end_time}+07:00`);
 
         if (start >= end) {
             return NextResponse.json({ error: "INVALID_TIME_RANGE", message: "End time must be after start time." }, { status: 400 });
@@ -85,26 +85,8 @@ export async function POST(req: Request) {
             where: {
                 room_id: Number(room_id),
                 status: "approved",
-                OR: [
-                    {
-                        AND: [
-                            { start_time: { lte: start } },
-                            { end_time: { gt: start } }
-                        ]
-                    },
-                    {
-                        AND: [
-                            { start_time: { lt: end } },
-                            { end_time: { gte: end } }
-                        ]
-                    },
-                    {
-                        AND: [
-                            { start_time: { gte: start } },
-                            { end_time: { lte: end } }
-                        ]
-                    }
-                ]
+                start_time: { lt: end },
+                end_time: { gt: start }
             }
         });
 
@@ -199,13 +181,27 @@ export async function POST(req: Request) {
 
 // DELETE: Cancel a booking
 export async function DELETE(req: Request) {
-    const token = (await cookies()).get("token")?.value;
-    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    const adminToken = cookieStore.get("admin_token")?.value;
+
+    if (!token && !adminToken) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
     try {
-        const decoded = verifyToken(token);
-        const emp_id = decoded.emp_id;
-        const isAdmin = decoded.role === "admin";
+        let emp_id: string | undefined;
+        let isAdmin = false;
+
+        if (adminToken) {
+            try {
+                const decoded = verifyToken(adminToken);
+                if (decoded.role === "admin") isAdmin = true;
+            } catch {}
+        }
+
+        if (!isAdmin && token) {
+            const decoded = verifyToken(token);
+            emp_id = decoded.emp_id;
+        }
 
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
@@ -237,13 +233,27 @@ export async function DELETE(req: Request) {
 
 // PATCH: Update meeting booking details
 export async function PATCH(req: Request) {
-    const token = (await cookies()).get("token")?.value;
-    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    const adminToken = cookieStore.get("admin_token")?.value;
+
+    if (!token && !adminToken) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
     try {
-        const decoded = verifyToken(token);
-        const emp_id = decoded.emp_id;
-        const isAdmin = decoded.role === "admin";
+        let emp_id: string | undefined;
+        let isAdmin = false;
+
+        if (adminToken) {
+            try {
+                const decoded = verifyToken(adminToken);
+                if (decoded.role === "admin") isAdmin = true;
+            } catch {}
+        }
+
+        if (!isAdmin && token) {
+            const decoded = verifyToken(token);
+            emp_id = decoded.emp_id;
+        }
 
         const body = await req.json();
         const { id, room_id, start_time, end_time, purpose, attendee_ids, minutes } = body;
@@ -261,8 +271,8 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }
 
-        const start = new Date(start_time);
-        const end = new Date(end_time);
+        const start = new Date(start_time.includes("Z") || start_time.includes("+") ? start_time : `${start_time}+07:00`);
+        const end = new Date(end_time.includes("Z") || end_time.includes("+") ? end_time : `${end_time}+07:00`);
 
         // Check overlap if time or room changed
         if (room_id || start_time || end_time) {
@@ -271,11 +281,8 @@ export async function PATCH(req: Request) {
                     id: { not: Number(id) },
                     room_id: room_id ? Number(room_id) : booking.room_id,
                     status: "approved",
-                    OR: [
-                        { start_time: { lte: start }, end_time: { gt: start } },
-                        { start_time: { lt: end }, end_time: { gte: end } },
-                        { start_time: { gte: start }, end_time: { lte: end } }
-                    ]
+                    start_time: { lt: end },
+                    end_time: { gt: start }
                 }
             });
 

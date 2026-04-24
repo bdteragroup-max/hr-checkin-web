@@ -38,6 +38,18 @@ export default function MeetingRoomsPage() {
     const [loading, setLoading] = useState(true);
     const [me, setMe] = useState<any>(null);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const currentTimePos = useMemo(() => {
+        const hour = now.getHours() + now.getMinutes() / 60;
+        if (hour < 8 || hour > 20) return null;
+        return (hour - 8) * (100 / 13);
+    }, [now]);
     
     // Booking Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,6 +72,17 @@ export default function MeetingRoomsPage() {
             .map((_, i) => addDays(currentDate, i))
             .filter(day => getDay(day) !== 0); // 0 = Sunday
     }, [currentDate]);
+
+    const isRoomInUse = (roomId: number) => {
+        const now = new Date();
+        // Since we are checking "current" state, we should only check if 'now' is on the 'day' we are currently rendering if we want per-day logic, 
+        // but usually "Currently In Use" means right now (today).
+        return bookings.some(b => 
+            b.room_id === roomId && 
+            new Date(b.start_time) <= now && 
+            new Date(b.end_time) > now
+        );
+    };
 
     const timeSlots = useMemo(() => {
         return [...Array(13)].map((_, i) => 8 + i); // 8:00 to 20:00
@@ -272,7 +295,12 @@ export default function MeetingRoomsPage() {
                                                         {format(day, "EEE d MMM", { locale: th })}
                                                     </div>
                                                 )}
-                                                <div className={styles.roomNameText}>{room.name}</div>
+                                                <div className={styles.roomNameContainer}>
+                                                    <div className={styles.roomNameText}>{room.name}</div>
+                                                    {isRoomInUse(room.id) && (
+                                                        <span className={styles.inUseBadge}>กำลังใช้งาน</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             
                                             <div className={styles.timeRow} style={{ gridColumn: `span ${timeSlots.length}` }}>
@@ -283,6 +311,12 @@ export default function MeetingRoomsPage() {
                                                         onClick={() => handleOpenBooking(day, hour)}
                                                     ></div>
                                                 ))}
+                                                
+                                                {isSameDay(day, now) && currentTimePos !== null && (
+                                                    <div className={styles.currentTimeLine} style={{ left: `${currentTimePos}%` }}>
+                                                        <div className={styles.timeDot} />
+                                                    </div>
+                                                )}
 
                                                 {bookings
                                                     .filter(b => {

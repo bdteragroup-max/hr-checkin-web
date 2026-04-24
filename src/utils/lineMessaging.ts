@@ -1612,7 +1612,14 @@ export async function sendMeetingBookingNotification(
       margin: "md",
       contents: [
         { type: "text", text: "ผู้เข้าร่วม:", color: "#888888", size: "sm" },
-        { type: "text", text: data.attendees.join(", "), color: "#111111", size: "sm", wrap: true, margin: "xs" }
+        { 
+          type: "text", 
+          text: data.attendees.map((name, i) => `${i + 1}. ${name}`).join("\n"), 
+          color: "#111111", 
+          size: "sm", 
+          wrap: true, 
+          margin: "xs" 
+        }
       ]
     });
   }

@@ -235,6 +235,12 @@
     white-space: nowrap;
 }
 
+.roomNameContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .roomNameText {
     font-size: 0.75rem;
     font-weight: 600;
@@ -242,6 +248,25 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.inUseBadge {
+    background: #16a34a;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    align-self: flex-start;
+    animation: pulse 2s infinite ease-in-out;
+    box-shadow: 0 0 8px rgba(22, 163, 74, 0.4);
+    letter-spacing: 0.5px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.98); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 .timeRow {
