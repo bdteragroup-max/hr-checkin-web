@@ -437,6 +437,129 @@ export async function POST(req: Request) {
                                 }).catch(console.error);
                             }
                         }
+                    } else if (action === "approve_travel" || action === "reject_travel") {
+                        console.log(`[LINE WEBHOOK] Querying travel claim: ${targetId}`);
+                        const claim = await prisma.travel_claims.findUnique({
+                            where: { id: targetId! },
+                            include: { employee: true }
+                        });
+
+                        if (!claim) {
+                            await sendReplyMessage(replyToken, "❌ ไม่พบข้อมูลคำขอเบี้ยเลี้ยง");
+                            continue;
+                        }
+
+                        // Auth Check
+                        const hrLineConfig = process.env.HR_LINE_USER_ID || "";
+                        const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
+                        const isHr = hrLineIds.includes(lineUserId || "");
+                        
+                        const supervisor = await prisma.employees.findUnique({
+                            where: { emp_id: claim.supervisor_id || "" }
+                        });
+                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
+
+                        if (!isHr && !isSupervisor) {
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
+                            continue;
+                        }
+
+                        let canAct = false;
+                        if (isSupervisor && claim.status === "pending_supervisor") canAct = true;
+                        else if (isHr && ["pending_supervisor", "pending_admin"].includes(claim.status)) canAct = true;
+
+                        if (!canAct) {
+                            await sendReplyMessage(replyToken, `⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้ (สถานะปัจจุบัน: ${claim.status})`);
+                            continue;
+                        }
+
+                        const { sendTravelClaimNotification, sendManagementTravelSummary } = await import("@/utils/lineMessaging");
+
+                        // Look up approver name for summary
+                        const approver = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { name: true }
+                        });
+                        const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
+
+                        if (action === "approve_travel") {
+                            const nextStatus = isHr ? "completed" : "pending_admin";
+                            const updated = await prisma.travel_claims.update({
+                                where: { id: targetId! },
+                                data: {
+                                    status: nextStatus,
+                                    supervisor_approved_at: isSupervisor ? new Date() : claim.supervisor_approved_at,
+                                    approved_at: isHr ? new Date() : claim.approved_at,
+                                    approved_by: isHr ? "HR_LINE" : claim.approved_by
+                                },
+                                include: { employee: true }
+                            });
+
+                            await sendReplyMessage(replyToken, `✅ ดำเนินการอนุมัติคำขอของ ${claim.employee.name} เรียบร้อยแล้ว (${nextStatus === "completed" ? "อนุมัติสิ้นสุด" : "รอ HR อนุมัติ"})`);
+
+                            // Notify Employee
+                            if (claim.employee.line_user_id) {
+                                await sendTravelClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    claimType: claim.claim_type,
+                                    siteName: claim.site_name,
+                                    dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                    amount: `${claim.accommodation_amount} THB`,
+                                    status: isHr ? "completed" : "approved",
+                                    reportUrl: claim.report_url,
+                                    hideButtons: true
+                                }, [claim.employee.line_user_id]);
+                            }
+
+                            // If Supervisor approved -> Notify HR
+                            if (isSupervisor && nextStatus === "pending_admin" && hrLineConfig) {
+                                await sendTravelClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    claimType: claim.claim_type,
+                                    siteName: claim.site_name,
+                                    dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                    amount: `${claim.accommodation_amount} THB`,
+                                    status: "pending_admin",
+                                    reportUrl: claim.report_url
+                                }, hrLineIds); // Use the array of HR IDs
+                            }
+
+                            // If HR approved (Completed) -> Notify Management
+                            if (isHr && nextStatus === "completed") {
+                                await sendManagementTravelSummary({
+                                    empName: claim.employee.name,
+                                    claimType: claim.claim_type,
+                                    siteName: claim.site_name,
+                                    dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                    amount: `${claim.accommodation_amount} THB`,
+                                    hrName: approverName
+                                });
+                            }
+                        } else {
+                            // Reject
+                            await prisma.travel_claims.update({
+                                where: { id: targetId! },
+                                data: { status: "rejected" }
+                            });
+
+                            await sendReplyMessage(replyToken, `❌ ปฏิเสธคำขอของ ${claim.employee.name} เรียบร้อยแล้ว`);
+
+                            if (claim.employee.line_user_id) {
+                                await sendTravelClaimNotification({
+                                    id: claim.id,
+                                    employeeName: claim.employee.name,
+                                    claimType: claim.claim_type,
+                                    siteName: claim.site_name,
+                                    dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                    amount: `${claim.accommodation_amount} THB`,
+                                    status: "rejected",
+                                    reportUrl: claim.report_url,
+                                    hideButtons: true
+                                }, [claim.employee.line_user_id]);
+                            }
+                        }
                     }
                 } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;

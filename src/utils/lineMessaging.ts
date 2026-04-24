@@ -1654,6 +1654,7 @@ export async function sendMeetingBookingNotification(
  * Notify about Travel Allowance Claim
  */
 export async function sendTravelClaimNotification(data: {
+  id: string;
   employeeName: string;
   claimType: string;
   siteName: string;
@@ -1662,6 +1663,7 @@ export async function sendTravelClaimNotification(data: {
   status: string;
   remark?: string;
   reportUrl?: string;
+  hideButtons?: boolean;
 }, lineUserIds: string[]) {
   if (lineUserIds.length === 0) return false;
 
@@ -1777,10 +1779,8 @@ export async function sendTravelClaimNotification(data: {
     });
   }
 
-  // Add Approve/Disapprove buttons if pending
-  if (data.status === "pending_supervisor" || data.status === "pending_admin") {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://hr.teragroup.com";
-    
+  // Add Approve/Disapprove buttons if pending and not hidden
+  if (!data.hideButtons && (data.status === "pending_supervisor" || data.status === "pending_admin")) {
     flexMessage.contents.footer.contents.push({
       type: "box",
       layout: "horizontal",
@@ -1790,9 +1790,10 @@ export async function sendTravelClaimNotification(data: {
         {
           type: "button",
           action: {
-            type: "uri",
+            type: "postback",
             label: "อนุมัติ",
-            uri: `${baseUrl}/travel-allowance` // Ideally we would deep link to the specific claim ID
+            data: `action=approve_travel&id=${data.id}`,
+            displayText: "ดำเนินการอนุมัติเบี้ยเลี้ยง"
           },
           style: "primary",
           color: "#059669",
@@ -1801,9 +1802,10 @@ export async function sendTravelClaimNotification(data: {
         {
           type: "button",
           action: {
-            type: "uri",
+            type: "postback",
             label: "ไม่อนุมัติ",
-            uri: `${baseUrl}/travel-allowance`
+            data: `action=reject_travel&id=${data.id}`,
+            displayText: "ไม่อนุมัติเบี้ยเลี้ยง"
           },
           style: "primary",
           color: "#dc2626",
@@ -1816,4 +1818,91 @@ export async function sendTravelClaimNotification(data: {
   // Final notification logic
   const results = await Promise.all(lineUserIds.map(id => sendLineMessage(id, [flexMessage])));
   return results.some(r => r === true);
+}
+/**
+ * Send Travel Claim Summary to Management
+ */
+export async function sendManagementTravelSummary(data: {
+  empName: string;
+  claimType: string;
+  siteName: string;
+  dateRange: string;
+  amount: string;
+  hrName: string;
+}) {
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  if (!managementId) return false;
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `สรุปการเบิกเบี้ยเลี้ยง: ${data.empName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1e293b",
+        contents: [
+          { type: "text", text: "สรุปการเบิกเบี้ยเลี้ยง (ฝ่ายบริหาร)", color: "#ffffff", weight: "bold", size: "md" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: data.empName, weight: "bold", size: "xl", color: "#111827" },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ประเภท:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.claimType, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "สถานที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.siteName, color: "#111827", size: "sm", flex: 4, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "วันที่:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.dateRange, color: "#111827", size: "sm", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "จำนวนเงิน:", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.amount, color: "#059669", size: "sm", weight: "bold", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ผู้อนุมัติ (HR):", color: "#6b7280", size: "sm", flex: 2 },
+                  { type: "text", text: data.hrName, color: "#111827", size: "sm", flex: 4 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+
+  return sendLineMessage(managementId, [flexMessage]);
 }

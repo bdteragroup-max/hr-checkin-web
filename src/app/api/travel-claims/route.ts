@@ -111,6 +111,7 @@ export async function POST(request: Request) {
                 // 1. Notify Supervisor (Action required)
                 if (supervisor?.line_user_id) {
                     await sendTravelClaimNotification({
+                        id: claim.id,
                         employeeName: employeeData.name,
                         claimType: body.claim_type,
                         siteName: body.site_name,
@@ -124,13 +125,15 @@ export async function POST(request: Request) {
                 // 2. Notify Employee (Submission confirmation)
                 if (employeeWithLine?.line_user_id) {
                     await sendTravelClaimNotification({
+                        id: claim.id,
                         employeeName: employeeData.name,
                         claimType: body.claim_type,
                         siteName: body.site_name,
                         dateRange: `${body.date}${body.end_date ? ` - ${body.end_date}` : ""}`,
                         amount: `${body.accommodation_amount || 0} THB`,
                         status: "pending_supervisor",
-                        reportUrl: body.report_url
+                        reportUrl: body.report_url,
+                        hideButtons: true
                     }, [employeeWithLine.line_user_id]);
                 }
             }

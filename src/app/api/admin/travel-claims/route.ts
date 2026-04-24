@@ -44,6 +44,7 @@ export async function POST(request: Request) {
             if (claim.employee.line_user_id) {
                 const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
                 await sendTravelClaimNotification({
+                    id: claim.id,
                     employeeName: claim.employee.name,
                     claimType: claim.claim_type,
                     siteName: claim.site_name,
@@ -51,7 +52,8 @@ export async function POST(request: Request) {
                     amount: `${claim.accommodation_amount} THB`,
                     status: status === "approved" ? "completed" : "rejected",
                     remark: remark,
-                    reportUrl: claim.report_url
+                    reportUrl: claim.report_url,
+                    hideButtons: true
                 }, [claim.employee.line_user_id]);
             }
         } catch (error) {

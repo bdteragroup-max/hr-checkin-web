@@ -63,6 +63,7 @@ export async function POST(request: Request) {
             // 1. Notify Employee
             if (claim.employee.line_user_id) {
                 await sendTravelClaimNotification({
+                    id: claim.id,
                     employeeName: claim.employee.name,
                     claimType: claim.claim_type,
                     siteName: claim.site_name,
@@ -70,7 +71,8 @@ export async function POST(request: Request) {
                     amount: `${claim.accommodation_amount} THB`,
                     status: updateStatus === "pending_admin" ? "approved" : "rejected",
                     remark: remark,
-                    reportUrl: claim.report_url
+                    reportUrl: claim.report_url,
+                    hideButtons: true
                 }, [claim.employee.line_user_id]);
             }
 
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
                 const hrLineId = process.env.HR_LINE_USER_ID;
                 if (hrLineId) {
                     await sendTravelClaimNotification({
+                        id: claim.id,
                         employeeName: claim.employee.name,
                         claimType: claim.claim_type,
                         siteName: claim.site_name,
