@@ -280,6 +280,31 @@ export default function PayrollPage() {
         }).filter(g => g.totalCount > 0);
     }, [data]);
 
+    const offSiteSummary = useMemo(() => {
+        const summary: { [division: string]: { [role: string]: { count: number, amount: number } } } = {};
+
+        data.forEach(p => {
+            if (p.travel_site_allowance <= 0) return;
+
+            const div = p.division || "ไม่ระบุฝ่าย (Unassigned)";
+            const pos = p.position.toLowerCase();
+            let role = "Staff";
+            if (pos.includes("manager") || pos.includes("ผู้จัดการ")) role = "Manager";
+            else if (pos.includes("engineer") || pos.includes("วิศวกร")) role = "Engineer";
+            else if (pos.includes("foreman") || pos.includes("หัวหน้าช่าง")) role = "Foreman";
+            else if (pos.includes("driver") || pos.includes("ขับรถ")) role = "Driver";
+
+            if (!summary[div]) summary[div] = {};
+            if (!summary[div][role]) summary[div][role] = { count: 0, amount: 0 };
+
+            summary[div][role].count += 1;
+            summary[div][role].amount += p.travel_site_allowance;
+        });
+
+        return summary;
+    }, [data]);
+
+
     if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูลเงินเดือน...</div>;
 
     return (
@@ -304,6 +329,61 @@ export default function PayrollPage() {
                     </select>
                 </div>
             </div>
+
+            {/* Off-Site Allowance Summary Section */}
+            {Object.keys(offSiteSummary).length > 0 && (
+                <div className={styles.summarySection}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                        <div style={{ width: 4, height: 24, background: 'var(--red)', borderRadius: 2 }}></div>
+                        <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>สรุปเบี้ยเลี้ยงปฏิบัติงานนอกสถานที่ (Off-Site Allowance Summary)</h2>
+                    </div>
+                    <div className={styles.summaryGrid}>
+                        {Object.entries(offSiteSummary).map(([div, roles]) => (
+                            <div key={div} className={styles.summaryCard}>
+                                <div className={styles.summaryHeader}>
+                                    <AcademicCapIcon width={18} style={{ color: 'var(--blue)' }} />
+                                    <h2>ฝ่าย: {div}</h2>
+                                </div>
+                                <table className={styles.summaryTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>ระดับ/ตำแหน่ง</th>
+                                            <th style={{ textAlign: 'center' }}>จำนวน (คน)</th>
+                                            <th style={{ textAlign: 'right' }}>ยอดรวม (฿)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(roles).map(([role, stats]) => (
+                                            <tr key={role}>
+                                                <td>
+                                                    <span className={`${styles.roleBadge} ${styles[`role${role}`]}`}>
+                                                        {role === "Manager" ? "ผู้จัดการ" : 
+                                                         role === "Engineer" ? "วิศวกร" : 
+                                                         role === "Foreman" ? "หัวหน้าช่าง" : 
+                                                         role === "Driver" ? "คนขับรถ" : "พนักงานทั่วไป"}
+                                                    </span>
+                                                </td>
+                                                <td style={{ textAlign: 'center', fontWeight: 600 }}>{stats.count}</td>
+                                                <td style={{ textAlign: 'right' }} className={styles.amountText}>{formatB(stats.amount)}</td>
+                                            </tr>
+                                        ))}
+                                        <tr className={styles.totalRow}>
+                                            <td style={{ fontWeight: 800 }}>รวมทั้งสิ้น</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                {Object.values(roles).reduce((acc, curr) => acc + curr.count, 0)}
+                                            </td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                {formatB(Object.values(roles).reduce((acc, curr) => acc + curr.amount, 0))}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
 
             {groupedData.length === 0 ? (
                 <div className={styles.card} style={{ padding: "40px", textAlign: "center", color: "var(--text3)", background: "white", borderRadius: "12px", border: "1px solid var(--line)" }}>

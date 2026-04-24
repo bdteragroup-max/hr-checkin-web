@@ -466,7 +466,14 @@ export async function POST(req: Request) {
 
                         let canAct = false;
                         if (isSupervisor && claim.status === "pending_supervisor") canAct = true;
-                        else if (isHr && ["pending_supervisor", "pending_admin"].includes(claim.status)) canAct = true;
+                        else if (isHr) {
+                            if (action === "approve_travel") {
+                                if (claim.status === "pending_admin") canAct = true;
+                            } else {
+                                // Reject - allow at any pending stage
+                                if (["pending_supervisor", "pending_admin"].includes(claim.status)) canAct = true;
+                            }
+                        }
 
                         if (!canAct) {
                             await sendReplyMessage(replyToken, `⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้ (สถานะปัจจุบัน: ${claim.status})`);
@@ -495,7 +502,18 @@ export async function POST(req: Request) {
                                 include: { employee: true }
                             });
 
-                            await sendReplyMessage(replyToken, `✅ ดำเนินการอนุมัติคำขอของ ${claim.employee.name} เรียบร้อยแล้ว (${nextStatus === "completed" ? "อนุมัติสิ้นสุด" : "รอ HR อนุมัติ"})`);
+                            // Card reply to Approver
+                            await sendTravelClaimNotification({
+                                id: claim.id,
+                                employeeName: claim.employee.name,
+                                claimType: claim.claim_type,
+                                siteName: claim.site_name,
+                                dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                amount: `${claim.accommodation_amount} THB`,
+                                status: nextStatus,
+                                reportUrl: claim.report_url,
+                                hideButtons: true
+                            }, [], replyToken);
 
                             // Notify Employee
                             if (claim.employee.line_user_id) {
@@ -544,7 +562,18 @@ export async function POST(req: Request) {
                                 data: { status: "rejected" }
                             });
 
-                            await sendReplyMessage(replyToken, `❌ ปฏิเสธคำขอของ ${claim.employee.name} เรียบร้อยแล้ว`);
+                            // Card reply to Approver
+                            await sendTravelClaimNotification({
+                                id: claim.id,
+                                employeeName: claim.employee.name,
+                                claimType: claim.claim_type,
+                                siteName: claim.site_name,
+                                dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
+                                amount: `${claim.accommodation_amount} THB`,
+                                status: "rejected",
+                                reportUrl: claim.report_url,
+                                hideButtons: true
+                            }, [], replyToken);
 
                             if (claim.employee.line_user_id) {
                                 await sendTravelClaimNotification({

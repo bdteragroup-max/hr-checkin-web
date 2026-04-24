@@ -395,11 +395,15 @@ export async function GET(request: Request) {
             if (adj?.travel_site_allowance_override !== null && adj?.travel_site_allowance_override !== undefined) {
                 travel_site_allowance = Number(adj.travel_site_allowance_override);
             } else if (!isDaily) {
+                const posName = (emp.job_positions?.title || "").toLowerCase();
                 const empTravelClaims = travelClaims.filter((tc: any) => tc.emp_id === emp.emp_id);
                 empTravelClaims.forEach((tc: any) => {
-                    let rate = 0;
-                    if (tc.claim_type === "upcountry") rate = 250;
-                    else rate = 150;
+                    let rate = 150; // Default Staff rate
+                    if (posName.includes("ผู้จัดการ") || posName.includes("manager")) rate = 350;
+                    else if (posName.includes("วิศวกร") || posName.includes("engineer")) rate = 250;
+                    else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) rate = 200;
+                    else if (posName.includes("ขับรถ") || posName.includes("driver")) rate = 200;
+
                     const start = new Date(tc.date);
                     const end = tc.end_date ? new Date(tc.end_date) : start;
                     const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;

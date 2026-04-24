@@ -1664,7 +1664,7 @@ export async function sendTravelClaimNotification(data: {
   remark?: string;
   reportUrl?: string;
   hideButtons?: boolean;
-}, lineUserIds: string[]) {
+}, lineUserIds: string[], replyToken?: string) {
   if (lineUserIds.length === 0) return false;
 
   const statusColor = data.status === "approved" || data.status === "completed" 
@@ -1816,6 +1816,9 @@ export async function sendTravelClaimNotification(data: {
   }
 
   // Final notification logic
+  if (replyToken) {
+    return sendLineMessage("", [flexMessage], replyToken);
+  }
   const results = await Promise.all(lineUserIds.map(id => sendLineMessage(id, [flexMessage])));
   return results.some(r => r === true);
 }

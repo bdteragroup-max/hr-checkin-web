@@ -295,3 +295,92 @@
   transform: none;
 }
 
+/* SUMMARY SECTION */
+.summarySection {
+  margin-bottom: 32px;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.summaryCard {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.summaryHeader {
+  padding: 16px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.summaryHeader h2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.summaryTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summaryTable th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text4);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.summaryTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line2);
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.summaryTable tr:last-child td {
+  border-bottom: none;
+}
+
+.roleBadge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.roleManager { background: #fee2e2; color: #ef4444; }
+.roleEngineer { background: #dcfce7; color: #22c55e; }
+.roleForeman { background: #fef9c3; color: #ca8a04; }
+.roleDriver { background: #e0f2fe; color: #0ea5e9; }
+.roleStaff { background: #f1f5f9; color: #64748b; }
+
+.amountText {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.totalRow {
+  background: var(--surface2);
+  font-weight: 800;
+}
+
+
