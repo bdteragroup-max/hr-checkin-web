@@ -54,27 +54,68 @@ function drawCell(
     size: number,
     color = COL_BLACK,
     align: "left" | "center" | "right" = "left",
-    paddingX = 6
+    paddingX = 6,
+    wrap = false
 ) {
     if (!text) return;
 
-    // Measure & truncate with ellipsis if needed
     const maxW = cellW - paddingX * 2;
-    let display = text;
-    while (display.length > 1 && font.widthOfTextAtSize(display, size) > maxW) {
-        display = display.slice(0, -1);
+    
+    if (!wrap) {
+        // Measure & truncate with ellipsis if needed
+        let display = text;
+        while (display.length > 1 && font.widthOfTextAtSize(display, size) > maxW) {
+            display = display.slice(0, -1);
+        }
+        if (display !== text) display = display.slice(0, -1) + "…";
+
+        const textW = font.widthOfTextAtSize(display, size);
+        const baseline = yTop - cellH * 0.5 - size * 0.15;
+
+        let textX: number;
+        if (align === "center") textX = cellX + (cellW - textW) / 2;
+        else if (align === "right") textX = cellX + cellW - textW - paddingX;
+        else textX = cellX + paddingX;
+
+        page.drawText(display, { x: textX, y: baseline, size, font, color });
+    } else {
+        // Simple wrapping logic
+        const lines = wrapText(text, font, size, maxW);
+        const lineHeight = size * 1.2;
+        lines.forEach((line, i) => {
+            const textW = font.widthOfTextAtSize(line, size);
+            const baseline = yTop - (i + 1) * lineHeight;
+            let textX = cellX + paddingX;
+            if (align === "center") textX = cellX + (cellW - textW) / 2;
+            page.drawText(line, { x: textX, y: baseline, size, font, color });
+        });
     }
-    if (display !== text) display = display.slice(0, -1) + "…";
+}
 
-    const textW = font.widthOfTextAtSize(display, size);
-    const baseline = yTop - cellH * 0.5 - size * 0.15; // lower the baseline for Thai fonts
-
-    let textX: number;
-    if (align === "center") textX = cellX + (cellW - textW) / 2;
-    else if (align === "right") textX = cellX + cellW - textW - paddingX;
-    else textX = cellX + paddingX;
-
-    page.drawText(display, { x: textX, y: baseline, size, font, color });
+/** Simple text wrapper */
+function wrapText(text: string, font: PDFFont, size: number, maxW: number): string[] {
+    const lines: string[] = [];
+    const paragraphs = text.split(/\r?\n/);
+    
+    for (const p of paragraphs) {
+        if (!p) {
+            lines.push("");
+            continue;
+        }
+        let currentLine = "";
+        const chars = Array.from(p); // Handle unicode/Thai characters correctly
+        for (const char of chars) {
+            const testLine = currentLine + char;
+            if (font.widthOfTextAtSize(testLine, size) > maxW) {
+                lines.push(currentLine);
+                currentLine = char;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+    }
+    return lines;
 }
 
 /** Draw a checkbox square and optionally fill it. */
@@ -312,7 +353,7 @@ export async function GET(req: Request) {
         const purposeLabel = !isMgmt
             ? `อื่นๆ ....... ${booking.purpose ?? ""}`
             : "อื่นๆ .......";
-        drawCell(page1, purposeLabel, cb2X + 14, y, CONTENT_W - 230 - 14, ROW_H, fontRegular, 11);
+        drawCell(page1, purposeLabel, cb2X + 14, y, CONTENT_W - 230 - 14, ROW_H, fontRegular, 11, COL_BLACK, "left", 6, true);
 
         y -= ROW_H;
 
@@ -381,8 +422,27 @@ export async function GET(req: Request) {
         // Attendee rows (always draw 10 rows for blank lines)
         const ATT_ROW_H = 26;
         const ROWS = Math.max(10, booking.attendees.length);
+        let currentAttPage = page1;
+
         for (let i = 0; i < ROWS; i++) {
-            drawRect(page1, MARGIN, y, CONTENT_W, ATT_ROW_H);
+            // Check for page break
+            if (y - ATT_ROW_H < MARGIN) {
+                currentAttPage = pdf.addPage([PAGE_W, PAGE_H]);
+                y = PAGE_H - MARGIN;
+                y = drawPageHeader(currentAttPage, y, fontBold, fontRegular, iconImage);
+                y = drawSectionBar(currentAttPage, y, 26, "รายชื่อผู้เข้าร่วมประชุม (ต่อ)", fontBold, 13);
+                
+                // Redraw column headers on new page
+                drawRect(currentAttPage, MARGIN, y, CONTENT_W, COL_H, COL_GREY);
+                let headCx = MARGIN;
+                for (const [label, w, align] of ATT_COLS) {
+                    drawCell(currentAttPage, label, headCx, y, w, COL_H, fontBold, 11, COL_BLACK, align);
+                    headCx += w;
+                }
+                y -= COL_H;
+            }
+
+            drawRect(currentAttPage, MARGIN, y, CONTENT_W, ATT_ROW_H);
 
             const att = i < booking.attendees.length ? booking.attendees[i] : null;
             cx = MARGIN;
@@ -391,7 +451,7 @@ export async function GET(req: Request) {
             let divCx = MARGIN;
             for (let ci = 0; ci < ATT_COLS.length - 1; ci++) {
                 divCx += ATT_COLS[ci][1];
-                page1.drawLine({
+                currentAttPage.drawLine({
                     start: { x: divCx, y },
                     end: { x: divCx, y: y - ATT_ROW_H },
                     thickness: 0.5, color: COL_BLACK,
@@ -414,7 +474,7 @@ export async function GET(req: Request) {
 
                 for (let ci = 0; ci < ATT_COLS.length; ci++) {
                     const [, w, align] = ATT_COLS[ci];
-                    drawCell(page1, rowData[ci], cx, y, w, ATT_ROW_H, fontRegular, 11, COL_BLACK, align);
+                    drawCell(currentAttPage, rowData[ci], cx, y, w, ATT_ROW_H, fontRegular, 11, COL_BLACK, align);
                     cx += w;
                 }
             }
@@ -435,33 +495,35 @@ export async function GET(req: Request) {
 
         // ── Agenda blocks ─────────────────────────────────────────────────────────
         const AGENDA_HEADER_H = 28;
-        const AGENDA_LINE_H = 24;
-        const AGENDA_LINES = 4;     // detail rows per agenda
-        const AGENDA_COUNT = 5;
+        const AGENDA_LINE_H = 22;
 
-        for (let i = 0; i < AGENDA_COUNT; i++) {
+        let currentPage = page2;
+
+        for (let i = 0; i < agendas.length || i < 5; i++) {
             const agenda = agendas[i] ?? { person: "", details: "" };
 
+            // Pre-calculate wrapped detail lines
+            const wrappedLines = wrapText(agenda.details || "", fontRegular, 11, CONTENT_W - 12);
+            const detailRows = Math.max(4, wrappedLines.length);
+            const blockH = AGENDA_HEADER_H + (detailRows * AGENDA_LINE_H) + 10;
+
             // Check if we need a new page
-            const blockH = AGENDA_HEADER_H + AGENDA_LINE_H * AGENDA_LINES;
-            if (y - blockH < MARGIN + 20) {
-                // Add new page (extend document if needed)
-                const extraPage = pdf.addPage([PAGE_W, PAGE_H]);
-                // Re-assign y for the new page — in real code you'd draw header etc.
+            if (y - blockH < MARGIN) {
+                currentPage = pdf.addPage([PAGE_W, PAGE_H]);
                 y = PAGE_H - MARGIN;
+                y = drawPageHeader(currentPage, y, fontBold, fontRegular, iconImage);
+                y = drawSectionBar(currentPage, y, 26, "วาระการประชุม (ต่อ)", fontBold, 13);
             }
 
             // ── Agenda header row ──────────────────────────────────────────────────
-            drawRect(page2, MARGIN, y, CONTENT_W, AGENDA_HEADER_H, COL_GREY);
+            drawRect(currentPage, MARGIN, y, CONTENT_W, AGENDA_HEADER_H, COL_GREY);
 
-            // "วาระที่ N :" label — fixed width
             const agLabel = `วาระที่ ${i + 1} :`;
             const agLabelW = 72;
-            drawCell(page2, agLabel, MARGIN, y, agLabelW, AGENDA_HEADER_H, fontBold, 12);
+            drawCell(currentPage, agLabel, MARGIN, y, agLabelW, AGENDA_HEADER_H, fontBold, 12);
 
-            // Person name — remaining width
             drawCell(
-                page2,
+                currentPage,
                 agenda.person || ".............................................................................",
                 MARGIN + agLabelW, y,
                 CONTENT_W - agLabelW, AGENDA_HEADER_H,
@@ -470,19 +532,20 @@ export async function GET(req: Request) {
 
             y -= AGENDA_HEADER_H;
 
-            // ── Detail lines ───────────────────────────────────────────────────────
-            const lines = (agenda.details ?? "").split("\n");
-            for (let r = 0; r < AGENDA_LINES; r++) {
-                drawRect(page2, MARGIN, y, CONTENT_W, AGENDA_LINE_H);
-                const line = lines[r] ?? "";
+            // ── Detail lines (Dynamic height) ───────────────────────────────────────
+            for (let r = 0; r < detailRows; r++) {
+                // If a single agenda's details cross a page, that's complex. 
+                // For now, we ensure the block starts on a new page if it doesn't fit.
+                drawRect(currentPage, MARGIN, y, CONTENT_W, AGENDA_LINE_H);
+                const line = wrappedLines[r] ?? "";
                 if (line) {
-                    drawCell(page2, line, MARGIN, y, CONTENT_W, AGENDA_LINE_H, fontRegular, 11);
+                    drawCell(currentPage, line, MARGIN, y, CONTENT_W, AGENDA_LINE_H, fontRegular, 11);
                 }
                 y -= AGENDA_LINE_H;
             }
 
             // Small gap between agenda blocks
-            y -= 4;
+            y -= 8;
         }
 
 
