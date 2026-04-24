@@ -48,14 +48,19 @@ export async function GET() {
             else if (nextRound === 3) dueDays = 90;
             else dueDays = 119;
             
-            const dueDate = new Date(emp.hire_date);
-            dueDate.setDate(dueDate.getDate() + dueDays);
-            
-            // Unlock 7 days in advance
-            const unlockDate = new Date(dueDate);
-            unlockDate.setDate(unlockDate.getDate() - 7);
-            
-            const isUnlocked = now >= unlockDate;
+            let dueDate = null;
+            let unlockDate = null;
+            let isUnlocked = false;
+
+            if (emp.hire_date) {
+                dueDate = new Date(emp.hire_date);
+                dueDate.setDate(dueDate.getDate() + dueDays);
+                
+                unlockDate = new Date(dueDate);
+                unlockDate.setDate(unlockDate.getDate() - 7);
+                
+                isUnlocked = now >= unlockDate;
+            }
 
             return {
                 emp_id: emp.emp_id,
@@ -65,8 +70,8 @@ export async function GET() {
                 department: emp.departments?.name || "N/A",
                 last_evaluation_no: nextRound - 1,
                 next_round: nextRound,
-                due_date: dueDate.toISOString(),
-                unlock_date: unlockDate.toISOString(),
+                due_date: dueDate ? dueDate.toISOString() : null,
+                unlock_date: unlockDate ? unlockDate.toISOString() : null,
                 is_unlocked: isUnlocked
             };
         });

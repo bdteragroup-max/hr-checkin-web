@@ -62,11 +62,19 @@ export async function GET() {
             else if (nextRound === 3) dueDays = 90;
             else dueDays = 119;
             
-            const dueDate = new Date(emp.hire_date);
-            dueDate.setDate(dueDate.getDate() + dueDays);
-            
-            const unlockDate = new Date(dueDate);
-            unlockDate.setDate(unlockDate.getDate() - 7);
+            let dueDate = null;
+            let unlockDate = null;
+            let isUnlocked = false;
+
+            if (emp.hire_date) {
+                dueDate = new Date(emp.hire_date);
+                dueDate.setDate(dueDate.getDate() + dueDays);
+                
+                unlockDate = new Date(dueDate);
+                unlockDate.setDate(unlockDate.getDate() - 7);
+                
+                isUnlocked = now >= unlockDate;
+            }
 
             return {
                 emp_id: emp.emp_id,
@@ -78,9 +86,9 @@ export async function GET() {
                 evaluations: emp.kpi_evaluations,
                 
                 prob_next_round: nextRound,
-                prob_due_date: dueDate.toISOString(),
-                prob_unlock_date: unlockDate.toISOString(),
-                prob_is_unlocked: now >= unlockDate
+                prob_due_date: dueDate ? dueDate.toISOString() : null,
+                prob_unlock_date: unlockDate ? unlockDate.toISOString() : null,
+                prob_is_unlocked: isUnlocked
             };
         });
 
