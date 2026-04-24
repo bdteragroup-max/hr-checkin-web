@@ -15,12 +15,13 @@ import styles from "./page.module.css";
 interface Subordinate {
     emp_id: string;
     name: string;
-    hire_date: string;
+    hire_date: string | null;
+    position: string;
     department: string;
     last_evaluation_no: number;
     next_round: number;
-    due_date: string;
-    unlock_date: string;
+    due_date: string | null;
+    unlock_date: string | null;
     is_unlocked: boolean;
 }
 
@@ -118,10 +119,10 @@ export default function SupervisorProbationPage() {
                                         gap: '4px'
                                     }}>
                                         <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-                                            เปิดให้ประเมินวันที่ {new Date(emp.unlock_date).toLocaleDateString("th-TH")}
+                                            เปิดให้ประเมินวันที่ {emp.unlock_date ? new Date(emp.unlock_date).toLocaleDateString("th-TH") : "ไม่ระบุ"}
                                         </div>
                                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                            (กำหนดครบ {emp.next_round === 1 ? 30 : emp.next_round === 2 ? 60 : emp.next_round === 3 ? 90 : 119} วัน: {new Date(emp.due_date).toLocaleDateString("th-TH")})
+                                            (กำหนดครบ {emp.next_round === 1 ? 30 : emp.next_round === 2 ? 60 : emp.next_round === 3 ? 90 : 119} วัน: {emp.due_date ? new Date(emp.due_date).toLocaleDateString("th-TH") : "ไม่ระบุ"})
                                         </div>
                                     </div>
                                 )}

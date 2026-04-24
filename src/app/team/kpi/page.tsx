@@ -25,14 +25,14 @@ interface KPIEvaluation {
 interface Subordinate {
     emp_id: string;
     name: string;
-    hire_date: string;
+    hire_date: string | null;
     position: string;
     department: string;
     is_on_trial: boolean;
     evaluations: KPIEvaluation[];
     prob_next_round: number;
-    prob_due_date: string;
-    prob_unlock_date: string;
+    prob_due_date: string | null;
+    prob_unlock_date: string | null;
     prob_is_unlocked: boolean;
 }
 
@@ -191,10 +191,10 @@ export default function SupervisorKPIPage() {
                                                                 alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%'
                                                             }}>
                                                                 <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                                                                    เปิดให้ทำ KPI วันที่ {new Date(emp.prob_unlock_date).toLocaleDateString("th-TH")}
+                                                                    เปิดให้ทำ KPI วันที่ {emp.prob_unlock_date ? new Date(emp.prob_unlock_date).toLocaleDateString("th-TH") : "ไม่ระบุ"}
                                                                 </div>
                                                                 <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                                                    (กำหนด {emp.prob_next_round === 1 ? 30 : emp.prob_next_round === 2 ? 60 : emp.prob_next_round === 3 ? 90 : 119} วัน: {new Date(emp.prob_due_date).toLocaleDateString("th-TH")})
+                                                                    (กำหนด {emp.prob_next_round === 1 ? 30 : emp.prob_next_round === 2 ? 60 : emp.prob_next_round === 3 ? 90 : 119} วัน: {emp.prob_due_date ? new Date(emp.prob_due_date).toLocaleDateString("th-TH") : "ไม่ระบุ"})
                                                                 </div>
                                                             </div>
                                                         ) : (
