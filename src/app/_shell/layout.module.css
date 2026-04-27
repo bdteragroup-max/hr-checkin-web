@@ -288,6 +288,39 @@
   box-shadow: -2px 0 8px var(--red-glow);
 }
 
+.alertBadge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--red);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 8px var(--red-glow);
+  z-index: 2;
+  animation: badgeIn 0.3s var(--ease) both;
+}
+
+@keyframes badgeIn {
+  from { opacity: 0; scale: 0.5; }
+  to { opacity: 1; scale: 1; }
+}
+
+.collapsed .alertBadge {
+  right: 6px;
+  top: 6px;
+  transform: none;
+  border: 2px solid var(--sb-bg);
+}
+
 /* Icon */
 .navIcon {
   flex-shrink: 0;
@@ -719,6 +752,7 @@
   .mobileIcon {
     font-size: 19px;
     line-height: 1;
+    position: relative;
   }
 
   .mobileLabel {
@@ -727,6 +761,25 @@
     font-weight: 500;
     letter-spacing: 0.2px;
     line-height: 1;
+  }
+
+  .mobileAlertBadge {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    background: var(--red);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 7.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    border: 1.5px solid var(--sb-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 }
 

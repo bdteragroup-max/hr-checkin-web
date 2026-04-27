@@ -51,7 +51,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const [isSupervisor, setIsSupervisor] = useState(false);
     const [baseSalary, setBaseSalary] = useState(0);
     const [hasPayslip, setHasPayslip] = useState(false);
-    const [birthMonth, setBirthMonth] = useState<number | null>(null); // 0-11
+    const [birthMonth, setBirthMonth] = useState<number | null>(null);
+    const [kpiStats, setKpiStats] = useState({ myKpiAlerts: 0, teamKpiAlerts: 0, teamProbationAlerts: 0 });
     const pathname = usePathname();
 
     useEffect(() => {
@@ -68,6 +69,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 }
             })
             .catch(() => { });
+
+        // Fetch KPI stats
+        fetch("/api/kpi/stats")
+            .then(r => r.json())
+            .then(d => {
+                if (d.ok) {
+                    setKpiStats({
+                        myKpiAlerts: d.myKpiAlerts || 0,
+                        teamKpiAlerts: d.teamKpiAlerts || 0,
+                        teamProbationAlerts: d.teamProbationAlerts || 0
+                    });
+                }
+            })
+            .catch(() => {});
     }, [pathname]);
 
     const navMain = NAV_MAIN_BASE.filter(item => {
@@ -138,6 +153,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
                                         <span className={styles.navLabel}>{item.label}</span>
                                         <span className={styles.navSub}>{item.sub}</span>
                                     </span>
+                                    {item.id === "kpi" && kpiStats.myKpiAlerts > 0 && (
+                                        <span className={styles.alertBadge}>{kpiStats.myKpiAlerts}</span>
+                                    )}
+                                    {item.id === "team-kpi" && kpiStats.teamKpiAlerts > 0 && (
+                                        <span className={styles.alertBadge}>{kpiStats.teamKpiAlerts}</span>
+                                    )}
+                                    {item.id === "team-probation" && kpiStats.teamProbationAlerts > 0 && (
+                                        <span className={styles.alertBadge}>{kpiStats.teamProbationAlerts}</span>
+                                    )}
                                     {active && <span className={styles.activePip} />}
                                 </Link>
                             </div>
@@ -192,7 +216,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
                             className={`${styles.mobileItem} ${active ? styles.mobileActive : ""}`}
                         >
                             {active && <span className={styles.mobilePip} />}
-                            <span className={styles.mobileIcon}><item.icon width={24} /></span>
+                            <span className={styles.mobileIcon}>
+                                <item.icon width={24} />
+                                {item.id === "kpi" && kpiStats.myKpiAlerts > 0 && (
+                                    <span className={styles.mobileAlertBadge}>{kpiStats.myKpiAlerts}</span>
+                                )}
+                                {item.id === "team-kpi" && kpiStats.teamKpiAlerts > 0 && (
+                                    <span className={styles.mobileAlertBadge}>{kpiStats.teamKpiAlerts}</span>
+                                )}
+                                {item.id === "team-probation" && kpiStats.teamProbationAlerts > 0 && (
+                                    <span className={styles.mobileAlertBadge}>{kpiStats.teamProbationAlerts}</span>
+                                )}
+                            </span>
                             <span className={styles.mobileLabel}>{item.label}</span>
                         </Link>
                     );
