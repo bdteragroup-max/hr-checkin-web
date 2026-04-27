@@ -15,6 +15,8 @@ export async function GET() {
                     select: { 
                         name: true, 
                         emp_id: true,
+                        salary_type: true,
+                        is_on_trial: true,
                         job_positions: { select: { title: true } },
                         departments: { select: { name: true } }
                     } 

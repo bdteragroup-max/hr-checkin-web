@@ -100,7 +100,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         let y = height - 40;
 
         // --- 1. Formal Header Layout ---
-        const title = isAnnual ? "แบบประเมินผลการปฏิบัติงานประจำปี (Annual Evaluation)" : "แบบประเมินผลการปฏิบัติงานทดลองงาน";
+        const title = isAnnual ? "แบบประเมินผลการปฏิบัติงานประจำปี (Annual Evaluation)" : 
+                      evalData.category === "MONTHLY" ? "แบบประเมินผลการทำงานรายเดือน (Monthly Performance)" : "แบบประเมินผลการปฏิบัติงานทดลองงาน";
         const titleW = fontBold.widthOfTextAtSize(title, 14);
         page.drawText(title, { x: (width - titleW) / 2, y: y, size: 14, font: fontBold });
         y -= 30;
@@ -109,8 +110,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             page.drawText(label, { x, y: currentY, size: 9, font: fontRegular });
             const labelW = fontRegular.widthOfTextAtSize(label, 9);
             const valX = x + labelW + 5;
-            page.drawText(value || "-", { x: valX, y: currentY, size: 9, font: fontBold });
-            page.drawLine({ start: { x: valX, y: currentY - 2 }, end: { x: x + w, y: currentY - 2 }, thickness: 0.5, color: GRAY_BORDER });
+            const maxValW = w - labelW - 10;
+            
+            const wrapped = wrapText(value || "-", maxValW, fontBold, 9);
+            wrapped.forEach((line, i) => {
+                page.drawText(line, { x: valX, y: currentY - (i * 12), size: 9, font: fontBold });
+            });
+            
+            const underlineY = currentY - (wrapped.length * 12) + 10;
+            page.drawLine({ 
+                start: { x: valX, y: underlineY }, 
+                end: { x: x + w, y: underlineY }, 
+                thickness: 0.5, 
+                color: GRAY_BORDER 
+            });
+
+            return wrapped.length;
         };
 
         const col1 = ML;
@@ -118,27 +133,34 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const col3 = ML + (FULL_W * 0.66);
         const fW = FULL_W * 0.3;
 
-        drawField("ชื่อ-สกุล", evalData.employee.name, col1, y, fW);
-        drawField("รหัสพนักงาน", evalData.employee.emp_id, col2, y, fW);
-        drawField("อายุงาน", calculateWorkAge(evalData.employee.hire_date), col3, y, fW);
-        y -= 20;
+        const h1 = Math.max(
+            drawField("ชื่อ-สกุล", evalData.employee.name, col1, y, fW),
+            drawField("รหัสพนักงาน", evalData.employee.emp_id, col2, y, fW),
+            drawField("อายุงาน", calculateWorkAge(evalData.employee.hire_date), col3, y, fW)
+        );
+        y -= (h1 * 12) + 8;
+        
+        const h2 = Math.max(
+            drawField("ตำแหน่ง", evalData.employee.job_positions?.title || "-", col1, y, fW),
+            drawField("แผนก/ฝ่าย", evalData.employee.departments?.name || "-", col2, y, fW),
+            drawField("บริษัท", "เทอรา กรุ๊ป จำกัด", col3, y, fW)
+        );
+        y -= (h2 * 12) + 8;
 
-        drawField("ตำแหน่ง", evalData.employee.job_positions?.title || "-", col1, y, fW);
-        drawField("แผนก/ฝ่าย", evalData.employee.departments?.name || "-", col2, y, fW);
-        drawField("บริษัท", "เทอรา กรุ๊ป จำกัด", col3, y, fW);
-        y -= 20;
-
-        drawField("รอบประเมิน", isAnnual ? (evalData.session_name === "Mid-Year" ? "Mid-Year Assessment" : evalData.session_name || "-") : `ครั้งที่ ${evalData.evaluation_no}`, col1, y, fW);
-        drawField("ปี", isAnnual ? evalData.year?.toString() || "-" : "-", col2, y, fW);
-        drawField("ระยะเวลา", `${formatThaiDate(evalData.period_start)} - ${formatThaiDate(evalData.period_end)}`, col3, y, fW);
-        y -= 35;
+        const h3 = Math.max(
+            drawField("รอบประเมิน", isAnnual ? (evalData.session_name === "Mid-Year" ? "Mid-Year Assessment" : evalData.session_name || "-") : 
+                                    evalData.category === "MONTHLY" ? `เดือน ${evalData.evaluation_no}` : `ครั้งที่ ${evalData.evaluation_no}`, col1, y, fW),
+            drawField("ปี", isAnnual ? evalData.year?.toString() || "-" : "-", col2, y, fW),
+            drawField("ระยะเวลา", `${formatThaiDate(evalData.period_start)} - ${formatThaiDate(evalData.period_end)}`, col3, y, fW)
+        );
+        y -= (h3 * 12) + 15;
 
         // --- RENDER PARTS ---
-        const SECTIONS = isAnnual
+        const SECTIONS = (isAnnual)
             ? [{ id: "KPI", label: "ส่วนที่ 1: เป้าหมายการปฏิบัติงาน (Performance KPIs - 70%)" },
             { id: "CORE_VALUE", label: "ส่วนที่ 2: ค่านิยมหลัก (Core Values - 20%)" },
             { id: "COMPETENCY", label: "ส่วนที่ 3: ขีดความสามารถ (Competencies - 10%)" }]
-            : [{ id: "KPI", label: "ส่วนที่ 1: เป้าหมายการปฏิบัติงาน (Performance KPIs - 100%)" }];
+            : [{ id: "KPI", label: `ส่วนที่ 1: เป้าหมายการปฏิบัติงาน (Performance KPIs - 100%)` }];
 
         for (const sec of SECTIONS) {
             const secItems = evalData.items.filter((it: { section: string; }) => it.section === sec.id || (!it.section && sec.id === "KPI"));
@@ -291,15 +313,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         page.drawRectangle({ x: gradeBoxX, y: y - 8, width: 90, height: 30, color: rgb(1, 1, 0), borderColor: BLACK, borderWidth: 1 });
         page.drawText(`เกรด: ${evalData.grade || "-"}`, { x: gradeBoxX + 15, y: y + 2, size: 14, font: fontBold });
 
-        // Show Pass/Fail for Probation
-        if (evalData.category === "PROBATION") {
-            const isPassing = evalData.is_passing;
+        // Show Pass/Fail or Salary recommendation
+        if (evalData.category === "PROBATION" || evalData.category === "MONTHLY") {
+            const isPassing = evalData.category === "PROBATION" ? evalData.is_passing : evalData.recommend_salary;
             const passText = isPassing ? "ผ่านการประเมิน (PASSED)" : "ไม่ผ่านการประเมิน (NOT PASSED)";
             const passColor = isPassing ? rgb(0.1, 0.6, 0.1) : rgb(0.8, 0.1, 0.1);
             page.drawText(passText, { x: ML, y: y - 25, size: 10, font: fontBold, color: passColor });
             y -= 45;
         } else {
-            y -= 30;
+            // ANNUAL
+            const recText = evalData.recommend_salary ? "เสนอพิจารณาปรับเงินเดือน" : "ยังไม่เข้าเกณฑ์พิจารณาปรับเงินเดือน";
+            page.drawText(`ข้อเสนอแนะ: ${recText}`, { x: ML, y: y - 25, size: 10, font: fontBold });
+            y -= 45;
         }
 
         // --- Comments Section ---

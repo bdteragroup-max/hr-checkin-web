@@ -29,17 +29,21 @@ interface Subordinate {
     position: string;
     department: string;
     is_on_trial: boolean;
-    evaluations: KPIEvaluation[];
-    prob_next_round: number;
-    prob_due_date: string | null;
-    prob_unlock_date: string | null;
-    prob_is_unlocked: boolean;
+    evaluations: any[];
+    track_info: {
+        probation: { next_round: number; due_date: string | null; unlock_date: string | null; is_unlocked: boolean };
+        monthly: { next_round: number; due_date: string | null; unlock_date: string | null; is_unlocked: boolean };
+        annual: { is_unlocked: boolean };
+    };
 }
 
 export default function SupervisorKPIPage() {
     const [list, setList] = useState<Subordinate[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'trial' | 'regular'>('trial');
+
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
 
     useEffect(() => {
         fetch("/api/team/kpi/employees")
@@ -71,14 +75,14 @@ export default function SupervisorKPIPage() {
 
                 {/* ── TABS ── */}
                 <div className={styles.tabs}>
-                    <div 
+                    <div
                         className={`${styles.tab} ${activeTab === 'trial' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('trial')}
                     >
                         <UsersIcon width={18} />
                         <span>พนักงานทดลองงาน</span>
                     </div>
-                    <div 
+                    <div
                         className={`${styles.tab} ${activeTab === 'regular' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('regular')}
                     >
@@ -119,106 +123,126 @@ export default function SupervisorKPIPage() {
                                     </div>
 
                                     {filtered.map((emp, i) => {
-                                        // Priority Logic: Find the latest evaluation for the CURRENT track
-                                        const categoryToFind = activeTab === 'trial' ? 'PROBATION' : 'ANNUAL';
-                                        // Priority: 1. Active evaluation of the correct category, 2. Latest evaluation of correct category, 3. Any latest
-                                        let currentEval = emp.evaluations.find(ev => (ev as any).category === categoryToFind && ev.status !== 'completed');
-                                        if (!currentEval) {
-                                            currentEval = emp.evaluations.find(ev => (ev as any).category === categoryToFind);
-                                        }
-                                        if (!currentEval) currentEval = emp.evaluations[0];
+                                        const renderTrack = (category: string, label: string, info: any) => {
+                                            // Priority Logic: 
+                                            // 1. For MONTHLY, try to find current month/year first
+                                            // 2. Otherwise find first uncompleted for that category
+                                            // 3. Otherwise find latest completed for that category
+                                            
+                                            let currentEval = null;
+                                            if (category === 'MONTHLY') {
+                                                currentEval = emp.evaluations.find(ev => 
+                                                    (ev as any).category === 'MONTHLY' && 
+                                                    ev.year === currentYear && 
+                                                    ev.evaluation_no === currentMonth
+                                                );
+                                            }
 
-                                        const isMidYearDone = currentEval && 
-                                                              (currentEval as any).category === 'ANNUAL' && 
-                                                              (currentEval as any).session_name?.includes('Mid-Year') && 
-                                                              currentEval.status === 'completed';
+                                            // Only fall back to others if we don't have a current one
+                                            if (!currentEval) {
+                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && ev.status !== 'completed');
+                                            }
+                                            
+                                            // Only show completed ones if we are NOT currently in an unlocked state for a new one
+                                            if (!currentEval && !info.is_unlocked) {
+                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && ev.status === 'completed');
+                                            }
 
-                                        const statusInfo = currentEval ? getStatusInfo(currentEval.status) : null;
-                                        const isMismatch = currentEval && (currentEval as any).category !== categoryToFind;
+                                            const statusInfo = currentEval ? getStatusInfo(currentEval.status) : null;
+                                            const isMismatch = currentEval && (currentEval as any).category !== category;
+
+                                            return (
+                                                <div className={styles.trackRow} key={category}>
+                                                    <div className={styles.trackMeta}>
+                                                        <div className={styles.trackLabel}>{label}</div>
+                                                        <div className={styles.trackVal}>
+                                                            {currentEval && !isMismatch ? (
+                                                                <>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                        <span style={{ color: '#d93025', fontWeight: 800 }}>
+                                                                            {category === 'MONTHLY' ? `KPI เดือน ${currentEval.evaluation_no}/${currentEval.year || ''}` :
+                                                                                category === 'ANNUAL' ? (currentEval.session_name || 'Annual KPI') : `ครั้งที่ ${currentEval.evaluation_no}`}
+                                                                        </span>
+                                                                        {statusInfo && (
+                                                                            <div className={styles.statusBadgeSmall} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
+                                                                                {statusInfo.label}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {category === 'MONTHLY' && (
+                                                                        <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.8, color: '#94a3b8' }}>
+                                                                            (เปิดให้ประเมินวันที่ 20 ของทุกเดือน)
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span style={{ color: '#94a3b8' }}>
+                                                                        ยังไม่ได้เริ่ม{category === 'MONTHLY' ? ` (เดือน ${info.next_round})` : category === 'PROBATION' ? ` (ครั้งที่ ${info.next_round})` : ''}
+                                                                    </span>
+                                                                    {category === 'MONTHLY' && (
+                                                                        <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.8, color: '#94a3b8' }}>
+                                                                            (เปิดให้ประเมินวันที่ 20 ของทุกเดือน)
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className={styles.trackActions}>
+                                                        {(!currentEval || isMismatch || currentEval.status === "completed") ? (
+                                                            (!info.is_unlocked) ? (
+                                                                <div className={styles.lockedHint}>
+                                                                    เปิด {info.unlock_date ? new Date(info.unlock_date).toLocaleDateString("th-TH") : "-"}
+                                                                </div>
+                                                            ) : (
+                                                                <Link 
+                                                                    href={`/team/kpi/define/${emp.emp_id}?category=${category}${category === 'MONTHLY' ? `&round=${currentMonth}&year=${currentYear}` : ''}`} 
+                                                                    className={currentEval?.status === 'completed' ? styles.btnActionDone : styles.btnActionPrimary}
+                                                                >
+                                                                    {currentEval?.status === 'completed' ? <CheckBadgeIcon width={14} /> : <PencilSquareIcon width={14} />}
+                                                                    <span>{currentEval?.status === 'completed' ? 'เสร็จสิ้น' : `เริ่ม${category === 'ANNUAL' ? 'ประเมินปี' : 'เป้าหมาย'}`}</span>
+                                                                </Link>
+                                                            )
+                                                        ) : currentEval.status === "pending_supervisor" ? (
+                                                            <Link href={`/team/kpi/evaluate/${currentEval.id}`} className={styles.btnActionEvaluate}>
+                                                                <CheckBadgeIcon width={14} /> <span>ประเมิน</span>
+                                                            </Link>
+                                                        ) : (
+                                                            <Link href={`/team/kpi/define/${emp.emp_id}?category=${category}`} className={styles.btnActionSecondary}>
+                                                                <EyeIcon width={14} /> <span>ดู/แก้</span>
+                                                            </Link>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        };
 
                                         return (
                                             <div key={emp.emp_id} className={styles.card} style={{ animationDelay: `${i * 0.05}s` }}>
-                                                <div className={styles.empInfo}>
+                                                <div className={styles.empHeader}>
                                                     <div className={styles.avatar}>
                                                         <UserIcon width={24} />
                                                     </div>
                                                     <div style={{ flex: 1 }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                            <div className={styles.empName}>{emp.name}</div>
-                                                            {statusInfo && (
-                                                                <div className={styles.statusBadge} style={{ backgroundColor: statusInfo.color + "15", color: statusInfo.color }}>
-                                                                    {statusInfo.icon}
-                                                                    <span>{statusInfo.label}</span>
-                                                                </div>
-                                                            )}
+                                                        <div className={styles.empName}>{emp.name}</div>
+                                                        <div className={styles.empDetails}>
+                                                            {emp.emp_id} · {emp.position} · {emp.department}
+                                                            {emp.hire_date && <span style={{ marginLeft: 8, opacity: 0.7 }}>เริ่มงาน: {new Date(emp.hire_date).toLocaleDateString("th-TH")}</span>}
                                                         </div>
-                                                        <div className={styles.empDetails}>{emp.emp_id} · {emp.position || "Staff"}</div>
                                                     </div>
                                                 </div>
 
-                                                <div className={styles.metaGrid}>
-                                                    <div className={styles.metaItem}>
-                                                        <span className={styles.metaLabel}>วันที่เริ่มงาน</span>
-                                                        <span className={styles.metaVal}>
-                                                            {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
-                                                        </span>
-                                                    </div>
-                                                    <div className={styles.metaItem}>
-                                                        <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
-                                                        <span className={styles.metaVal} style={{ color: isMidYearDone ? 'var(--blue)' : '#d93025', fontWeight: 800 }}>
-                                                            {isMidYearDone ? (
-                                                                "Ready for Year-End Assessment"
-                                                            ) : currentEval && !isMismatch ? (
-                                                                <>
-                                                                    {(currentEval as any).category === 'ANNUAL' ? (currentEval as any).session_name || 'Annual' : `ครั้งที่ ${currentEval.evaluation_no}`}
-                                                                    <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>
-                                                                        {(currentEval as any).year || ''}
-                                                                    </span>
-                                                                </>
-                                                            ) : (
-                                                                `ยังไม่ได้เริ่ม (ครั้งที่ ${activeTab === 'trial' ? (emp.evaluations.filter(ev => (ev as any).category === 'PROBATION').length + 1) : 1})`
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className={styles.actions}>
-                                                    {(!currentEval || isMismatch || currentEval.status === "completed") ? (
-                                                        (activeTab === 'trial' && !emp.prob_is_unlocked) ? (
-                                                            <div style={{
-                                                                background: '#f1f5f9', border: '1px dashed #cbd5e1', borderRadius: '8px',
-                                                                padding: '8px 12px', display: 'flex', flexDirection: 'column',
-                                                                alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%'
-                                                            }}>
-                                                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                                                                    เปิดให้ทำ KPI วันที่ {emp.prob_unlock_date ? new Date(emp.prob_unlock_date).toLocaleDateString("th-TH") : "ไม่ระบุ"}
-                                                                </div>
-                                                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                                                    (กำหนด {emp.prob_next_round === 1 ? 30 : emp.prob_next_round === 2 ? 60 : emp.prob_next_round === 3 ? 90 : 119} วัน: {emp.prob_due_date ? new Date(emp.prob_due_date).toLocaleDateString("th-TH") : "ไม่ระบุ"})
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnPrimary}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                                    <PencilSquareIcon width={18} />
-                                                                    <span>เริ่มกำหนดเป้าหมาย {activeTab === 'trial' ? 'KPI' : 'ประจำปี'}</span>
-                                                                </div>
-                                                            </Link>
-                                                        )
-                                                    ) : currentEval.status === "pending_supervisor" ? (
-                                                        <Link href={`/team/kpi/evaluate/${currentEval.id}`} className={styles.btnPrimary} style={{ background: '#3b82f6', boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                                <CheckBadgeIcon width={18} />
-                                                                <span>ประเมินคะแนน KPI</span>
-                                                            </div>
-                                                        </Link>
+                                                <div className={styles.tracksContainer}>
+                                                    {activeTab === 'trial' ? (
+                                                        renderTrack('PROBATION', 'ประเมินผลทดลองงาน', emp.track_info.probation)
                                                     ) : (
-                                                        <Link href={`/team/kpi/define/${emp.emp_id}?category=${categoryToFind}`} className={styles.btnSecondary}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                                                <EyeIcon width={18} />
-                                                                <span>ดูรายละเอียด / แก้ไข</span>
-                                                            </div>
-                                                        </Link>
+                                                        <>
+                                                            {renderTrack('MONTHLY', 'ประเมินผลการทำงานรายเดือน', emp.track_info.monthly)}
+                                                            <div style={{ borderTop: '1px dashed #f1f5f9', margin: '4px 0' }} />
+                                                            {renderTrack('ANNUAL', 'ประเมินปรับเงินเดือน', emp.track_info.annual)}
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>

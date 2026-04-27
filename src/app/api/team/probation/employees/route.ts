@@ -19,19 +19,20 @@ export async function GET() {
                     { supervisor_id: supervisorId },
                     { secondary_supervisor_id: supervisorId }
                 ],
-                is_on_trial: true,
                 is_active: true
             },
             select: {
                 emp_id: true,
                 name: true,
                 hire_date: true,
+                is_on_trial: true,
                 job_positions: { select: { title: true } },
                 departments: { select: { name: true } },
+                salary_type: true,
                 probation_evaluations: {
                     where: { supervisor_id: supervisorId },
-                    select: { evaluation_no: true },
-                    orderBy: { evaluation_no: "desc" },
+                    select: { evaluation_no: true, created_at: true },
+                    orderBy: { created_at: "desc" },
                     take: 1
                 }
             }
@@ -39,35 +40,56 @@ export async function GET() {
 
         const now = new Date();
         const results = employees.map(emp => {
-            const nextRound = (emp.probation_evaluations[0]?.evaluation_no || 0) + 1;
-            
-            // Calculate due date based on round
-            let dueDays = 0;
-            if (nextRound === 1) dueDays = 30;
-            else if (nextRound === 2) dueDays = 60;
-            else if (nextRound === 3) dueDays = 90;
-            else dueDays = 119;
+            const lastEval = emp.probation_evaluations[0];
+            const nextRound = (lastEval?.evaluation_no || 0) + 1;
             
             let dueDate = null;
             let unlockDate = null;
             let isUnlocked = false;
 
-            if (emp.hire_date) {
-                dueDate = new Date(emp.hire_date);
-                dueDate.setDate(dueDate.getDate() + dueDays);
+            if (emp.is_on_trial) {
+                // Calculate due date based on round (30, 60, 90, 119 days)
+                let dueDays = 0;
+                if (nextRound === 1) dueDays = 30;
+                else if (nextRound === 2) dueDays = 60;
+                else if (nextRound === 3) dueDays = 90;
+                else dueDays = 119;
                 
-                unlockDate = new Date(dueDate);
-                unlockDate.setDate(unlockDate.getDate() - 7);
+                if (emp.hire_date) {
+                    dueDate = new Date(emp.hire_date);
+                    dueDate.setDate(dueDate.getDate() + dueDays);
+                    
+                    unlockDate = new Date(dueDate);
+                    unlockDate.setDate(unlockDate.getDate() - 7);
+                    
+                    isUnlocked = now >= unlockDate;
+                }
+            } else {
+                // Regular staff: Monthly Evaluation
+                // Rule: If last evaluation was in a different month, or no evaluation yet, it's due.
+                // We'll set the unlock date to the 20th of every month.
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
                 
-                isUnlocked = now >= unlockDate;
+                unlockDate = new Date(currentYear, currentMonth, 20);
+                dueDate = new Date(currentYear, currentMonth + 1, 0); // Last day of month
+                
+                const lastEvalDate = lastEval ? new Date(lastEval.created_at) : null;
+                const evaluatedThisMonth = lastEvalDate && 
+                                          lastEvalDate.getMonth() === currentMonth && 
+                                          lastEvalDate.getFullYear() === currentYear;
+                
+                isUnlocked = (now >= unlockDate) && !evaluatedThisMonth;
             }
 
             return {
                 emp_id: emp.emp_id,
                 name: emp.name,
                 hire_date: emp.hire_date,
+                is_on_trial: emp.is_on_trial,
                 position: emp.job_positions?.title || "N/A",
                 department: emp.departments?.name || "N/A",
+                salary_type: emp.salary_type,
                 last_evaluation_no: nextRound - 1,
                 next_round: nextRound,
                 due_date: dueDate ? dueDate.toISOString() : null,
@@ -79,6 +101,7 @@ export async function GET() {
         return NextResponse.json({ ok: true, list: results });
     } catch (e: any) {
         console.error("[API/PROBATION/EMPLOYEES] Error:", e);
-        return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+        return NextResponse.json({ error: "INTERNAL_ERROR", message: e.message }, { status: 500 });
     }
 }
+

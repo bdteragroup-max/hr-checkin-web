@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/client_v2"
 }
 
 datasource db {
@@ -128,7 +127,7 @@ model employees {
   resignation_date        DateTime?              @db.Date
   probation_evaluations   probation_evaluations[] @relation("EmployeeToProbation")
   submitted_evaluations   probation_evaluations[] @relation("SupervisorToProbation")
-  kpi_evaluations         kpi_evaluations[]       @relation("EmployeeToKPI")
+  kpiList                 kpi_evaluations[]       @relation("EmployeeToKPI")
   kpi_submissions         kpi_evaluations[]       @relation("SupervisorToKPI")
   room_bookings           room_bookings[]
   booking_attendees       room_booking_attendees[]

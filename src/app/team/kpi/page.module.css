@@ -135,11 +135,11 @@
     gap: 4px;
 }
 
-.empInfo {
+.empHeader {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .tabs {
@@ -299,4 +299,140 @@
     padding: 40px;
     text-align: center;
     border: 2px dashed var(--gray-200);
+    margin-top: 10px;
+}
+
+.tracksContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--gray-200);
+}
+
+.trackRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.trackMeta {
+    flex: 1;
+}
+
+.trackLabel {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+
+.trackVal {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.statusBadgeSmall {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.trackActions {
+    display: flex;
+    gap: 8px;
+}
+
+.btnActionPrimary {
+    background: var(--red);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(217, 48, 37, 0.2);
+    border: none;
+}
+
+.btnActionPrimary:hover {
+    background: var(--red-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 48, 37, 0.3);
+}
+
+.btnActionDone {
+    background: #f1f5f9;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    border: 1px solid #e2e8f0;
+    cursor: default;
+    transition: all 0.2s;
+}
+
+.btnActionEvaluate {
+    background: #3b82f6;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.btnActionEvaluate:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.btnActionSecondary {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.btnActionSecondary:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.lockedHint {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 700;
+    background: #f8fafc;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+    white-space: nowrap;
 }

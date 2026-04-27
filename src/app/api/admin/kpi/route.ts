@@ -8,12 +8,14 @@ export async function GET() {
     try {
         await requireAdmin();
 
-        const list = await prisma.kpi_evaluations.findMany({
+        const list = await (prisma as any).kpi_evaluations.findMany({
             include: {
                 employee: { 
                     select: { 
                         name: true, 
                         emp_id: true,
+                        is_on_trial: true,
+                        hire_date: true,
                         job_positions: { select: { title: true } },
                         departments: { select: { name: true } }
                     } 
@@ -42,7 +44,7 @@ export async function PATCH(req: Request) {
         if (!id) return NextResponse.json({ error: "ID_REQUIRED" }, { status: 400 });
 
         // 1. Update the main evaluation
-        const updatedEval = await prisma.kpi_evaluations.update({
+        const updatedEval = await (prisma as any).kpi_evaluations.update({
             where: { id: Number(id) },
             data: {
                 status: status || undefined,
@@ -58,7 +60,7 @@ export async function PATCH(req: Request) {
         if (items && Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {
-                    await prisma.kpi_items.update({
+                    await (prisma as any).kpi_items.update({
                         where: { id: Number(item.id) },
                         data: {
                             objective: item.objective || undefined,

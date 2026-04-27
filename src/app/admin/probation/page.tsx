@@ -42,6 +42,7 @@ export default function AdminProbationPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [sendingId, setSendingId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<'trial' | 'regular'>('trial');
 
     // -- REVIEW UI STATE --
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -68,10 +69,13 @@ export default function AdminProbationPage() {
         refresh();
     }, []);
 
-    const filtered = (list || []).filter(item => 
-        (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
-        (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = (list || []).filter(item => {
+        const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+                              (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
+        
+        if (activeTab === 'trial') return matchesSearch && item.employee?.is_on_trial;
+        return matchesSearch && !item.employee?.is_on_trial;
+    });
 
     const filteredPending = (pendingList || []).filter(item => 
         (item.name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -180,8 +184,8 @@ export default function AdminProbationPage() {
     }
 
     const decisionMap: any = {
-        pass: { label: "ผ่านทดลองงาน", color: "#16a34a" },
-        fail: { label: "ไม่ผ่านทดลองงาน", color: "#dc2626" },
+        pass: { label: "ผ่าน", color: "#16a34a" },
+        fail: { label: "ไม่ผ่าน", color: "#dc2626" },
         extend: { label: "ขยายเวลา", color: "#d97706" },
         salary_adjust: { label: "ปรับเงินเดือน", color: "#2563eb" }
     };
@@ -198,10 +202,20 @@ export default function AdminProbationPage() {
                         <span style={{ color: '#dc2626', marginLeft: 12, fontWeight: 800 }}>* ต้องได้เกรด C ขึ้นไปเพื่อผ่านการประเมิน</span>
                     </div>
                 </div>
-                <div className={styles.headerActions}>
-                    <button className={styles.btnRefresh} onClick={refresh} disabled={loading}>
-                        <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
-                    </button>
+            </div>
+
+            <div className={styles.tabs}>
+                <div 
+                    className={`${styles.tab} ${activeTab === 'trial' ? styles.tabActive : ''}`}
+                    onClick={() => setActiveTab('trial')}
+                >
+                    พนักงานทดลองงาน (Probation)
+                </div>
+                <div 
+                    className={`${styles.tab} ${activeTab === 'regular' ? styles.tabActive : ''}`}
+                    onClick={() => setActiveTab('regular')}
+                >
+                    พนักงานประจำ (Regular Staff)
                 </div>
             </div>
 
@@ -211,7 +225,7 @@ export default function AdminProbationPage() {
                 
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle}>
-                        <DocumentCheckIcon width={20} /> รายการส่งประเมิน
+                        <DocumentCheckIcon width={20} /> {activeTab === 'trial' ? 'รายการส่งประเมินทดลองงาน' : 'รายการส่งประเมินประจำเดือน'}
                     </div>
                     <div>
                         <span className={styles.rowCount}>{(list || []).length} ทั้งหมด</span>
@@ -231,7 +245,7 @@ export default function AdminProbationPage() {
                 </div>
 
                 {/* --- PENDING EVALUATIONS SECTION --- */}
-                {filteredPending.length > 0 && (
+                {activeTab === 'trial' && filteredPending.length > 0 && (
                     <div className={styles.sectionPending}>
                         <div className={styles.sectionTitlePending}>
                             <UserIcon width={20} /> พนักงานที่ต้องเข้ารับการประเมิน ({filteredPending.length})

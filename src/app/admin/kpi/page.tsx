@@ -21,6 +21,7 @@ export default function AdminKPIPage() {
     const [list, setList] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [tab, setTab] = useState<"trial" | "permanent">("permanent");
     
     // Modal State
     const [selectedEval, setSelectedEval] = useState<any>(null);
@@ -44,10 +45,13 @@ export default function AdminKPIPage() {
         refresh();
     }, []);
 
-    const filtered = (list || []).filter(item => 
-        (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
-        (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = (list || []).filter(item => {
+        const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+                             (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
+        const isTrial = item.employee?.is_on_trial;
+        const matchesTab = tab === "trial" ? isTrial : !isTrial;
+        return matchesSearch && matchesTab;
+    });
 
     const getStatusLabel = (status: string) => {
         switch (status) {
@@ -148,6 +152,22 @@ export default function AdminKPIPage() {
                     <button className={styles.btnRefresh} onClick={refresh} disabled={loading}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
                     </button>
+                </div>
+            </div>
+
+            {/* --- TABS --- */}
+            <div className={styles.tabs}>
+                <div 
+                    className={`${styles.tabItem} ${tab === 'permanent' ? styles.tabActive : ''}`}
+                    onClick={() => setTab('permanent')}
+                >
+                    <UserIcon width={18} /> พนักงานประจำ
+                </div>
+                <div 
+                    className={`${styles.tabItem} ${tab === 'trial' ? styles.tabActive : ''}`}
+                    onClick={() => setTab('trial')}
+                >
+                    <UserIcon width={18} /> พนักงานทดลองงาน
                 </div>
             </div>
 

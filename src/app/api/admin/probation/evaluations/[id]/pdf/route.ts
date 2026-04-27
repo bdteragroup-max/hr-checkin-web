@@ -61,7 +61,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                         hire_date: true,
                         birth_date: true,
                         job_positions: { select: { title: true } },
-                        departments: { select: { name: true } }
+                        departments: { select: { name: true } },
+                        is_on_trial: true
                     }
                 },
                 supervisor: { select: { name: true } }
@@ -100,11 +101,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         page.drawRectangle({ x: ML, y: y - HEADER_TOT_H, width: FULL_W, height: HEADER_TOT_H, borderColor: BLACK, borderWidth: 1.1 });
         page.drawRectangle({ x: ML + 2, y: y - HEADER_TOT_H + 2, width: FULL_W - 4, height: HEADER_TOT_H - 4, borderColor: BLACK, borderWidth: 0.3 });
 
-        const titleText = "แบบฟอร์มประเมินผลการปฏิบัติงานระยะทดลองงาน";
+        const isTrial = evalData.employee.is_on_trial;
+        const titleText = isTrial ? "แบบฟอร์มประเมินผลการปฏิบัติงานระยะทดลองงาน" : "แบบฟอร์มสรุปผลการปฏิบัติงานประจำเดือน";
         const titleW = fontBold.widthOfTextAtSize(titleText, 12);
         page.drawText(titleText, { x: ML + (FULL_W - titleW) / 2, y: y - 22, size: 12, font: fontBold, color: BLACK });
 
-        const subText = "PROBATION PERFORMANCE EVALUATION FORM";
+        const subText = isTrial ? "PROBATION PERFORMANCE EVALUATION FORM" : "MONTHLY PERFORMANCE EVALUATION FORM";
         const subW = fontItalic.widthOfTextAtSize(subText, 7);
         page.drawText(subText, { x: ML + (FULL_W - subW) / 2, y: y - 35, size: 7, font: fontItalic, color: BLACK });
 
@@ -336,15 +338,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         y = drawSectionHeader("สรุปผลการประเมิน", y);
         y -= 10; // Increased padding to prevent overlap
         const COL_QX = FULL_W / 4;
-        const opts = [
+        const opts = isTrial ? [
             { key: "fail", l: "ไม่ผ่านทดลองงาน", i: 0 },
             { key: "pass", l: "ผ่านทดลองงาน", i: 1 },
             { key: "extend", l: "ต่อทดลองงาน", i: 2 },
             { key: "salary_adjust", l: "เสนอปรับเงินเดือน", i: 3 }
+        ] : [
+            { key: "fail", l: "ไม่ผ่าน", i: 0 },
+            { key: "pass", l: "ผ่าน", i: 1 }
         ];
 
         opts.forEach(opt => {
-            const dx = ML + opt.i * COL_QX + 4;
+            const dx = ML + opt.i * (isTrial ? COL_QX : FULL_W / 2) + 4;
             const isChecked = evalData.decision === opt.key;
             page.drawRectangle({ x: dx, y: y - 8, width: 8, height: 8, color: isChecked ? BLACK : WHITE, borderColor: BLACK, borderWidth: 0.7 });
             if (isChecked) {
@@ -354,19 +359,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             page.drawText(opt.l, { x: dx + 11, y: y - 7, size: 7.5, font: fontRegular, color: BLACK });
         });
 
-        y -= 18; 
-        const salaryX = ML + 2.4 * COL_QX;
-        page.drawText("จาก", { x: salaryX, y: y - 2, size: 7, font: fontRegular, color: BLACK });
-        page.drawLine({ start: { x: salaryX + 14, y: y - 3 }, end: { x: salaryX + 60, y: y - 3 }, thickness: 0.6, color: BLACK });
-        if (evalData.salary_adjust_from) {
-            page.drawText(evalData.salary_adjust_from.toLocaleString(), { x: salaryX + 16, y: y - 2, size: 7, font: fontBold });
+        if (isTrial) {
+            y -= 18; 
+            const salaryX = ML + 2.4 * COL_QX;
+            page.drawText("จาก", { x: salaryX, y: y - 2, size: 7, font: fontRegular, color: BLACK });
+            page.drawLine({ start: { x: salaryX + 14, y: y - 3 }, end: { x: salaryX + 60, y: y - 3 }, thickness: 0.6, color: BLACK });
+            if (evalData.salary_adjust_from) {
+                page.drawText(evalData.salary_adjust_from.toLocaleString(), { x: salaryX + 16, y: y - 2, size: 7, font: fontBold });
+            }
+            page.drawText("บาท เป็น", { x: salaryX + 62, y: y - 2, size: 7, font: fontRegular, color: BLACK });
+            page.drawLine({ start: { x: salaryX + 100, y: y - 3 }, end: { x: salaryX + 145, y: y - 3 }, thickness: 0.6, color: BLACK });
+            if (evalData.salary_adjust_to) {
+                page.drawText(evalData.salary_adjust_to.toLocaleString(), { x: salaryX + 102, y: y - 2, size: 7, font: fontBold });
+            }
+            page.drawText("บาท", { x: salaryX + 147, y: y - 2, size: 7, font: fontRegular, color: BLACK });
         }
-        page.drawText("บาท เป็น", { x: salaryX + 62, y: y - 2, size: 7, font: fontRegular, color: BLACK });
-        page.drawLine({ start: { x: salaryX + 100, y: y - 3 }, end: { x: salaryX + 145, y: y - 3 }, thickness: 0.6, color: BLACK });
-        if (evalData.salary_adjust_to) {
-            page.drawText(evalData.salary_adjust_to.toLocaleString(), { x: salaryX + 102, y: y - 2, size: 7, font: fontBold });
-        }
-        page.drawText("บาท", { x: salaryX + 147, y: y - 2, size: 7, font: fontRegular, color: BLACK });
 
         y -= 14;
         page.drawLine({ start: { x: ML, y: y }, end: { x: MR, y: y }, thickness: 0.4, color: BLACK });

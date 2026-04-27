@@ -439,8 +439,10 @@ export default function MeetingRoomsPage() {
                                     onChange={e => setNewBooking({...newBooking, startTime: e.target.value})}
                                 >
                                     {timeSlots.map(h => {
-                                        const time = `${h.toString().padStart(2, '0')}:00`;
-                                        return <option key={time} value={time}>{time}</option>;
+                                        return [0, 15, 30, 45].map(m => {
+                                            const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                                            return <option key={time} value={time}>{time}</option>;
+                                        });
                                     })}
                                 </select>
                             </div>
@@ -452,8 +454,10 @@ export default function MeetingRoomsPage() {
                                     onChange={e => setNewBooking({...newBooking, endTime: e.target.value})}
                                 >
                                     {timeSlots.map(h => {
-                                        const time = `${h.toString().padStart(2, '0')}:00`;
-                                        return <option key={time} value={time}>{time}</option>;
+                                        return [0, 15, 30, 45].map(m => {
+                                            const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                                            return <option key={time} value={time}>{time}</option>;
+                                        });
                                     })}
                                     <option value="21:00">21:00</option>
                                 </select>

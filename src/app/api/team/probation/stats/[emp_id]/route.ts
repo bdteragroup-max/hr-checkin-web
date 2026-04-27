@@ -41,8 +41,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
         const end = new Date(endStr);
         end.setHours(23, 59, 59, 999);
 
+        // 0. Fetch Holidays
+        const holidays = await prisma.holidays.findMany({
+            where: { date: { gte: start, lte: end } },
+            select: { date: true }
+        });
+        const holidayDates = new Set(holidays.map(h => h.date.toDateString()));
+
         // 1. Count Late Check-ins & Minutes
-        const lateCheckins = await prisma.checkins.findMany({
+        const rawLateCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id,
                 date_key: { gte: start, lte: end },
@@ -52,6 +59,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
             select: { date_key: true, late_min: true, late_status: true }
         });
 
+        // Filter and Deduplicate: Only one late per day, skipping Sundays and Holidays
+        const uniqueLateDays = new Map<string, any>();
+        
+        rawLateCheckins.forEach(c => {
+            const dateObj = new Date(c.date_key);
+            const dateStr = dateObj.toDateString();
+            
+            // Skip Sunday (0)
+            if (dateObj.getDay() === 0) return;
+            // Skip Holidays
+            if (holidayDates.has(dateStr)) return;
+
+            // Group by date: take the maximum late minutes for that day if there are multiple scans
+            if (!uniqueLateDays.has(dateStr)) {
+                uniqueLateDays.set(dateStr, c);
+            } else {
+                const existing = uniqueLateDays.get(dateStr);
+                if ((c.late_min || 0) > (existing.late_min || 0)) {
+                    uniqueLateDays.set(dateStr, c);
+                }
+            }
+        });
+
+        const lateCheckins = Array.from(uniqueLateDays.values());
         const totalLateMin = lateCheckins.reduce((sum, c) => sum + (c.late_min || 0), 0);
         const lateCount = lateCheckins.length;
 

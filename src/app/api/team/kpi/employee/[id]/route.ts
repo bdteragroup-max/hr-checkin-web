@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 
-export const runtime = "nodejs";
+export const runtime = "nodejs"; // Rebuild trigger
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const token = (await cookies()).get("token")?.value;
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const { id: targetEmpId } = await params;
 
         // Verify if the requester is the supervisor of this employee
-        const employee = await prisma.employees.findFirst({
+        const employee = await (prisma as any).employees.findFirst({
             where: {
                 emp_id: targetEmpId,
                 OR: [
@@ -23,11 +23,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                     { secondary_supervisor_id: supervisorId }
                 ]
             },
-            include: {
+            select: {
+                emp_id: true,
+                name: true,
+                branch_id: true,
+                is_on_trial: true,
+                hire_date: true,
                 job_positions: { select: { title: true } },
                 departments: { select: { name: true } },
                 _count: { select: { subordinates: true } },
-                kpi_evaluations: {
+                kpiList: {
                     select: { 
                         id: true, 
                         category: true, 
@@ -48,7 +53,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         return NextResponse.json({ ok: true, employee });
     } catch (e: any) {
-        console.error("[API/TEAM/KPI/EMPLOYEE] Error:", e);
+        console.error("[API/TEAM/KPI/EMPLOYEE] Error:", e.message);
+        if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+            return NextResponse.json({ error: "INVALID_OR_EXPIRED_TOKEN" }, { status: 401 });
+        }
         return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
     }
 }

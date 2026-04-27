@@ -77,6 +77,7 @@ export default function KPISupervisorEvaluatePage() {
         const p3Items = items.filter(it => it.section === "COMPETENCY");
 
         const isProbation = evaluation?.category === 'PROBATION';
+        const isMonthly = evaluation?.category === 'MONTHLY';
         const hasP3 = p3Items.length > 0;
 
         let total = 0;
@@ -85,7 +86,7 @@ export default function KPISupervisorEvaluatePage() {
         let w1PctVal = 100;
         let w23PctVal = 0;
 
-        if (isProbation) {
+        if (isProbation || isMonthly) {
             s1 = p1Items.reduce((sum, it) => sum + (Number(it.weight) / 100) * (Number(it.supervisor_score) || 0), 0);
             total = s1;
             w1PctVal = 100;
@@ -119,7 +120,14 @@ export default function KPISupervisorEvaluatePage() {
             w1Pct: w1PctVal,
             w23Pct: w23PctVal
         };
-    }, [items]);
+    }, [items, evaluation]);
+
+    useEffect(() => {
+        if (evaluation?.category === 'MONTHLY' || evaluation?.category === 'PROBATION') {
+            const isPassing = totalSupervisorScore >= 2.5;
+            setRecommendSalary(isPassing);
+        }
+    }, [totalSupervisorScore, evaluation?.category]);
 
     const { s1Employee, s23Employee, totalEmployeeScore } = useMemo(() => {
         const p1Items = items.filter(it => it.section === "KPI");
@@ -127,13 +135,14 @@ export default function KPISupervisorEvaluatePage() {
         const p3Items = items.filter(it => it.section === "COMPETENCY");
 
         const isProbation = evaluation?.category === 'PROBATION';
+        const isMonthly = evaluation?.category === 'MONTHLY';
         const hasP3 = p3Items.length > 0;
 
         let total = 0;
         let s1 = 0;
         let s23 = 0;
 
-        if (isProbation) {
+        if (isProbation || isMonthly) {
             s1 = p1Items.reduce((sum, it) => sum + (Number(it.weight) / 100) * (Number(it.employee_score) || 0), 0);
             total = s1;
         } else {
@@ -213,7 +222,7 @@ export default function KPISupervisorEvaluatePage() {
                 {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
                     <h1 className={styles.heroH1}>
-                        {evaluation?.category === "ANNUAL" ? "ประเมินผล KPI ประจำปี" : "ประเมินผล KPI ทดลองงาน"}
+                        {evaluation?.category === "ANNUAL" ? "ประเมินผล KPI ประจำปี" : (evaluation?.category === "MONTHLY" ? "ประเมินผล KPI ประจำเดือน" : "ประเมินผล KPI ทดลองงาน")}
                     </h1>
                     <button onClick={() => router.back()} className={styles.btnBack}>
                         <ChevronLeftIcon width={14} /> ย้อนกลับ
@@ -242,7 +251,8 @@ export default function KPISupervisorEvaluatePage() {
                         <div className={styles.inputGroup}>
                             <label>รอบการประเมิน (Session)</label>
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#D93025' }}>
-                                {evaluation.category === 'ANNUAL' ? (evaluation.session_name === 'Mid-Year' ? 'Mid-Year Assessment' : evaluation.session_name) : `ครั้งที่ ${evaluation.evaluation_no}`}
+                                {evaluation.category === 'ANNUAL' ? (evaluation.session_name === 'Mid-Year' ? 'Mid-Year Assessment' : evaluation.session_name) : 
+                                 evaluation.category === 'MONTHLY' ? `KPI เดือน ${evaluation.evaluation_no}/${evaluation.year || ''}` : `ครั้งที่ ${evaluation.evaluation_no}`}
                                 {evaluation.category === 'ANNUAL' && <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>({evaluation.year})</span>}
                             </div>
                         </div>
@@ -257,7 +267,7 @@ export default function KPISupervisorEvaluatePage() {
                 {["KPI", "CORE_VALUE", "COMPETENCY"].map((sec) => {
                     const secItems = items.filter(it => it.section === sec);
                     if (secItems.length === 0) return null;
-                    if (evaluation.category === 'PROBATION' && (sec === 'CORE_VALUE' || sec === 'COMPETENCY')) return null;
+                    if ((evaluation.category === 'PROBATION' || evaluation.category === 'MONTHLY') && (sec === 'CORE_VALUE' || sec === 'COMPETENCY')) return null;
 
                     return (
                         <div key={sec}>
@@ -373,7 +383,7 @@ export default function KPISupervisorEvaluatePage() {
                     );
                 })}
 
-                {evaluation.category === 'ANNUAL' && (
+                {(evaluation.category === 'ANNUAL') && (
                 <div key="DEVELOPMENT">
                     <div className={styles.sectionLabel} style={{ marginTop: 32, marginBottom: 16 }}>
                         <div className={styles.dot} />
@@ -452,6 +462,7 @@ export default function KPISupervisorEvaluatePage() {
                                 <td>{(s1Employee * (w1Pct / 100)).toFixed(2)}</td>
                                 <td>{(s1Supervisor * (w1Pct / 100)).toFixed(2)}</td>
                             </tr>
+                            {(evaluation.category !== 'PROBATION' && evaluation.category !== 'MONTHLY') && (
                             <tr>
                                 <td className={styles.colTitle}>ส่วนที่ 2 & 3: Attributes</td>
                                 <td>{s23Employee.toFixed(2)}</td>
@@ -460,6 +471,7 @@ export default function KPISupervisorEvaluatePage() {
                                 <td>{(s23Employee * (w23Pct / 100)).toFixed(2)}</td>
                                 <td>{(s23Supervisor * (w23Pct / 100)).toFixed(2)}</td>
                             </tr>
+                            )}
                             <tr className={styles.totalRow}>
                                 <td className={styles.colTitle}>รวมคะแนนทั้งหมด</td>
                                 <td></td>
@@ -485,22 +497,37 @@ export default function KPISupervisorEvaluatePage() {
 
                     <div className={styles.recommendSection}>
                         <div style={{ fontWeight: 800, fontSize: 14, color: '#475569' }}>ความคิดเห็นของผู้ประเมิน</div>
-                        <div className={styles.checkGroup}>
+                        <div className={styles.checkGroup} style={{ opacity: (evaluation?.category === 'MONTHLY' || evaluation?.category === 'PROBATION') ? 0.8 : 1 }}>
                             <div
                                 className={`${styles.checkItem} ${recommendSalary === true ? styles.active : ""}`}
-                                onClick={() => setRecommendSalary(true)}
+                                onClick={() => {
+                                    if (evaluation?.category === 'ANNUAL') setRecommendSalary(true);
+                                }}
+                                style={{ cursor: (evaluation?.category === 'MONTHLY' || evaluation?.category === 'PROBATION') ? 'not-allowed' : 'pointer' }}
                             >
                                 <input type="checkbox" checked={recommendSalary === true} readOnly />
-                                <span>เสนอพิจารณาปรับเงินเดือน</span>
+                                <span>
+                                    {evaluation?.category === 'ANNUAL' ? 'เสนอพิจารณาปรับเงินเดือน' : 'ผ่าน (Pass)'}
+                                </span>
                             </div>
                             <div
                                 className={`${styles.checkItem} ${recommendSalary === false ? styles.active : ""}`}
-                                onClick={() => setRecommendSalary(false)}
+                                onClick={() => {
+                                    if (evaluation?.category === 'ANNUAL') setRecommendSalary(false);
+                                }}
+                                style={{ cursor: (evaluation?.category === 'MONTHLY' || evaluation?.category === 'PROBATION') ? 'not-allowed' : 'pointer' }}
                             >
                                 <input type="checkbox" checked={recommendSalary === false} readOnly />
-                                <span>ยังไม่เข้าเกณฑ์พิจารณาปรับเงินเดือน</span>
+                                <span>
+                                    {evaluation?.category === 'ANNUAL' ? 'ยังไม่เข้าเกณฑ์พิจารณาปรับเงินเดือน' : 'ไม่ผ่าน (Fail)'}
+                                </span>
                             </div>
                         </div>
+                        {(evaluation?.category === 'MONTHLY' || evaluation?.category === 'PROBATION') && (
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 8, fontStyle: 'italic' }}>
+                                * ระบบล็อคผลการประเมินอัตโนมัติตามเกรด (ต้องได้เกรด C หรือคะแนน 2.50 ขึ้นไปจึงจะผ่าน)
+                            </div>
+                        )}
                     </div>
                 </div>
 

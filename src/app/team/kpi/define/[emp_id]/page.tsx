@@ -58,6 +58,13 @@ export default function KPIDefinePage() {
                 setPeriodStart(`${year}-07-01`);
                 setPeriodEnd(`${year}-12-31`);
             }
+        } else if (category === "MONTHLY") {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth() + 1;
+            setPeriodStart(`${y}-${m.toString().padStart(2, '0')}-01`);
+            const lastDay = new Date(y, m, 0).getDate();
+            setPeriodEnd(`${y}-${m.toString().padStart(2, '0')}-${lastDay}`);
         }
     }, [category, sessionName, year]);
 
@@ -81,8 +88,8 @@ export default function KPIDefinePage() {
                         }
                         setSessionName(existing.session_name || (category === 'ANNUAL' ? 'Mid-Year Assessment' : ''));
                         setYear(existing.year || new Date().getUTCFullYear());
-                        if (category === "PROBATION") {
-                            setCurrentRound(existing.evaluation_no || 1);
+                        if (category === "PROBATION" || category === "MONTHLY") {
+                            setCurrentRound(existing.evaluation_no || (category === "MONTHLY" ? new Date().getMonth() + 1 : 1));
                         }
                     } else {
                         const commonItems: KPIItem[] = [
@@ -121,6 +128,10 @@ export default function KPIDefinePage() {
                             const dates = calculateProbationDates(data.employee.hire_date, roundNo);
                             setPeriodStart(dates.start);
                             setPeriodEnd(dates.end);
+                            setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                        } else if (category === "MONTHLY") {
+                            const monthNo = new Date().getMonth() + 1;
+                            setCurrentRound(monthNo);
                             setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
                         } else if (category === "ANNUAL") {
                             // Logic to auto-detect if we should start Year-End
@@ -183,7 +194,7 @@ export default function KPIDefinePage() {
                     period_end: periodEnd,
                     category,
                     year,
-                    session_name: category === "PROBATION" ? `Round ${currentRound}` : sessionName
+                    session_name: category === "PROBATION" ? `Round ${currentRound}` : (category === "MONTHLY" ? `KPI เดือน ${currentRound}/${year}` : sessionName)
                 })
             });
 
@@ -215,7 +226,7 @@ export default function KPIDefinePage() {
                 {/* ── HERO TITLE ── */}
                 <div className={styles.hero}>
                     <h1 className={styles.heroH1}>
-                        {category === "ANNUAL" ? "นิยาม KPI ประจำปี" : "นิยาม KPI ทดลองงาน"}
+                        {category === "ANNUAL" ? "นิยาม KPI ประจำปี" : (category === "MONTHLY" ? "นิยาม KPI ประจำเดือน" : "นิยาม KPI ทดลองงาน")}
                     </h1>
                     <button onClick={() => router.back()} className={styles.btnBack}>
                         <ChevronLeftIcon width={14} /> ย้อนกลับ
@@ -248,6 +259,8 @@ export default function KPIDefinePage() {
                                 </select>
                                 <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100 }} />
                             </div>
+                        ) : category === "MONTHLY" ? (
+                            <input disabled value={`KPI เดือน ${currentRound}/${year}`} />
                         ) : (
                             <input disabled value={`Probation Round ${currentRound}`} />
                         )}
@@ -276,7 +289,7 @@ export default function KPIDefinePage() {
                 {/* ── SECTION 2: ITEMS ── */}
                 {["KPI", "CORE_VALUE", "COMPETENCY", "DEVELOPMENT"].map((sec) => {
                     const secItems = items.filter(it => it.section === sec);
-                    if (category === "PROBATION" && sec !== "KPI") return null;
+                    if ((category === "PROBATION" || category === "MONTHLY") && sec !== "KPI") return null;
                     if (sec === "COMPETENCY" && !isLeader) return null;
                     if (sec === "DEVELOPMENT" && category !== "ANNUAL") return null;
 

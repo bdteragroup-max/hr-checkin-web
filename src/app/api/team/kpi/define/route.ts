@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         const supervisorId = decoded.emp_id;
 
         const body = await req.json();
-        const { emp_id, items, period_start, period_end, category, year, session_name } = body;
+        const { emp_id, items, period_start, period_end, category, year, session_name, evaluation_no } = body;
 
         if (!emp_id || !items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json({ error: "INVALID_DATA" }, { status: 400 });
@@ -93,15 +93,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: true, id: existing.id });
         }
 
-        // Get latest evaluation no FOR THIS CATEGORY
-        const lastEval = await prisma.kpi_evaluations.findFirst({
-            where: { 
-                emp_id,
-                category: currentCategory 
-            },
-            orderBy: { evaluation_no: "desc" }
-        });
-        const nextNo = (lastEval?.evaluation_no || 0) + 1;
+        let nextNo = evaluation_no;
+        if (!nextNo) {
+            if (currentCategory === "MONTHLY") {
+                nextNo = new Date().getMonth() + 1;
+            } else {
+                const lastEval = await prisma.kpi_evaluations.findFirst({
+                    where: { 
+                        emp_id,
+                        category: currentCategory 
+                    },
+                    orderBy: { evaluation_no: "desc" }
+                });
+                nextNo = (lastEval?.evaluation_no || 0) + 1;
+            }
+        }
 
         const newEval = await prisma.kpi_evaluations.create({
             data: {
