@@ -47,18 +47,52 @@ export async function GET() {
         }
 
         // 2. Supervisor Alerts: Evaluations waiting for my approval (pending_supervisor)
-        const teamKpiAlerts = await (prisma as any).kpi_evaluations.count({
+        let teamKpiAlerts = await (prisma as any).kpi_evaluations.count({
             where: {
                 supervisor_id: myId,
                 status: "pending_supervisor"
             }
         });
 
+        // 2.1 NEW: If after 20th, notify supervisor of regular employees who haven't had a monthly KPI started yet
+        if (now.getDate() >= 20) {
+            // Find all regular subordinates
+            const subordinates = await (prisma as any).employees.findMany({
+                where: {
+                    OR: [
+                        { supervisor_id: myId },
+                        { secondary_supervisor_id: myId }
+                    ],
+                    is_active: true,
+                    is_on_trial: false
+                },
+                select: { emp_id: true }
+            });
+
+            const subIds = subordinates.map((s: any) => s.emp_id);
+            if (subIds.length > 0) {
+                // Check how many don't have this month's KPI
+                const startedCount = await (prisma as any).kpi_evaluations.count({
+                    where: {
+                        emp_id: { in: subIds },
+                        category: "MONTHLY",
+                        evaluation_no: currentMonth,
+                        year: currentYear
+                    }
+                });
+                
+                const notStarted = subIds.length - startedCount;
+                if (notStarted > 0) {
+                    teamKpiAlerts += notStarted;
+                }
+            }
+        }
+
         // 3. Probation Alerts: Evaluations waiting for supervisor review
         const teamProbationAlerts = await (prisma as any).probation_evaluations.count({
             where: {
                 supervisor_id: myId,
-                status: "submitted" // In probation, 'submitted' means waiting for review/HR
+                status: "submitted" 
             }
         });
 
