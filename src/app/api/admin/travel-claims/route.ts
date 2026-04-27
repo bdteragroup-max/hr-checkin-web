@@ -2,13 +2,25 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
 
-
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         await requireAdmin();
+        const url = new URL(req.url);
+        const start_date = url.searchParams.get("start_date");
+        const end_date = url.searchParams.get("end_date");
+
+        const where: any = {};
+        if (start_date && end_date) {
+            where.date = {
+                gte: new Date(start_date),
+                lte: new Date(end_date)
+            };
+        }
+
         const claims = await prisma.travel_claims.findMany({
+            where,
             include: { employee: true },
             orderBy: { created_at: "desc" }
         });

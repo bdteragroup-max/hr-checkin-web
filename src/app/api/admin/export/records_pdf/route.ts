@@ -58,16 +58,38 @@ export async function GET(req: Request) {
         const fontRegular = await pdf.embedFont(fontRegularBytes, { subset: true });
         const fontBold = fontBoldBytes ? await pdf.embedFont(fontBoldBytes, { subset: true }) : fontRegular;
 
-        let page = pdf.addPage([595.28, 841.89]); // A4
-        let y = 800;
+        // Configuration for Landscape A4
+        const PAGE_WIDTH = 841.89;
+        const PAGE_HEIGHT = 595.28;
+        const MARGIN = 40;
+        
+        let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+        let y = PAGE_HEIGHT - MARGIN;
 
-        const draw = (text: string, size = 12, bold = false, color: any = rgb(0,0,0)) => {
-            if (y < 60) {
-                page = pdf.addPage([595.28, 841.89]);
-                y = 800;
+        const checkNewPage = (heightNeeded: number) => {
+            if (y - heightNeeded < MARGIN) {
+                page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+                y = PAGE_HEIGHT - MARGIN;
+                return true;
             }
-            page.drawText(text, { x: 50, y, size, font: bold ? fontBold : fontRegular, color });
-            y -= size + 6;
+            return false;
+        };
+
+        const drawText = (text: string, x: number, yPos: number, size = 12, bold = false, color = rgb(0, 0, 0)) => {
+            page.drawText(text, { x, y: yPos, size, font: bold ? fontBold : fontRegular, color });
+        };
+
+        const truncate = (text: string, font: any, size: number, maxWidth: number) => {
+            if (!text) return "";
+            let width = font.widthOfTextAtSize(text, size);
+            if (width <= maxWidth) return text;
+            
+            let truncated = text;
+            while (width > maxWidth - 10 && truncated.length > 0) {
+                truncated = truncated.slice(0, -1);
+                width = font.widthOfTextAtSize(truncated + "...", size);
+            }
+            return truncated + "...";
         };
 
         if (emp_id) {
@@ -75,9 +97,10 @@ export async function GET(req: Request) {
             const emp = await prisma.employees.findUnique({ where: { emp_id } });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
-            draw(`Detailed Attendance Log: ${emp.name} (${emp_id})`, 16, true);
-            draw(`Period: ${periodLabel}`, 12);
-            y -= 10;
+            drawText(`Detailed Attendance Log: ${emp.name} (${emp_id})`, MARGIN, y, 16, true);
+            y -= 20;
+            drawText(`Period: ${periodLabel}`, MARGIN, y, 12);
+            y -= 30;
 
             const checkins = await prisma.checkins.findMany({
                 where: { emp_id, timestamp: { gte: start, lte: end } },
@@ -91,21 +114,44 @@ export async function GET(req: Request) {
             const holidayMap = new Map<string, string>();
             holidays.forEach(h => holidayMap.set(h.date.toISOString().split("T")[0], h.name));
 
-            const leaveDays = new Set<string>();
+            const leaveDaysMap = new Map<string, string>();
             leaves.forEach(l => {
                 let cur = new Date(l.start_date);
                 const endD = new Date(l.end_date);
                 while (cur <= endD) {
-                    leaveDays.add(cur.toISOString().split("T")[0]);
+                    leaveDaysMap.set(cur.toISOString().split("T")[0], l.leave_type);
                     cur.setDate(cur.getDate() + 1);
                 }
             });
+
+            // Table Header
+            const colWidths = [80, 50, 200, 50, 200, 150];
+            const headers = ["วันที่", "เข้า", "สถานที่เช็คอิน", "ออก", "สถานที่เช็คเอาท์", "สถานะ"];
+            
+            const drawHeader = (currY: number) => {
+                let currX = MARGIN;
+                page.drawRectangle({
+                    x: MARGIN,
+                    y: currY - 5,
+                    width: PAGE_WIDTH - MARGIN * 2,
+                    height: 20,
+                    color: rgb(0.9, 0.9, 0.9),
+                });
+                
+                headers.forEach((h, i) => {
+                    drawText(h, currX + 5, currY, 10, true);
+                    currX += colWidths[i];
+                });
+                return currY - 25;
+            };
+
+            y = drawHeader(y);
 
             for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
                 const dateStr = dt.toISOString().split("T")[0];
                 const isSunday = dt.getUTCDay() === 0;
                 const holName = holidayMap.get(dateStr);
-                const isLeave = leaveDays.has(dateStr);
+                const leaveType = leaveDaysMap.get(dateStr);
 
                 const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
                 const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
@@ -116,7 +162,7 @@ export async function GET(req: Request) {
                 let status = "ขาด";
                 if (isSunday) status = "วันหยุด";
                 if (holName) status = `หยุดพิเศษ (${holName})`;
-                if (isLeave) status = "ลา";
+                if (leaveType) status = leaveType;
                 
                 const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
                 const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
@@ -134,19 +180,60 @@ export async function GET(req: Request) {
                     if (loc) outLocs.add(loc);
                 });
 
-                const inStr = inRecord ? `${formatTime(inRecord.timestamp)} (${Array.from(inLocs).join(" → ") || "-"})` : "-";
-                const outStr = outRecord ? `${formatTime(outRecord.timestamp)} (${Array.from(outLocs).join(" → ") || "-"})` : "-";
+                const inLocStr = Array.from(inLocs).join(", ");
+                const outLocStr = Array.from(outLocs).join(", ");
                 const lateStr = (inRecord?.late_min || 0) > 0 ? ` [สาย ${inRecord?.late_min} นาที]` : "";
+                const finalStatus = `${status}${lateStr}`;
 
-                draw(`${dateStr} | ${status}${lateStr}`, 11, true);
-                draw(`  IN: ${inStr}  |  OUT: ${outStr}`, 10);
-                y -= 4; // slight padding between days
+                if (checkNewPage(20)) {
+                    y = drawHeader(y);
+                }
+
+                let currX = MARGIN;
+                const rowData = [
+                    dateStr,
+                    inRecord ? formatTime(inRecord.timestamp) : "-",
+                    inLocStr || "-",
+                    outRecord ? formatTime(outRecord.timestamp) : "-",
+                    outLocStr || "-",
+                    finalStatus
+                ];
+
+                rowData.forEach((text, i) => {
+                    const truncatedText = truncate(text, fontRegular, 9, colWidths[i] - 10);
+                    drawText(truncatedText, currX + 5, y, 9);
+                    currX += colWidths[i];
+                });
+
+                // Draw thin line under row
+                page.drawLine({
+                    start: { x: MARGIN, y: y - 5 },
+                    end: { x: PAGE_WIDTH - MARGIN, y: y - 5 },
+                    thickness: 0.5,
+                    color: rgb(0.8, 0.8, 0.8),
+                });
+
+                y -= 20;
             }
 
         } else {
             // ================== AGGREGATE SUMMARY EXPORT ==================
-            // (Same as original code)
-            draw(`Historical Records: ${periodLabel}`, 18, true);
+            // Summary remains Portrait for now as it's a different report, 
+            // but let's make it look better if possible.
+            // (Reverting to Portrait for Summary)
+            page = pdf.addPage([595.28, 841.89]);
+            y = 800;
+
+            const drawPortrait = (text: string, size = 12, bold = false, color: any = rgb(0,0,0)) => {
+                if (y < 60) {
+                    page = pdf.addPage([595.28, 841.89]);
+                    y = 800;
+                }
+                page.drawText(text, { x: 50, y, size, font: bold ? fontBold : fontRegular, color });
+                y -= size + 6;
+            };
+
+            drawPortrait(`Historical Records: ${periodLabel}`, 18, true);
             
             const emps = await prisma.employees.findMany({
                 where: { is_active: true },
@@ -177,7 +264,7 @@ export async function GET(req: Request) {
                 totalWorkDays++;
             }
 
-            draw(`Total Working Days: ${totalWorkDays}`, 12);
+            drawPortrait(`Total Working Days: ${totalWorkDays}`, 12);
             y -= 10;
 
             const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string> }> = {};
@@ -206,10 +293,10 @@ export async function GET(req: Request) {
                 let absences = totalWorkDays - s.present_dates.size - s.leave_days;
                 if (absences < 0) absences = 0;
 
-                draw(`-------------------------------------------------------------------------`, 10);
-                draw(`EMP_ID: ${e.emp_id} | Name: ${e.name} | Branch: ${e.branch_id || "-"}`, 11, true);
-                draw(`Present: ${s.present_dates.size} | Absent: ${absences} | Leave: ${s.leave_days} (Pending: ${s.pending_leave_days})`, 11);
-                draw(`Late Count: ${s.late_count} times | Late Mins: ${s.late_mins} minutes`, 11);
+                drawPortrait(`-------------------------------------------------------------------------`, 10);
+                drawPortrait(`EMP_ID: ${e.emp_id} | Name: ${e.name} | Branch: ${e.branch_id || "-"}`, 11, true);
+                drawPortrait(`Present: ${s.present_dates.size} | Absent: ${absences} | Leave: ${s.leave_days} (Pending: ${s.pending_leave_days})`, 11);
+                drawPortrait(`Late Count: ${s.late_count} times | Late Mins: ${s.late_mins} minutes`, 11);
             }
         }
 

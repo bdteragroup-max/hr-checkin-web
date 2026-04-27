@@ -15,10 +15,14 @@ import {
     CheckIcon,
     ClockIcon,
     UserGroupIcon,
-    ShieldCheckIcon
+    ShieldCheckIcon,
+    ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 export default function AdminTravelClaimsPage() {
+    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
+    const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
     const [loading, setLoading] = useState(true);
     const [claims, setClaims] = useState<any[]>([]);
 
@@ -40,7 +44,7 @@ export default function AdminTravelClaimsPage() {
     async function fetchClaims() {
         setLoading(true);
         try {
-            const r = await fetch("/api/admin/travel-claims");
+            const r = await fetch(`/api/admin/travel-claims?start_date=${startDate}&end_date=${endDate}`);
             const data = await r.json();
             if (data.ok) setClaims(data.list || []);
         } catch (e) {
@@ -86,6 +90,11 @@ export default function AdminTravelClaimsPage() {
         }
     }
 
+    function handleExportExcel() {
+        const url = `/api/admin/export/travel_claims_excel?start_date=${startDate}&end_date=${endDate}`;
+        window.location.href = url;
+    }
+
     const filteredClaims = useMemo(() => {
         return claims.filter(c => {
             const matchesStatus = statusFilter === "all" || c.status === statusFilter;
@@ -127,6 +136,26 @@ export default function AdminTravelClaimsPage() {
             {/* ── Filter Bar ── */}
             <div className={styles.filterBar}>
                 <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>DATE RANGE</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                            type="date"
+                            className={styles.input}
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            onBlur={fetchClaims}
+                        />
+                        <span style={{ color: "var(--text4)" }}>-</span>
+                        <input
+                            type="date"
+                            className={styles.input}
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            onBlur={fetchClaims}
+                        />
+                    </div>
+                </div>
+                <div className={styles.filterGroup}>
                     <label className={styles.filterLabel}>STATUS</label>
                     <select
                         className={styles.select}
@@ -140,7 +169,7 @@ export default function AdminTravelClaimsPage() {
                         <option value="rejected">ไม่อนุมัติ</option>
                     </select>
                 </div>
-                <div className={styles.filterGroup} style={{ flex: 1, minWidth: 250 }}>
+                <div className={styles.filterGroup} style={{ flex: 1, minWidth: 200 }}>
                     <label className={styles.filterLabel}>SEARCH</label>
                     <input
                         className={styles.input}
@@ -150,9 +179,19 @@ export default function AdminTravelClaimsPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> Refresh
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <button 
+                        className={styles.btnRefresh} 
+                        onClick={handleExportExcel} 
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: "var(--ok)", color: "white", borderColor: "var(--ok-bdr)" }}
+                        title="Export Excel"
+                    >
+                        <ArrowDownTrayIcon width={16} /> Excel
+                    </button>
+                </div>
             </div>
 
             {/* ── Table Card ── */}

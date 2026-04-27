@@ -71,13 +71,13 @@ export async function GET(req: Request) {
         const reports: any[] = [];
 
         // Build a map of dates that fall under approved leaves
-        const leaveDays = new Set<string>();
+        const leaveDaysMap = new Map<string, string>();
         leaves.forEach(l => {
             let cur = new Date(l.start_date);
             const endD = new Date(l.end_date);
             while (cur <= endD) {
                 const ds = cur.toISOString().split("T")[0];
-                leaveDays.add(ds);
+                leaveDaysMap.set(ds, l.leave_type);
                 cur.setDate(cur.getDate() + 1);
             }
         });
@@ -92,7 +92,7 @@ export async function GET(req: Request) {
             const dateStr = dt.toISOString().split("T")[0];
             const isSunday = dt.getUTCDay() === 0;
             const holName = holidayMap.get(dateStr);
-            const isLeave = leaveDays.has(dateStr);
+            const leaveType = leaveDaysMap.get(dateStr);
 
             // Match by date_key string comparison
             const dayCheckins = checkins.filter(c => {
@@ -116,8 +116,8 @@ export async function GET(req: Request) {
             if (holName) {
                 status = `หยุดพิเศษ (${holName})`;
             }
-            if (isLeave) {
-                status = "ลา";
+            if (leaveType) {
+                status = leaveType;
             }
 
             const inRecord = inRecords.length > 0 ? inRecords[0] : null; 

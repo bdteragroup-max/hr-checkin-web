@@ -14,13 +14,25 @@ async function getAuth() {
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     const user = await getAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // TODO: Check if admin role?
 
     try {
+        const url = new URL(req.url);
+        const start_date = url.searchParams.get("start_date");
+        const end_date = url.searchParams.get("end_date");
+
+        const where: any = {};
+        if (start_date && end_date) {
+            where.date = {
+                gte: new Date(start_date),
+                lte: new Date(end_date)
+            };
+        }
+
         const claims = await prisma.commission_claims.findMany({
+            where,
             include: {
                 employee: {
                     select: { name: true, emp_id: true }

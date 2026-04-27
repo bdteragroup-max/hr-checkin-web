@@ -359,16 +359,16 @@ export default function RecordsPage() {
                                                         background: d.status === "มาทำงาน" ? "var(--ok-bg)" :
                                                                    d.status === "มาสาย" ? "var(--late-bg)" :
                                                                    d.status === "ขาด" ? "var(--bad-bg)" :
-                                                                   d.status === "ลา" ? "var(--red-lt)" : "var(--surface3)",
+                                                                   (d.status.startsWith("ลา") || d.status.includes("ปฏิบัติงาน")) ? "var(--red-lt)" : "var(--surface3)",
                                                         color: d.status === "มาทำงาน" ? "var(--ok)" :
                                                                d.status === "มาสาย" ? "var(--late)" :
                                                                d.status === "ขาด" ? "var(--bad)" :
-                                                               d.status === "ลา" ? "var(--red)" : "var(--text3)",
+                                                               (d.status.startsWith("ลา") || d.status.includes("ปฏิบัติงาน")) ? "var(--red)" : "var(--text3)",
                                                         border: `1px solid ${
                                                             d.status === "มาทำงาน" ? "var(--ok-bdr)" :
                                                             d.status === "มาสาย" ? "var(--late-bdr)" :
                                                             d.status === "ขาด" ? "var(--bad-bdr)" :
-                                                            d.status === "ลา" ? "#f5c6c3" : "var(--line)"
+                                                            (d.status.startsWith("ลา") || d.status.includes("ปฏิบัติงาน")) ? "#f5c6c3" : "var(--line)"
                                                         }`
                                                     }}>
                                                         {d.status}

@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminAuth";
+import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-function csvEscape(s: any) {
-    const v = (s ?? "").toString();
-    if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-    return v;
-}
 
 function formatTime(d: Date) {
     return d.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
@@ -46,121 +41,70 @@ export async function GET(req: Request) {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
 
+        const workbook = new ExcelJS.Workbook();
+
+        const holidays = await prisma.holidays.findMany({
+            where: { date: { gte: start, lte: end } }
+        });
+        const holidayMap = new Map<string, string>();
+        holidays.forEach(h => holidayMap.set(h.date.toISOString().split("T")[0], h.name));
+
         if (emp_id) {
-            // ================== DETAILED INDIVIDUAL EXPORT ==================
+            // ================== INDIVIDUAL EXPORT ==================
             const emp = await prisma.employees.findUnique({ where: { emp_id } });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
-            const checkins = await prisma.checkins.findMany({
-                where: { emp_id, timestamp: { gte: start, lte: end } },
-                orderBy: { timestamp: "asc" },
-            });
+            const sheet = workbook.addWorksheet("Attendance Details");
+            await fillEmployeeSheet(sheet, emp_id, emp.name, start, end, holidayMap);
 
-            const leaves = await prisma.leave_requests.findMany({
-                where: { emp_id, status: "approved", start_date: { lte: end }, end_date: { gte: start } },
-            });
-
-            const holidays = await prisma.holidays.findMany({
-                where: { date: { gte: start, lte: end } }
-            });
-
-            const holidayMap = new Map<string, string>();
-            holidays.forEach(h => holidayMap.set(h.date.toISOString().split("T")[0], h.name));
-
-            const leaveDays = new Set<string>();
-            leaves.forEach(l => {
-                let cur = new Date(l.start_date);
-                const endD = new Date(l.end_date);
-                while (cur <= endD) {
-                    leaveDays.add(cur.toISOString().split("T")[0]);
-                    cur.setDate(cur.getDate() + 1);
-                }
-            });
-
-            const lines: string[] = [];
-            lines.push(["DATE", "IN_TIME", "IN_LOCATION", "OUT_TIME", "OUT_LOCATION", "LATE_MINS", "STATUS", "IS_WEEKEND"].map(csvEscape).join(","));
-
-            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-                const dateStr = dt.toISOString().split("T")[0];
-                const isSunday = dt.getUTCDay() === 0;
-                const holName = holidayMap.get(dateStr);
-                const isLeave = leaveDays.has(dateStr);
-
-                const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
-                const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
-                const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
-
-                if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
-
-                let status = "ขาด";
-                if (isSunday) status = "วันหยุด";
-                if (holName) status = `หยุดพิเศษ (${holName})`;
-                if (isLeave) status = "ลา";
-                
-                const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
-                const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
-
-                if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
-
-                const inLocs = new Set<string>();
-                inRecords.forEach(c => {
-                    const loc = c.project_name || c.remark || c.branch_name;
-                    if (loc) inLocs.add(loc);
-                });
-                const outLocs = new Set<string>();
-                outRecords.forEach(c => {
-                    const loc = c.project_name || c.remark || c.branch_name;
-                    if (loc) outLocs.add(loc);
-                });
-
-                lines.push([
-                    dateStr,
-                    inRecord ? formatTime(inRecord.timestamp) : "-",
-                    inLocs.size > 0 ? Array.from(inLocs).join(" → ") : "-",
-                    outRecord ? formatTime(outRecord.timestamp) : "-",
-                    outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
-                    inRecord?.late_min || 0,
-                    status,
-                    isSunday ? "YES" : "NO"
-                ].map(csvEscape).join(","));
-            }
-
-            const csv = lines.join("\n");
-            const bom = "\uFEFF";
-            return new Response(bom + csv, {
+            const buffer = await workbook.xlsx.writeBuffer();
+            return new Response(buffer, {
                 headers: {
-                    "Content-Type": "text/csv; charset=utf-8",
-                    "Content-Disposition": `attachment; filename="${emp_id}_records_${periodLabel}.csv"`,
+                    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "Content-Disposition": `attachment; filename="${emp_id}_records_${periodLabel}.xlsx"`,
                 },
             });
 
         } else {
-            // ================== AGGREGATE SUMMARY EXPORT ==================
-            // (Same as original code)
+            // ================== EVERYONE EXPORT ==================
             const emps = await prisma.employees.findMany({
-                where: { is_active: true },
+                where: { is_active: true, is_checkin_exempt: false } as any,
                 select: { emp_id: true, name: true, branch_id: true },
                 orderBy: { emp_id: "asc" },
             });
 
             const empIds = emps.map(e => e.emp_id);
-            const rows = await prisma.checkins.findMany({
+            
+            // 1. Summary Sheet
+            const summarySheet = workbook.addWorksheet("Summary Report");
+            summarySheet.columns = [
+                { header: "EMP_ID", key: "emp_id", width: 15 },
+                { header: "NAME", key: "name", width: 25 },
+                { header: "BRANCH", key: "branch", width: 15 },
+                { header: "PRESENT_DAYS", key: "present", width: 15 },
+                { header: "ABSENT_DAYS", key: "absent", width: 15 },
+                { header: "APPROVED_LEAVES", key: "leave", width: 15 },
+                { header: "PENDING_LEAVES", key: "pending", width: 15 },
+                { header: "LATE_TIMES", key: "late_count", width: 15 },
+                { header: "LATE_MINUTES", key: "late_mins", width: 15 },
+                { header: "TOTAL_WORK_DAYS", key: "total_days", width: 15 },
+            ];
+            summarySheet.getRow(1).font = { bold: true };
+
+            const checkinsAll = await prisma.checkins.findMany({
                 where: { emp_id: { in: empIds }, timestamp: { gte: start, lte: end } },
                 select: { emp_id: true, timestamp: true, type: true, late_status: true, late_min: true },
             });
 
-            const leaves = await prisma.leave_requests.findMany({
+            const leavesAll = await prisma.leave_requests.findMany({
                 where: { emp_id: { in: empIds }, start_date: { lte: end }, end_date: { gte: start } },
                 select: { emp_id: true, days: true, status: true },
             });
 
-            const holidaysFetch = await prisma.holidays.findMany({
-                where: { date: { gte: start, lte: end } }
-            });
-            const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
+            const holidayDates = new Set(Array.from(holidayMap.keys()));
 
             let totalWorkDays = 0;
-            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+            for (let dt = new Date(start); dt <= end; dt.setUTCDate(dt.getUTCDate() + 1)) {
                 if (dt.getUTCDay() === 0) continue;
                 if (holidayDates.has(dt.toISOString().split("T")[0])) continue;
                 totalWorkDays++;
@@ -169,13 +113,13 @@ export async function GET(req: Request) {
             const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string> }> = {};
             for (const id of empIds) stats[id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set() };
 
-            for (const l of leaves) {
+            for (const l of leavesAll) {
                 if (!stats[l.emp_id]) continue;
                 if (l.status === "approved") stats[l.emp_id].leave_days += l.days || 0;
                 else if (l.status === "pending") stats[l.emp_id].pending_leave_days += l.days || 0;
             }
 
-            for (const r of rows) {
+            for (const r of checkinsAll) {
                 if (!stats[r.emp_id]) continue;
                 const d = new Date(r.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
                 if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
@@ -187,38 +131,123 @@ export async function GET(req: Request) {
                 }
             }
 
-            const lines: string[] = [];
-            lines.push(["EMP_ID", "NAME", "BRANCH", "PRESENT_DAYS", "TOTAL_ABSENT_DAYS", "APPROVED_LEAVES", "PENDING_LEAVES", "LATE_TIMES", "LATE_MINUTES", "TOTAL_WORK_DAYS"].map(csvEscape).join(","));
-
             for (const e of emps) {
                 const s = stats[e.emp_id];
                 let absences = totalWorkDays - s.present_dates.size - s.leave_days;
                 if (absences < 0) absences = 0;
 
-                lines.push([
-                    e.emp_id,
-                    e.name,
-                    e.branch_id || "-",
-                    s.present_dates.size,
-                    absences,
-                    s.leave_days,
-                    s.pending_leave_days,
-                    s.late_count,
-                    s.late_mins,
-                    totalWorkDays
-                ].map(csvEscape).join(","));
+                summarySheet.addRow({
+                    emp_id: e.emp_id,
+                    name: e.name,
+                    branch: e.branch_id || "-",
+                    present: s.present_dates.size,
+                    absent: absences,
+                    leave: s.leave_days,
+                    pending: s.pending_leave_days,
+                    late_count: s.late_count,
+                    late_mins: s.late_mins,
+                    total_days: totalWorkDays
+                });
             }
 
-            const csv = lines.join("\n");
-            const bom = "\uFEFF";
-            return new Response(bom + csv, {
+            // 2. Individual Sheets
+            for (const e of emps) {
+                // Excel sheet names must be unique and <= 31 chars
+                let sheetName = `${e.emp_id} - ${e.name}`.slice(0, 31);
+                // Ensure unique name (though emp_id should already guarantee this)
+                const sheet = workbook.addWorksheet(sheetName);
+                await fillEmployeeSheet(sheet, e.emp_id, e.name, start, end, holidayMap);
+            }
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            return new Response(buffer, {
                 headers: {
-                    "Content-Type": "text/csv; charset=utf-8",
-                    "Content-Disposition": `attachment; filename="historical_records_ALL_${periodLabel}.csv"`,
+                    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "Content-Disposition": `attachment; filename="historical_records_ALL_${periodLabel}.xlsx"`,
                 },
             });
         }
+
     } catch (e: any) {
+        console.error("EXPORT EXCEL ERROR:", e);
         return NextResponse.json({ ok: false, error: e.message || "ERROR" }, { status: 500 });
+    }
+}
+
+async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name: string, start: Date, end: Date, holidayMap: Map<string, string>) {
+    sheet.columns = [
+        { header: "DATE", key: "date", width: 15 },
+        { header: "IN_TIME", key: "in_time", width: 12 },
+        { header: "IN_LOCATION", key: "in_loc", width: 30 },
+        { header: "OUT_TIME", key: "out_time", width: 12 },
+        { header: "OUT_LOCATION", key: "out_loc", width: 30 },
+        { header: "LATE_MINS", key: "late_mins", width: 12 },
+        { header: "STATUS", key: "status", width: 25 },
+        { header: "WEEKEND", key: "weekend", width: 10 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+
+    const checkins = await prisma.checkins.findMany({
+        where: { emp_id, timestamp: { gte: start, lte: end } },
+        orderBy: { timestamp: "asc" },
+    });
+
+    const leaves = await prisma.leave_requests.findMany({
+        where: { emp_id, status: "approved", start_date: { lte: end }, end_date: { gte: start } },
+    });
+
+    const leaveDaysMap = new Map<string, string>();
+    leaves.forEach(l => {
+        let cur = new Date(l.start_date);
+        const endD = new Date(l.end_date);
+        while (cur <= endD) {
+            leaveDaysMap.set(cur.toISOString().split("T")[0], l.leave_type);
+            cur.setDate(cur.getDate() + 1);
+        }
+    });
+
+    for (let dt = new Date(start); dt <= end; dt.setUTCDate(dt.getUTCDate() + 1)) {
+        const dateStr = dt.toISOString().split("T")[0];
+        const isSunday = dt.getUTCDay() === 0;
+        const holName = holidayMap.get(dateStr);
+        const leaveType = leaveDaysMap.get(dateStr);
+
+        const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
+        const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
+        const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
+
+        if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
+
+        let status = "ขาด";
+        if (isSunday) status = "วันหยุด";
+        if (holName) status = `หยุดพิเศษ (${holName})`;
+        if (leaveType) status = leaveType;
+        
+        const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
+        const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
+
+        if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+
+        const inLocs = new Set<string>();
+        inRecords.forEach(c => {
+            const loc = c.project_name || c.remark || c.branch_name;
+            if (loc) inLocs.add(loc);
+        });
+        const outLocs = new Set<string>();
+        outRecords.forEach(c => {
+            const loc = c.project_name || c.remark || c.branch_name;
+            if (loc) outLocs.add(loc);
+        });
+
+        sheet.addRow({
+            date: dateStr,
+            in_time: inRecord ? formatTime(inRecord.timestamp) : "-",
+            in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : "-",
+            out_time: outRecord ? formatTime(outRecord.timestamp) : "-",
+            out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
+            late_mins: inRecord?.late_min || 0,
+            status: status,
+            weekend: isSunday ? "YES" : "NO"
+        });
     }
 }
