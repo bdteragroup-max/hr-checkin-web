@@ -295,7 +295,7 @@ export async function POST(req: Request) {
                         await sendTripUpdateNotification(targetLineIds, {
                             empName: auth.emp.name,
                             locationName: locPart || branch.name,
-                            timestamp: new Date().toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                            timestamp: new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: '2-digit', minute: '2-digit' }),
                             photoUrl: photo_url!,
                             lat: lat || undefined,
                             lon: lon || undefined,
@@ -341,9 +341,9 @@ export async function POST(req: Request) {
                         await sendCheckoutOtVerificationNotification({
                             empName: auth.emp.name,
                             dateFor: date_key.toLocaleDateString("th-TH"),
-                            requestedTime: `${new Date(approvedOt.start_time).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' })} - ${requestedEnd.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' })}`,
+                            requestedTime: `${new Date(approvedOt.start_time).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: '2-digit', minute: '2-digit' })} - ${requestedEnd.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: '2-digit', minute: '2-digit' })}`,
                             actualIn: checkIn ? "ช่วงเช้า" : "—", // In a real scenario, we'd fetch the exact time
-                            actualOut: actualOut.toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }),
+                            actualOut: actualOut.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: '2-digit', minute: '2-digit' }),
                             status,
                             diffMins: Math.abs(diffMins),
                             photoUrl: photo_url!
