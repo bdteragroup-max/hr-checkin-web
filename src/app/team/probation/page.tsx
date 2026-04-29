@@ -13,6 +13,7 @@ import {
 import styles from "./page.module.css";
 
 interface Subordinate {
+    evaluation_history: { evaluation_no: number; evaluation_date: string }[];
     emp_id: string;
     name: string;
     hire_date: string | null;
@@ -129,6 +130,34 @@ export default function SupervisorProbationPage() {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {emp.is_on_trial && emp.evaluation_history && emp.evaluation_history.length > 0 && (
+                                        <div className={styles.historyContainer}>
+                                            <div className={styles.historyTitle}>ประวัติการประเมินที่ผ่านมา:</div>
+                                            <div className={styles.historyGrid}>
+                                                {[1, 2, 3].map(round => {
+                                                    const hist = emp.evaluation_history?.find(h => h.evaluation_no === round);
+                                                    if (!hist) return null;
+
+                                                    const hire = new Date(emp.hire_date!);
+                                                    const target = new Date(hire);
+                                                    target.setDate(hire.getDate() + (round * 30));
+                                                    const actual = new Date(hist.evaluation_date);
+                                                    const diff = Math.floor((actual.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+                                                    const isDelayed = diff > 0;
+
+                                                    return (
+                                                        <div key={round} className={styles.historyTag}>
+                                                            <span className={styles.tagRound}>ครั้งที่ {round}</span>
+                                                            <span className={isDelayed ? styles.tagDelayed : styles.tagNormal}>
+                                                                {isDelayed ? `ล่าช้า ${diff} วัน` : 'ปกติ'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {emp.is_unlocked ? (
                                         <Link

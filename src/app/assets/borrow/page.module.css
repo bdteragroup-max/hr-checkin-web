@@ -515,4 +515,31 @@
     grid-template-columns: 1fr;
     text-align: center;
   }
+
+  .modal {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .modalHeader {
+    padding: 14px 16px;
+  }
+
+  .modalHeader h2 {
+    font-size: 15px;
+    line-height: 1.4;
+    padding-right: 12px;
+  }
+
+  .form {
+    padding: 16px;
+  }
+
+  .heroH1 {
+    font-size: 26px;
+  }
+
+  .wrap {
+    padding: 0 10px 100px;
+  }
 }

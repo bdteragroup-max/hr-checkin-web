@@ -92,6 +92,31 @@ export default function AdminProbationPage() {
         return { days, color };
     };
 
+    const getRoundHistory = (empId: string, hireDate: string) => {
+        if (!hireDate) return [];
+        const empEvals = list.filter(it => it.emp_id === empId).sort((a, b) => a.evaluation_no - b.evaluation_no);
+        
+        return [1, 2, 3].map(round => {
+            const evaluation = empEvals.find(it => it.evaluation_no === round);
+            if (!evaluation) return { round, status: 'pending' };
+
+            const hire = new Date(hireDate);
+            const target = new Date(hire);
+            target.setDate(hire.getDate() + (round * 30));
+            
+            const actual = new Date(evaluation.evaluation_date);
+            const diff = actual.getTime() - target.getTime();
+            const delayDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            return {
+                round,
+                status: delayDays > 0 ? 'delayed' : 'normal',
+                delayDays: delayDays > 0 ? delayDays : 0,
+                date: actual
+            };
+        });
+    };
+
     // -- REVIEW LOGIC --
     const openReview = async (id: number) => {
         const evalItem = list.find(it => it.id === id);
@@ -273,6 +298,20 @@ export default function AdminProbationPage() {
                                                     <ExclamationTriangleIcon width={14} /> เหลืออีก {info.days} วัน
                                                 </div>
                                             )}
+
+                                            <div className={styles.historyRounds}>
+                                                {getRoundHistory(emp.emp_id, emp.hire_date).map(h => {
+                                                    if (h.status === 'pending') return null;
+                                                    return (
+                                                        <div key={h.round} className={styles.historyItem}>
+                                                            <span className={styles.historyRoundLabel}>ครั้งที่ {h.round}</span>
+                                                            <span className={h.status === 'delayed' ? styles.statusDelayed : styles.statusNormal}>
+                                                                {h.status === 'delayed' ? `ล่าช้า ${h.delayDays} วัน` : 'ปกติ'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 );

@@ -236,7 +236,37 @@ export default function SupervisorKPIPage() {
 
                                                 <div className={styles.tracksContainer}>
                                                     {activeTab === 'trial' ? (
-                                                        renderTrack('PROBATION', 'ประเมินผลทดลองงาน', emp.track_info.probation)
+                                                        <>
+                                                            {renderTrack('PROBATION', 'ประเมินผลทดลองงาน', emp.track_info.probation)}
+                                                            {/* History for KPI Rounds */}
+                                                            {emp.evaluations.filter(ev => ev.category === 'PROBATION' && ev.status === 'completed').length > 0 && (
+                                                                <div className={styles.historyContainer}>
+                                                                    <div className={styles.historyTitle}>ประวัติ KPI ที่ผ่านมา:</div>
+                                                                    <div className={styles.historyGrid}>
+                                                                        {[1, 2, 3].map(round => {
+                                                                            const hist = emp.evaluations.find(ev => ev.category === 'PROBATION' && ev.evaluation_no === round);
+                                                                            if (!hist) return null;
+                                                                            
+                                                                            const hire = new Date(emp.hire_date!);
+                                                                            const target = new Date(hire);
+                                                                            target.setDate(hire.getDate() + (round * 30));
+                                                                            const actual = new Date(hist.evaluation_date);
+                                                                            const diff = Math.floor((actual.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+                                                                            const isDelayed = diff > 0;
+
+                                                                            return (
+                                                                                <div key={round} className={styles.historyTag}>
+                                                                                    <span className={styles.tagRound}>ครั้งที่ {round}</span>
+                                                                                    <span className={isDelayed ? styles.tagDelayed : styles.tagNormal}>
+                                                                                        {isDelayed ? `ล่าช้า ${diff} วัน` : 'ปกติ'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     ) : (
                                                         <>
                                                             {renderTrack('MONTHLY', 'ประเมินผลการทำงานรายเดือน', emp.track_info.monthly)}

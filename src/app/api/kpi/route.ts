@@ -19,10 +19,9 @@ export async function GET() {
                 items: true,
                 supervisor: { select: { name: true } },
                 employee: {
-                    include: {
-                        _count: {
-                            select: { subordinates: true }
-                        },
+                    select: {
+                        hire_date: true,
+                        is_on_trial: true,
                         job_positions: { select: { title: true } }
                     }
                 }

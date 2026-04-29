@@ -257,3 +257,73 @@
     color: var(--text3);
     font-weight: 600;
 }
+
+.timelineCard {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.timelineHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 16px;
+    color: var(--red);
+}
+
+.timelineGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.timelineItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.itemDotNormal, .itemDotDelayed, .itemDotPending {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+
+.itemDotNormal { background: #16a34a; }
+.itemDotDelayed { background: #dc2626; }
+.itemDotPending { background: #cbd5e1; }
+
+.itemInfo {
+    flex: 1;
+}
+
+.itemLabel {
+    font-size: 11px;
+    font-weight: 800;
+    color: #475569;
+}
+
+.itemDate {
+    font-size: 10px;
+    color: #94a3b8;
+}
+
+.itemStatusNormal {
+    font-size: 11px;
+    font-weight: 700;
+    color: #16a34a;
+}
+
+.itemStatusDelayed {
+    font-size: 11px;
+    font-weight: 700;
+    color: #dc2626;
+}

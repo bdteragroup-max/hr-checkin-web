@@ -423,6 +423,41 @@
     gap: 6px;
 }
 
+.historyRounds {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.historyItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+}
+
+.historyRoundLabel {
+    font-weight: 700;
+    color: #475569;
+}
+
+.statusNormal {
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.statusDelayed {
+    color: #dc2626;
+    font-weight: 800;
+    background: #fee2e2;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
 /* --- MODAL --- */
 .modalOverlay {
     position: fixed;

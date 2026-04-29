@@ -30,17 +30,15 @@ export async function GET() {
                 departments: { select: { name: true } },
                 salary_type: true,
                 probation_evaluations: {
-                    where: { supervisor_id: supervisorId },
-                    select: { evaluation_no: true, created_at: true },
-                    orderBy: { created_at: "desc" },
-                    take: 1
+                    select: { evaluation_no: true, evaluation_date: true },
+                    orderBy: { evaluation_no: "asc" }
                 }
             }
         });
 
         const now = new Date();
         const results = employees.map(emp => {
-            const lastEval = emp.probation_evaluations[0];
+            const lastEval = emp.probation_evaluations[emp.probation_evaluations.length - 1];
             const nextRound = (lastEval?.evaluation_no || 0) + 1;
             
             let dueDate = null;
@@ -48,7 +46,6 @@ export async function GET() {
             let isUnlocked = false;
 
             if (emp.is_on_trial) {
-                // Calculate due date based on round (30, 60, 90, 119 days)
                 let dueDays = 0;
                 if (nextRound === 1) dueDays = 30;
                 else if (nextRound === 2) dueDays = 60;
@@ -65,16 +62,13 @@ export async function GET() {
                     isUnlocked = now >= unlockDate;
                 }
             } else {
-                // Regular staff: Monthly Evaluation
-                // Rule: If last evaluation was in a different month, or no evaluation yet, it's due.
-                // We'll set the unlock date to the 20th of every month.
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
                 
                 unlockDate = new Date(currentYear, currentMonth, 20);
-                dueDate = new Date(currentYear, currentMonth + 1, 0); // Last day of month
+                dueDate = new Date(currentYear, currentMonth + 1, 0); 
                 
-                const lastEvalDate = lastEval ? new Date(lastEval.created_at) : null;
+                const lastEvalDate = lastEval ? new Date(lastEval.evaluation_date) : null;
                 const evaluatedThisMonth = lastEvalDate && 
                                           lastEvalDate.getMonth() === currentMonth && 
                                           lastEvalDate.getFullYear() === currentYear;
@@ -94,7 +88,8 @@ export async function GET() {
                 next_round: nextRound,
                 due_date: dueDate ? dueDate.toISOString() : null,
                 unlock_date: unlockDate ? unlockDate.toISOString() : null,
-                is_unlocked: isUnlocked
+                is_unlocked: isUnlocked,
+                evaluation_history: emp.probation_evaluations
             };
         });
 

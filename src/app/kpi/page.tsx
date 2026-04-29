@@ -73,6 +73,52 @@ export default function EmployeeKPIPage() {
                             <span>My KPI Sessions ({list.length})</span>
                         </div>
 
+                        {/* Probationary KPI Timeline */}
+                        {list.length > 0 && (list[0] as any).employee?.is_on_trial && (list[0] as any).employee?.hire_date && (
+                            <div className={styles.timelineCard}>
+                                <div className={styles.timelineHeader}>
+                                    <AcademicCapIcon width={20} />
+                                    <span>KPI Probation Timeline</span>
+                                </div>
+                                <div className={styles.timelineGrid}>
+                                    {[1, 2, 3].map(round => {
+                                        const hist = list.find(ev => (ev as any).category === 'PROBATION' && ev.evaluation_no === round);
+                                        const hire = new Date((list[0] as any).employee.hire_date);
+                                        const target = new Date(hire);
+                                        target.setDate(hire.getDate() + (round * 30));
+                                        
+                                        if (!hist) {
+                                            return (
+                                                <div key={round} className={styles.timelineItem}>
+                                                    <div className={styles.itemDotPending} />
+                                                    <div className={styles.itemInfo}>
+                                                        <div className={styles.itemLabel}>ครั้งที่ {round}</div>
+                                                        <div className={styles.itemDate}>กำหนด: {target.toLocaleDateString("th-TH")}</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        const actual = new Date((hist as any).evaluation_date || (hist as any).created_at);
+                                        const diff = Math.floor((actual.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+                                        const isDelayed = diff > 0;
+
+                                        return (
+                                            <div key={round} className={styles.timelineItem}>
+                                                <div className={isDelayed ? styles.itemDotDelayed : styles.itemDotNormal} />
+                                                <div className={styles.itemInfo}>
+                                                    <div className={styles.itemLabel}>ครั้งที่ {round}</div>
+                                                    <div className={isDelayed ? styles.itemStatusDelayed : styles.itemStatusNormal}>
+                                                        {isDelayed ? `ล่าช้า ${diff} วัน` : 'ปกติ'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {list.map((evalData, idx) => {
                             const statusInfo = getStatusInfo(evalData.status);
                             return (

@@ -262,3 +262,53 @@
     text-align: center;
     border: 2px dashed var(--gray-200);
 }
+
+.historyContainer {
+  margin-bottom: 16px;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.historyTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.historyGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.historyTag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 11px;
+}
+
+.tagRound {
+  font-weight: 700;
+  color: #334155;
+}
+
+.tagNormal {
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.tagDelayed {
+  color: #dc2626;
+  font-weight: 800;
+  background: #fee2e2;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
