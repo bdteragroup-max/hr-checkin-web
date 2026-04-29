@@ -673,6 +673,12 @@
     gap: 12px;
 }
 
+.scoreCardWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .scoreCard {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -682,6 +688,23 @@
     align-items: center;
     justify-content: space-between;
     transition: all 0.2s;
+}
+
+.scoreCommentBox {
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.scoreCommentInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 12px;
+    color: #475569;
+    font-style: italic;
 }
 
 .scoreCard:hover {

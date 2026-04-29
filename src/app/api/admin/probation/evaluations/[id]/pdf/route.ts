@@ -220,6 +220,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             evalData.score_discipline, evalData.score_tool_maintenance, evalData.score_participation
         ];
 
+        const scoreCommentKeys = [
+            "work_quality", "work_quantity", "dedication",
+            "knowledge", "learning", "obedience",
+            "responsibility", "creativity", "teamwork",
+            "discipline", "tool_maintenance", "participation"
+        ];
+        const scoreComments = (evalData as any).score_comments || {};
+
         for (let i = 0; i < CATEGORY_NAMES.length; i++) {
             const rowH = 15; // Vertical Compaction
             const textX = CX[0] + 6;
@@ -266,6 +274,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             page.drawText(earned, { x: x7 + (w7 - fontBold.widthOfTextAtSize(earned, 8)) / 2, y: y - 10.5, size: 8, font: fontBold, color: BLACK });
 
             page.drawLine({ start: { x: CX[8], y: y }, end: { x: CX[8], y: y - rowH }, thickness: 0.35, color: BLACK });
+            const catComment = scoreComments[scoreCommentKeys[i]] || "";
+            if (catComment) {
+                page.drawText(catComment, { x: CX[8] + 4, y: y - 10.5, size: 6.5, font: fontRegular, color: BLACK });
+            }
             page.drawLine({ start: { x: ML, y: y - rowH }, end: { x: MR, y: y - rowH }, thickness: 0.35, color: BLACK });
             y -= rowH;
         }

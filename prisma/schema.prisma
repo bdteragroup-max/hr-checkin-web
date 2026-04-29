@@ -452,6 +452,7 @@ model probation_evaluations {
   comment_supervisor    String?  @db.Text
   comment_improvement   String?  @db.Text
   comment_praise        String?  @db.Text
+  score_comments        Json?
 
   decision              String   @db.VarChar(50) // pass, fail, extend, salary_adjust
   salary_adjust_from    Decimal? @db.Decimal(12, 2)

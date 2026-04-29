@@ -52,6 +52,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             attendance_counts,
             decision,
             hr_remark,
+            score_comments,
             salary_adjust_from,
             salary_adjust_to
         } = body;
@@ -75,7 +76,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const totalScore = calculateTotalScore(updatedScores);
         const grade = calculateGrade(totalScore);
 
-        const result = await prisma.probation_evaluations.update({
+        const result = await (prisma.probation_evaluations as any).update({
             where: { id: Number(id) },
             data: {
                 score_work_quality: updatedScores.work_quality ?? original.score_work_quality,
@@ -106,6 +107,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
                 hr_remark: hr_remark ?? original.hr_remark,
                 salary_adjust_from: salary_adjust_from !== undefined ? Number(salary_adjust_from) : original.salary_adjust_from,
                 salary_adjust_to: salary_adjust_to !== undefined ? Number(salary_adjust_to) : original.salary_adjust_to,
+                score_comments: score_comments ?? (original as any).score_comments,
                 
                 status: "reviewed" // Mark as reviewed by HR
             }

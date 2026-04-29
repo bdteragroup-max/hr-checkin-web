@@ -145,6 +145,7 @@ export default function AdminProbationPage() {
             },
             decision: evalItem.decision,
             hr_remark: evalItem.hr_remark || "",
+            score_comments: evalItem.score_comments || {},
             salary_adjust_from: evalItem.salary_adjust_from || "",
             salary_adjust_to: evalItem.salary_adjust_to || ""
         });
@@ -456,21 +457,35 @@ export default function AdminProbationPage() {
                             </div>
                             <div className={styles.scoreGrid}>
                                 {CATEGORIES.map(cat => (
-                                    <div key={cat.key} className={styles.scoreCard}>
-                                        <div className={styles.scoreInfo}>
-                                            <div className={styles.scoreCatLabel}>{cat.label}</div>
-                                            <div className={styles.scoreWeight}>น้ำหนัก: {cat.weight}</div>
+                                    <div key={cat.key} className={styles.scoreCardWrapper}>
+                                        <div className={styles.scoreCard}>
+                                            <div className={styles.scoreInfo}>
+                                                <div className={styles.scoreCatLabel}>{cat.label}</div>
+                                                <div className={styles.scoreWeight}>น้ำหนัก: {cat.weight}</div>
+                                            </div>
+                                            <div className={styles.scoreInputWrap}>
+                                                <input 
+                                                    type="number" 
+                                                    min="1" 
+                                                    max="5" 
+                                                    className={styles.scoreInput} 
+                                                    value={editData.scores[cat.key]} 
+                                                    onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
+                                                />
+                                                <span className={styles.scoreMax}>/ 5</span>
+                                            </div>
                                         </div>
-                                        <div className={styles.scoreInputWrap}>
+                                        <div className={styles.scoreCommentBox}>
                                             <input 
-                                                type="number" 
-                                                min="1" 
-                                                max="5" 
-                                                className={styles.scoreInput} 
-                                                value={editData.scores[cat.key]} 
-                                                onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
+                                                type="text" 
+                                                className={styles.scoreCommentInput}
+                                                placeholder="ความคิดเห็นเพิ่มเติม..."
+                                                value={editData.score_comments[cat.key] || ""}
+                                                onChange={e => setEditData({
+                                                    ...editData, 
+                                                    score_comments: { ...editData.score_comments, [cat.key]: e.target.value }
+                                                })}
                                             />
-                                            <span className={styles.scoreMax}>/ 5</span>
                                         </div>
                                     </div>
                                 ))}

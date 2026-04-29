@@ -189,12 +189,47 @@
   letter-spacing: 0.5px;
 }
 
+.categoryWrapper {
+    border-bottom: 1px dashed var(--gray-200);
+    padding: 8px 0 16px;
+}
+
 .scoreRow {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 0;
-    border-bottom: 1px dashed var(--gray-200);
+    padding: 8px 0;
+}
+
+.catCommentRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 6px 12px;
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.catCommentIcon {
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.catCommentInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-th);
+    font-size: 13px;
+    color: var(--text);
+    padding: 2px 0;
+}
+
+.catCommentInput::placeholder {
+    color: var(--gray-300);
+    font-style: italic;
 }
 
 .catInfo {

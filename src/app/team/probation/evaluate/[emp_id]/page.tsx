@@ -62,6 +62,7 @@ export default function EvaluatePage() {
     const [commentSupervisor, setCommentSupervisor] = useState("");
     const [commentImprovement, setCommentImprovement] = useState("");
     const [commentPraise, setCommentPraise] = useState("");
+    const [scoreComments, setScoreComments] = useState<Record<string, string>>({});
 
     // --- CORRECTIONS & DETAILS ---
     const [attDetails, setAttDetails] = useState<any>(null);
@@ -192,6 +193,7 @@ export default function EvaluatePage() {
                     comment_supervisor: commentSupervisor,
                     comment_improvement: commentImprovement,
                     comment_praise: commentPraise,
+                    score_comments: scoreComments,
                     decision,
                     salary_adjust_from: salaryFrom,
                     salary_adjust_to: salaryTo
@@ -366,21 +368,35 @@ export default function EvaluatePage() {
                     </div>
 
                     {CATEGORIES.map(cat => (
-                        <div key={cat.key} className={styles.scoreRow}>
-                            <div className={styles.catInfo}>
-                                <div className={styles.catName}>{cat.label}</div>
-                                <div className={styles.catWeight}>ความสำคัญ: {cat.weight}</div>
+                        <div key={cat.key} className={styles.categoryWrapper}>
+                            <div className={styles.scoreRow}>
+                                <div className={styles.catInfo}>
+                                    <div className={styles.catName}>{cat.label}</div>
+                                    <div className={styles.catWeight}>ความสำคัญ: {cat.weight}</div>
+                                </div>
+                                <div className={styles.scoreButtons}>
+                                    {[5, 4, 3, 2, 1].map(s => (
+                                        <button 
+                                            key={s}
+                                            className={`${styles.scoreBtn} ${scores[cat.key] === s ? styles.active : ""}`}
+                                            onClick={() => setScores(p => ({ ...p, [cat.key]: s }))}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <div className={styles.scoreButtons}>
-                                {[5, 4, 3, 2, 1].map(s => (
-                                    <button 
-                                        key={s}
-                                        className={`${styles.scoreBtn} ${scores[cat.key] === s ? styles.active : ""}`}
-                                        onClick={() => setScores(p => ({ ...p, [cat.key]: s }))}
-                                    >
-                                        {s}
-                                    </button>
-                                ))}
+                            <div className={styles.catCommentRow}>
+                                <div className={styles.catCommentIcon}>
+                                    <ChatBubbleLeftRightIcon width={14} />
+                                </div>
+                                <input 
+                                    type="text" 
+                                    className={styles.catCommentInput}
+                                    placeholder={`ระบุความคิดเห็นสำหรับหัวข้อ ${cat.label.split(".")[1].trim()}...`}
+                                    value={scoreComments[cat.key] || ""}
+                                    onChange={e => setScoreComments(p => ({ ...p, [cat.key]: e.target.value }))}
+                                />
                             </div>
                         </div>
                     ))}

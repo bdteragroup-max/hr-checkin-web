@@ -33,6 +33,7 @@ export async function POST(req: Request) {
             comment_supervisor,
             comment_improvement,
             comment_praise,
+            score_comments,
             decision,
             salary_adjust_from,
             salary_adjust_to
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
         }
 
         // 5. Save to DB
-        const result = await prisma.probation_evaluations.create({
+        const result = await (prisma.probation_evaluations as any).create({
             data: {
                 emp_id,
                 supervisor_id,
@@ -125,6 +126,7 @@ export async function POST(req: Request) {
                 comment_supervisor: finalCommentSupervisor,
                 comment_improvement,
                 comment_praise,
+                score_comments: score_comments || {},
                 
                 decision,
                 salary_adjust_from: salary_adjust_from ? Number(salary_adjust_from) : null,
