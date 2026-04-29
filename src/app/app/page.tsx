@@ -370,22 +370,47 @@ export default function AppPage() {
     /* ── Init ── */
     useEffect(() => {
         (async () => {
-            const r = await fetch("/api/me");
-            if (!r.ok) return (window.location.href = "/");
-            const meData: Me = await r.json();
-            setMe(meData);
-            setEmpId(meData.emp_id);
-            setEmpName(meData.name);
-            if (meData.branch_id) setSelectedBranch(meData.branch_id);
+            try {
+                // Fetch basic 'me' first to verify auth
+                const meRes = await fetch("/api/me");
+                if (!meRes.ok) {
+                    window.location.href = "/";
+                    return;
+                }
+                const meData: Me = await meRes.json();
+                setMe(meData);
+                setEmpId(meData.emp_id);
+                setEmpName(meData.name);
+                if (meData.branch_id) setSelectedBranch(meData.branch_id);
 
-            const b = await fetch("/api/branches");
-            const bd = await b.json();
-            setBranches(bd.branches || []);
+                // Now fetch everything else in parallel
+                const [branchesRes, checkinsRes, warningsRes, birthdaysRes] = await Promise.all([
+                    fetch("/api/branches"),
+                    fetch("/api/checkins", { cache: "no-store" }),
+                    fetch("/api/warnings", { cache: "no-store" }),
+                    fetch("/api/birthdays", { cache: "no-store" })
+                ]);
 
-            await refreshToday();
-            await fetchWarnings();
-            await fetchBirthdays();
-            setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
+                // Parse all results
+                const [branchesData, checkinsData, warningsData, birthdaysData] = await Promise.all([
+                    branchesRes.json(),
+                    checkinsRes.json().catch(() => ({})),
+                    warningsRes.json().catch(() => ({})),
+                    birthdaysRes.json().catch(() => ({}))
+                ]);
+
+                // Update state
+                if (branchesData.branches) setBranches(branchesData.branches);
+                if (checkinsData.list) setToday(checkinsData.list);
+                if (checkinsData.dateKey) setTodayKey(checkinsData.dateKey);
+                if (warningsData.ok && warningsData.warnings) setWarnings(warningsData.warnings);
+                if (birthdaysData.ok && birthdaysData.list) setBirthdays(birthdaysData.list);
+
+                setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                setStatus(<span><ExclamationTriangleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />เกิดข้อผิดพลาดในการโหลด</span>, "bad");
+            }
         })();
     }, []);
 

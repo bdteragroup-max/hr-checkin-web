@@ -12,8 +12,10 @@ import {
     ClockIcon,
     UserIcon,
     ClipboardDocumentListIcon,
-    XMarkIcon
+    XMarkIcon,
+    ChartBarIcon
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 
 type Asset = {
@@ -285,9 +287,14 @@ export default function AdminAssetsPage() {
                     <h1 className={styles.title}>จัดการรถยนต์ (Cars)</h1>
                     <p className={styles.subtitle}>จัดการรถยนต์บริษัท การยืม-คืน และประวัติการใช้งาน</p>
                 </div>
-                <button className={styles.addBtn} onClick={openAddModal}>
-                    <PlusIcon width={20} /> เพิ่มรถยนต์
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <Link href="/admin/reports/vehicles" className={styles.reportBtn}>
+                        <ChartBarIcon width={20} /> ดูรายงานสรุป
+                    </Link>
+                    <button className={styles.addBtn} onClick={openAddModal}>
+                        <PlusIcon width={20} /> เพิ่มรถยนต์
+                    </button>
+                </div>
             </div>
 
             <div className={styles.statsBar}>

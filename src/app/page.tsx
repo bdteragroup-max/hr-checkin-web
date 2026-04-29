@@ -3,11 +3,18 @@
 import { useState, Suspense } from "react";
 import styles from "./page.module.css";
 import { User, Lock } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 function LoginContent() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl");
+
+    useEffect(() => {
+        // Pre-fetch the main app to speed up the transition
+        router.prefetch("/app");
+    }, [router]);
 
     const [emp_id, setEmpId] = useState("");
     const [pin, setPin] = useState("");
@@ -28,7 +35,7 @@ function LoginContent() {
             if (!r.ok) return setMsg(data?.error === "INVALID_CREDENTIALS" ? "ID หรือ PIN ไม่ถูกต้อง" : data?.error || "เข้าสู่ระบบไม่สำเร็จ");
             
             // Redirect to callbackUrl if present, otherwise default to home
-            window.location.href = callbackUrl || "/app";
+            router.push(callbackUrl || "/app");
         } catch {
             setMsg("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
         } finally {

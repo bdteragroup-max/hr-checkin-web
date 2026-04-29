@@ -22,12 +22,13 @@
 }
 
 .addBtn {
-    background: linear-gradient(135deg, var(--red3), var(--red2));
-    color: #fff;
+    background: #1e293b;
+    color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: var(--radius-sm);
-    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -36,9 +37,30 @@
 }
 
 .addBtn:hover {
-    filter: brightness(1.1);
+    background: #0f172a;
     transform: translateY(-1px);
-    box-shadow: var(--shadow-red);
+}
+
+.reportBtn {
+    background: white;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.reportBtn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
 }
 
 .statsBar {
