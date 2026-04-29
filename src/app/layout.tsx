@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://hr-checkin-web.vercel.app"),
   title: "TERA GROUP",
-  description: "Leave ",
+  description: "Leave and Attendance System",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

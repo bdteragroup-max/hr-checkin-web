@@ -296,7 +296,14 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
                                     <span className={`${styles.historyTag} ${tagCls}`}>{x.lateLabel}</span>
                                 )}
                                 {x.photo_url && (
-                                    <Image src={x.photo_url} alt="photo" width={300} height={225} className={styles.photoThumb} unoptimized priority />
+                                    <Image 
+                                        src={x.photo_url} 
+                                        alt="photo" 
+                                        width={300} 
+                                        height={225} 
+                                        className={styles.photoThumb} 
+                                        loading="lazy"
+                                    />
                                 )}
                             </div>
                         );
@@ -778,7 +785,12 @@ export default function AppPage() {
     ────────────────────────────────────────── */
     return (
         <>
-            <Script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.21.3/zxing.min.js" strategy="lazyOnload" />
+            {showQR && (
+                <Script 
+                    src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.21.3/zxing.min.js" 
+                    onLoad={() => console.log("ZXing loaded")}
+                />
+            )}
 
             <div className={styles.wrapper} style={{ paddingBottom: 60 }}>
 
