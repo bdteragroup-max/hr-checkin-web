@@ -35,6 +35,7 @@ export default function KPIDefinePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const category = searchParams.get("category") || "PROBATION";
+    const round = searchParams.get("round");
 
     const [empInfo, setEmpInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -76,9 +77,18 @@ export default function KPIDefinePage() {
                     setEmpInfo(data.employee);
                     const isLeader = (data.employee._count?.subordinates || 0) > 0;
 
-                    const existing = data.employee.kpi_evaluations?.find((ev: any) =>
-                        ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor')
-                    );
+                    const targetRound = round ? Number(round) : (category === "MONTHLY" ? new Date().getMonth() + 1 : 1);
+                    const targetYear = searchParams.get("year") ? Number(searchParams.get("year")) : new Date().getUTCFullYear();
+
+                    const existing = data.employee.kpi_evaluations?.find((ev: any) => {
+                        const isMatch = ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor');
+                        if (!isMatch) return false;
+                        
+                        if (category === "MONTHLY" || category === "PROBATION") {
+                            return ev.evaluation_no === targetRound && ev.year === targetYear;
+                        }
+                        return true;
+                    });
 
                     if (existing) {
                         setItems(existing.items || []);
@@ -130,9 +140,38 @@ export default function KPIDefinePage() {
                             setPeriodEnd(dates.end);
                             setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
                         } else if (category === "MONTHLY") {
-                            const monthNo = new Date().getMonth() + 1;
+                            const monthNo = round ? Number(round) : new Date().getMonth() + 1;
                             setCurrentRound(monthNo);
-                            setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                            
+                            // Try to find the most recent previous monthly evaluation to use as a template
+                            const previousMonthly = data.employee.kpi_evaluations
+                                ?.filter((ev: any) => ev.category === "MONTHLY")
+                                .sort((a: any, b: any) => (b.year * 100 + b.evaluation_no) - (a.year * 100 + a.evaluation_no))[0];
+
+                            if (previousMonthly && previousMonthly.items) {
+                                // Copy KPI items, removing database IDs and scores
+                                const templateItems = previousMonthly.items
+                                    .filter((it: any) => it.section === "KPI")
+                                    .map((it: any) => ({
+                                        objective: it.objective,
+                                        indicator: it.indicator,
+                                        weight: it.weight,
+                                        target_1: it.target_1,
+                                        target_2: it.target_2,
+                                        target_3: it.target_3,
+                                        target_4: it.target_4,
+                                        target_5: it.target_5,
+                                        section: it.section
+                                    }));
+                                
+                                if (templateItems.length > 0) {
+                                    setItems(templateItems);
+                                } else {
+                                    setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                                }
+                            } else {
+                                setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                            }
                         } else if (category === "ANNUAL") {
                             // Logic to auto-detect if we should start Year-End
                             const midYear = data.employee.kpi_evaluations?.find((ev: any) => 

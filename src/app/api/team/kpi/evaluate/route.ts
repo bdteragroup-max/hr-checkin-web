@@ -128,6 +128,8 @@ export async function POST(req: Request) {
                     updated_at: new Date()
                 }
             });
+        }, {
+            timeout: 30000 // 30 seconds timeout
         });
 
         // Notify HR and Management

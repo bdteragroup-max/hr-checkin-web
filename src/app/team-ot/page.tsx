@@ -176,39 +176,38 @@ export default function TeamOtPage() {
                                         </div>
 
                                         <div className={styles.itemDetails}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                                <div>
-                                                    <span className={styles.detailLabel}>วันที่:</span>
-                                                    <span className={styles.detailVal}>{dateLabel}</span>
+                                            <div className={styles.detailRow}>
+                                                <div className={styles.detailBlock}>
+                                                    <span className={styles.detailLabel}>วันที่ทำงาน:</span>
+                                                    <span className={styles.detailValLarge}>{dateLabel}</span>
                                                 </div>
                                                 {req.has_discrepancy && (
-                                                    <div style={{ 
-                                                        color: "var(--red)", fontSize: 11, fontWeight: 700, 
-                                                        display: "flex", alignItems: "center", gap: 4,
-                                                        background: "rgba(239, 68, 68, 0.1)", padding: "2px 8px", borderRadius: 4
-                                                    }}>
+                                                    <div className={styles.discrepancyBadge}>
                                                         <ExclamationTriangleIcon width={14} /> พบความผิดปกติ
                                                     </div>
                                                 )}
                                             </div>
-                                            
-                                            <span className={styles.detailLabel}>เวลาที่ขอ:</span>
-                                            <span className={styles.detailVal}>{startL} - {endL}</span>
 
-                                            {req.actual_start_at && (
-                                                <>
-                                                    <span className={styles.detailLabel}>เวลาเช็คอินจริง:</span>
-                                                    <span className={styles.detailVal} style={{ color: "var(--text-3)" }}>
-                                                        {formatTime24h(req.actual_start_at)} - {formatTime24h(req.actual_end_at)}
-                                                    </span>
-                                                </>
-                                            )}
+                                            <div className={styles.timeGrid}>
+                                                <div className={styles.timeBox}>
+                                                    <span className={styles.timeLabel}>เวลาที่ขอ (Requested)</span>
+                                                    <span className={styles.timeVal}>{startL} - {endL}</span>
+                                                </div>
+                                                {req.actual_start_at && (
+                                                    <div className={styles.timeBoxActual}>
+                                                        <span className={styles.timeLabel}>เช็คอินจริง (Actual)</span>
+                                                        <span className={styles.timeVal}>
+                                                            {formatTime24h(req.actual_start_at)} - {formatTime24h(req.actual_end_at)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {req.reason && (
-                                                <>
-                                                    <span className={styles.detailLabel}>เหตุผล:</span>
+                                                <div className={styles.reasonSection}>
+                                                    <span className={styles.detailLabel}>เหตุผลการขอ OT:</span>
                                                     <div className={styles.reasonBox}>{req.reason}</div>
-                                                </>
+                                                </div>
                                             )}
                                         </div>
 
@@ -230,28 +229,23 @@ export default function TeamOtPage() {
                                                 className={styles.btnApprove}
                                                 onClick={() => handleUpdateStatus(req.id, "approved", dHours)}
                                                 disabled={!!processingId}
-                                                style={{ 
-                                                    opacity: processingId ? 0.5 : 1, 
-                                                    cursor: processingId ? "not-allowed" : "pointer",
-                                                    background: processingId === req.id ? "#e5e7eb" : "var(--ok)",
-                                                    color: processingId === req.id ? "#9ca3af" : "white"
-                                                }}
                                             >
-                                                <HandThumbUpIcon width={18} style={{ marginRight: 6 }} /> {processingId === req.id ? "กำลังส่ง..." : "อนุมัติ"}
+                                                {processingId === req.id ? (
+                                                    <>
+                                                        <ArrowPathIcon width={18} className="animate-spin" /> กำลังส่ง...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircleIcon width={20} /> อนุมัติ
+                                                    </>
+                                                )}
                                             </button>
                                             <button
                                                 className={styles.btnReject}
                                                 onClick={() => handleUpdateStatus(req.id, "rejected", dHours)}
                                                 disabled={!!processingId}
-                                                style={{ 
-                                                    opacity: processingId ? 0.5 : 1, 
-                                                    cursor: processingId ? "not-allowed" : "pointer",
-                                                    background: "white",
-                                                    border: processingId === req.id ? "1px solid #e5e7eb" : "1px solid var(--red-hover)",
-                                                    color: processingId === req.id ? "#9ca3af" : "var(--red)"
-                                                }}
                                             >
-                                                <HandThumbDownIcon width={18} style={{ marginRight: 6 }} /> ไม่อนุมัติ
+                                                <XCircleIcon width={20} /> ไม่อนุมัติ
                                             </button>
                                         </div>
                                     </div>

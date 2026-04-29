@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const { id: targetEmpId } = await params;
 
         // Verify if the requester is the supervisor of this employee
-        const employee = await (prisma as any).employees.findFirst({
+        const employeeResult = await (prisma as any).employees.findFirst({
             where: {
                 emp_id: targetEmpId,
                 OR: [
@@ -39,6 +39,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                         status: true,
                         session_name: true,
                         year: true,
+                        evaluation_no: true,
                         items: true,
                         period_start: true,
                         period_end: true
@@ -47,9 +48,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             }
         });
 
-        if (!employee) {
+        if (!employeeResult) {
             return NextResponse.json({ error: "NOT_FOUND_OR_FORBIDDEN" }, { status: 404 });
         }
+
+        // Map kpiList to kpi_evaluations for frontend compatibility
+        const employee = {
+            ...employeeResult,
+            kpi_evaluations: employeeResult.kpiList
+        };
+        delete (employee as any).kpiList;
 
         return NextResponse.json({ ok: true, employee });
     } catch (e: any) {

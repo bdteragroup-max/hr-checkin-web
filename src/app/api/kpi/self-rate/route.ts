@@ -33,13 +33,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "WRONG_STATUS" }, { status: 400 });
         }
 
+        // Pre-fetch existing items to get weights/sections for calculation without awaiting each update
+        const existingItems = await prisma.kpi_items.findMany({
+            where: { kpi_evaluation_id: evaluation_id }
+        });
+        const itemMap = new Map(existingItems.map(i => [i.id, i]));
+
         // Update items and evaluation status
         await prisma.$transaction(async (tx) => {
             let totalEmployeeScore = 0;
             for (const it of items) {
                 if (it.id) {
+                    const existingItem = itemMap.get(it.id);
+
                     // Update existing item
-                    const item = await tx.kpi_items.update({
+                    await tx.kpi_items.update({
                         where: { id: it.id },
                         data: {
                             result_description: it.result_description,
@@ -51,8 +59,8 @@ export async function POST(req: Request) {
                     });
 
                     // Only calculate weight for non-development items (Part 1-3)
-                    if (item.section !== "DEVELOPMENT") {
-                        totalEmployeeScore += (Number(item.weight) / 100) * (it.employee_score || 0);
+                    if (existingItem && existingItem.section !== "DEVELOPMENT") {
+                        totalEmployeeScore += (Number(existingItem.weight) / 100) * (it.employee_score || 0);
                     }
                 } else {
                     // Create new item (usually Part 4: DEVELOPMENT)
@@ -80,6 +88,8 @@ export async function POST(req: Request) {
                     updated_at: new Date()
                 }
             });
+        }, {
+            timeout: 30000 // 30 seconds timeout
         });
 
         // Notify Supervisor

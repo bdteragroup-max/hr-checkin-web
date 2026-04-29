@@ -178,31 +178,88 @@
   font-size: 14px;
 }
 
-.itemDetails {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 4px 8px;
-  font-size: 13px;
-  color: #374151;
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 12px;
 }
 
-.detailLabel {
-  color: #6b7280;
+.detailBlock {
+  display: flex;
+  flex-direction: column;
 }
 
-.detailVal {
+.detailValLarge {
+  font-family: "Prompt", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
   color: #111827;
-  font-weight: 500;
+}
+
+.discrepancyBadge {
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+}
+
+.timeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.timeBox, .timeBoxActual {
+  background: #f9fafb;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timeBoxActual {
+  background: #fff;
+  border: 1px dashed #d1d5db;
+}
+
+.timeLabel {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.timeVal {
+  font-family: "Prompt", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.reasonSection {
+  margin-bottom: 16px;
 }
 
 .reasonBox {
   background: #f9fafb;
-  padding: 8px 10px;
-  border-radius: 6px;
-  grid-column: 2;
+  padding: 10px 14px;
+  border-radius: 8px;
   font-style: italic;
-  font-size: 12px;
+  font-size: 13px;
+  color: #4b5563;
+  margin-top: 4px;
+  line-height: 1.5;
+  border-left: 3px solid #e5e7eb;
 }
 
 .inputRow {
@@ -237,26 +294,70 @@
 
 .btnApprove {
   flex: 1;
-  padding: 10px 0;
+  height: 48px;
   background: #16a34a;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+}
+
+.btnApprove:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3);
+}
+
+.btnApprove:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btnApprove:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btnReject {
-  flex: 12;
-  padding: 10px 0;
+  flex: 1;
+  height: 48px;
   background: white;
-  border: 1px solid #ef4444;
+  border: 2px solid #ef4444;
   color: #dc2626;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.btnReject:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btnReject:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btnReject:disabled {
+  border-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 /* History */
