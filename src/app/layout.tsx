@@ -18,6 +18,15 @@ export const metadata: Metadata = {
   title: "TERA GROUP",
   description: "Leave and Attendance System",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.jpg",
+    apple: "/icon.jpg",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "TERA GROUP",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({

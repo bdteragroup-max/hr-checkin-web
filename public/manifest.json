@@ -1,6 +1,6 @@
 {
-  "name": "TERA GROUP HR",
-  "short_name": "TG HR",
+  "name": "TERA GROUP",
+  "short_name": "TERA GROUP",
   "description": "TERA GROUP Human Resource & Check-in System",
   "start_url": "/",
   "display": "standalone",
@@ -8,15 +8,15 @@
   "theme_color": "#d93025",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icon.jpg",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/jpeg",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icon.jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ]
 }

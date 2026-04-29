@@ -136,11 +136,7 @@ export default function CarBorrowPage() {
             return;
         }
 
-        const missingPhotos = Object.entries(borrowPhotos).filter(([_, url]) => !url);
-        if (missingPhotos.length > 0) {
-            setAlert({ visible: true, message: "กรุณาถ่ายรูปให้ครบทั้ง 5 จุด (หน้า, หลัง, ซ้าย, ขวา และเลขไมล์)", type: "error" });
-            return;
-        }
+        // No longer requiring photos for borrowing
 
         if (!formData.location) {
             setAlert({ visible: true, message: "กรุณาระบุสถานที่ปลายทางที่เดินทางไป", type: "error" });
@@ -602,48 +598,10 @@ export default function CarBorrowPage() {
                                 </div>
                             </div>
 
-                            {/* Photo documentation */}
-                            <div className={styles.photoGroup}>
-                                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span>ถ่ายภาพความเรียบร้อยของรถยนต์ (5 จุด) <span style={{ color: "#dc2626" }}>*</span></span>
-                                </label>
-                                
-                                <div className={styles.photoGrid}>
-                                    {[
-                                        { id: "front", name: "ด้านหน้า" },
-                                        { id: "back", name: "ด้านหลัง" },
-                                        { id: "left", name: "ด้านซ้าย" },
-                                        { id: "right", name: "ด้านขวา" },
-                                        { id: "mileage", name: "เลขไมล์หน้าปัด" }
-                                    ].map(slot => (
-                                        <div key={slot.id} className={`${styles.photoItem} ${slot.id === 'mileage' ? styles.mileageSlot : ''}`}>
-                                            <span className={styles.photoLabel}>{slot.name}</span>
-                                            {borrowPhotos[slot.id] ? (
-                                                <div className={styles.photoPreviewSlot}>
-                                                    <img src={borrowPhotos[slot.id]!} alt={slot.name} className={styles.photoThumb} />
-                                                    <button type="button" className={styles.removePhotoSmall} onClick={() => setBorrowPhotos(prev => ({ ...prev, [slot.id]: null }))}>
-                                                        เปลี่ยนรูป {slot.name}
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className={styles.uploadTrigger}>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        capture="environment"
-                                                        id={`borrow-${slot.id}`}
-                                                        className={styles.hiddenInput}
-                                                        onChange={(e) => handlePhotoUpload(e, "borrow", slot.id)}
-                                                    />
-                                                    <label htmlFor={`borrow-${slot.id}`} className={styles.uploadBtn}>
-                                                        {uploading === `borrow-${slot.id}` ? "..." : <><CameraIcon width={20} /> ถ่ายรูป</>}
-                                                    </label>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* 
+                                Photo documentation for borrowing has been removed at user request.
+                                Only return photos are required now.
+                            */}
 
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setSelectedAsset(null)} disabled={submitting}>ยกเลิก</button>
