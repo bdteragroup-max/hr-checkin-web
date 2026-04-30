@@ -29,8 +29,7 @@ export async function POST(req: Request) {
 
         const currentCategory = category || "PROBATION";
         const currentYear = year || new Date().getFullYear();
-
-        const currentRound = evaluation_no || (currentCategory === "MONTHLY" ? new Date().getMonth() + 1 : undefined);
+        const currentRound = evaluation_no ? Number(evaluation_no) : (currentCategory === "MONTHLY" ? new Date().getMonth() + 1 : undefined);
 
         // Check if there's an ongoing evaluation for THIS category/year/round
         const existing = await prisma.kpi_evaluations.findFirst({

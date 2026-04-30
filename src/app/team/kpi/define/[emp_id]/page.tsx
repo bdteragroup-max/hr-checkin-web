@@ -49,6 +49,7 @@ export default function KPIDefinePage() {
     const [sessionName, setSessionName] = useState(category === "ANNUAL" ? "Mid-Year Assessment" : "");
     const [year, setYear] = useState(new Date().getUTCFullYear());
     const [currentRound, setCurrentRound] = useState<number>(1);
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     useEffect(() => {
         if (category === "ANNUAL") {
@@ -77,11 +78,22 @@ export default function KPIDefinePage() {
                     setEmpInfo(data.employee);
                     const isLeader = (data.employee._count?.subordinates || 0) > 0;
 
-                    const targetRound = round ? Number(round) : (category === "MONTHLY" ? new Date().getMonth() + 1 : 1);
-                    const targetYear = searchParams.get("year") ? Number(searchParams.get("year")) : new Date().getUTCFullYear();
+                    // Find the most relevant evaluation (ongoing or specified)
+                    const ongoing = data.employee.kpi_evaluations?.find((ev: any) => 
+                        ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor')
+                    );
+
+                    const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === category && ev.status === 'completed').length || 0;
+                    const targetRound = round ? Number(round) : (
+                        ongoing ? ongoing.evaluation_no : (
+                            category === "MONTHLY" ? new Date().getMonth() + 1 : 
+                            category === "PROBATION" ? completedRounds + 1 : 1
+                        )
+                    );
+                    const targetYear = searchParams.get("year") ? Number(searchParams.get("year")) : (ongoing ? ongoing.year : new Date().getUTCFullYear());
 
                     const existing = data.employee.kpi_evaluations?.find((ev: any) => {
-                        const isMatch = ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor');
+                        const isMatch = ev.category === category;
                         if (!isMatch) return false;
                         
                         if (category === "MONTHLY" || category === "PROBATION") {
@@ -91,6 +103,7 @@ export default function KPIDefinePage() {
                     });
 
                     if (existing) {
+                        setIsReadOnly(existing.status !== 'draft' && existing.status !== 'pending_employee');
                         setItems(existing.items || []);
                         if (category !== "ANNUAL") {
                             setPeriodStart(existing.period_start ? existing.period_start.split('T')[0] : "");
@@ -133,12 +146,39 @@ export default function KPIDefinePage() {
 
                         if (category === "PROBATION") {
                             const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === "PROBATION" && ev.status === 'completed').length || 0;
-                            const roundNo = completedRounds + 1;
+                            const roundNo = targetRound || (completedRounds + 1);
                             setCurrentRound(roundNo);
                             const dates = calculateProbationDates(data.employee.hire_date, roundNo);
                             setPeriodStart(dates.start);
                             setPeriodEnd(dates.end);
-                            setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+
+                            // Template Copying for Probation: Use previous round's targets if available
+                            const previousProbation = data.employee.kpi_evaluations
+                                ?.filter((ev: any) => ev.category === "PROBATION")
+                                .sort((a: any, b: any) => b.evaluation_no - a.evaluation_no)[0];
+
+                            if (previousProbation && previousProbation.items) {
+                                const templateItems = previousProbation.items
+                                    .filter((it: any) => it.section === "KPI")
+                                    .map((it: any) => ({
+                                        objective: it.objective,
+                                        indicator: it.indicator,
+                                        weight: it.weight,
+                                        target_1: it.target_1,
+                                        target_2: it.target_2,
+                                        target_3: it.target_3,
+                                        target_4: it.target_4,
+                                        target_5: it.target_5,
+                                        section: it.section
+                                    }));
+                                if (templateItems.length > 0) {
+                                    setItems(templateItems);
+                                } else {
+                                    setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                                }
+                            } else {
+                                setItems([{ objective: "ผลงานตามเป้าหมายหลัก (Main KPIs)", indicator: "วัดผลตามความสำเร็จของเป้าหมายที่กำหนด", weight: 100, target_1: "", target_2: "", target_3: "", target_4: "", target_5: "", section: "KPI" }]);
+                            }
                         } else if (category === "MONTHLY") {
                             const monthNo = round ? Number(round) : new Date().getMonth() + 1;
                             setCurrentRound(monthNo);
@@ -180,13 +220,34 @@ export default function KPIDefinePage() {
                                 ev.year === year
                             );
                             
-                            if (midYear && midYear.status === 'completed') {
-                                setSessionName("Year-End Assessment");
+                            if (midYear) {
+                                if (midYear.status === 'completed') {
+                                    setSessionName("Year-End Assessment");
+                                } else {
+                                    setSessionName("Mid-Year Assessment");
+                                }
+
+                                // Carry forward targets from Mid-Year if available
+                                if (midYear.items && midYear.items.length > 0) {
+                                    const templateItems = midYear.items.map((it: any) => ({
+                                        objective: it.objective,
+                                        indicator: it.indicator,
+                                        weight: it.weight,
+                                        target_1: it.target_1,
+                                        target_2: it.target_2,
+                                        target_3: it.target_3,
+                                        target_4: it.target_4,
+                                        target_5: it.target_5,
+                                        section: it.section
+                                    }));
+                                    setItems(templateItems);
+                                } else {
+                                    setItems(commonItems);
+                                }
                             } else {
                                 setSessionName("Mid-Year Assessment");
+                                setItems(commonItems);
                             }
-
-                            setItems(commonItems);
                         }
                     }
                 }
@@ -233,6 +294,7 @@ export default function KPIDefinePage() {
                     period_end: periodEnd,
                     category,
                     year,
+                    evaluation_no: currentRound,
                     session_name: category === "PROBATION" ? `Round ${currentRound}` : (category === "MONTHLY" ? `KPI เดือน ${currentRound}/${year}` : sessionName)
                 })
             });
@@ -292,11 +354,11 @@ export default function KPIDefinePage() {
                         <label>รอบการประเมิน / ปี</label>
                         {category === "ANNUAL" ? (
                             <div style={{ display: 'flex', gap: 8 }}>
-                                <select value={sessionName} onChange={e => setSessionName(e.target.value)} style={{ flex: 1 }}>
+                                <select value={sessionName} onChange={e => setSessionName(e.target.value)} style={{ flex: 1 }} disabled={isReadOnly}>
                                     <option value="Mid-Year Assessment">Mid-Year Assessment (ครึ่งปีแรก)</option>
                                     <option value="Year-End Assessment">Year-End Assessment (ปลายปี)</option>
                                 </select>
-                                <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100 }} />
+                                <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100 }} disabled={isReadOnly} />
                             </div>
                         ) : category === "MONTHLY" ? (
                             <input disabled value={`KPI เดือน ${currentRound}/${year}`} />
@@ -313,6 +375,7 @@ export default function KPIDefinePage() {
                                 value={periodStart}
                                 onChange={e => setPeriodStart(e.target.value)}
                                 style={{ flex: 1 }}
+                                disabled={isReadOnly}
                             />
                             <span>-</span>
                             <input
@@ -320,6 +383,7 @@ export default function KPIDefinePage() {
                                 value={periodEnd}
                                 onChange={e => setPeriodEnd(e.target.value)}
                                 style={{ flex: 1 }}
+                                disabled={isReadOnly}
                             />
                         </div>
                     </div>
@@ -350,7 +414,7 @@ export default function KPIDefinePage() {
                                     <div key={index} className={styles.card}>
                                         <div className={styles.itemHeader}>
                                             <div className={styles.itemTitle}>หัวข้อที่ {index + 1} {item.section !== 'KPI' && item.section !== 'DEVELOPMENT' ? "(Standard Criteria)" : ""}</div>
-                                            {(item.section === 'KPI') && (
+                                            {(item.section === 'KPI' && !isReadOnly) && (
                                                 <button onClick={() => removeItem(index)} className={styles.btnRemove}>
                                                     <TrashIcon width={18} />
                                                 </button>
@@ -364,7 +428,7 @@ export default function KPIDefinePage() {
                                                     value={item.objective}
                                                     onChange={e => updateItem(index, "objective", e.target.value)}
                                                     placeholder={sec === "DEVELOPMENT" ? "เช่น พัฒนาทักษะ..." : "เป้าหมาย..."}
-                                                    disabled={item.section === 'DEVELOPMENT' || item.section !== 'KPI'}
+                                                    disabled={item.section === 'DEVELOPMENT' || item.section !== 'KPI' || isReadOnly}
                                                 />
                                             </div>
                                             <div className={styles.inputGroup}>
@@ -373,7 +437,7 @@ export default function KPIDefinePage() {
                                                     value={item.indicator}
                                                     onChange={e => updateItem(index, "indicator", e.target.value)}
                                                     placeholder={sec === "DEVELOPMENT" ? "เช่น เรียนรู้เพิ่มเติม..." : "เกณฑ์วัดผล..."}
-                                                    disabled={item.section === 'DEVELOPMENT' || item.section !== 'KPI'}
+                                                    disabled={item.section === 'DEVELOPMENT' || item.section !== 'KPI' || isReadOnly}
                                                 />
                                             </div>
                                             <div className={styles.inputGroup}>
@@ -383,13 +447,14 @@ export default function KPIDefinePage() {
                                                         value={item.target_1}
                                                         onChange={e => updateItem(index, "target_1", e.target.value)}
                                                         placeholder="เช่น มกราคม - ธันวาคม..."
+                                                        disabled={isReadOnly}
                                                     />
                                                 ) : (
                                                     <input
                                                         type="number"
                                                         value={item.weight}
                                                         onChange={e => updateItem(index, "weight", Number(e.target.value))}
-                                                        disabled={item.section !== 'KPI'}
+                                                        disabled={item.section !== 'KPI' || isReadOnly}
                                                     />
                                                 )}
                                             </div>
@@ -405,7 +470,7 @@ export default function KPIDefinePage() {
                                                             onChange={e => updateItem(index, `target_${lv}` as any, e.target.value)}
                                                             placeholder="..."
                                                             style={{ fontSize: 11, padding: '8px' }}
-                                                            disabled={item.section !== 'KPI'}
+                                                            disabled={item.section !== 'KPI' || isReadOnly}
                                                         />
                                                     </div>
                                                 ))}
@@ -415,7 +480,7 @@ export default function KPIDefinePage() {
                                 );
                             })}
 
-                             {sec === 'KPI' && (
+                             {(sec === 'KPI' && !isReadOnly) && (
                                 <button onClick={() => addItem(sec)} className={styles.btnAddFull}>
                                     <PlusIcon width={16} /> เพิ่มหัวข้อใหม่
                                 </button>
@@ -442,13 +507,21 @@ export default function KPIDefinePage() {
                             </div>
                         )}
                     </div>
-                    <button
-                        className={styles.btnSubmit}
-                        onClick={handleSubmit}
-                        disabled={submitting || Math.abs(p1Weight - 100) > 0.1}
-                    >
-                        {submitting ? "กำลังบันทึก..." : "ยืนยันการตั้งค่า"}
-                    </button>
+                     {!isReadOnly && (
+                        <button
+                            className={styles.btnSubmit}
+                            onClick={handleSubmit}
+                            disabled={submitting || Math.abs(p1Weight - 100) > 0.1}
+                        >
+                            {submitting ? "กำลังบันทึก..." : "ยืนยันการตั้งค่า"}
+                        </button>
+                    )}
+                    {isReadOnly && (
+                         <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text3)', fontSize: '13px', fontWeight: 600 }}>
+                            <CheckCircleIcon width={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4, color: 'var(--ok)' }} />
+                            รายการนี้ถูกบันทึกแล้วและไม่สามารถแก้ไขได้
+                         </div>
+                    )}
                 </div>
             </div>
         </div>

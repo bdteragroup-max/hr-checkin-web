@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET || "hr-checkin-secret-123";
+const HR_LINE_USER_ID = process.env.HR_LINE_USER_ID;
 const MANAGEMENT_LINE_USER_ID = process.env.MANAGEMENT_LINE_USER_ID;
 
 async function sendLineFlex(to: string, flex: any, altText: string) {
@@ -180,8 +181,16 @@ export async function GET(req: Request) {
             }
         };
 
-        if (MANAGEMENT_LINE_USER_ID) {
-            await sendLineFlex(MANAGEMENT_LINE_USER_ID, flex, `สรุปการใช้รถยนต์วันนี้ ${dateLabel}`);
+        // Recipients List: HR, Management, and Warehouse Managers
+        const recipientIds = [
+            HR_LINE_USER_ID, 
+            MANAGEMENT_LINE_USER_ID, 
+            "U816bdcddad4fbf4b69b203dc1ab86238", // Warehouse Officer
+            "Ub6daecf693050239c2f9543dae5eee98"  // Purchasing & Warehouse Manager
+        ].filter(id => !!id) as string[];
+        
+        for (const rid of recipientIds) {
+            await sendLineFlex(rid, flex, `สรุปการใช้รถยนต์วันนี้ ${dateLabel}`);
         }
 
         return NextResponse.json({ ok: true, count: borrowings.length, carsLeft });

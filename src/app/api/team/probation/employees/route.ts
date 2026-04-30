@@ -30,7 +30,7 @@ export async function GET() {
                 departments: { select: { name: true } },
                 salary_type: true,
                 probation_evaluations: {
-                    select: { evaluation_no: true, evaluation_date: true },
+                    select: { evaluation_no: true, evaluation_date: true, total_score: true, grade: true },
                     orderBy: { evaluation_no: "asc" }
                 }
             }

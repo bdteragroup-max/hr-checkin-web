@@ -350,7 +350,16 @@ export default function CarBorrowPage() {
                                     <div key={b.id} className={styles.card}>
                                         <div className={styles.myHeader}>
                                             <div className={styles.assetId}>{b.assets.asset_id}</div>
-                                            <div className={styles.myStatus} style={{ backgroundColor: "#eff6ff", color: "#1d4ed8", padding: "2px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: 600 }}>กำลังใช้งานรถยนต์</div>
+                                            <div className={styles.myStatus} style={{ 
+                                                backgroundColor: b.status === "reserved" ? "#fef3c7" : "#eff6ff", 
+                                                color: b.status === "reserved" ? "#92400e" : "#1d4ed8", 
+                                                padding: "2px 8px", 
+                                                borderRadius: "12px", 
+                                                fontSize: "11px", 
+                                                fontWeight: 600 
+                                            }}>
+                                                {b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งานรถยนต์"}
+                                            </div>
                                         </div>
                                         <h3 className={styles.assetName}>{b.assets.name}</h3>
 
@@ -606,7 +615,11 @@ export default function CarBorrowPage() {
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setSelectedAsset(null)} disabled={submitting}>ยกเลิก</button>
                                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || !!uploading}>
-                                    {submitting ? "ระบบกำลังดำเนินการ..." : "ยืนยันการยืมรถยนต์"}
+                                    {submitting ? "ระบบกำลังดำเนินการ..." : (
+                                        new Date(formData.borrow_date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)
+                                        ? "ยืนยันการจองล่วงหน้า"
+                                        : "ยืนยันการยืมรถยนต์"
+                                    )}
                                 </button>
                             </div>
                         </form>

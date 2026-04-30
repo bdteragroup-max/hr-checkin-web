@@ -13,7 +13,7 @@ import {
 import styles from "./page.module.css";
 
 interface Subordinate {
-    evaluation_history: { evaluation_no: number; evaluation_date: string }[];
+    evaluation_history: { evaluation_no: number; evaluation_date: string; total_score: number; grade: string }[];
     emp_id: string;
     name: string;
     hire_date: string | null;
@@ -149,6 +149,8 @@ export default function SupervisorProbationPage() {
                                                     return (
                                                         <div key={round} className={styles.historyTag}>
                                                             <span className={styles.tagRound}>ครั้งที่ {round}</span>
+                                                            <span className={styles.tagScore}>{hist.total_score}</span>
+                                                            <span className={styles.tagGrade}>{hist.grade}</span>
                                                             <span className={isDelayed ? styles.tagDelayed : styles.tagNormal}>
                                                                 {isDelayed ? `ล่าช้า ${diff} วัน` : 'ปกติ'}
                                                             </span>

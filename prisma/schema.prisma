@@ -328,7 +328,7 @@ model monthly_payroll_data {
   emp_id                           String    @db.VarChar(20)
   cycle_month                      Int
   cycle_year                       Int
-  social_security                  Decimal?  @default(0) @db.Decimal(10, 2)
+  social_security                  Decimal?  @db.Decimal(10, 2)
   student_loan                     Decimal?  @default(0) @db.Decimal(10, 2)
   insurance                        Decimal?  @default(0) @db.Decimal(10, 2)
   insurance_income                 Decimal?  @default(0) @db.Decimal(10, 2)
@@ -350,7 +350,7 @@ model monthly_payroll_data {
   travel_allowance_override        Decimal?  @db.Decimal(10, 2)
   travel_site_allowance_override   Decimal?  @db.Decimal(10, 2)
   tax                              Decimal?  @default(0) @db.Decimal(10, 2)
-  unpaid_absenteeism               Decimal?  @default(0) @db.Decimal(10, 2)
+  unpaid_absenteeism               Decimal?  @db.Decimal(10, 2)
   bonus                            Decimal?  @default(0) @db.Decimal(10, 2)
   commissions                      Decimal?  @default(0) @db.Decimal(10, 2)
   employee                         employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)

@@ -357,29 +357,31 @@ export async function GET(request: Request) {
                     if (mDiff < 0 || (mDiff === 0 && endDate.getDate() < hireDate.getDate())) yearsOfService--;
                 }
 
+                const deptName = (emp.departments?.name || "").toLowerCase();
                 const posName = (emp.job_positions?.title || "").toLowerCase();
                 const divName = (emp.departments?.divisions?.name || "").toLowerCase();
 
-                // 1. Driver (Day 1)
-                if (posName.includes("ขับรถ") || posName.includes("driver")) {
+                // 1. Manager (High Priority)
+                if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
+                    calculatedPhoneAllowance = 1000;
+                }
+                // 2. HR / Admin Division
+                else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
+                    calculatedPhoneAllowance = 800;
+                }
+                // 3. Engineering Dept or Engineer Position
+                else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
+                    calculatedPhoneAllowance = 500;
+                }
+                // 4. Foreman or Driver
+                else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
                     calculatedPhoneAllowance = 300;
-                } 
-                // 2. Others (After Probation)
-                else if (!isOnTrial) {
-                    if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
-                        calculatedPhoneAllowance = 800;
-                    } else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) {
-                        calculatedPhoneAllowance = 300;
-                    } else if (posName.includes("วิศวกร") || posName.includes("engineer")) {
-                        calculatedPhoneAllowance = 500;
-                    } else if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
-                        calculatedPhoneAllowance = 1000;
-                    } else {
-                        // General Staff
-                        if (yearsOfService < 1) calculatedPhoneAllowance = 100;
-                        else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
-                        else calculatedPhoneAllowance = 300;
-                    }
+                }
+                else {
+                    // General Staff - based on years of service
+                    if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                    else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                    else calculatedPhoneAllowance = 300;
                 }
             }
 
@@ -462,15 +464,21 @@ export async function GET(request: Request) {
                 ? Number(adj.unpaid_absenteeism)
                 : auto_unpaid_deduction;
 
-            // --- 5. SOCIAL SECURITY (SSO) FORMULA ---
+            // --- 5. SOCIAL SECURITY (SSO) FORMULA (2026 Rules) ---
             let social_security = 0;
             if (adj?.social_security !== null && adj?.social_security !== undefined) {
                 social_security = Number(adj.social_security);
             } else {
-                const ssoBase = Math.max(0, baseSalary - unpaid_absenteeism);
-                if (ssoBase > 1650 && !isDaily) {
-                    const cappedBase = Math.min(17500, ssoBase);
-                    social_security = Math.round(cappedBase * 0.05);
+                // Per user: This deduction will not apply to daily wage earners.
+                if (!isDaily) {
+                    // SSO is calculated on Base Salary + Position Allowance
+                    const ssoBase = Math.max(0, baseSalary + position_allowance - unpaid_absenteeism);
+                    
+                    // 2026 Adjusted Rules: Max deduction 875 THB for earnings >= 17,500 THB
+                    if (ssoBase >= 1650) {
+                        const cappedBase = Math.min(17500, ssoBase);
+                        social_security = Math.round(cappedBase * 0.05);
+                    }
                 }
             }
 

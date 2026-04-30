@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         // 2. Fetch Employee
         const emp = await prisma.employees.findUnique({
             where: { emp_id: p.emp_id },
-            include: { departments: true, job_positions: true }
+            include: { departments: { include: { divisions: true } }, job_positions: true }
         });
         if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -235,7 +235,48 @@ export async function GET(request: Request) {
         }
 
         position_allowance = adj.position_allowance_override !== null && adj.position_allowance_override !== undefined ? Number(adj.position_allowance_override) : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
-        telephone_allowance = adj.phone_allowance_override !== null && adj.phone_allowance_override !== undefined ? Number(adj.phone_allowance_override) : ((!isDaily && warnings.length === 0 && emp.has_telephone_allowance) ? 300 : 0);
+        // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (Synced with Admin View) ---
+        let calculatedPhoneAllowance = 0;
+        if (!isDaily && emp.has_telephone_allowance && warnings.length === 0) {
+            const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
+            let yearsOfService = 0;
+            if (hireDate) {
+                yearsOfService = endDate.getFullYear() - hireDate.getFullYear();
+                const mDiff = endDate.getMonth() - hireDate.getMonth();
+                if (mDiff < 0 || (mDiff === 0 && endDate.getDate() < hireDate.getDate())) yearsOfService--;
+            }
+
+            const posName = (emp.job_positions?.title || "").toLowerCase();
+            const divName = (emp.departments?.divisions?.name || "").toLowerCase();
+            const deptName = (emp.departments?.name || "").toLowerCase();
+
+            // 1. Manager (High Priority)
+            if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
+                calculatedPhoneAllowance = 1000;
+            }
+            // 2. HR / Admin Division
+            else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
+                calculatedPhoneAllowance = 800;
+            }
+            // 3. Engineering Dept or Engineer Position
+            else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
+                calculatedPhoneAllowance = 500;
+            }
+            // 4. Foreman or Driver
+            else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
+                calculatedPhoneAllowance = 300;
+            }
+            else {
+                // General Staff - based on years of service
+                if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                else calculatedPhoneAllowance = 300;
+            }
+        }
+
+        telephone_allowance = adj.phone_allowance_override !== null && adj.phone_allowance_override !== undefined 
+            ? Number(adj.phone_allowance_override) 
+            : calculatedPhoneAllowance;
 
         if (adj.travel_site_allowance_override !== null && adj.travel_site_allowance_override !== undefined) {
             travel_site_allowance = Number(adj.travel_site_allowance_override);
@@ -421,8 +462,8 @@ export async function GET(request: Request) {
 
         // --- ROW 2: Income Values ---
         const ot23 = holiday1xPay + holiday3xPay;
-        const allowanceAmount = telephone_allowance + position_allowance;
-        const otherIncomeRemaining = other_benefits + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_site_allowance + travel_accommodation;
+        const allowanceAmount = travel_site_allowance;
+        const otherIncomeRemaining = telephone_allowance + position_allowance + other_benefits + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
 
         drawVal(formatB(baseSalary), 0, Y[1]);
         drawVal(normalOtPay > 0 ? formatB(normalOtPay) : "-", 1, Y[1]);

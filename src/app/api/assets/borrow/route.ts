@@ -36,11 +36,41 @@ export async function POST(req: Request) {
             where: { id: Number(asset_id) }
         });
 
-        if (!asset || asset.status !== "available") {
-            return NextResponse.json({ error: "ASSET_NOT_AVAILABLE" }, { status: 400 });
+        if (!asset) {
+            return NextResponse.json({ error: "ASSET_NOT_FOUND" }, { status: 404 });
         }
 
-        // Create transaction and update asset status in a transaction
+        // --- 1. DATE VALIDATION ---
+        const now = new Date();
+        const bDate = new Date(borrow_date);
+        const isFuture = bDate.setHours(0,0,0,0) > now.setHours(0,0,0,0);
+        const isPast = bDate.setHours(0,0,0,0) < now.setHours(0,0,0,0);
+
+        if (isPast) {
+            return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow for a past date." }, { status: 400 });
+        }
+
+        // --- 2. OVERLAP/AVAILABILITY CHECK ---
+        // If borrowing for Today, asset MUST be available
+        if (!isFuture && asset.status !== "available") {
+            return NextResponse.json({ error: "ASSET_NOT_AVAILABLE", message: "This vehicle is currently borrowed by another user." }, { status: 400 });
+        }
+
+        // If reserving for Future, check if anyone else already reserved it for that day
+        if (isFuture) {
+            const existingReservation = await prisma.asset_borrowings.findFirst({
+                where: {
+                    asset_id: Number(asset_id),
+                    status: { in: ["borrowed", "reserved"] },
+                    borrow_date: { equals: new Date(borrow_date) }
+                }
+            });
+            if (existingReservation) {
+                return NextResponse.json({ error: "ALREADY_RESERVED", message: "This vehicle is already reserved for the selected date." }, { status: 400 });
+            }
+        }
+
+        // Create transaction
         const result = await prisma.$transaction(async (tx) => {
             const borrowing = await tx.asset_borrowings.create({
                 data: {
@@ -51,7 +81,7 @@ export async function POST(req: Request) {
                     location: location || null,
                     condition_at_borrow: remark || null,
                     photo_url_borrow: photo_url_borrow || null,
-                    status: "borrowed",
+                    status: isFuture ? "reserved" : "borrowed",
                     // New Inspection Fields
                     borrow_vehicle_status,
                     borrow_is_clean: borrow_is_clean === true,
@@ -62,11 +92,14 @@ export async function POST(req: Request) {
                     borrow_inspection_remark: borrow_inspection_remark || null
                 }
             });
-
-            await tx.assets.update({
-                where: { id: Number(asset_id) },
-                data: { status: "borrowed" }
-            });
+            
+            // ONLY update asset status if borrowing starts TODAY
+            if (!isFuture) {
+                await tx.assets.update({
+                    where: { id: Number(asset_id) },
+                    data: { status: "borrowed" }
+                });
+            }
 
             return borrowing;
         });

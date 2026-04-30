@@ -312,3 +312,20 @@
   padding: 1px 4px;
   border-radius: 4px;
 }
+
+.tagScore {
+  color: #d93025;
+  font-weight: 700;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 6px;
+}
+
+.tagGrade {
+  background: #d93025;
+  color: #fff;
+  font-weight: 900;
+  padding: 0 6px;
+  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+}
