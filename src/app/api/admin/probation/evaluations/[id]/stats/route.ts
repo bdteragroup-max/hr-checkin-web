@@ -21,19 +21,72 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const end = new Date(period_end);
         end.setHours(23, 59, 59, 999);
 
-        // 1. Fetch Late Check-ins
-        const lateCheckins = await prisma.checkins.findMany({
+        // 0. Fetch Holidays
+        const holidays = await prisma.holidays.findMany({
+            where: { date: { gte: start, lte: end } },
+            select: { date: true }
+        });
+        const holidayDates = new Set(holidays.map(h => h.date.toDateString()));
+
+        // 1. Fetch Late & OT
+        const rawCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id,
                 date_key: { gte: start, lte: end },
-                late_status: { not: "ontime" },
-                NOT: { late_status: null }
+                OR: [
+                    { 
+                        late_status: "late", 
+                        type: { in: ["Check-in", "Project-In", "Offsite-In"] } 
+                    },
+                    { 
+                        late_status: "ot", 
+                        type: { in: ["Check-out", "Project-Out", "Offsite-Out"] } 
+                    }
+                ]
             },
-            select: { date_key: true, late_min: true, late_status: true }
+            select: { date_key: true, late_min: true, late_status: true, type: true }
         });
 
+        // Filter and Deduplicate
+        const uniqueLateDays = new Map<string, any>();
+        const uniqueOtDays = new Map<string, any>();
+        
+        rawCheckins.forEach(c => {
+            const dateObj = new Date(c.date_key);
+            const dateStr = dateObj.toDateString();
+            
+            if (c.late_status === "late") {
+                // Skip Sunday (0)
+                if (dateObj.getDay() === 0) return;
+                // Skip Holidays
+                if (holidayDates.has(dateStr)) return;
+
+                if (!uniqueLateDays.has(dateStr)) {
+                    uniqueLateDays.set(dateStr, c);
+                } else {
+                    const existing = uniqueLateDays.get(dateStr);
+                    if ((c.late_min || 0) > (existing.late_min || 0)) {
+                        uniqueLateDays.set(dateStr, c);
+                    }
+                }
+            } else if (c.late_status === "ot") {
+                if (!uniqueOtDays.has(dateStr)) {
+                    uniqueOtDays.set(dateStr, c);
+                } else {
+                    const existing = uniqueOtDays.get(dateStr);
+                    if ((c.late_min || 0) > (existing.late_min || 0)) {
+                        uniqueOtDays.set(dateStr, c);
+                    }
+                }
+            }
+        });
+
+        const lateCheckins = Array.from(uniqueLateDays.values());
         const totalLateMin = lateCheckins.reduce((sum, c) => sum + (c.late_min || 0), 0);
         const lateCount = lateCheckins.length;
+
+        const otCheckins = Array.from(uniqueOtDays.values());
+        const totalOtMin = otCheckins.reduce((sum, c) => sum + (c.late_min || 0), 0);
 
         // Helper to calculate days within range
         const calculateDaysInRange = (leaveStart: Date, leaveEnd: Date, leaveTotalDays: number) => {
@@ -88,6 +141,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             stats: {
                 late: lateCount,
                 late_min: totalLateMin,
+                late_min_ot: totalOtMin,
                 sick: Number(proRatedSick.toFixed(2)),
                 personal: Number(proRatedPersonal.toFixed(2))
             },

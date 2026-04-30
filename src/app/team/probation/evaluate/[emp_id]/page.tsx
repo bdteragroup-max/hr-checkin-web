@@ -20,7 +20,8 @@ import {
     ExclamationTriangleIcon,
     XMarkIcon,
     EyeIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    ClockIcon
 } from "@heroicons/react/24/solid";
 import styles from "./page.module.css";
 import Link from "next/link";
@@ -52,7 +53,7 @@ export default function EvaluatePage() {
     const [periodEnd, setPeriodEnd] = useState("");
     
     const [scores, setScores] = useState<Record<string, number>>({});
-    const [attendanceCounts, setAttendanceCounts] = useState({ late: 0, sick: 0, personal: 0 });
+    const [attendanceCounts, setAttendanceCounts] = useState({ late: 0, sick: 0, personal: 0, ot_min: 0 });
     const [attendanceLoading, setAttendanceLoading] = useState(false);
 
     const [decision, setDecision] = useState("pass");
@@ -125,7 +126,12 @@ export default function EvaluatePage() {
             .then(r => r.json())
             .then(data => {
                 if (data.stats) {
-                    setAttendanceCounts(data.stats);
+                    setAttendanceCounts({
+                        late: data.stats.late,
+                        sick: data.stats.sick,
+                        personal: data.stats.personal,
+                        ot_min: data.stats.late_min_ot || 0
+                    });
                     setExtraLateMin(data.stats.late_min || 0);
                 }
                 if (data.details) setAttDetails(data.details);
@@ -292,13 +298,19 @@ export default function EvaluatePage() {
                                 <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("late")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                             <div className={styles.attItem}>
+                                <div className={styles.attVal}>{attendanceCounts.ot_min}</div>
+                                <div className={styles.attLabel}>OT (นาที)</div>
+                                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>หลัง 17:00</div>
+                                <div style={{ marginTop: 8, color: '#94a3b8' }}><ClockIcon width={12} style={{margin:'0 auto'}}/></div>
+                            </div>
+                            <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.sick}</div>
                                 <div className={styles.attLabel}>ลาป่วย</div>
                                 <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("sick")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                             <div className={styles.attItem}>
                                 <div className={styles.attVal}>{attendanceCounts.personal}</div>
-                                <div className={styles.attLabel}>ลากิจ / ลาไม่รับค่าจ้าง</div>
+                                <div className={styles.attLabel}>ลากิจ / อื่นๆ</div>
                                 <button className={styles.attDetailBtn} onClick={() => setActiveDetailType("personal")}><EyeIcon width={10} style={{display:'inline',marginRight:2}}/> รายละเอียด</button>
                             </div>
                         </div>

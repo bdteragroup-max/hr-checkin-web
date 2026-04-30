@@ -113,9 +113,14 @@ export async function GET(req: Request) {
 
             if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                 stats[r.emp_id].present_dates.add(d);
-                if (r.late_status === "late") {
-                    stats[r.emp_id].late_count += 1;
-                    if (r.late_min) stats[r.emp_id].late_mins += r.late_min;
+
+                // Consistency: Skip counting late on Sundays and Holidays
+                const isSunday = r.date_key.getUTCDay() === 0;
+                if (!isSunday && !holidayDates.has(d)) {
+                    if (r.late_status === "late") {
+                        stats[r.emp_id].late_count += 1;
+                        if (r.late_min) stats[r.emp_id].late_mins += r.late_min;
+                    }
                 }
             }
         }
