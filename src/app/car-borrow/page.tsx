@@ -59,6 +59,13 @@ type Asset = {
     description: string | null;
     image_url: string | null;
     status: string;
+    asset_borrowings?: {
+        id: number;
+        borrow_date: string;
+        expected_return_date: string;
+        status: string;
+        employee: { name: string; nickname?: string | null };
+    }[];
 };
 
 export default function CarBorrowPage() {
