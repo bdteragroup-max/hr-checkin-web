@@ -29,7 +29,7 @@ export async function GET(req: Request) {
             },
             include: {
                 employee: {
-                    select: { name: true, emp_id: true }
+                    select: { name: true, nickname: true, emp_id: true }
                 },
                 room: {
                     select: { name: true, floor: true }
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
                 attendees: {
                     include: {
                         employee: {
-                            select: { name: true, emp_id: true }
+                            select: { name: true, nickname: true, emp_id: true }
                         }
                     }
                 }
@@ -45,7 +45,35 @@ export async function GET(req: Request) {
             orderBy: { start_time: "asc" }
         });
 
-        return NextResponse.json(bookings);
+        const formattedBookings = bookings.map((b: any) => {
+            // Format Booker Name
+            let bookerName = b.employee?.name || "";
+            const bookerNickname = b.employee?.nickname;
+            if (bookerNickname && !bookerName.includes(`(${bookerNickname})`)) {
+                bookerName = `${bookerName} (${bookerNickname})`;
+            }
+
+            // Format Attendee Names
+            const formattedAttendees = b.attendees?.map((a: any) => {
+                let attendeeName = a.employee?.name || "";
+                const attendeeNickname = a.employee?.nickname;
+                if (attendeeNickname && !attendeeName.includes(`(${attendeeNickname})`)) {
+                    attendeeName = `${attendeeName} (${attendeeNickname})`;
+                }
+                return {
+                    ...a,
+                    employee: a.employee ? { ...a.employee, name: attendeeName } : null
+                };
+            }) || [];
+
+            return {
+                ...b,
+                employee: b.employee ? { ...b.employee, name: bookerName } : null,
+                attendees: formattedAttendees
+            };
+        });
+
+        return NextResponse.json(formattedBookings);
     } catch (error: any) {
         console.error("[API/BOOKINGS/GET] Error:", error);
         return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
@@ -209,7 +237,12 @@ export async function DELETE(req: Request) {
         if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
 
         const booking = await prisma.room_bookings.findUnique({
-            where: { id: Number(id) }
+            where: { id: Number(id) },
+            include: {
+                employee: true,
+                room: true,
+                attendees: { include: { employee: true } }
+            }
         });
 
         if (!booking) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
@@ -223,6 +256,45 @@ export async function DELETE(req: Request) {
             where: { id: Number(id) },
             data: { status: "cancelled" }
         });
+
+        // --- LINE NOTIFICATION ---
+        try {
+            const { sendMeetingBookingCancelledNotification } = await import("@/utils/lineMessaging");
+            const attendeeNames = booking.attendees.map((a: any) => a.employee.name);
+            const attendeeLineIds = booking.attendees
+                .map((a: any) => a.employee.line_user_id)
+                .filter((id: any) => !!id) as string[];
+
+            const startTimeStr = new Date(booking.start_time).toLocaleString("th-TH", { 
+                timeZone: "Asia/Bangkok", 
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit' 
+            });
+            const endTimeStr = new Date(booking.end_time).toLocaleString("th-TH", { 
+                timeZone: "Asia/Bangkok", 
+                hour: '2-digit', minute: '2-digit' 
+            });
+
+            let cancellerName = undefined;
+            if (isAdmin) {
+                cancellerName = "Admin";
+            } else if (emp_id === booking.emp_id) {
+                cancellerName = booking.employee.name;
+            }
+
+            await sendMeetingBookingCancelledNotification({
+                roomName: booking.room.name,
+                floor: booking.room.floor,
+                startTime: startTimeStr,
+                endTime: endTimeStr,
+                purpose: booking.purpose || "-",
+                bookerName: booking.employee.name,
+                attendees: attendeeNames,
+                cancellerName
+            }, attendeeLineIds);
+        } catch (error) {
+            console.error("[API/BOOKINGS/DELETE] Notification failed:", error);
+        }
 
         return NextResponse.json({ ok: true });
     } catch (error: any) {

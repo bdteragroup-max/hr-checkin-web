@@ -35,12 +35,28 @@ export async function GET(req: Request) {
             where,
             include: {
                 employee: {
-                    select: { name: true, emp_id: true }
+                    select: { name: true, nickname: true, emp_id: true }
                 }
             },
             orderBy: { created_at: "desc" }
         });
-        return NextResponse.json({ ok: true, list: claims });
+
+        const formattedClaims = claims.map((c: any) => {
+            const nickname = c.employee?.nickname;
+            let finalName = c.employee?.name || "";
+            if (nickname && !finalName.includes(`(${nickname})`)) {
+                finalName = `${finalName} (${nickname})`;
+            }
+            return {
+                ...c,
+                employee: c.employee ? {
+                    ...c.employee,
+                    name: finalName
+                } : null
+            };
+        });
+
+        return NextResponse.json({ ok: true, list: formattedClaims });
     } catch (e) {
         return NextResponse.json({ ok: false, error: "ERROR" }, { status: 500 });
     }

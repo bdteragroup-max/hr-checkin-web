@@ -80,6 +80,8 @@ export async function GET(req: Request) {
                 handover_person: true,
                 employees: {
                     select: {
+                        name: true,
+                        nickname: true,
                         supervisor_id: true,
                         departments: {
                             select: { name: true }
@@ -89,7 +91,20 @@ export async function GET(req: Request) {
             },
         });
 
-        return NextResponse.json(jsonSafe({ ok: true, list: rows }));
+        const formattedRows = rows.map((r: any) => {
+            const empName = r.employees?.name || r.name;
+            const nickname = r.employees?.nickname;
+            let finalName = empName;
+            if (nickname && !empName.includes(`(${nickname})`)) {
+                finalName = `${empName} (${nickname})`;
+            }
+            return {
+                ...r,
+                name: finalName
+            };
+        });
+
+        return NextResponse.json(jsonSafe({ ok: true, list: formattedRows }));
     } catch (e: any) {
         console.error("leaves GET error:", e);
         const msg = e instanceof Error ? e.message : "ERROR";

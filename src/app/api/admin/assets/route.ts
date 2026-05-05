@@ -22,13 +22,35 @@ export async function GET(req: Request) {
                 asset_borrowings: {
                     where: { status: "borrowed" },
                     include: {
-                        employee: { select: { name: true } }
+                        employee: { select: { name: true, nickname: true } }
                     }
                 }
             },
             orderBy: { name: "asc" }
         });
-        return NextResponse.json(assets);
+
+        const formattedAssets = assets.map((a: any) => {
+            const formattedBorrowings = a.asset_borrowings.map((b: any) => {
+                const nickname = b.employee?.nickname;
+                let finalName = b.employee?.name || "";
+                if (nickname && !finalName.includes(`(${nickname})`)) {
+                    finalName = `${finalName} (${nickname})`;
+                }
+                return {
+                    ...b,
+                    employee: b.employee ? {
+                        ...b.employee,
+                        name: finalName
+                    } : null
+                };
+            });
+            return {
+                ...a,
+                asset_borrowings: formattedBorrowings
+            };
+        });
+
+        return NextResponse.json(formattedAssets);
     } catch (e: any) {
         console.error("[API/admin/assets] GET Error:", e);
         return NextResponse.json({ error: e.message }, { status: 500 });

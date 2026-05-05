@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 type CreateEmployeeBody = {
     emp_id: string;
     name: string;
+    nickname?: string | null;
     branch_id?: string | null;
     pin?: string;
     is_active?: boolean;
@@ -37,6 +38,7 @@ type PatchEmployeeBody = {
     emp_id: string;
 
     name?: string;
+    nickname?: string | null;
     branch_id?: string | null;
     is_active?: boolean;
 
@@ -87,9 +89,16 @@ export async function GET(req: Request) {
         if (minimal) {
             const list = await prisma.employees.findMany({
                 where: { is_active: true },
-                select: { name: true, birth_date: true },
+                select: { name: true, nickname: true, birth_date: true },
             });
-            return NextResponse.json({ ok: true, list });
+            const formattedList = list.map(emp => {
+                let finalName = emp.name;
+                if (emp.nickname && !finalName.includes(`(${emp.nickname})`)) {
+                    finalName = `${finalName} (${emp.nickname})`;
+                }
+                return { ...emp, name: finalName };
+            });
+            return NextResponse.json({ ok: true, list: formattedList });
         }
 
         const list = await prisma.employees.findMany({
@@ -98,6 +107,7 @@ export async function GET(req: Request) {
             select: {
                 emp_id: true,
                 name: true,
+                nickname: true,
                 branch_id: true,
                 is_active: true,
                 created_at: true,
@@ -146,6 +156,7 @@ export async function POST(req: Request) {
 
         const emp_id = clean(body.emp_id);
         const name = clean(body.name);
+        const nickname = body.nickname ? clean(body.nickname) : null;
         const branch_id = body.branch_id ? clean(body.branch_id) : null;
 
         if (!emp_id) return jsonError("EMP_ID_REQUIRED", 400);
@@ -176,6 +187,7 @@ export async function POST(req: Request) {
             data: {
                 emp_id,
                 name,
+                nickname,
                 branch_id,
                 is_active: body.is_active ?? true,
                 ...(pin_hash ? { pin_hash } : {}),
@@ -206,6 +218,7 @@ export async function POST(req: Request) {
             select: {
                 emp_id: true,
                 name: true,
+                nickname: true,
                 branch_id: true,
                 is_active: true,
                 gender: true,
@@ -257,6 +270,10 @@ export async function PATCH(req: Request) {
             const name = clean(body.name);
             if (!name) return jsonError("NAME_REQUIRED", 400);
             data.name = name;
+        }
+
+        if (body.nickname !== undefined) {
+            data.nickname = body.nickname ? clean(body.nickname) : null;
         }
 
         if (body.branch_id !== undefined) {
@@ -373,6 +390,7 @@ export async function PATCH(req: Request) {
             select: {
                 emp_id: true,
                 name: true,
+                nickname: true,
                 branch_id: true,
                 is_active: true,
                 gender: true,

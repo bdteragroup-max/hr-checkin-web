@@ -492,8 +492,8 @@ export default function AdminLeavesPage() {
                                                 const displayDuration = formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined));
                                                 return (
                                                     <tr key={r.id} className={styles.clickableRow}>
-                                                        <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                            <div style={{ fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name || "-"}</div>
+                                                        <td style={{ overflow: "hidden" }}>
+                                                            <div style={{ fontWeight: 700, color: "var(--text)", wordBreak: "break-word" }}>{r.name || "-"}</div>
                                                             <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: "flex", gap: 4, alignItems: "center" }}>
                                                                 <span className={styles.monoText}>{r.emp_id}</span> <span style={{ opacity: 0.5 }}>•</span> <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{r.employees?.departments?.name || "ไม่ระบุแผนก"}</span>
                                                             </div>
@@ -574,7 +574,7 @@ export default function AdminLeavesPage() {
                                             {filteredByReason.map((r) => (
                                                 <tr key={r.id} className={styles.clickableRow}>
                                                     <td style={{ overflow: "hidden" }}>
-                                                        <div style={{ fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                        <div style={{ fontWeight: 700, color: "var(--text)", wordBreak: "break-word" }}>
                                                             {r.name || "-"}
                                                             {!r.employees?.supervisor_id && (
                                                                 <span style={{ 

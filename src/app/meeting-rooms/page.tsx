@@ -57,6 +57,7 @@ export default function MeetingRoomsPage() {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newBooking, setNewBooking] = useState({
         room_id: "",
         date: format(new Date(), "yyyy-MM-dd"),
@@ -196,6 +197,7 @@ export default function MeetingRoomsPage() {
 
     const submitBooking = async () => {
         try {
+            setIsSubmitting(true);
             const url = "/api/bookings";
             const method = selectedBooking ? "PATCH" : "POST";
             const res = await fetch(url, {
@@ -222,6 +224,8 @@ export default function MeetingRoomsPage() {
             fetchData();
         } catch (error) {
             alert("An error occurred");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -634,6 +638,13 @@ export default function MeetingRoomsPage() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {isSubmitting && (
+                <div className={styles.submittingOverlay}>
+                    <div className={styles.spinner}></div>
+                    <div>กำลังบันทึกข้อมูล...</div>
                 </div>
             )}
         </div>

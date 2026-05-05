@@ -18,6 +18,34 @@ import {
     UserIcon
 } from "@heroicons/react/24/outline";
 
+/** 24-hour time picker using two selects — avoids browser AM/PM locale issues */
+function TimePicker({ value, onChange, required }: { value: string; onChange: (v: string) => void; required?: boolean }) {
+    const [h, m] = (value || "00:00").split(":");
+    const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+    const mins = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+    return (
+        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            <select
+                value={h}
+                onChange={e => onChange(`${e.target.value}:${m}`)}
+                required={required}
+                style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", border: "1px solid var(--border, #e2e8f0)", fontSize: "14px", backgroundColor: "var(--surface, #fff)", color: "var(--text1, #0f172a)", cursor: "pointer" }}
+            >
+                {hours.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+            </select>
+            <span style={{ fontWeight: 700, color: "var(--text3, #64748b)", fontSize: "16px" }}>:</span>
+            <select
+                value={m}
+                onChange={e => onChange(`${h}:${e.target.value}`)}
+                required={required}
+                style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", border: "1px solid var(--border, #e2e8f0)", fontSize: "14px", backgroundColor: "var(--surface, #fff)", color: "var(--text1, #0f172a)", cursor: "pointer" }}
+            >
+                {mins.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+            </select>
+        </div>
+    );
+}
+
 type Asset = {
     id: number;
     asset_id: string; // License Plate
@@ -56,14 +84,18 @@ export default function CarBorrowPage() {
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
     const [returnData, setReturnData] = useState({
-        actual_return_date: new Date().toISOString().split("T")[0],
+        actual_return_date: new Date().toISOString().slice(0,10),
+        actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
         is_damaged: false
     });
 
+    const nowRounded = (() => { const d = new Date(); d.setSeconds(0, 0); return d; })();
     const [formData, setFormData] = useState({
-        borrow_date: new Date().toISOString().split("T")[0],
+        borrow_date: nowRounded.toISOString().slice(0,10),
+        borrow_time: nowRounded.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         expected_return_date: "",
+        expected_return_time: "17:00",
         location: "",
         remark: "",
         // New Inspection Checklist
@@ -131,10 +163,13 @@ export default function CarBorrowPage() {
         e.preventDefault();
         if (!selectedAsset) return;
 
-        if (!formData.expected_return_date) {
-            setAlert({ visible: true, message: "กรุณาระบุวันที่กำหนดคืน", type: "error" });
+        if (!formData.expected_return_date || !formData.expected_return_time) {
+            setAlert({ visible: true, message: "กรุณาระบุวันที่และเวลาที่กำหนดคืน", type: "error" });
             return;
         }
+
+        const borrowDatetime = `${formData.borrow_date}T${formData.borrow_time}:00`;
+        const returnDatetime = `${formData.expected_return_date}T${formData.expected_return_time}:00`;
 
         // No longer requiring photos for borrowing
 
@@ -150,7 +185,17 @@ export default function CarBorrowPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     asset_id: selectedAsset.id,
-                    ...formData,
+                    borrow_date: borrowDatetime,
+                    expected_return_date: returnDatetime,
+                    location: formData.location,
+                    remark: formData.remark,
+                    borrow_vehicle_status: formData.borrow_vehicle_status,
+                    borrow_is_clean: formData.borrow_is_clean,
+                    borrow_is_lights_ok: formData.borrow_is_lights_ok,
+                    borrow_is_tires_ok: formData.borrow_is_tires_ok,
+                    borrow_is_body_ok: formData.borrow_is_body_ok,
+                    borrow_is_insurance_ok: formData.borrow_is_insurance_ok,
+                    borrow_inspection_remark: formData.borrow_inspection_remark,
                     photo_url_borrow: JSON.stringify(borrowPhotos)
                 })
             });
@@ -160,9 +205,12 @@ export default function CarBorrowPage() {
                 setAlert({ visible: true, message: "ทำการจองและยืมรถยนต์เรียบร้อยแล้ว แจ้งเตือนส่งไปยัง HR แล้ว", type: "ok" });
                 setSelectedAsset(null);
                 setBorrowPhotos({ front: null, back: null, left: null, right: null, mileage: null });
-                setFormData({
-                    borrow_date: new Date().toISOString().split("T")[0],
+                setFormData(prev => ({
+                    ...prev,
+                    borrow_date: new Date().toISOString().slice(0,10),
+                    borrow_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     expected_return_date: "",
+                    expected_return_time: "17:00",
                     location: "",
                     remark: "",
                     borrow_vehicle_status: "รถอยู่ Tera",
@@ -172,10 +220,15 @@ export default function CarBorrowPage() {
                     borrow_is_body_ok: true,
                     borrow_is_insurance_ok: true,
                     borrow_inspection_remark: ""
-                });
+                }));
                 loadData();
             } else {
-                setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
+                const errMsg = 
+                    data.error === "TIME_OVERLAP" ? data.message :
+                    data.error === "INVALID_DATE_RANGE" ? "กรุณากำหนดเวลาคืนให้หลังเวลายืม" :
+                    data.error === "INVALID_DATE" ? data.message || "วันที่ไม่ถูกต้อง" :
+                    data.error || "เกิดข้อผิดพลาด";
+                setAlert({ visible: true, message: errMsg, type: "error" });
             }
         } catch (err: any) {
             setAlert({ visible: true, message: err.message, type: "error" });
@@ -188,7 +241,8 @@ export default function CarBorrowPage() {
         setSelectedReturn(borrowing);
         setReturnPhotos({ front: null, back: null, left: null, right: null, mileage: null });
         setReturnData({
-            actual_return_date: new Date().toISOString().split("T")[0],
+            actual_return_date: new Date().toISOString().slice(0,10),
+            actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
             condition_at_return: "",
             is_damaged: false
         });
@@ -210,7 +264,9 @@ export default function CarBorrowPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     borrowing_id: selectedReturn.id,
-                    ...returnData,
+                    actual_return_date: `${returnData.actual_return_date}T${returnData.actual_return_time}:00`,
+                    condition_at_return: returnData.condition_at_return,
+                    is_damaged: returnData.is_damaged,
                     photo_url_return: JSON.stringify(returnPhotos)
                 })
             });
@@ -365,10 +421,10 @@ export default function CarBorrowPage() {
 
                                         <div className={styles.myDetails}>
                                             <div className={styles.myDetailItem}>
-                                                <span>วันที่ยืม:</span> {new Date(b.borrow_date).toLocaleDateString("th-TH")}
+                                                <span>เวลายืม:</span> {new Date(b.borrow_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                             </div>
                                             <div className={styles.myDetailItem}>
-                                                <span>กำหนดคืน:</span> {new Date(b.expected_return_date).toLocaleDateString("th-TH")}
+                                                <span>กำหนดคืน:</span> {new Date(b.expected_return_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                             </div>
                                             <div className={styles.myDetailItem}>
                                                 <span>สถานที่/ผู้ติดต่อ:</span> {b.location || "-"}
@@ -406,19 +462,30 @@ export default function CarBorrowPage() {
                                     <input
                                         type="date"
                                         value={formData.borrow_date}
+                                        min={new Date().toISOString().slice(0,10)}
                                         onChange={e => setFormData({ ...formData, borrow_date: e.target.value })}
                                         required
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
-                                    <label>กำหนดวันคืน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <label>เวลาเริ่มใช้งาน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={formData.borrow_time} onChange={v => setFormData({ ...formData, borrow_time: v })} required />
+                                </div>
+                            </div>
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label>วันที่ที่จะคืน <span style={{ color: "#dc2626" }}>*</span></label>
                                     <input
                                         type="date"
                                         value={formData.expected_return_date}
-                                        min={formData.borrow_date}
+                                        min={formData.borrow_date || new Date().toISOString().slice(0,10)}
                                         onChange={e => setFormData({ ...formData, expected_return_date: e.target.value })}
                                         required
                                     />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label>เวลาที่จะคืน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={formData.expected_return_time} onChange={v => setFormData({ ...formData, expected_return_time: v })} required />
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
@@ -616,7 +683,7 @@ export default function CarBorrowPage() {
                                 <button type="button" className={styles.btn} onClick={() => setSelectedAsset(null)} disabled={submitting}>ยกเลิก</button>
                                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || !!uploading}>
                                     {submitting ? "ระบบกำลังดำเนินการ..." : (
-                                        new Date(formData.borrow_date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)
+                                        formData.borrow_date && new Date(`${formData.borrow_date}T${formData.borrow_time}`) > new Date()
                                         ? "ยืนยันการจองล่วงหน้า"
                                         : "ยืนยันการยืมรถยนต์"
                                     )}
@@ -679,14 +746,20 @@ export default function CarBorrowPage() {
                                 </div>
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label>วันที่ส่งคืน <span style={{ color: "#dc2626" }}>*</span></label>
-                                <input
-                                    type="date"
-                                    value={returnData.actual_return_date}
-                                    onChange={e => setReturnData({ ...returnData, actual_return_date: e.target.value })}
-                                    required
-                                />
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label>วันที่ส่งคืน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <input
+                                        type="date"
+                                        value={returnData.actual_return_date}
+                                        onChange={e => setReturnData({ ...returnData, actual_return_date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label>เวลาที่ส่งคืน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={returnData.actual_return_time} onChange={v => setReturnData({ ...returnData, actual_return_time: v })} required />
+                                </div>
                             </div>
 
                             <div className={styles.formGroup}>

@@ -40,35 +40,55 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "ASSET_NOT_FOUND" }, { status: 404 });
         }
 
-        // --- 1. DATE VALIDATION ---
+        const borrowStart = new Date(borrow_date);
+        const borrowEnd = new Date(expected_return_date);
         const now = new Date();
-        const bDate = new Date(borrow_date);
-        const isFuture = bDate.setHours(0,0,0,0) > now.setHours(0,0,0,0);
-        const isPast = bDate.setHours(0,0,0,0) < now.setHours(0,0,0,0);
 
-        if (isPast) {
-            return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow for a past date." }, { status: 400 });
+        // Validate dates
+        if (isNaN(borrowStart.getTime()) || isNaN(borrowEnd.getTime())) {
+            return NextResponse.json({ error: "INVALID_DATE", message: "Invalid date format." }, { status: 400 });
         }
 
-        // --- 2. OVERLAP/AVAILABILITY CHECK ---
-        // If borrowing for Today, asset MUST be available
-        if (!isFuture && asset.status !== "available") {
-            return NextResponse.json({ error: "ASSET_NOT_AVAILABLE", message: "This vehicle is currently borrowed by another user." }, { status: 400 });
+        if (borrowEnd <= borrowStart) {
+            return NextResponse.json({ error: "INVALID_DATE_RANGE", message: "Return time must be after borrow time." }, { status: 400 });
         }
 
-        // If reserving for Future, check if anyone else already reserved it for that day
-        if (isFuture) {
-            const existingReservation = await prisma.asset_borrowings.findFirst({
-                where: {
-                    asset_id: Number(asset_id),
-                    status: { in: ["borrowed", "reserved"] },
-                    borrow_date: { equals: new Date(borrow_date) }
-                }
-            });
-            if (existingReservation) {
-                return NextResponse.json({ error: "ALREADY_RESERVED", message: "This vehicle is already reserved for the selected date." }, { status: 400 });
+        // Cannot borrow in the past (allow up to 5 minutes grace period)
+        const gracePeriod = new Date(now.getTime() - 5 * 60 * 1000);
+        if (borrowStart < gracePeriod) {
+            return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow starting in the past." }, { status: 400 });
+        }
+
+        const isFuture = borrowStart > now;
+
+        // --- OVERLAP CHECK ---
+        // Check if any active borrowing overlaps with the requested time window
+        const overlapping = await prisma.asset_borrowings.findFirst({
+            where: {
+                asset_id: Number(asset_id),
+                status: { in: ["borrowed", "reserved"] },
+                // Intervals overlap if: existing_start < new_end AND existing_end > new_start
+                AND: [
+                    { borrow_date: { lt: borrowEnd } },
+                    { expected_return_date: { gt: borrowStart } }
+                ]
             }
+        });
+
+        if (overlapping) {
+            const conflictStart = overlapping.borrow_date.toLocaleString("th-TH", {
+                timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric",
+                hour: "2-digit", minute: "2-digit"
+            });
+            const conflictEnd = overlapping.expected_return_date.toLocaleString("th-TH", {
+                timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit"
+            });
+            return NextResponse.json({ 
+                error: "TIME_OVERLAP", 
+                message: `รถนี้ถูกจองในช่วงเวลาที่ซ้อนทับกัน (${conflictStart} - ${conflictEnd})` 
+            }, { status: 400 });
         }
+
 
         // Create transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -76,8 +96,8 @@ export async function POST(req: Request) {
                 data: {
                     asset_id: Number(asset_id),
                     emp_id: payload.emp_id,
-                    borrow_date: new Date(borrow_date),
-                    expected_return_date: new Date(expected_return_date),
+                    borrow_date: borrowStart,
+                    expected_return_date: borrowEnd,
                     location: location || null,
                     condition_at_borrow: remark || null,
                     photo_url_borrow: photo_url_borrow || null,
@@ -128,8 +148,8 @@ export async function POST(req: Request) {
                     branchName: employee.branches?.name,
                     assetName: asset.name,
                     assetId: asset.asset_id,
-                    borrowDate: new Date(borrow_date).toLocaleDateString("th-TH"),
-                    returnDate: new Date(expected_return_date).toLocaleDateString("th-TH"),
+                    borrowDate: borrowStart.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                    returnDate: borrowEnd.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                     location: location || "ไม่ได้ระบุ",
                     photoUrl: photo_url_borrow ?? undefined,
                     extraTargetIds: extraIds,

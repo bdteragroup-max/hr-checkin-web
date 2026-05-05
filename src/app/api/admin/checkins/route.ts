@@ -44,12 +44,12 @@ export async function GET(req: Request) {
         const statusParam = url.searchParams.get("status") || "";
 
         // ✅ active employees only
-        const activeEmpIds = (
-            await prisma.employees.findMany({
-                where: { is_active: true, is_checkin_exempt: false },
-                select: { emp_id: true },
-            })
-        ).map((e) => e.emp_id);
+        const activeEmployeesData = await prisma.employees.findMany({
+            where: { is_active: true, is_checkin_exempt: false },
+            select: { emp_id: true, nickname: true },
+        });
+        const activeEmpIds = activeEmployeesData.map((e) => e.emp_id);
+        const nicknameMap = new Map(activeEmployeesData.map(e => [e.emp_id, e.nickname]));
 
         const where: any = { emp_id: { in: activeEmpIds } };
 
@@ -160,10 +160,18 @@ export async function GET(req: Request) {
             return NextResponse.json(
                 jsonSafe({
                     ok: true,
-                    list: missing.map((r) => ({
-                        ...r,
-                        late_label: lateLabel(r.late_status, null),
-                    })),
+                    list: missing.map((r) => {
+                        const nickname = nicknameMap.get(r.emp_id);
+                        let finalName = r.name || "";
+                        if (nickname && !finalName.includes(`(${nickname})`)) {
+                            finalName = `${finalName} (${nickname})`;
+                        }
+                        return {
+                            ...r,
+                            name: finalName,
+                            late_label: lateLabel(r.late_status, null),
+                        };
+                    }),
                 })
             );
         }
@@ -242,10 +250,18 @@ export async function GET(req: Request) {
         return NextResponse.json(
             jsonSafe({
                 ok: true,
-                list: mergedRows.map((r) => ({
-                    ...r,
-                    late_label: lateLabel(r.late_status, r.late_min),
-                })),
+                list: mergedRows.map((r) => {
+                    const nickname = nicknameMap.get(r.emp_id);
+                    let finalName = r.name || "";
+                    if (nickname && !finalName.includes(`(${nickname})`)) {
+                        finalName = `${finalName} (${nickname})`;
+                    }
+                    return {
+                        ...r,
+                        name: finalName,
+                        late_label: lateLabel(r.late_status, r.late_min),
+                    };
+                }),
             })
         );
     } catch (e: any) {

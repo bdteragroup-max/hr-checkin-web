@@ -21,13 +21,13 @@ export async function GET() {
                 },
                 is_active: true
             },
-            select: { emp_id: true, name: true, hire_date: true }
+            select: { emp_id: true, name: true, nickname: true, hire_date: true }
         });
 
         // 2. Birthdays Today
         const allEmps = await prisma.employees.findMany({
             where: { is_active: true, birth_date: { not: null } },
-            select: { emp_id: true, name: true, birth_date: true }
+            select: { emp_id: true, name: true, nickname: true, birth_date: true }
         });
         const todayEmps = allEmps.filter(e => {
             const b = new Date(e.birth_date!);
@@ -41,8 +41,20 @@ export async function GET() {
 
         return NextResponse.json({
             ok: true,
-            arrivals: arrivals.map(a => ({ ...a, hire_date: a.hire_date?.toISOString() })),
-            birthdays: todayEmps,
+            arrivals: arrivals.map(a => {
+                let name = a.name;
+                if (a.nickname && !name.includes(`(${a.nickname})`)) {
+                    name = `${name} (${a.nickname})`;
+                }
+                return { ...a, name, hire_date: a.hire_date?.toISOString() };
+            }),
+            birthdays: todayEmps.map(a => {
+                let name = a.name;
+                if (a.nickname && !name.includes(`(${a.nickname})`)) {
+                    name = `${name} (${a.nickname})`;
+                }
+                return { ...a, name };
+            }),
             pendingClaimsCount
         });
     } catch (e) {

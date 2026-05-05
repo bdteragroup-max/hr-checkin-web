@@ -17,7 +17,7 @@ export async function GET(request: Request) {
             orderBy: { created_at: "desc" },
             include: {
                 employee: {
-                    select: { name: true, departments: { select: { name: true } } }
+                    select: { name: true, nickname: true, departments: { select: { name: true } } }
                 }
             }
         });
@@ -30,10 +30,22 @@ export async function GET(request: Request) {
         });
         const supMap = Object.fromEntries(supervisors.map(s => [s.emp_id, s.name]));
 
-        const resData = ots.map(o => ({
-            ...o,
-            supervisor_name: o.supervisor_id ? supMap[o.supervisor_id] : null
-        }));
+        const resData = ots.map(o => {
+            const nickname = (o.employee as any)?.nickname;
+            let finalName = o.employee?.name || "";
+            if (nickname && !finalName.includes(`(${nickname})`)) {
+                finalName = `${finalName} (${nickname})`;
+            }
+            
+            return {
+                ...o,
+                employee: {
+                    ...o.employee,
+                    name: finalName
+                },
+                supervisor_name: o.supervisor_id ? supMap[o.supervisor_id] : null
+            };
+        });
 
         return NextResponse.json(resData);
     } catch (e: any) {

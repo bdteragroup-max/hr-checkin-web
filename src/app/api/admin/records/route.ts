@@ -37,6 +37,7 @@ export async function GET(req: Request) {
             select: {
                 emp_id: true,
                 name: true,
+                nickname: true,
                 branch_id: true,
                 is_active: true,
             },
@@ -133,9 +134,14 @@ export async function GET(req: Request) {
             let absences = totalWorkDays - s.present_dates.size - s.leave_days;
             if (absences < 0) absences = 0;
 
+            let finalName = e.name;
+            if (e.nickname && !finalName.includes(`(${e.nickname})`)) {
+                finalName = `${finalName} (${e.nickname})`;
+            }
+
             return {
                 emp_id: e.emp_id,
-                name: e.name,
+                name: finalName,
                 branch_id: e.branch_id,
                 is_active: e.is_active,
                 leave_days: s.leave_days,

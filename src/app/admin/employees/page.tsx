@@ -23,6 +23,7 @@ type Branch = { id: string; name: string };
 type Emp = {
     emp_id: string;
     name: string;
+    nickname?: string | null;
     branch_id: string | null;
     is_active: boolean;
     gender?: string | null;
@@ -55,6 +56,7 @@ type Emp = {
 type EditDraft = {
     emp_id: string;
     name: string;
+    nickname: string;
     branch_id: string;
     gender: string;
     hire_date: string;
@@ -105,6 +107,7 @@ export default function AdminEmployeesPage() {
     /* create form */
     const [empId, setEmpId] = useState("");
     const [name, setName] = useState("");
+    const [nickname, setNickname] = useState("");
     const [branchId, setBranchId] = useState("");
     const [pin, setPin] = useState("");
     const [isActive, setIsActive] = useState(true);
@@ -193,6 +196,7 @@ export default function AdminEmployeesPage() {
                 body: JSON.stringify({
                     emp_id: empId.trim(),
                     name: name.trim(),
+                    nickname: nickname.trim() || undefined,
                     branch_id: branchId || null,
                     pin: pin.trim() || undefined,
                     is_active: isActive,
@@ -233,7 +237,7 @@ export default function AdminEmployeesPage() {
             setNewEmpId(empId.trim());
             setTimeout(() => setNewEmpId(null), 3000);
 
-            setEmpId(""); setName(""); setBranchId(""); setPin("");
+            setEmpId(""); setName(""); setNickname(""); setBranchId(""); setPin("");
             setIsActive(true); setGender("M"); setHireDate(""); setBirthDate(""); setPhoneNumber("");
             setDepartmentId(0); setPositionId(0); setBaseSalary(""); setSupervisorId("");
             setSecondarySupervisorId("");
@@ -267,6 +271,7 @@ export default function AdminEmployeesPage() {
                 body: JSON.stringify({
                     emp_id: editDraft.emp_id,
                     name: editDraft.name.trim(),
+                    nickname: editDraft.nickname.trim() || undefined,
                     branch_id: editDraft.branch_id || null,
                     gender: editDraft.gender,
                     hire_date: editDraft.hire_date || null,
@@ -318,6 +323,7 @@ export default function AdminEmployeesPage() {
             setEditDraft({
                 emp_id: x.emp_id,
                 name: x.name,
+                nickname: x.nickname ?? "",
                 branch_id: x.branch_id ?? "",
                 gender: x.gender ?? "M",
                 hire_date: x.hire_date ? String(x.hire_date).slice(0, 10) : "",
@@ -405,7 +411,7 @@ export default function AdminEmployeesPage() {
     /* ── filtered list ── */
     const filtered = useMemo(() => list.filter((x) => {
         const q = search.trim().toLowerCase();
-        const matchQ = !q || x.emp_id.toLowerCase().includes(q) || x.name.toLowerCase().includes(q);
+        const matchQ = !q || x.emp_id.toLowerCase().includes(q) || x.name.toLowerCase().includes(q) || x.nickname?.toLowerCase().includes(q);
         const matchS =
             statusFilter === "all" ? true :
                 statusFilter === "active" ? x.is_active :
@@ -554,7 +560,7 @@ export default function AdminEmployeesPage() {
                                             <tr key={x.emp_id} className={x.emp_id === newEmpId ? styles.highlightRed : undefined} style={{ opacity: x.is_active ? 1 : 0.55 }}>
                                                 <td><span className={styles.empId}>{x.emp_id}</span></td>
                                                 <td style={{ fontWeight: 600, color: "var(--text)" }}>
-                                                    {x.name}
+                                                    {x.name} {x.nickname && <span style={{ color: "var(--text-3)", fontSize: 13, fontWeight: 500 }}>({x.nickname})</span>}
                                                     {!x.line_user_id && x.is_active && (
                                                         <span style={{ 
                                                             marginLeft: 8, 
@@ -647,6 +653,7 @@ export default function AdminEmployeesPage() {
                                                                 setEditDraft({
                                                                     emp_id: x.emp_id,
                                                                     name: x.name,
+                                                                    nickname: x.nickname ?? "",
                                                                     branch_id: x.branch_id ?? "",
                                                                     gender: x.gender ?? "M",
                                                                     hire_date: x.hire_date ? String(x.hire_date).slice(0, 10) : "",
@@ -749,9 +756,18 @@ export default function AdminEmployeesPage() {
                             <input className={styles.input} placeholder="E0001"
                                 value={empId} onChange={(e) => setEmpId(e.target.value)} />
 
-                            <label className={styles.lbl}>ชื่อ-สกุล</label>
-                            <input className={styles.input} placeholder="ชื่อพนักงาน"
-                                value={name} onChange={(e) => setName(e.target.value)} />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <div>
+                                    <label className={styles.lbl}>ชื่อ-สกุล</label>
+                                    <input className={styles.input} placeholder="ชื่อพนักงาน"
+                                        value={name} onChange={(e) => setName(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className={styles.lbl}>ชื่อเล่น</label>
+                                    <input className={styles.input} placeholder="ชื่อเล่น"
+                                        value={nickname} onChange={(e) => setNickname(e.target.value)} />
+                                </div>
+                            </div>
 
                             <label className={styles.lbl}>สาขา</label>
                             <select className={styles.input} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
@@ -939,10 +955,20 @@ export default function AdminEmployeesPage() {
                         </div>
 
                         {/* Name */}
-                        <label className={styles.lbl}>ชื่อ-สกุล</label>
-                        <input className={styles.input}
-                            value={editDraft.name}
-                            onChange={(e) => setEditDraft((d) => d && ({ ...d, name: e.target.value }))} />
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            <div>
+                                <label className={styles.lbl}>ชื่อ-สกุล</label>
+                                <input className={styles.input}
+                                    value={editDraft.name}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, name: e.target.value }))} />
+                            </div>
+                            <div>
+                                <label className={styles.lbl}>ชื่อเล่น</label>
+                                <input className={styles.input}
+                                    value={editDraft.nickname}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, nickname: e.target.value }))} />
+                            </div>
+                        </div>
 
                         {/* Branch + Gender side by side */}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>

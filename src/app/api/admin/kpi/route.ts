@@ -13,6 +13,7 @@ export async function GET() {
                 employee: { 
                     select: { 
                         name: true, 
+                        nickname: true,
                         emp_id: true,
                         is_on_trial: true,
                         hire_date: true,
@@ -20,13 +21,39 @@ export async function GET() {
                         departments: { select: { name: true } }
                     } 
                 },
-                supervisor: { select: { name: true } },
+                supervisor: { select: { name: true, nickname: true } },
                 items: true
             },
             orderBy: { created_at: "desc" }
         });
 
-        return NextResponse.json({ ok: true, list });
+        const formattedList = list.map((ev: any) => {
+            const empNickname = ev.employee?.nickname;
+            let empName = ev.employee?.name || "";
+            if (empNickname && !empName.includes(`(${empNickname})`)) {
+                empName = `${empName} (${empNickname})`;
+            }
+
+            const supNickname = ev.supervisor?.nickname;
+            let supName = ev.supervisor?.name || "";
+            if (supNickname && !supName.includes(`(${supNickname})`)) {
+                supName = `${supName} (${supNickname})`;
+            }
+
+            return {
+                ...ev,
+                employee: {
+                    ...ev.employee,
+                    name: empName
+                },
+                supervisor: ev.supervisor ? {
+                    ...ev.supervisor,
+                    name: supName
+                } : null
+            };
+        });
+
+        return NextResponse.json({ ok: true, list: formattedList });
     } catch (e: any) {
         if (e.message === "UNAUTHORIZED" || e.message === "FORBIDDEN") {
             return NextResponse.json({ error: e.message }, { status: 401 });

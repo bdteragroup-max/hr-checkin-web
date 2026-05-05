@@ -42,6 +42,10 @@ async function requireEmployee() {
         if (!emp || !emp.is_active)
             return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
 
+        if (emp.nickname) {
+            emp.name = `${emp.name} (${emp.nickname})`;
+        }
+
         return { emp };
     } catch {
         return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
@@ -58,43 +62,44 @@ export async function GET() {
 
     const date_key = new Date(getTodayBangkokISO());
 
+    // 🌙 MIDNIGHT SHIFT: between 00:00 and 06:00 BKK, also include yesterday's records
+    const bkkNow = getBangkokWallClock();
+    const bkkHour = bkkNow.getHours();
+    const isPostMidnight = bkkHour >= 0 && bkkHour < 6;
+
+    let yesterday_date_key: Date | null = null;
+    if (isPostMidnight) {
+        const yest = new Date(bkkNow);
+        yest.setDate(yest.getDate() - 1);
+        const yISO = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+        yesterday_date_key = new Date(yISO);
+    }
+
+    const selectFields = {
+        id: true, type: true, timestamp: true, branch_name: true,
+        distance: true, photo_url: true, project_name: true, remark: true,
+        is_trip: true, lat: true, lon: true,
+    };
+
     let list: any[];
     try {
-        list = await (prisma.checkins.findMany as any)({
-            where: { emp_id: auth.emp.emp_id, date_key },
-            orderBy: { timestamp: "asc" },
-            select: {
-                id: true,
-                type: true,
-                timestamp: true,
-                branch_name: true,
-                distance: true,
-                photo_url: true,
-                project_name: true,
-                remark: true,
-                is_trip: true,
-                lat: true,
-                lon: true,
-            },
-        });
+        const queries = [
+            (prisma.checkins.findMany as any)({ where: { emp_id: auth.emp.emp_id, date_key }, orderBy: { timestamp: "asc" }, select: selectFields })
+        ];
+        if (yesterday_date_key) {
+            queries.push((prisma.checkins.findMany as any)({ where: { emp_id: auth.emp.emp_id, date_key: yesterday_date_key }, orderBy: { timestamp: "asc" }, select: selectFields }));
+        }
+        const results = await Promise.all(queries);
+        // Merge and deduplicate by id; prefer records from yesterday's shift when post-midnight
+        const combined = [...(results[1] || []), ...results[0]];
+        const seen = new Set<string>();
+        list = combined.filter((r: any) => { const k = String(r.id); if (seen.has(k)) return false; seen.add(k); return true; });
     } catch (e: any) {
         console.error("[API/CHECKIN] GET DB Error:", e);
-        // Fallback or re-try without newer columns if DB is out of sync during migrations
         list = await (prisma.checkins.findMany as any)({
             where: { emp_id: auth.emp.emp_id, date_key },
             orderBy: { timestamp: "asc" },
-            select: {
-                id: true,
-                type: true,
-                timestamp: true,
-                branch_name: true,
-                distance: true,
-                photo_url: true,
-                project_name: true,
-                remark: true,
-                lat: true,
-                lon: true,
-            },
+            select: { id: true, type: true, timestamp: true, branch_name: true, distance: true, photo_url: true, project_name: true, remark: true, lat: true, lon: true },
         });
     }
 
@@ -104,12 +109,23 @@ export async function GET() {
         id: row.id.toString(),
     }));
 
+    // The displayed date key is yesterday's if we are in post-midnight and have relevant records from yesterday
+    const displayKey = isPostMidnight && yesterday_date_key && safeList.some((r: any) => {
+        const d = new Date(r.timestamp);
+        return d.toDateString() === yesterday_date_key!.toDateString();
+    }) ? yesterdayISO(yesterday_date_key) : getTodayBangkokISO();
+
     return NextResponse.json({
         ok: true,
-        date_key: getTodayBangkokISO(),
+        date_key: displayKey,
         list: safeList,
     });
 }
+
+function yesterdayISO(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 
 /* ============================
    POST - Check-in / Check-out
@@ -144,15 +160,32 @@ export async function POST(req: Request) {
     if (!photo_url)
         return NextResponse.json({ error: "PHOTO_REQUIRED" }, { status: 400 });
 
-    // 🔥 OPTIMIZATION: Parallel Fetch Data (Branch, Project, Today's Check-ins)
+    // 🌙 MIDNIGHT SHIFT SUPPORT
     const date_key = new Date(getTodayBangkokISO());
-    const [branch, project, todaysCheckins] = await Promise.all([
+    // If it's between 00:00 and 06:00 Bangkok time, a checkout might belong
+    // to the *previous day's* shift (employee checked in yesterday before midnight).
+    const bkkNow = getBangkokWallClock();
+    const bkkHour = bkkNow.getHours();
+    const isPostMidnight = bkkHour >= 0 && bkkHour < 6;
+
+    // Compute yesterday's date_key for midnight-shift lookups
+    const yesterdayBangkok = new Date(bkkNow);
+    yesterdayBangkok.setDate(yesterdayBangkok.getDate() - 1);
+    const yesterdayISO = `${yesterdayBangkok.getFullYear()}-${String(yesterdayBangkok.getMonth() + 1).padStart(2, '0')}-${String(yesterdayBangkok.getDate()).padStart(2, '0')}`;
+    const yesterday_date_key = new Date(yesterdayISO);
+
+    // For Check-out: also fetch yesterday's check-ins if post-midnight
+    const [branch, project, todaysCheckins, yesterdaysCheckins] = await Promise.all([
         prisma.branches.findUnique({ where: { id: branch_id } }),
         customer_id ? prisma.projects.findUnique({ where: { id: customer_id } }) : Promise.resolve(null),
         prisma.checkins.findMany({
             where: { emp_id: auth.emp.emp_id, date_key },
             select: { type: true, customer_id: true, project_name: true }
-        })
+        }),
+        isPostMidnight ? prisma.checkins.findMany({
+            where: { emp_id: auth.emp.emp_id, date_key: yesterday_date_key },
+            select: { type: true, customer_id: true, project_name: true }
+        }) : Promise.resolve([] as { type: string; customer_id: number | null; project_name: string | null }[])
     ]);
 
     if (!branch)
@@ -197,8 +230,10 @@ export async function POST(req: Request) {
         if (type === "Project-Out") inType = "Project-In";
         else if (type === "Offsite-Out") inType = "Offsite-In";
 
-        const hasIn = todaysCheckins.find(c => 
-            c.type === inType && 
+        // Look in today's checkins first, then yesterday's (for midnight shifts)
+        const allCheckins = [...todaysCheckins, ...yesterdaysCheckins];
+        const hasIn = allCheckins.find(c =>
+            c.type === inType &&
             (type === "Project-Out" ? (customer_id ? c.customer_id === customer_id : c.project_name === project_name) : true)
         );
 
@@ -206,13 +241,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
     }
 
+    // For midnight shifts (00:00–06:00), the checkout record should be stored
+    // under the same date_key as the check-in (yesterday), so the shift stays together.
+    const effective_date_key = 
+        isPostMidnight && (type === "Check-out") && todaysCheckins.every(c => c.type !== "Check-in") && yesterdaysCheckins.some(c => c.type === "Check-in")
+            ? yesterday_date_key
+            : date_key;
+
     // Duplicate Check & Creation (Atomic)
     let row: any;
     try {
         row = await prisma.$transaction(async (tx) => {
             if (type === "Check-in" || type === "Check-out") {
                 const count = await tx.checkins.count({
-                    where: { emp_id: auth.emp.emp_id, date_key, type }
+                    where: { emp_id: auth.emp.emp_id, date_key: effective_date_key, type }
                 });
                 if (count > 0) throw new Error("DUPLICATE_TODAY");
             }
@@ -220,7 +262,7 @@ export async function POST(req: Request) {
             return await (tx.checkins.create as any)({
                 data: {
                     timestamp: getNowBangkok(),
-                    date_key,
+                    date_key: effective_date_key,
                     time_key,
                     emp_id: auth.emp.emp_id,
                     name: auth.emp.name,

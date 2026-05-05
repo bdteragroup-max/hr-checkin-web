@@ -49,9 +49,10 @@ export async function GET(req: Request) {
         // 1) active employees base
         const activeEmployees = await prisma.employees.findMany({
             where: { is_active: true, is_checkin_exempt: false },
-            select: { emp_id: true },
+            select: { emp_id: true, nickname: true },
         });
         const activeEmpIds = activeEmployees.map((e) => e.emp_id);
+        const nicknameMap = new Map(activeEmployees.map(e => [e.emp_id, e.nickname]));
 
         // 2) Fetch ALL check-ins for this day to calculate accurate counters
         const allDayCheckins = await prisma.checkins.findMany({
@@ -126,10 +127,18 @@ export async function GET(req: Request) {
                 absent: Math.max(0, absent),
                 late,
                 onLeave,
-                recent: recentRows.map((r) => ({
-                    ...r,
-                    late_label: lateLabel(r.late_status, r.late_min),
-                })),
+                recent: recentRows.map((r) => {
+                    const nickname = nicknameMap.get(r.emp_id);
+                    let finalName = r.name || "";
+                    if (nickname && !finalName.includes(`(${nickname})`)) {
+                        finalName = `${finalName} (${nickname})`;
+                    }
+                    return {
+                        ...r,
+                        name: finalName,
+                        late_label: lateLabel(r.late_status, r.late_min),
+                    };
+                }),
             })
         );
     } catch (error: any) {

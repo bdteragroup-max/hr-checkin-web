@@ -1,3 +1,21 @@
+import { prisma } from "@/lib/prisma";
+
+const nameCache = new Map<string, string>();
+async function formatNameDb(name: string | undefined): Promise<string> {
+    if (!name || name.includes('(')) return name || "";
+    if (nameCache.has(name)) return nameCache.get(name)!;
+    try {
+        const emp = await prisma.employees.findFirst({ where: { name }, select: { nickname: true } });
+        if (emp && emp.nickname) {
+            const res = name + ' (' + emp.nickname + ')';
+            nameCache.set(name, res);
+            return res;
+        }
+    } catch(e) {}
+    nameCache.set(name, name);
+    return name;
+}
+
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
 /**
@@ -156,6 +174,13 @@ export async function sendLeaveApprovalFlexMessage(
   replyToken?: string,
   isModified: boolean = false
 ) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+    if ((leaveData as any).supervisorName) (leaveData as any).supervisorName = await formatNameDb((leaveData as any).supervisorName);
+    if ((leaveData as any).approvedBy) (leaveData as any).approvedBy = await formatNameDb((leaveData as any).approvedBy);
+  }
+
   const bodyContents: any[] = [
     {
       type: "box",
@@ -199,7 +224,7 @@ export async function sendLeaveApprovalFlexMessage(
     }
   ];
 
-  if (leaveData.supervisorName) {
+  if ((leaveData as any).supervisorName) {
     bodyContents.push({
       type: "box",
       layout: "horizontal",
@@ -343,6 +368,13 @@ export async function sendOtApprovalFlexMessage(
   isProcessed: boolean = false,
   replyToken?: string
 ) {
+  // Format names with nicknames
+  if (otData) {
+    if ((otData as any).empName) (otData as any).empName = await formatNameDb((otData as any).empName);
+    if ((otData as any).supervisorName) (otData as any).supervisorName = await formatNameDb((otData as any).supervisorName);
+    if ((otData as any).approvedBy) (otData as any).approvedBy = await formatNameDb((otData as any).approvedBy);
+  }
+
   const bodyContents: any[] = [
     {
       type: "box",
@@ -390,7 +422,7 @@ export async function sendOtApprovalFlexMessage(
     ]
   });
 
-  if (otData.supervisorName) {
+  if ((otData as any).supervisorName) {
     bodyContents.push({
       type: "box",
       layout: "horizontal",
@@ -510,6 +542,13 @@ export async function sendHrLeaveNotification(
     usedMins?: number;
   }
 ) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+    if ((leaveData as any).supervisorName) (leaveData as any).supervisorName = await formatNameDb((leaveData as any).supervisorName);
+    if ((leaveData as any).approvedBy) (leaveData as any).approvedBy = await formatNameDb((leaveData as any).approvedBy);
+  }
+
   const hrLineUserId = process.env.HR_LINE_USER_ID;
   if (!hrLineUserId) return false;
   return sendLeaveApprovalFlexMessage(hrLineUserId, leaveData);
@@ -527,6 +566,13 @@ export async function sendHrOtNotification(
     supervisorName: string;
   }
 ) {
+  // Format names with nicknames
+  if (otData) {
+    if ((otData as any).empName) (otData as any).empName = await formatNameDb((otData as any).empName);
+    if ((otData as any).supervisorName) (otData as any).supervisorName = await formatNameDb((otData as any).supervisorName);
+    if ((otData as any).approvedBy) (otData as any).approvedBy = await formatNameDb((otData as any).approvedBy);
+  }
+
   const hrLineUserId = process.env.HR_LINE_USER_ID;
   if (!hrLineUserId) return false;
   return sendOtApprovalFlexMessage(hrLineUserId, otData);
@@ -544,6 +590,13 @@ export async function sendManagementLeaveApprovalMessage(
     handoverPerson?: string;
   }
 ) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+    if ((leaveData as any).supervisorName) (leaveData as any).supervisorName = await formatNameDb((leaveData as any).supervisorName);
+    if ((leaveData as any).approvedBy) (leaveData as any).approvedBy = await formatNameDb((leaveData as any).approvedBy);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
   return sendLeaveApprovalFlexMessage(managementId, leaveData);
@@ -564,6 +617,13 @@ export async function sendEmployeeLeaveStatusNotification(
     rejectionReason?: string;
   }
 ) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+    if ((leaveData as any).supervisorName) (leaveData as any).supervisorName = await formatNameDb((leaveData as any).supervisorName);
+    if ((leaveData as any).approvedBy) (leaveData as any).approvedBy = await formatNameDb((leaveData as any).approvedBy);
+  }
+
   const statusConfig = {
     pending_hr: { headerText: "รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c", altText: "ใบลาของคุณรอ HR อนุมัติ" },
     pending_management: { headerText: "รอฝ่ายบริหารอนุมัติ", headerBg: "#faf5ff", headerColor: "#7c3aed", badgeText: "รอฝ่ายบริหารอนุมัติ", badgeColor: "#7c3aed", altText: "ใบลาพักร้อนของคุณรอฝ่ายบริหารอนุมัติ" },
@@ -584,7 +644,7 @@ export async function sendEmployeeLeaveStatusNotification(
     { type: "box", layout: "horizontal", margin: "lg", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: cfg.badgeText, color: cfg.badgeColor, size: "sm", weight: "bold", flex: 7 }] }
   ];
 
-  if (leaveData.approvedBy) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.approvedBy, color: "#111111", size: "sm", flex: 7 }] });
+  if ((leaveData as any).approvedBy) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.approvedBy, color: "#111111", size: "sm", flex: 7 }] });
   if (leaveData.status === "rejected" && leaveData.rejectionReason) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.rejectionReason, color: "#dc2626", size: "sm", flex: 7, wrap: true }] });
   if (leaveData.status === "pending_hr") bodyContents.push({ type: "text", text: "หัวหน้าอนุมัติแล้ว กำลังรอ HR อนุมัติขั้นสุดท้าย", color: "#9ca3af", size: "xs", margin: "md", wrap: true });
   if (leaveData.status === "pending_management") bodyContents.push({ type: "text", text: "คำขอได้รับการส่งให้ฝ่ายบริหารอนุมัติแล้ว", color: "#9ca3af", size: "xs", margin: "md", wrap: true });
@@ -612,6 +672,13 @@ export async function sendLeaveCancelledNotification(
     reason: string;
   }
 ) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+    if ((leaveData as any).supervisorName) (leaveData as any).supervisorName = await formatNameDb((leaveData as any).supervisorName);
+    if ((leaveData as any).approvedBy) (leaveData as any).approvedBy = await formatNameDb((leaveData as any).approvedBy);
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -652,6 +719,13 @@ export async function sendEmployeeOtStatusNotification(
     rejectionReason?: string;
   }
 ) {
+  // Format names with nicknames
+  if (otData) {
+    if ((otData as any).empName) (otData as any).empName = await formatNameDb((otData as any).empName);
+    if ((otData as any).supervisorName) (otData as any).supervisorName = await formatNameDb((otData as any).supervisorName);
+    if ((otData as any).approvedBy) (otData as any).approvedBy = await formatNameDb((otData as any).approvedBy);
+  }
+
   const statusConfig = {
     pending_hr: { headerText: "OT รอ HR อนุมัติ", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR อนุมัติ", badgeColor: "#ea580c" },
     approved: { headerText: "OT อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a" },
@@ -668,7 +742,7 @@ export async function sendEmployeeOtStatusNotification(
     { type: "box", layout: "horizontal", margin: "lg", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: cfg.badgeText, color: cfg.badgeColor, size: "sm", weight: "bold", flex: 7 }] }
   ];
 
-  if (otData.approvedBy) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: otData.approvedBy, color: "#111111", size: "sm", flex: 7 }] });
+  if ((otData as any).approvedBy) bodyContents.push({ type: "box", layout: "horizontal", contents: [{ type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: otData.approvedBy, color: "#111111", size: "sm", flex: 7 }] });
 
   const contents: any = {
     type: "bubble",
@@ -682,6 +756,13 @@ export async function sendEmployeeOtStatusNotification(
 export async function sendManagementLeaveSummary(data: {
   empName: string; leaveType: string; startDate: string; endDate: string; minutes: number; reason: string; handoverPerson?: string; supervisorName: string; hrName: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
 
@@ -720,6 +801,13 @@ export async function sendManagementLeaveSummary(data: {
 export async function sendManagementOtSummary(data: {
   empName: string; dateFor: string; startTime: string; endTime: string; totalHours: number; reason: string; supervisorName: string; hrName: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
 
@@ -769,6 +857,13 @@ export async function sendTripUpdateNotification(
     remark?: string;
   }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const mapUrl = data.lat && data.lon
     ? `https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lon}`
     : null;
@@ -884,6 +979,13 @@ export async function sendCheckoutOtVerificationNotification(
     photoUrl: string;
   }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const hrManagerId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   const targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
@@ -958,6 +1060,13 @@ export async function sendAssetBorrowNotification(
     };
   }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const hrManagerId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
@@ -1081,6 +1190,13 @@ export async function sendAssetReturnNotification(
     extraTargetIds?: string[];
   }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const hrManagerId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
@@ -1144,6 +1260,13 @@ export async function sendPayslipNotification(lineUserId: string, data: {
   month: number;
   year: number;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
   const monthName = THAI_MONTHS[data.month - 1] || `${data.month}`;
   const yearTh = data.year + 543;
@@ -1238,6 +1361,13 @@ export async function sendProbationEvaluationHrAlert(data: {
   totalScore: number;
   decision: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const hrLineUserId = process.env.HR_LINE_USER_ID;
   if (!hrLineUserId) return false;
 
@@ -1320,6 +1450,13 @@ export async function sendProbationSummaryToManagement(data: {
   comment: string;
   hrName: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
 
@@ -1390,6 +1527,13 @@ export async function sendKpiDefineNotification(
         supervisorName: string;
     }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
     if (!lineUserId) return false;
     const contents: any = {
         type: "bubble",
@@ -1432,6 +1576,13 @@ export async function sendKpiSelfRateNotification(
         evaluationNo: number;
     }
 ) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
     if (!lineUserId) return false;
     const contents: any = {
         type: "bubble",
@@ -1474,6 +1625,13 @@ export async function sendKpiEvaluateHrAlert(data: {
     totalScore: number;
     grade: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
     const hrLineUserId = process.env.HR_LINE_USER_ID;
     if (!hrLineUserId) return false;
 
@@ -1534,6 +1692,13 @@ export async function sendKpiManagementSummary(data: {
     totalScore: number;
     grade: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
     const managementId = process.env.MANAGEMENT_LINE_USER_ID;
     if (!managementId) return false;
 
@@ -1592,6 +1757,14 @@ export async function sendMeetingBookingNotification(
   },
   targetLineIds: string[]
 ) {
+  // Format names with nicknames
+  if (data) {
+    if (data.bookerName) data.bookerName = await formatNameDb(data.bookerName);
+    if (data.attendees && data.attendees.length > 0) {
+      data.attendees = await Promise.all(data.attendees.map(async (name) => await formatNameDb(name)));
+    }
+  }
+
   const hrId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   
@@ -1650,6 +1823,75 @@ export async function sendMeetingBookingNotification(
   return results.every(r => r);
 }
 
+export async function sendMeetingBookingCancelledNotification(
+  data: {
+    roomName: string;
+    floor: number;
+    startTime: string;
+    endTime: string;
+    purpose: string;
+    bookerName: string;
+    attendees: string[];
+    cancellerName?: string;
+  },
+  targetLineIds: string[]
+) {
+  if (data) {
+    if (data.bookerName) data.bookerName = await formatNameDb(data.bookerName);
+    if (data.cancellerName) data.cancellerName = await formatNameDb(data.cancellerName);
+    if (data.attendees && data.attendees.length > 0) {
+      data.attendees = await Promise.all(data.attendees.map(async (name) => await formatNameDb(name)));
+    }
+  }
+
+  const hrId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  const allTargets = Array.from(new Set([...targetLineIds, hrId, managementId].filter(id => !!id)));
+
+  const bodyContents: any[] = [
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ห้องประชุม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.roomName} (ชั้น ${data.floor})`, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เวลา:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.startTime} - ${data.endTime}`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "หัวข้อ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.purpose || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ผู้จอง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.bookerName, color: "#111111", size: "sm", flex: 7 }] },
+  ];
+
+  if (data.cancellerName) {
+    bodyContents.push(
+      { type: "separator", margin: "md" },
+      { type: "box", layout: "horizontal", margin: "md", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `ยกเลิกโดย ${data.cancellerName}`, color: "#dc2626", size: "sm", weight: "bold", flex: 7 }] }
+    );
+  } else {
+    bodyContents.push(
+      { type: "separator", margin: "md" },
+      { type: "text", text: "สถานะ: ยกเลิกการจองแล้ว", color: "#dc2626", size: "sm", weight: "bold", margin: "md", align: "center" }
+    );
+  }
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "ยกเลิกการจองห้องประชุม", weight: "bold", size: "lg", color: "#ffffff" }
+      ],
+      backgroundColor: "#64748b"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: bodyContents
+    }
+  };
+
+  const results = await Promise.all(
+    allTargets.map(id => sendLineMessage(id!, [{ type: "flex", altText: `ยกเลิกจองห้องประชุม: ${data.purpose}`, contents }]))
+  );
+  
+  return results.every(r => r);
+}
+
 /**
  * Notify about Travel Allowance Claim
  */
@@ -1665,6 +1907,13 @@ export async function sendTravelClaimNotification(data: {
   reportUrl?: string;
   hideButtons?: boolean;
 }, lineUserIds: string[], replyToken?: string) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   if (lineUserIds.length === 0) return false;
 
   const statusColor = data.status === "approved" || data.status === "completed" 
@@ -1833,6 +2082,13 @@ export async function sendManagementTravelSummary(data: {
   amount: string;
   hrName: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
 
@@ -1923,6 +2179,13 @@ export async function sendCommissionClaimNotification(data: {
   status: string;
   hideButtons?: boolean;
 }, lineUserIds: string[], replyToken?: string) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   if (lineUserIds.length === 0 && !replyToken) return false;
 
   const statusColor = data.status === "completed" 
@@ -2064,6 +2327,13 @@ export async function sendHrCommissionNotification(data: {
   totalAmount: string;
   perPerson: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const hrLineUserId = process.env.HR_LINE_USER_ID;
   if (!hrLineUserId) return false;
   return sendCommissionClaimNotification({ ...data, status: "pending_admin" }, [hrLineUserId]);
@@ -2077,6 +2347,13 @@ export async function sendManagementCommissionSummary(data: {
   perPerson: string;
   hrName: string;
 }) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+    if ((data as any).supervisorName) (data as any).supervisorName = await formatNameDb((data as any).supervisorName);
+    if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
+  }
+
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
   if (!managementId) return false;
 
