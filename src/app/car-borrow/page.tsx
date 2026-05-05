@@ -112,6 +112,22 @@ export default function CarBorrowPage() {
         loadData();
     }, [activeTab]);
 
+    useEffect(() => {
+        if (selectedAsset) {
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const hour = now.getHours().toString().padStart(2, "0");
+            const minute = (Math.floor(now.getMinutes() / 5) * 5).toString().padStart(2, "0");
+            const timeStr = `${hour}:${minute}`;
+            
+            setFormData(prev => ({
+                ...prev,
+                borrow_date: dateStr,
+                borrow_time: timeStr
+            }));
+        }
+    }, [selectedAsset]);
+
     async function loadData() {
         setLoading(true);
         try {
@@ -373,6 +389,27 @@ export default function CarBorrowPage() {
                                         {asset.image_url && (
                                             <div className={styles.assetImageWrap}>
                                                 <img src={asset.image_url} alt={asset.name} className={styles.assetImage} />
+                                            </div>
+                                        )}
+
+                                        {asset.asset_borrowings && asset.asset_borrowings.length > 0 && (
+                                            <div style={{ marginTop: 12, padding: "10px", backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "10px" }}>
+                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9a3412", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                    <CalendarIcon width={14} /> รายการจองล่วงหน้า / จองต่อ:
+                                                </div>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                    {asset.asset_borrowings.map((b: any) => (
+                                                        <div key={b.id} style={{ fontSize: "10px", color: "#c2410c", lineHeight: "1.4" }}>
+                                                            <span style={{ fontWeight: 600 }}>
+                                                                {new Date(b.borrow_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                                {" - "}
+                                                                {new Date(b.expected_return_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                            </span>
+                                                            <br />
+                                                            โดย: {b.employee.name} {b.employee.nickname ? `(${b.employee.nickname})` : ""}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
 

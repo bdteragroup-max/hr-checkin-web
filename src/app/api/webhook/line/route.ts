@@ -100,7 +100,7 @@ export async function POST(req: Request) {
                         console.log(`[LINE WEBHOOK] Querying leave request: ${targetId}`);
                         const leaveReq = await prisma.leave_requests.findUnique({
                             where: { id: targetId! },
-                            include: { employees: true }
+                            include: { employees: { select: { name: true, nickname: true, line_user_id: true } } }
                         });
 
                         if (!leaveReq) {
@@ -162,6 +162,7 @@ export async function POST(req: Request) {
                         const approverName = approver?.name || (isHr ? "HR Team" : isManagement ? "Management" : (supervisor?.name || "Staff"));
 
                         const { sendLeaveApprovalFlexMessage, sendHrLeaveNotification, sendEmployeeLeaveStatusNotification, sendManagementLeaveSummary } = await import("@/utils/lineMessaging");
+                        const leaveEmpName = leaveReq.employees?.nickname ? `${leaveReq.employees.name} (${leaveReq.employees.nickname})` : (leaveReq.employees?.name || leaveReq.name);
 
                         if (action === "approve_leave") {
                             // Management: pending_management → approved directly
@@ -188,7 +189,7 @@ export async function POST(req: Request) {
 
                             await sendLeaveApprovalFlexMessage(lineUserId!, {
                                 id: leaveReq.id,
-                                empName: leaveReq.name,
+                                empName: leaveEmpName,
                                 leaveType: leaveReq.leave_type,
                                 startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -206,7 +207,7 @@ export async function POST(req: Request) {
                             if (leaveReq.employees?.line_user_id) {
                                 console.log(`[LINE WEBHOOK] Notifying employee: ${leaveReq.employees.line_user_id} Status: ${nextStatus}`);
                                 notifications.push(sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
-                                    empName: leaveReq.name,
+                                    empName: leaveEmpName,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -223,7 +224,7 @@ export async function POST(req: Request) {
                                 console.log(`[LINE WEBHOOK] Supervisor approved. Notifying HR.`);
                                 notifications.push(sendHrLeaveNotification({
                                     id: leaveReq.id,
-                                    empName: leaveReq.name,
+                                    empName: leaveEmpName,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -238,7 +239,7 @@ export async function POST(req: Request) {
                             if (isHr) {
                                 console.log(`[LINE WEBHOOK] HR approved. Sending summary to Management.`);
                                 notifications.push(sendManagementLeaveSummary({
-                                    empName: leaveReq.name,
+                                    empName: leaveEmpName,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -263,7 +264,7 @@ export async function POST(req: Request) {
                             
                             await sendLeaveApprovalFlexMessage(lineUserId!, {
                                 id: leaveReq.id,
-                                empName: leaveReq.name,
+                                empName: leaveEmpName,
                                 leaveType: leaveReq.leave_type,
                                 startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -275,7 +276,7 @@ export async function POST(req: Request) {
                             if (leaveReq.employees?.line_user_id) {
                                 console.log(`[LINE WEBHOOK] Notifying employee of REJECTION: ${leaveReq.employees.line_user_id}`);
                                 await sendEmployeeLeaveStatusNotification(leaveReq.employees.line_user_id, {
-                                    empName: leaveReq.name,
+                                    empName: leaveEmpName,
                                     leaveType: leaveReq.leave_type,
                                     startDate: leaveReq.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     endDate: leaveReq.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -290,7 +291,7 @@ export async function POST(req: Request) {
                         console.log(`[LINE WEBHOOK] Querying OT request: ${targetId}`);
                         const otReq = await prisma.ot_requests.findUnique({
                             where: { id: Number(targetId!) },
-                            include: { employee: true }
+                            include: { employee: { select: { name: true, nickname: true, emp_id: true, supervisor_id: true, line_user_id: true } } }
                         });
 
                         if (!otReq) {
@@ -344,6 +345,7 @@ export async function POST(req: Request) {
                         }
 
                         const { sendOtApprovalFlexMessage, sendHrOtNotification, sendEmployeeOtStatusNotification, sendManagementOtSummary } = await import("@/utils/lineMessaging");
+                        const otEmpName = otReq.employee.nickname ? `${otReq.employee.name} (${otReq.employee.nickname})` : otReq.employee.name;
 
                         if (action === "approve_ot") {
                             const nextStatus = isHr ? "approved" : "pending_hr";
@@ -358,7 +360,7 @@ export async function POST(req: Request) {
                             // ✅ Feedback Feedback
                             await sendOtApprovalFlexMessage(lineUserId!, {
                                 id: otReq.id,
-                                empName: otReq.employee.name,
+                                empName: otEmpName,
                                 dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                 endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -371,7 +373,7 @@ export async function POST(req: Request) {
                             // Notify employee
                             if (otReq.employee.line_user_id) {
                                 sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
-                                    empName: otReq.employee.name,
+                                    empName: otEmpName,
                                     dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -386,7 +388,7 @@ export async function POST(req: Request) {
                             if (isSupervisor) {
                                 sendHrOtNotification({
                                     id: otReq.id,
-                                    empName: otReq.employee.name,
+                                    empName: otEmpName,
                                     dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -399,7 +401,7 @@ export async function POST(req: Request) {
                             // If HR -> Management Summary
                             if (isHr) {
                                 sendManagementOtSummary({
-                                    empName: otReq.employee.name,
+                                    empName: otEmpName,
                                     dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -417,7 +419,7 @@ export async function POST(req: Request) {
                             
                             await sendOtApprovalFlexMessage(lineUserId!, {
                                 id: otReq.id,
-                                empName: otReq.employee.name,
+                                empName: otEmpName,
                                 dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                 startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                 endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -427,7 +429,7 @@ export async function POST(req: Request) {
 
                             if (otReq.employee.line_user_id) {
                                 sendEmployeeOtStatusNotification(otReq.employee.line_user_id, {
-                                    empName: otReq.employee.name,
+                                    empName: otEmpName,
                                     dateFor: otReq.date_for.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                                     startTime: otReq.start_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
                                     endTime: otReq.end_time.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }),
@@ -441,7 +443,7 @@ export async function POST(req: Request) {
                         console.log(`[LINE WEBHOOK] Querying travel claim: ${targetId}`);
                         const claim = await prisma.travel_claims.findUnique({
                             where: { id: targetId! },
-                            include: { employee: true }
+                            include: { employee: { select: { name: true, nickname: true, emp_id: true, supervisor_id: true, line_user_id: true } } }
                         });
 
                         if (!claim) {
@@ -481,6 +483,7 @@ export async function POST(req: Request) {
                         }
 
                         const { sendTravelClaimNotification, sendManagementTravelSummary } = await import("@/utils/lineMessaging");
+                        const travelEmpName = claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name;
 
                         // Look up approver name for summary
                         const approver = await prisma.employees.findFirst({
@@ -505,7 +508,7 @@ export async function POST(req: Request) {
                             // Card reply to Approver
                             await sendTravelClaimNotification({
                                 id: claim.id,
-                                employeeName: claim.employee.name,
+                                employeeName: travelEmpName,
                                 claimType: claim.claim_type,
                                 siteName: claim.site_name,
                                 dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -519,7 +522,7 @@ export async function POST(req: Request) {
                             if (claim.employee.line_user_id) {
                                 await sendTravelClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: travelEmpName,
                                     claimType: claim.claim_type,
                                     siteName: claim.site_name,
                                     dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -534,7 +537,7 @@ export async function POST(req: Request) {
                             if (isSupervisor && nextStatus === "pending_admin" && hrLineConfig) {
                                 await sendTravelClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: travelEmpName,
                                     claimType: claim.claim_type,
                                     siteName: claim.site_name,
                                     dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -547,7 +550,7 @@ export async function POST(req: Request) {
                             // If HR approved (Completed) -> Notify Management
                             if (isHr && nextStatus === "completed") {
                                 await sendManagementTravelSummary({
-                                    empName: claim.employee.name,
+                                    empName: travelEmpName,
                                     claimType: claim.claim_type,
                                     siteName: claim.site_name,
                                     dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -565,7 +568,7 @@ export async function POST(req: Request) {
                             // Card reply to Approver
                             await sendTravelClaimNotification({
                                 id: claim.id,
-                                employeeName: claim.employee.name,
+                                employeeName: travelEmpName,
                                 claimType: claim.claim_type,
                                 siteName: claim.site_name,
                                 dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -578,7 +581,7 @@ export async function POST(req: Request) {
                             if (claim.employee.line_user_id) {
                                 await sendTravelClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: travelEmpName,
                                     claimType: claim.claim_type,
                                     siteName: claim.site_name,
                                     dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
@@ -593,7 +596,7 @@ export async function POST(req: Request) {
                         console.log(`[LINE WEBHOOK] Querying commission claim: ${targetId}`);
                         const claim = await prisma.commission_claims.findUnique({
                             where: { id: targetId! },
-                            include: { employee: true }
+                            include: { employee: { select: { name: true, nickname: true, emp_id: true, supervisor_id: true, line_user_id: true } } }
                         });
 
                         if (!claim) {
@@ -632,6 +635,7 @@ export async function POST(req: Request) {
                         }
 
                         const { sendCommissionClaimNotification, sendManagementCommissionSummary } = await import("@/utils/lineMessaging");
+                        const commEmpName = claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name;
 
                         // Look up approver name for summary
                         const approver = await prisma.employees.findFirst({
@@ -656,7 +660,7 @@ export async function POST(req: Request) {
                             // Card reply to Approver
                             await sendCommissionClaimNotification({
                                 id: claim.id,
-                                employeeName: claim.employee.name,
+                                employeeName: commEmpName,
                                 customerName: claim.customer_name,
                                 date: claim.date.toLocaleDateString("th-TH"),
                                 totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -669,7 +673,7 @@ export async function POST(req: Request) {
                             if (claim.employee.line_user_id) {
                                 await sendCommissionClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: commEmpName,
                                     customerName: claim.customer_name,
                                     date: claim.date.toLocaleDateString("th-TH"),
                                     totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -683,7 +687,7 @@ export async function POST(req: Request) {
                             if (isSupervisor && nextStatus === "pending_admin" && hrLineConfig) {
                                 await sendCommissionClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: commEmpName,
                                     customerName: claim.customer_name,
                                     date: claim.date.toLocaleDateString("th-TH"),
                                     totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -695,7 +699,7 @@ export async function POST(req: Request) {
                             // If HR approved -> Notify Management
                             if (isHr && nextStatus === "completed") {
                                 await sendManagementCommissionSummary({
-                                    empName: claim.employee.name,
+                                    empName: commEmpName,
                                     customerName: claim.customer_name,
                                     date: claim.date.toLocaleDateString("th-TH"),
                                     amount: claim.total_commission?.toLocaleString() || "0",
@@ -713,7 +717,7 @@ export async function POST(req: Request) {
                             // Card reply to Approver
                             await sendCommissionClaimNotification({
                                 id: claim.id,
-                                employeeName: claim.employee.name,
+                                employeeName: commEmpName,
                                 customerName: claim.customer_name,
                                 date: claim.date.toLocaleDateString("th-TH"),
                                 totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -725,7 +729,7 @@ export async function POST(req: Request) {
                             if (claim.employee.line_user_id) {
                                 await sendCommissionClaimNotification({
                                     id: claim.id,
-                                    employeeName: claim.employee.name,
+                                    employeeName: commEmpName,
                                     customerName: claim.customer_name,
                                     date: claim.date.toLocaleDateString("th-TH"),
                                     totalAmount: claim.total_commission?.toLocaleString() || "0",

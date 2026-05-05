@@ -27,7 +27,7 @@ export async function GET() {
             },
             include: {
                 employee: {
-                    select: { name: true, emp_id: true }
+                    select: { name: true, nickname: true, emp_id: true }
                 }
             },
             orderBy: { created_at: "desc" }
@@ -43,14 +43,20 @@ export async function GET() {
             },
             include: {
                 employee: {
-                    select: { name: true, emp_id: true }
+                    select: { name: true, nickname: true, emp_id: true }
                 }
             },
             orderBy: { updated_at: "desc" },
             take: 50
         });
 
-        return NextResponse.json({ pending: requests, history });
+        const formatName = (emp: { name: string; nickname?: string | null }) =>
+            emp.nickname ? `${emp.name} (${emp.nickname})` : emp.name;
+
+        const pendingList = requests.map(r => ({ ...r, employee: { ...r.employee, name: formatName(r.employee) } }));
+        const historyList = history.map(r => ({ ...r, employee: { ...r.employee, name: formatName(r.employee) } }));
+
+        return NextResponse.json({ pending: pendingList, history: historyList });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
@@ -107,15 +113,17 @@ export async function PUT(request: Request) {
         const updated = await prisma.ot_requests.update({
             where: { id: reqId },
             data: updateData,
-            include: { employee: true }
+            include: { employee: { select: { name: true, nickname: true, emp_id: true, line_user_id: true, supervisor_id: true } } }
         });
+
+        const empDisplayName = updated.employee.nickname ? `${updated.employee.name} (${updated.employee.nickname})` : updated.employee.name;
 
         // ✅ LINE Notifications
         if (updated.employee.line_user_id) {
             const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
             const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
-                empName: updated.employee.name,
+                empName: empDisplayName,
                 dateFor: formatDateShortThai(updated.date_for),
                 startTime: formatTime24h(updated.start_time),
                 endTime: formatTime24h(updated.end_time),
@@ -131,7 +139,7 @@ export async function PUT(request: Request) {
             const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendHrOtNotification({
                 id: updated.id,
-                empName: updated.employee.name,
+                empName: empDisplayName,
                 dateFor: formatDateShortThai(updated.date_for),
                 startTime: formatTime24h(updated.start_time),
                 endTime: formatTime24h(updated.end_time),

@@ -45,13 +45,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 reason: rejectReason ? `${leave.reason || ""} (หัวหน้าไม่อนุมัติ: ${rejectReason})`.trim() : `${leave.reason || ""} (หัวหน้าไม่อนุมัติ)`,
             },
             include: {
-                employees: { select: { name: true, line_user_id: true } },
+                employees: { select: { name: true, nickname: true, line_user_id: true } },
             },
         });
 
         // ✅ Notify Employee
         if (updated.employees?.line_user_id) {
             const { sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+            const { formatName } = await import("@/utils/formatName");
             
             const supervisor = await prisma.employees.findUnique({
                 where: { emp_id: p.emp_id },
@@ -59,7 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             });
 
             sendEmployeeLeaveStatusNotification(updated.employees.line_user_id, {
-                empName: updated.employees.name,
+                empName: formatName(updated.employees.name, (updated.employees as any).nickname),
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),

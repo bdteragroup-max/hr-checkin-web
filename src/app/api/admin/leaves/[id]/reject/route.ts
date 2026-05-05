@@ -63,12 +63,14 @@ export async function POST(
         if (leaveBeforeUpdate) {
             const employee = await prisma.employees.findUnique({
                 where: { emp_id: leaveBeforeUpdate.emp_id },
-                select: { line_user_id: true },
+                select: { line_user_id: true, nickname: true },
             });
+            const { formatName } = await import("@/utils/formatName");
+            const empDisplayName = formatName(leaveBeforeUpdate.name, employee?.nickname);
 
             if (employee?.line_user_id) {
                 await sendEmployeeLeaveStatusNotification(employee.line_user_id, {
-                    empName: leaveBeforeUpdate.name,
+                    empName: empDisplayName,
                     leaveType: leaveBeforeUpdate.leave_type,
                     startDate: leaveBeforeUpdate.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                     endDate: leaveBeforeUpdate.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),

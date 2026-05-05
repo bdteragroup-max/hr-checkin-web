@@ -605,6 +605,21 @@
     border-color: var(--gray-300);
 }
 
+.dropdownHeader.disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border-color: var(--gray-200);
+}
+
+.formGroup input:disabled, 
+.formGroup select:disabled, 
+.formGroup textarea:disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
 .chevron {
     font-size: 0.7rem;
     color: var(--gray-500);

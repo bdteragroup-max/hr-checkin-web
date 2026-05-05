@@ -293,7 +293,7 @@ export default function TripLogPage() {
                             }} />
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: gps ? 'var(--ok)' : 'var(--red)' }}>
-                                    {gps ? 'พิกัด GPS แม่นยำพร้อมใช้งาน' : 'กำลังค้นหาตำแหน่ง GPS...'}
+                                    {gps ? 'พิกัด GPS แม่นยำพร้อมใช้งาน' : 'Waiting for GPS verification'}
                                 </div>
                                 {gps && <div style={{ fontSize: 11, color: 'var(--text3)' }}>ความแม่นยำ +/- {Math.round(gps.acc)} เมตร</div>}
                             </div>

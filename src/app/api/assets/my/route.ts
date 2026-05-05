@@ -16,7 +16,10 @@ export async function GET(req: Request) {
 
         const payload = verifyToken(token) as { emp_id: string };
 
-        const whereClause: any = { emp_id: payload.emp_id, status: "borrowed" };
+        const whereClause: any = { 
+            emp_id: payload.emp_id, 
+            status: { in: ["borrowed", "reserved"] } 
+        };
         if (category) {
             whereClause.assets = { category };
         } else if (categoryExclude) {

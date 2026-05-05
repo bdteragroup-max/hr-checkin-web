@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         try {
             const employeeData = await prisma.employees.findUnique({
                 where: { emp_id: user.emp_id },
-                select: { name: true, supervisor_id: true }
+                select: { name: true, nickname: true, supervisor_id: true }
             });
 
             if (employeeData) {
@@ -107,12 +107,14 @@ export async function POST(request: Request) {
                 });
 
                 const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
+                const { formatName } = await import("@/utils/formatName");
+                const empDisplayName = formatName(employeeData.name, (employeeData as any).nickname);
                 
                 // 1. Notify Supervisor (Action required)
                 if (supervisor?.line_user_id) {
                     await sendTravelClaimNotification({
                         id: claim.id,
-                        employeeName: employeeData.name,
+                        employeeName: empDisplayName,
                         claimType: body.claim_type,
                         siteName: body.site_name,
                         dateRange: `${body.date}${body.end_date ? ` - ${body.end_date}` : ""}`,
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
                 if (employeeWithLine?.line_user_id) {
                     await sendTravelClaimNotification({
                         id: claim.id,
-                        employeeName: employeeData.name,
+                        employeeName: empDisplayName,
                         claimType: body.claim_type,
                         siteName: body.site_name,
                         dateRange: `${body.date}${body.end_date ? ` - ${body.end_date}` : ""}`,

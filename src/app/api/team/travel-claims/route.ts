@@ -24,7 +24,14 @@ export async function GET() {
             include: { employee: true },
             orderBy: { created_at: "desc" }
         });
-        return NextResponse.json({ ok: true, list: claims });
+        const list = claims.map(c => ({
+            ...c,
+            employee: {
+                ...c.employee,
+                name: c.employee.nickname ? `${c.employee.name} (${c.employee.nickname})` : c.employee.name
+            }
+        }));
+        return NextResponse.json({ ok: true, list });
     } catch (e: any) {
         console.error("Team travel claims GET error:", e);
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
             if (claim.employee.line_user_id) {
                 await sendTravelClaimNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name,
                     claimType: claim.claim_type,
                     siteName: claim.site_name,
                     dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
                 if (hrLineId) {
                     await sendTravelClaimNotification({
                         id: claim.id,
-                        employeeName: claim.employee.name,
+                        employeeName: claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name,
                         claimType: claim.claim_type,
                         siteName: claim.site_name,
                         dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,

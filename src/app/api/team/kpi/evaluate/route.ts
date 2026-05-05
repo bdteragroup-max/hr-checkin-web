@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
-import { sendKpiEvaluateHrAlert, sendKpiManagementSummary } from "@/utils/lineMessaging";
+import { 
+    sendKpiEvaluateHrAlert, 
+    sendKpiManagementSummary, 
+    sendKpiEvaluateEmployeeNotification 
+} from "@/utils/lineMessaging";
 
 export const runtime = "nodejs";
 
@@ -73,15 +77,59 @@ export async function POST(req: Request) {
 
         // Update items and evaluation status
         await prisma.$transaction(async (tx) => {
+            // 1. Get existing item IDs
+            const existingItems = await tx.kpi_items.findMany({
+                where: { kpi_evaluation_id: evaluation_id },
+                select: { id: true }
+            });
+            const existingIds = existingItems.map(i => i.id);
+            const incomingIds = items.map((i: any) => i.id).filter(id => !!id);
+
+            // 2. Delete items that are no longer in the list
+            const idsToDelete = existingIds.filter(id => !incomingIds.includes(id));
+            if (idsToDelete.length > 0) {
+                await tx.kpi_items.deleteMany({
+                    where: { id: { in: idsToDelete } }
+                });
+            }
+
+            // 3. Update or Create items
             const allItems = [];
             for (const it of items) {
-                const item = await tx.kpi_items.update({
-                    where: { id: it.id },
-                    data: {
-                        supervisor_score: it.supervisor_score
-                    }
-                });
-                allItems.push(item);
+                if (it.id) {
+                    const item = await tx.kpi_items.update({
+                        where: { id: it.id },
+                        data: {
+                            objective: it.objective,
+                            indicator: it.indicator,
+                            weight: it.weight,
+                            target_1: it.target_1,
+                            target_2: it.target_2,
+                            target_3: it.target_3,
+                            target_4: it.target_4,
+                            target_5: it.target_5,
+                            supervisor_score: it.supervisor_score
+                        }
+                    });
+                    allItems.push(item);
+                } else {
+                    const item = await tx.kpi_items.create({
+                        data: {
+                            kpi_evaluation_id: evaluation_id,
+                            objective: it.objective,
+                            indicator: it.indicator,
+                            weight: it.weight,
+                            section: it.section || "KPI",
+                            target_1: it.target_1,
+                            target_2: it.target_2,
+                            target_3: it.target_3,
+                            target_4: it.target_4,
+                            target_5: it.target_5,
+                            supervisor_score: it.supervisor_score
+                        }
+                    });
+                    allItems.push(item);
+                }
             }
 
             const p1 = allItems.filter(it => it.section === "KPI");
@@ -135,7 +183,7 @@ export async function POST(req: Request) {
         // Notify HR and Management
         const employee = await prisma.employees.findUnique({
             where: { emp_id: evaluation.emp_id },
-            select: { name: true }
+            select: { name: true, nickname: true, line_user_id: true }
         });
         const supervisor = await prisma.employees.findUnique({
             where: { emp_id: supervisorId },
@@ -148,8 +196,9 @@ export async function POST(req: Request) {
         });
 
         if (finalEval && employee && supervisor) {
+            const empDisplayName = employee.nickname ? `${employee.name} (${employee.nickname})` : employee.name;
             await sendKpiEvaluateHrAlert({
-                empName: employee.name,
+                empName: empDisplayName,
                 supervisorName: supervisor.name,
                 evaluationNo: finalEval.evaluation_no,
                 totalScore: Number(finalEval.total_supervisor_score),
@@ -157,11 +206,20 @@ export async function POST(req: Request) {
             });
 
             await sendKpiManagementSummary({
-                empName: employee.name,
+                empName: empDisplayName,
                 supervisorName: supervisor.name,
                 totalScore: Number(finalEval.total_supervisor_score),
                 grade: finalEval.grade || "E"
             });
+
+            if (employee.line_user_id) {
+                await sendKpiEvaluateEmployeeNotification(employee.line_user_id, {
+                    evaluationNo: finalEval.evaluation_no,
+                    totalScore: Number(finalEval.total_supervisor_score),
+                    grade: finalEval.grade || "E",
+                    supervisorName: supervisor.name
+                });
+            }
         }
 
         return NextResponse.json({ ok: true });

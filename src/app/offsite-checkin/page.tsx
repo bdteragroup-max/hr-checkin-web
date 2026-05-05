@@ -421,6 +421,7 @@ export default function OffsiteCheckinPage() {
         if (!locationName.trim()) return showAlert("กรุณาระบุสถานที่ปฏิบัติงาน");
         if (!remark.trim()) return showAlert("กรุณาระบุรายละเอียดงาน/หมายเหตุ (จำเป็น)");
         if (!preview || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
+        if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
 
         setIsSubmitting(true);
         setCheckType(targetType);
@@ -586,6 +587,11 @@ export default function OffsiteCheckinPage() {
                             }
                             return null;
                         })()}
+                        {gps.lat === 0 && gps.lon === 0 && (
+                            <span style={{ fontSize: 12, background: "#fee2e2", color: "#ef4444", padding: "2px 8px", borderRadius: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Waiting for GPS verification
+                            </span>
+                        )}
                     </div>
 
                     {!cameraReady && !cameraError && !isCameraStarting && (

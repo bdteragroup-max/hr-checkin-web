@@ -13,7 +13,7 @@ export async function GET() {
         verifyToken(token);
         const list = await prisma.employees.findMany({
             where: { is_active: true },
-            select: { emp_id: true, name: true },
+            select: { emp_id: true, name: true, nickname: true },
             orderBy: { name: "asc" }
         });
         return NextResponse.json(list);

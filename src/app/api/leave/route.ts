@@ -5,6 +5,7 @@ import { verifyToken } from "@/lib/jwt";
 import crypto from "crypto";
 import { sendLeaveApprovalFlexMessage, sendManagementLeaveApprovalMessage } from "@/utils/lineMessaging";
 import { calcWorkingMinutes } from "@/utils/time";
+import { formatName } from "@/utils/formatName";
 
 export const runtime = "nodejs";
 
@@ -302,7 +303,7 @@ export async function POST(req: Request) {
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
         select: { 
-            emp_id: true, name: true, gender: true, hire_date: true, 
+            emp_id: true, name: true, nickname: true, gender: true, hire_date: true, 
             supervisor_id: true, is_on_trial: true, line_user_id: true, 
             salary_type: true,
             supervisor: { select: { line_user_id: true } } 
@@ -428,10 +429,11 @@ export async function POST(req: Request) {
         } = await import("@/utils/lineMessaging");
 
         // ✅ 1. Has Supervisor -> Notify Supervisor
+        const empDisplayName = formatName(emp.name, (emp as any).nickname);
         if (supervisorLineId) {
             sendLeaveApprovalFlexMessage(supervisorLineId, {
                 id,
-                empName: emp.name,
+                empName: empDisplayName,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -444,7 +446,7 @@ export async function POST(req: Request) {
 
             // Notify Employee
             sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
-                empName: emp.name,
+                empName: empDisplayName,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -458,7 +460,7 @@ export async function POST(req: Request) {
         } else {
             sendHrLeaveNotification({
                 id,
-                empName: emp.name,
+                empName: empDisplayName,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -472,7 +474,7 @@ export async function POST(req: Request) {
 
             // Notify Employee
             sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
-                empName: emp.name,
+                empName: empDisplayName,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -546,6 +548,7 @@ export async function PUT(req: Request) {
         select: { 
             emp_id: true, 
             name: true, 
+            nickname: true,
             gender: true, 
             hire_date: true, 
             supervisor_id: true, 
@@ -674,10 +677,11 @@ export async function PUT(req: Request) {
         const supervisorLineId = emp.supervisor?.line_user_id;
 
         // ✅ Notify Supervisor or HR (similar to POST logic)
+        const empDisplayName2 = formatName(emp.name, (emp as any).nickname);
         if (supervisorLineId) {
             sendLeaveApprovalFlexMessage(supervisorLineId, {
                 id,
-                empName: emp.name,
+                empName: empDisplayName2,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -689,7 +693,7 @@ export async function PUT(req: Request) {
             }, false, undefined, true).catch(console.error); // isModified = true
 
             sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
-                empName: emp.name,
+                empName: empDisplayName2,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -701,7 +705,7 @@ export async function PUT(req: Request) {
         } else {
             sendHrLeaveNotification({
                 id,
-                empName: emp.name,
+                empName: empDisplayName2,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -714,7 +718,7 @@ export async function PUT(req: Request) {
             }).catch(console.error);
 
             sendEmployeeLeaveStatusNotification(emp.line_user_id || "", {
-                empName: emp.name,
+                empName: empDisplayName2,
                 leaveType: def.name,
                 startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -749,7 +753,7 @@ export async function DELETE(req: Request) {
 
     const existing = await prisma.leave_requests.findUnique({ 
         where: { id },
-        include: { employees: { select: { name: true, supervisor: { select: { line_user_id: true } } } } }
+        include: { employees: { select: { name: true, nickname: true, supervisor: { select: { line_user_id: true } } } } }
     });
     if (!existing) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
     if (existing.emp_id !== p.emp_id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 403 });
@@ -774,7 +778,7 @@ export async function DELETE(req: Request) {
         const supervisorLineId = existing.employees?.supervisor?.line_user_id;
 
         const noticeData = {
-            empName: existing.employees?.name || existing.name,
+            empName: formatName(existing.employees?.name || existing.name, (existing.employees as any)?.nickname),
             leaveType: existing.leave_type,
             startDate: existing.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
             endDate: existing.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),

@@ -557,3 +557,98 @@
     text-align: center;
     color: var(--text3);
 }
+
+.itemActionsTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.btnEditSmall, .btnDeleteSmall {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    border: 1px solid transparent;
+}
+
+.btnEditSmall {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: var(--gray-300);
+}
+
+.btnEditSmall:hover {
+    background: var(--gray-200);
+}
+
+.btnDeleteSmall {
+    background: #fef2f2;
+    color: var(--red);
+    border-color: var(--red-border);
+}
+
+.btnDeleteSmall:hover {
+    background: #fee2e2;
+}
+
+.editForm {
+    background: #f8fafc;
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.rubricGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.editActions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--gray-200);
+    padding-top: 16px;
+}
+
+.btnSave, .btnCancel {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btnSave {
+    background: var(--red);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(217, 48, 37, 0.25);
+}
+
+.btnCancel {
+    background: white;
+    color: var(--text3);
+    border: 1.5px solid var(--gray-300);
+}
+
+.weightStatus {
+    font-size: 11px;
+    font-weight: 800;
+    margin-left: auto;
+    padding: 4px 10px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}

@@ -40,7 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 supervisor_approved_at: new Date(),
             },
             include: {
-                employees: { select: { name: true, line_user_id: true } },
+                employees: { select: { name: true, nickname: true, line_user_id: true } },
             },
         });
 
@@ -51,10 +51,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         // ✅ 1. Notify HR Officer
         const { sendHrLeaveNotification, sendEmployeeLeaveStatusNotification } = await import("@/utils/lineMessaging");
+        const { formatName } = await import("@/utils/formatName");
+        const empDisplayName = formatName(updated.employees?.name || updated.name, (updated.employees as any)?.nickname);
         
         sendHrLeaveNotification({
             id: updated.id,
-            empName: updated.employees?.name || updated.name,
+            empName: empDisplayName,
             leaveType: updated.leave_type,
             startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
             endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -67,7 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         // ✅ 2. Notify Employee (Transition to Pending HR)
         if (updated.employees?.line_user_id) {
             sendEmployeeLeaveStatusNotification(updated.employees.line_user_id, {
-                empName: updated.employees.name,
+                empName: empDisplayName,
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),

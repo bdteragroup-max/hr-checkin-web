@@ -141,7 +141,7 @@ export async function GET(req: Request) {
                                     type: "box",
                                     layout: "horizontal",
                                     contents: [
-                                        { type: "text", text: b.assets.name, size: "sm", weight: "bold", color: "#111827", flex: 7 },
+                                        { type: "text", text: `${b.assets.name} (${b.assets.asset_id})`, size: "sm", weight: "bold", color: "#111827", flex: 7 },
                                         { type: "text", text: b.status === 'returned' ? "คืนแล้ว" : "ยังไม่คืน", size: "xxs", color: b.status === 'returned' ? "#16a34a" : "#ea580c", flex: 3, align: "end" }
                                     ]
                                 },

@@ -54,12 +54,15 @@ export async function POST(
         // ✅ Notify employee via LINE Flex Message that HR has approved
         const employee = await prisma.employees.findUnique({
             where: { emp_id: updated.emp_id },
-            select: { line_user_id: true },
+            select: { line_user_id: true, nickname: true },
         });
+
+        const { formatName } = await import("@/utils/formatName");
+        const empDisplayName = formatName(updated.name, employee?.nickname);
 
         if (employee?.line_user_id) {
             await sendEmployeeLeaveStatusNotification(employee.line_user_id, {
-                empName: updated.name,
+                empName: empDisplayName,
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
@@ -81,7 +84,7 @@ export async function POST(
             });
 
             await sendManagementLeaveSummary({
-                empName: updated.name,
+                empName: empDisplayName,
                 leaveType: updated.leave_type,
                 startDate: updated.start_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
                 endDate: updated.end_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),

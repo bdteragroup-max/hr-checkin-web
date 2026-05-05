@@ -24,13 +24,21 @@ export async function GET() {
             where: { supervisor_id: user.emp_id },
             include: {
                 employee: {
-                    select: { name: true }
+                    select: { name: true, nickname: true }
                 }
             },
             orderBy: { date: "desc" }
         });
+
+        const list = claims.map(c => ({
+            ...c,
+            employee: {
+                ...c.employee,
+                name: c.employee.nickname ? `${c.employee.name} (${c.employee.nickname})` : c.employee.name
+            }
+        }));
         
-        return NextResponse.json({ ok: true, list: claims });
+        return NextResponse.json({ ok: true, list });
     } catch (e) {
         console.error("Team commission fetch error:", e);
         return NextResponse.json({ ok: false, error: "ERROR" }, { status: 500 });
@@ -47,7 +55,7 @@ export async function PATCH(request: Request) {
 
         const claim = await prisma.commission_claims.findUnique({
             where: { id },
-            include: { employee: true }
+            include: { employee: { select: { name: true, nickname: true, line_user_id: true } } }
         });
 
         if (!claim) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
@@ -82,7 +90,7 @@ export async function PATCH(request: Request) {
                 const { sendCommissionClaimNotification } = await import("@/utils/lineMessaging");
                 await sendCommissionClaimNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name,
                     customerName: claim.customer_name,
                     date: claim.date.toLocaleDateString("th-TH"),
                     totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -101,7 +109,7 @@ export async function PATCH(request: Request) {
                 const { sendHrCommissionNotification } = await import("@/utils/lineMessaging");
                 await sendHrCommissionNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: claim.employee.nickname ? `${claim.employee.name} (${claim.employee.nickname})` : claim.employee.name,
                     customerName: claim.customer_name,
                     date: claim.date.toLocaleDateString("th-TH"),
                     totalAmount: updated.total_commission?.toLocaleString() || "รอคำนวณ",

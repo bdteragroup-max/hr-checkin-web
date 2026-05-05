@@ -190,8 +190,8 @@ export async function POST(req: Request) {
                 startTime: startTimeStr,
                 endTime: endTimeStr,
                 purpose: booking.purpose || "-",
-                bookerName: booking.employee.name,
-                attendees: attendeeNames
+                bookerName: (booking.employee as any).nickname ? `${booking.employee.name} (${(booking.employee as any).nickname})` : booking.employee.name,
+                attendees: booking.attendees.map((a: any) => a.employee.nickname ? `${a.employee.name} (${a.employee.nickname})` : a.employee.name)
             }, attendeeLineIds);
         } catch (error) {
             console.error("[API/BOOKINGS/POST] Notification failed:", error);
@@ -279,7 +279,7 @@ export async function DELETE(req: Request) {
             if (isAdmin) {
                 cancellerName = "Admin";
             } else if (emp_id === booking.emp_id) {
-                cancellerName = booking.employee.name;
+                cancellerName = (booking.employee as any).nickname ? `${booking.employee.name} (${(booking.employee as any).nickname})` : booking.employee.name;
             }
 
             await sendMeetingBookingCancelledNotification({

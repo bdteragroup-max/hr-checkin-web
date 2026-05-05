@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 import { sendOtApprovalFlexMessage, sendEmployeeOtStatusNotification } from "@/utils/lineMessaging";
+import { formatName } from "@/utils/formatName";
 
 export async function POST(request: Request) {
     try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
             include: { 
                 supervisor: { select: { line_user_id: true, name: true } }
             }
-        });
+        }) as any;
 
         if (!emp) {
             return NextResponse.json({ error: "Employee not found" }, { status: 404 });
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
             const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendOtApprovalFlexMessage(emp.supervisor.line_user_id, {
                 id: newOt.id,
-                empName: emp.name,
+                empName: formatName(emp.name, emp.nickname),
                 dateFor: formatDateShortThai(date_for),
                 startTime: formatTime24h(start),
                 endTime: formatTime24h(end),
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
         if (emp.line_user_id) {
             const { formatDateShortThai, formatTime24h } = await import("@/utils/time");
             sendEmployeeOtStatusNotification(emp.line_user_id, {
-                empName: emp.name,
+                empName: formatName(emp.name, emp.nickname),
                 dateFor: formatDateShortThai(date_for),
                 startTime: formatTime24h(start),
                 endTime: formatTime24h(end),

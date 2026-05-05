@@ -47,10 +47,16 @@ export async function GET() {
                 reason: true,
                 status: true,
                 attachment_url: true,
+                employees: { select: { nickname: true } },
             },
         });
 
-        return NextResponse.json(jsonSafe({ ok: true, list }));
+        const formatted = list.map(({ employees: emp, ...rest }) => ({
+            ...rest,
+            name: emp?.nickname ? `${rest.name} (${emp.nickname})` : rest.name,
+        }));
+
+        return NextResponse.json(jsonSafe({ ok: true, list: formatted }));
     } catch (e: any) {
         console.error("team leaves GET error:", e);
         return NextResponse.json({ ok: false, error: e.message || "ERROR" }, { status: 500 });

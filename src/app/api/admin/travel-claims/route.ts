@@ -64,16 +64,17 @@ export async function POST(request: Request) {
                 approved_by: admin.emp_id,
                 approved_at: new Date()
             },
-            include: { employee: true }
+            include: { employee: { select: { name: true, nickname: true, line_user_id: true } } }
         });
 
         // Notify Employee of Final Decision
         try {
             if (claim.employee.line_user_id) {
                 const { sendTravelClaimNotification } = await import("@/utils/lineMessaging");
+                const { formatName } = await import("@/utils/formatName");
                 await sendTravelClaimNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: formatName(claim.employee.name, (claim.employee as any).nickname),
                     claimType: claim.claim_type,
                     siteName: claim.site_name,
                     dateRange: `${claim.date.toLocaleDateString("th-TH")}${claim.end_date ? ` - ${claim.end_date.toLocaleDateString("th-TH")}` : ""}`,

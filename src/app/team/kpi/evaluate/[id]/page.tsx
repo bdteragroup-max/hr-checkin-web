@@ -8,7 +8,9 @@ import {
     UserCircleIcon,
     ArrowPathIcon,
     TableCellsIcon,
-    CheckBadgeIcon
+    CheckBadgeIcon,
+    PencilSquareIcon,
+    TrashIcon
 } from "@heroicons/react/24/solid";
 import styles from "./page.module.css";
 
@@ -24,6 +26,9 @@ export default function KPISupervisorEvaluatePage() {
     const [comment, setComment] = useState("");
     const [recommendSalary, setRecommendSalary] = useState<boolean | null>(null);
     const [attendance, setAttendance] = useState<any>(null);
+
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editBuffer, setEditBuffer] = useState<any>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -71,7 +76,7 @@ export default function KPISupervisorEvaluatePage() {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const { totalSupervisorScore, grade, s1Supervisor, s23Supervisor, w1Pct, w23Pct } = useMemo(() => {
+    const { totalSupervisorScore, grade, s1Supervisor, s23Supervisor, w1Pct, w23Pct, totalKpiWeight } = useMemo(() => {
         const p1Items = items.filter(it => it.section === "KPI");
         const p2Items = items.filter(it => it.section === "CORE_VALUE");
         const p3Items = items.filter(it => it.section === "COMPETENCY");
@@ -118,7 +123,8 @@ export default function KPISupervisorEvaluatePage() {
             s1Supervisor: s1,
             s23Supervisor: s23,
             w1Pct: w1PctVal,
-            w23Pct: w23PctVal
+            w23Pct: w23PctVal,
+            totalKpiWeight: p1Items.reduce((sum, it) => sum + Number(it.weight), 0)
         };
     }, [items, evaluation]);
 
@@ -171,10 +177,41 @@ export default function KPISupervisorEvaluatePage() {
         setItems(newItems);
     };
 
+    const deleteItem = (index: number) => {
+        if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบหัวข้อนี้? การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+        const newItems = items.filter((_, i) => i !== index);
+        setItems(newItems);
+    };
+
+    const startEditing = (index: number) => {
+        setEditingIndex(index);
+        setEditBuffer({ ...items[index] });
+    };
+
+    const saveEdit = () => {
+        if (editingIndex === null) return;
+        const newItems = [...items];
+        newItems[editingIndex] = { ...editBuffer };
+        setItems(newItems);
+        setEditingIndex(null);
+        setEditBuffer(null);
+    };
+
+    const cancelEdit = () => {
+        setEditingIndex(null);
+        setEditBuffer(null);
+    };
+
     const handleSubmit = async () => {
         const incomplete = items.find(it => it.section !== "DEVELOPMENT" && it.supervisor_score === 0);
         if (incomplete) {
             alert("กรุณาให้คะแนนประเมินให้ครบทุกหัวข้อ");
+            return;
+        }
+
+        const totalWeight = items.filter(it => it.section === "KPI").reduce((sum, it) => sum + Number(it.weight), 0);
+        if (Math.abs(totalWeight - 100) > 0.01) {
+            alert(`น้ำหนักรวมของ KPI ต้องเท่ากับ 100% (ปัจจุบัน: ${totalWeight}%)`);
             return;
         }
 
@@ -278,6 +315,11 @@ export default function KPISupervisorEvaluatePage() {
                                         sec === "CORE_VALUE" ? "ส่วนที่ 2 คุณลักษณะส่วนบุคคลตามค่านิยมของบริษัท (Personal Attributes According to Values)" :
                                             "ส่วนที่ 3 คุณลักษณะความเป็นผู้นำ (Leadership Qualities)"}
                                 </span>
+                                {sec === "KPI" && (
+                                    <div className={styles.weightStatus} style={{ color: Math.abs(totalKpiWeight - 100) < 0.01 ? '#16a34a' : '#d93025' }}>
+                                        น้ำหนักรวม: {totalKpiWeight}%
+                                    </div>
+                                )}
                             </div>
 
                             <div className={styles.itemsList}>
@@ -287,7 +329,15 @@ export default function KPISupervisorEvaluatePage() {
                                         <div key={item.id} className={styles.card}>
                                             <div className={styles.itemHeader}>
                                                 <div className={styles.itemTitle}>หัวข้อที่ {index + 1}: {item.objective}</div>
-                                                <div className={styles.weightBadge}>{item.weight}%</div>
+                                                <div className={styles.itemActionsTop}>
+                                                    <div className={styles.weightBadge}>{item.weight}%</div>
+                                                    <button className={styles.btnEditSmall} onClick={() => startEditing(index)}>
+                                                        <PencilSquareIcon width={14} />
+                                                    </button>
+                                                    <button className={styles.btnDeleteSmall} onClick={() => deleteItem(index)}>
+                                                        <TrashIcon width={14} />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className={styles.itemContent}>
@@ -374,6 +424,52 @@ export default function KPISupervisorEvaluatePage() {
                                                         <strong style={{ fontSize: 14, color: '#D93025' }}>{((Number(item.weight) / 100) * (item.supervisor_score || 0)).toFixed(2)}</strong>
                                                     </div>
                                                 </div>
+
+                                                {editingIndex === index && (
+                                                    <div className={styles.editForm}>
+                                                        <div className={styles.inputGroup}>
+                                                            <label>วัตถุประสงค์ (Objective)</label>
+                                                            <textarea 
+                                                                rows={2} 
+                                                                value={editBuffer.objective} 
+                                                                onChange={e => setEditBuffer({...editBuffer, objective: e.target.value})}
+                                                            />
+                                                        </div>
+                                                        <div className={styles.inputGroup}>
+                                                            <label>ตัวชี้วัด (Indicator)</label>
+                                                            <textarea 
+                                                                rows={2} 
+                                                                value={editBuffer.indicator} 
+                                                                onChange={e => setEditBuffer({...editBuffer, indicator: e.target.value})}
+                                                            />
+                                                        </div>
+                                                        <div className={styles.inputGroup}>
+                                                            <label>น้ำหนัก (%)</label>
+                                                            <input 
+                                                                type="number" 
+                                                                value={editBuffer.weight} 
+                                                                onChange={e => setEditBuffer({...editBuffer, weight: Number(e.target.value)})}
+                                                            />
+                                                        </div>
+                                                        <div className={styles.indicatorLabel} style={{ marginTop: 8 }}>ระดับคะแนน (Rubric)</div>
+                                                        <div className={styles.rubricGrid}>
+                                                            {[1, 2, 3, 4, 5].map(r => (
+                                                                <div key={r} className={styles.inputGroup}>
+                                                                    <label>Rating {r}</label>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={editBuffer[`target_${r}`] || ""} 
+                                                                        onChange={e => setEditBuffer({...editBuffer, [`target_${r}`]: e.target.value})}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className={styles.editActions}>
+                                                            <button className={styles.btnSave} onClick={saveEdit}>บันทึกการแก้ไข</button>
+                                                            <button className={styles.btnCancel} onClick={cancelEdit}>ยกเลิก</button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     );

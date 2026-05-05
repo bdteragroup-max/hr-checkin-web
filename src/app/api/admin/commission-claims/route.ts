@@ -78,10 +78,12 @@ export async function PATCH(request: Request) {
 
         const claim = await prisma.commission_claims.findUnique({
             where: { id },
-            include: { employee: true }
+            include: { employee: { select: { name: true, nickname: true, line_user_id: true } } }
         });
-
         if (!claim) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+
+        const { formatName } = await import("@/utils/formatName");
+        const empDisplayName = formatName(claim.employee.name, (claim.employee as any).nickname);
 
         let nextStatus = claim.status;
         if (action === "approve") {
@@ -118,7 +120,7 @@ export async function PATCH(request: Request) {
                 const { sendCommissionClaimNotification } = await import("@/utils/lineMessaging");
                 await sendCommissionClaimNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: empDisplayName,
                     customerName: claim.customer_name,
                     date: claim.date.toLocaleDateString("th-TH"),
                     totalAmount: claim.total_commission?.toLocaleString() || "0",
@@ -137,7 +139,7 @@ export async function PATCH(request: Request) {
                 const { sendHrCommissionNotification } = await import("@/utils/lineMessaging");
                 await sendHrCommissionNotification({
                     id: claim.id,
-                    employeeName: claim.employee.name,
+                    employeeName: empDisplayName,
                     customerName: claim.customer_name,
                     date: claim.date.toLocaleDateString("th-TH"),
                     totalAmount: updated.total_commission?.toLocaleString() || "รอคำนวณ",

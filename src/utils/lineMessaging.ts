@@ -1743,6 +1743,71 @@ export async function sendKpiManagementSummary(data: {
 }
 
 /**
+ * 4. Notify Employee when Supervisor evaluates KPI
+ */
+export async function sendKpiEvaluateEmployeeNotification(
+    lineUserId: string,
+    data: {
+        evaluationNo: number;
+        totalScore: number;
+        grade: string;
+        supervisorName: string;
+    }
+) {
+    // Format names with nicknames
+    if (data && data.supervisorName) {
+        data.supervisorName = await formatNameDb(data.supervisorName);
+    }
+
+    const contents: any = {
+        type: "bubble",
+        header: {
+            type: "box",
+            layout: "vertical",
+            contents: [{ type: "text", text: "ผลการประเมิน KPI ของคุณ", weight: "bold", size: "lg", color: "#ffffff" }],
+            backgroundColor: "#16a34a"
+        },
+        body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+                { type: "text", text: `หัวหน้างานได้ทำการประเมิน KPI ของคุณเสร็จสิ้นแล้ว`, size: "sm", color: "#111111", wrap: true },
+                {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "xs",
+                    contents: [
+                        { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
+                        { type: "text", text: `รอบการประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+                    ]
+                },
+                {
+                    type: "box",
+                    layout: "horizontal",
+                    margin: "md",
+                    contents: [
+                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
+                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
+                    ]
+                },
+                {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                        { type: "text", text: "เกรดที่คุณได้รับ:", size: "sm", color: "#64748b", flex: 4 },
+                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#16a34a", flex: 6 }
+                    ]
+                },
+                { type: "text", text: "คุณสามารถดูรายละเอียดคะแนนและข้อเสนอแนะเพิ่มเติมได้ในระบบ", size: "xs", color: "#9ca3af", margin: "lg", wrap: true }
+            ]
+        }
+    };
+
+    return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนผลการประเมิน KPI", contents }]);
+}
+
+/**
  * 5. Notify Meeting Room Booking
  */
 export async function sendMeetingBookingNotification(

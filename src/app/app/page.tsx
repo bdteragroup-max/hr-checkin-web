@@ -453,7 +453,7 @@ export default function AppPage() {
     /* ── GPS ── */
     async function readGPS() {
         setGpsLoading(true);
-        setStatus(<span><ArrowPathIcon width={14} className="animate-spin" style={{ display: 'inline', marginRight: 6 }} />กำลังอ่าน GPS...</span>, "warn");
+        setStatus(<span><ArrowPathIcon width={14} className="animate-spin" style={{ display: 'inline', marginRight: 6 }} />Waiting for GPS verification</span>, "warn");
         const branch = selectedBranchObj;
 
         return new Promise<GpsState>((resolve) => {

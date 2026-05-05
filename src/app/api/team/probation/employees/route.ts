@@ -24,6 +24,7 @@ export async function GET() {
             select: {
                 emp_id: true,
                 name: true,
+                nickname: true,
                 hire_date: true,
                 is_on_trial: true,
                 job_positions: { select: { title: true } },
@@ -78,7 +79,7 @@ export async function GET() {
 
             return {
                 emp_id: emp.emp_id,
-                name: emp.name,
+                name: emp.nickname ? `${emp.name} (${emp.nickname})` : emp.name,
                 hire_date: emp.hire_date,
                 is_on_trial: emp.is_on_trial,
                 position: emp.job_positions?.title || "N/A",

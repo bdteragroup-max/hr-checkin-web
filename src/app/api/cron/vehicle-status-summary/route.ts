@@ -84,7 +84,7 @@ export async function GET(req: Request) {
         lines.push(`✅ ยืมวันนี้ (${borrowedToday.length}):`);
         if (borrowedToday.length > 0) {
             borrowedToday.forEach(b => {
-                lines.push(`• ${b.employee.name} ยืม ${b.assets.name}`);
+                lines.push(`• ${b.employee.name} ยืม ${b.assets.name} (${b.assets.asset_id})`);
             });
         } else {
             lines.push("• ไม่มีรายการยืมใหม่");
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
         lines.push(`🔄 คืนวันนี้ (${returnedToday.length}):`);
         if (returnedToday.length > 0) {
             returnedToday.forEach(r => {
-                lines.push(`• ${r.employee.name} คืน ${r.assets.name}`);
+                lines.push(`• ${r.employee.name} คืน ${r.assets.name} (${r.assets.asset_id})`);
             });
         } else {
             lines.push("• ไม่มีรายการคืน");
@@ -108,7 +108,7 @@ export async function GET(req: Request) {
         lines.push(`🚗 กำลังใช้งานอยู่ (${activeBorrowings.length}):`);
         if (activeBorrowings.length > 0) {
             activeBorrowings.forEach(a => {
-                lines.push(`• ${a.employee.name}: ${a.assets.name}`);
+                lines.push(`• ${a.employee.name}: ${a.assets.name} (${a.assets.asset_id})`);
             });
         } else {
             lines.push("• ไม่มีรถที่กำลังใช้งาน");

@@ -20,14 +20,15 @@ interface Booking {
     end_time: string;
     purpose: string;
     minutes: string | null;
-    employee: { name: string; emp_id: string };
+    employee: { name: string; emp_id: string; nickname?: string | null };
     room: { name: string; floor: number };
-    attendees: { employee: { name: string; emp_id: string } }[];
+    attendees: { employee: { name: string; emp_id: string; nickname?: string | null } }[];
 }
 
 interface Employee {
     emp_id: string;
     name: string;
+    nickname?: string | null;
 }
 
 export default function MeetingRoomsPage() {
@@ -54,6 +55,11 @@ export default function MeetingRoomsPage() {
     // Booking Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+    const isOwner = useMemo(() => {
+        if (!selectedBooking) return true;
+        return me?.emp_id === selectedBooking.emp_id;
+    }, [selectedBooking, me]);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -400,7 +406,7 @@ export default function MeetingRoomsPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
                         <div className={styles.modalHeader}>
-                            <h2>{selectedBooking ? "บันทึกการประชุม" : "จองห้องประชุม"}</h2>
+                            <h2>{selectedBooking ? (isOwner ? "บันทึกการประชุม" : "รายละเอียดการจอง") : "จองห้องประชุม"}</h2>
                             <button className={styles.closeModalBtn} onClick={() => setIsModalOpen(false)}>&times;</button>
                         </div>
                         
@@ -410,6 +416,7 @@ export default function MeetingRoomsPage() {
                             <select 
                                 value={newBooking.room_id} 
                                 onChange={e => setNewBooking({...newBooking, room_id: e.target.value})}
+                                disabled={!isOwner}
                             >
                                 <option value="">-- เลือกห้อง --</option>
                                 {[1, 2, 3, 4].map(f => {
@@ -432,6 +439,7 @@ export default function MeetingRoomsPage() {
                                 type="date" 
                                 value={newBooking.date}
                                 onChange={e => setNewBooking({...newBooking, date: e.target.value})}
+                                disabled={!isOwner}
                             />
                         </div>
 
@@ -441,6 +449,7 @@ export default function MeetingRoomsPage() {
                                 <select 
                                     value={newBooking.startTime}
                                     onChange={e => setNewBooking({...newBooking, startTime: e.target.value})}
+                                    disabled={!isOwner}
                                 >
                                     {timeSlots.map(h => {
                                         return [0, 15, 30, 45].map(m => {
@@ -456,6 +465,7 @@ export default function MeetingRoomsPage() {
                                 <select 
                                     value={newBooking.endTime}
                                     onChange={e => setNewBooking({...newBooking, endTime: e.target.value})}
+                                    disabled={!isOwner}
                                 >
                                     {timeSlots.map(h => {
                                         return [0, 15, 30, 45].map(m => {
@@ -475,6 +485,7 @@ export default function MeetingRoomsPage() {
                                 value={newBooking.purpose}
                                 onChange={e => setNewBooking({...newBooking, purpose: e.target.value})}
                                 placeholder="เช่น ประชุมฝ่ายบริหารประจำสัปดาห์"
+                                disabled={!isOwner}
                             />
                         </div>
 
@@ -482,8 +493,8 @@ export default function MeetingRoomsPage() {
                             <label>ผู้เข้าร่วมประชุม</label>
                             <div className={styles.dropdownContainer} ref={dropdownRef}>
                                 <div 
-                                    className={styles.dropdownHeader}
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className={`${styles.dropdownHeader} ${!isOwner ? styles.disabled : ""}`}
+                                    onClick={() => isOwner && setIsDropdownOpen(!isDropdownOpen)}
                                 >
                                     {newBooking.attendee_ids.length > 0 
                                         ? `เลือกแล้ว ${newBooking.attendee_ids.length} คน`
@@ -522,7 +533,7 @@ export default function MeetingRoomsPage() {
                                                         checked={newBooking.attendee_ids.includes(emp.emp_id)}
                                                         readOnly
                                                     />
-                                                    <span>{emp.name}</span>
+                                                    <span>{emp.name}{emp.nickname ? ` (${emp.nickname})` : ""}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -536,8 +547,8 @@ export default function MeetingRoomsPage() {
                                         const emp = employees.find(e => e.emp_id === id);
                                         return emp ? (
                                             <span key={id} className={styles.badge}>
-                                                {emp.name.split(" ")[0]}
-                                                <button onClick={() => setNewBooking({...newBooking, attendee_ids: newBooking.attendee_ids.filter(i => i !== id)})}>&times;</button>
+                                                {emp.name.split(" ")[0]}{emp.nickname ? ` (${emp.nickname})` : ""}
+                                                {isOwner && <button onClick={() => setNewBooking({...newBooking, attendee_ids: newBooking.attendee_ids.filter(i => i !== id)})}>&times;</button>}
                                             </span>
                                         ) : null;
                                     })}
@@ -585,10 +596,12 @@ export default function MeetingRoomsPage() {
                                         <div key={i} style={{ padding: '12px', border: '1px solid #eee', borderRadius: '8px', marginBottom: '12px', background: '#fafafa' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                                 <strong>วาระที่ {i + 1}</strong>
-                                                <button 
-                                                    onClick={() => removeAgenda(i)}
-                                                    style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: '18px' }}
-                                                >&times;</button>
+                                                {isOwner && (
+                                                    <button 
+                                                        onClick={() => removeAgenda(i)}
+                                                        style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: '18px' }}
+                                                    >&times;</button>
+                                                )}
                                             </div>
                                             
                                             <div style={{ marginBottom: 8 }}>
@@ -598,6 +611,7 @@ export default function MeetingRoomsPage() {
                                                     value={agenda.person}
                                                     onChange={e => updateAgenda(i, 'person', e.target.value)}
                                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                    disabled={!isOwner}
                                                 />
                                             </div>
                                             <div>
@@ -607,17 +621,20 @@ export default function MeetingRoomsPage() {
                                                     value={agenda.details}
                                                     onChange={e => updateAgenda(i, 'details', e.target.value)}
                                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                    disabled={!isOwner}
                                                 />
                                             </div>
                                         </div>
                                     ))}
                                     
-                                    <button 
-                                        onClick={addAgenda}
-                                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px dashed #ccc', background: 'transparent', cursor: 'pointer', color: '#666' }}
-                                    >
-                                        + เพิ่มวาระการประชุม
-                                    </button>
+                                    {isOwner && (
+                                        <button 
+                                            onClick={addAgenda}
+                                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px dashed #ccc', background: 'transparent', cursor: 'pointer', color: '#666' }}
+                                        >
+                                            + เพิ่มวาระการประชุม
+                                        </button>
+                                    )}
                                 </div>
                             );
                         })()}
@@ -633,9 +650,11 @@ export default function MeetingRoomsPage() {
                                     ดาวน์โหลด PDF
                                 </button>
                             )}
-                            <button className={styles.submitBtn} onClick={submitBooking}>
-                                {selectedBooking ? "บันทึกการเปลี่ยนแปลง" : "ยืนยันการจอง"}
-                            </button>
+                            {(isOwner || !selectedBooking) && (
+                                <button className={styles.submitBtn} onClick={submitBooking}>
+                                    {selectedBooking ? "บันทึกการเปลี่ยนแปลง" : "ยืนยันการจอง"}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     if (!branch_id)
         return NextResponse.json({ error: "MISSING_BRANCH" }, { status: 400 });
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lon))
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0))
         return NextResponse.json({ error: "GPS_REQUIRED" }, { status: 400 });
 
     if (!photo_url)

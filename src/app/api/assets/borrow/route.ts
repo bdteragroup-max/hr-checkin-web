@@ -26,8 +26,9 @@ export async function POST(req: Request) {
             include: { 
                 job_positions: true,
                 branches: true
-            }
-        });
+            },
+            // nickname for notifications
+        }) as any;
 
         if (!employee) return NextResponse.json({ error: "EMPLOYEE_NOT_FOUND" }, { status: 404 });
 
@@ -40,9 +41,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "ASSET_NOT_FOUND" }, { status: 404 });
         }
 
-        const borrowStart = new Date(borrow_date);
-        const borrowEnd = new Date(expected_return_date);
-        const now = new Date();
+        const borrowStart = new Date(`${borrow_date}+07:00`);
+        const borrowEnd = new Date(`${expected_return_date}+07:00`);
+        const now = new Date(); // now is already UTC-aware/local-aware correctly
 
         // Validate dates
         if (isNaN(borrowStart.getTime()) || isNaN(borrowEnd.getTime())) {
@@ -53,10 +54,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "INVALID_DATE_RANGE", message: "Return time must be after borrow time." }, { status: 400 });
         }
 
-        // Cannot borrow in the past (allow up to 5 minutes grace period)
-        const gracePeriod = new Date(now.getTime() - 5 * 60 * 1000);
+        // Cannot borrow in the past (allow up to 2 hours grace period for logging)
+        const gracePeriod = new Date(now.getTime() - 120 * 60 * 1000);
         if (borrowStart < gracePeriod) {
-            return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow starting in the past." }, { status: 400 });
+            return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow starting in the past (more than 2 hours ago)." }, { status: 400 });
         }
 
         const isFuture = borrowStart > now;
@@ -81,7 +82,8 @@ export async function POST(req: Request) {
                 hour: "2-digit", minute: "2-digit"
             });
             const conflictEnd = overlapping.expected_return_date.toLocaleString("th-TH", {
-                timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit"
+                timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric",
+                hour: "2-digit", minute: "2-digit"
             });
             return NextResponse.json({ 
                 error: "TIME_OVERLAP", 
@@ -142,8 +144,9 @@ export async function POST(req: Request) {
                     .filter(id => !!id) as string[];
 
                 const { sendAssetBorrowNotification } = await import("@/utils/lineMessaging");
+                const { formatName } = await import("@/utils/formatName");
                 await sendAssetBorrowNotification({
-                    empName: employee.name,
+                    empName: formatName(employee.name, employee.nickname),
                     jobTitle: employee.job_positions?.title,
                     branchName: employee.branches?.name,
                     assetName: asset.name,

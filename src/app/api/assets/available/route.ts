@@ -16,8 +16,35 @@ export async function GET(req: Request) {
             whereClause.category = { not: categoryExclude };
         }
 
+        const now = new Date();
         const availableAssets = await prisma.assets.findMany({
-            where: whereClause,
+            where: {
+                ...whereClause,
+                NOT: {
+                    asset_borrowings: {
+                        some: {
+                            status: { in: ["borrowed", "reserved"] },
+                            borrow_date: { lte: now },
+                            expected_return_date: { gte: now }
+                        }
+                    }
+                }
+            },
+            include: {
+                asset_borrowings: {
+                    where: {
+                        status: { in: ["borrowed", "reserved"] },
+                        expected_return_date: { gt: now }
+                    },
+                    include: {
+                        employee: {
+                            select: { name: true, nickname: true }
+                        }
+                    },
+                    orderBy: { borrow_date: "asc" },
+                    take: 3
+                }
+            },
             orderBy: { name: "asc" }
         });
         return NextResponse.json(availableAssets);

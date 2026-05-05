@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         // 1. Verify Supervisor Relationship (Allow Primary or Secondary)
         const emp = await prisma.employees.findUnique({
             where: { emp_id },
-            select: { supervisor_id: true, secondary_supervisor_id: true, name: true }
+            select: { supervisor_id: true, secondary_supervisor_id: true, name: true, nickname: true }
         });
         
         const isAuthorized = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
 
         // 6. Notify HR via LINE
         await sendProbationEvaluationHrAlert({
-            empName: emp.name,
+            empName: emp.nickname ? `${emp.name} (${emp.nickname})` : emp.name,
             empId: emp_id,
             supervisorName: supervisor?.name || "Unknown",
             evaluationNo: Number(evaluation_no || 1),

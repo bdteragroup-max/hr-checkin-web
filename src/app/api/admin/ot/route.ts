@@ -83,14 +83,17 @@ export async function POST(request: Request) {
         const updated = await prisma.ot_requests.update({
             where: { id: Number(id) },
             data: updateData,
-            include: { employee: true }
+            include: { employee: { select: { name: true, nickname: true, line_user_id: true } } }
         });
+
+        const { formatName } = await import("@/utils/formatName");
+        const empDisplayName = formatName(updated.employee?.name || "", (updated.employee as any)?.nickname);
 
         // ✅ LINE Notification to employee
         if (updated.employee.line_user_id) {
             const { sendEmployeeOtStatusNotification } = await import("@/utils/lineMessaging");
             sendEmployeeOtStatusNotification(updated.employee.line_user_id, {
-                empName: updated.employee.name,
+                empName: empDisplayName,
                 dateFor: formatDateShortThai(updated.date_for),
                 startTime: formatTime24h(updated.start_time),
                 endTime: formatTime24h(updated.end_time),
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
             });
 
             sendManagementOtSummary({
-                empName: updated.employee.name,
+                empName: empDisplayName,
                 dateFor: formatDateShortThai(updated.date_for),
                 startTime: formatTime24h(updated.start_time),
                 endTime: formatTime24h(updated.end_time),

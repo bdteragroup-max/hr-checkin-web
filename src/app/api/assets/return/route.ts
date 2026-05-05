@@ -30,7 +30,7 @@ export async function POST(req: Request) {
                         job_positions: true, 
                         branches: true 
                     } 
-                }
+                } as any
             }
         });
 
@@ -80,10 +80,11 @@ export async function POST(req: Request) {
                     .filter(id => !!id) as string[];
 
                 const { sendAssetReturnNotification } = await import("@/utils/lineMessaging");
+                const { formatName } = await import("@/utils/formatName");
                 await sendAssetReturnNotification({
-                    empName: borrowing.employee.name,
-                    jobTitle: borrowing.employee.job_positions?.title,
-                    branchName: borrowing.employee.branches?.name,
+                    empName: formatName((borrowing.employee as any).name, (borrowing.employee as any).nickname),
+                    jobTitle: (borrowing.employee as any).job_positions?.title,
+                    branchName: (borrowing.employee as any).branches?.name,
                     assetName: borrowing.assets.name,
                     assetId: borrowing.assets.asset_id,
                     actualReturnDate: new Date(actual_return_date).toLocaleDateString("th-TH"),

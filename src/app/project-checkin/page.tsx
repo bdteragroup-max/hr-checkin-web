@@ -560,6 +560,7 @@ export default function ProjectCheckinPage() {
     async function doSubmitCheckin(targetType: "Project-In" | "Project-Out") {
         if (!remark.trim()) return showAlert("กรุณาระบุรายละเอียดงาน/บันทึกเพิ่มเติม (จำเป็น)");
         if (!preview || !selectedCustomer || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
+        if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
 
         setIsSubmitting(true);
         // 🔥 Redraw watermark with correct type from RAW frame
@@ -804,6 +805,11 @@ export default function ProjectCheckinPage() {
                                     }
                                     return null;
                                 })()}
+                                {gps.lat === 0 && gps.lon === 0 && (
+                                    <span style={{ fontSize: 12, background: "#fee2e2", color: "#ef4444", padding: "2px 8px", borderRadius: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <ExclamationTriangleIcon style={{ width: 14, height: 14 }} /> Waiting for GPS verification
+                                    </span>
+                                )}
                             </div>
 
                             {!cameraReady && (
@@ -932,7 +938,7 @@ export default function ProjectCheckinPage() {
 
                             <div style={{ padding: "12px", background: "#f9fafb", borderRadius: 8, fontSize: 13, color: "#6b7280", display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                {gps.lat ? `${gps.lat.toFixed(4)}, ${gps.lon?.toFixed(4)}` : "กำลังหาพิกัด..."}
+                                {gps.lat ? `${gps.lat.toFixed(4)}, ${gps.lon?.toFixed(4)}` : "Waiting for GPS verification"}
                             </div>
                         </div>
 

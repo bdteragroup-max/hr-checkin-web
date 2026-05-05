@@ -95,7 +95,7 @@ export async function POST(req: Request) {
         // Notify Supervisor
         const emp = await prisma.employees.findUnique({
             where: { emp_id: empId },
-            select: { name: true, supervisor_id: true }
+            select: { name: true, nickname: true, supervisor_id: true }
         });
 
         if (emp?.supervisor_id) {
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
             if (supervisor?.line_user_id) {
                 await sendKpiSelfRateNotification(supervisor.line_user_id, {
-                    empName: emp.name,
+                    empName: emp.nickname ? `${emp.name} (${emp.nickname})` : emp.name,
                     evaluationNo: evaluation.evaluation_no
                 });
             }
