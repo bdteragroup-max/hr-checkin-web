@@ -33,7 +33,7 @@ interface TripItem {
     lon?: number;
 }
 
-const QUICK_TAGS = ["ถึงที่หมาย", "เริ่มเดินทาง", "แวะพัก/เติมน้ำมัน", "พบลูกค้า", "เริ่มงานไซต์", "เช็คอินโรงแรม"];
+const QUICK_TAGS = ["ถึงที่หมาย", "เริ่มเดินทาง", "แวะพัก/เติมน้ำมัน", "พบลูกค้า", "เริ่มงานไซต์", "เช็คอินที่พัก"];
 
 function getThaiTimeStr() {
     return new Date().toLocaleTimeString("th-TH", {
@@ -189,8 +189,23 @@ export default function TripLogPage() {
     }
 
     /* ── ACTIONS ── */
+    async function handleCheckout() {
+        if (!gps) return;
+        setLocationName("สิ้นสุดการเดินทาง");
+        setStep('camera');
+        (window as any).isTripCheckout = true;
+    }
+
+    async function handleAccommodation() {
+        if (!gps) return;
+        setLocationName("เช็คอินที่พัก");
+        setStep('camera');
+        (window as any).isTripCheckout = true;
+    }
+
     async function handleUpdate() {
         if (!photoPreview) return;
+        const isCheckout = (window as any).isTripCheckout;
         setStep('submitting');
         try {
             const blob = await (await fetch(photoPreview)).blob();
@@ -204,7 +219,7 @@ export default function TripLogPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    type: "Trip-Update",
+                    type: isCheckout ? "Check-out" : "Trip-Update",
                     is_trip: true,
                     lat: gps?.lat,
                     lon: gps?.lon,
@@ -215,17 +230,25 @@ export default function TripLogPage() {
                     branch_id: me?.branch_id
                 })
             });
-            if (!resSave.ok) throw new Error("บันทึกล้มเหลว");
+            const saveData = await resSave.json();
+            if (!resSave.ok) throw new Error(saveData.error || "บันทึกล้มเหลว");
 
-            setAlertData({ type: 'success', msg: "บันทึกพิกัดการเดินทางและแจ้งเตือนเรียบร้อยแล้ว" });
+            let successMsg = isCheckout ? "สิ้นสุดการเดินทางเรียบร้อยแล้ว" : "บันทึกพิกัดการเดินทางและแจ้งเตือนเรียบร้อยแล้ว";
+            if (saveData.auto_ot) {
+                successMsg += "\n(ระบบได้ส่งคำขอ OT อัตโนมัติให้คุณเรียบร้อยแล้ว)";
+            }
+
+            setAlertData({ type: 'success', msg: successMsg });
             setLocationName("");
             setRemark("");
             setPhotoPreview(null);
             setStep('log');
+            (window as any).isTripCheckout = false;
             await refreshHistory();
         } catch (e: any) {
             setAlertData({ type: 'error', msg: e.message || "เกิดข้อผิดพลาดในการบันทึก" });
             setStep('log');
+            (window as any).isTripCheckout = false;
         }
     }
 
@@ -268,10 +291,30 @@ export default function TripLogPage() {
                                 className={styles.updateBtn}
                                 onClick={gps ? startCamera : undefined}
                                 disabled={!gps}
-                                style={{ opacity: gps ? 1 : 0.6 }}
+                                title="บันทึกพิกัด"
                             >
-                                <Navigation size={42} />
-                                <span className={styles.updateBtnText}>บันทึกพิกัด</span>
+                                <Navigation size={32} />
+                                <span className={styles.updateBtnText}>Update</span>
+                            </button>
+
+                            <button
+                                className={`${styles.updateBtn} ${styles.accommodationBtn}`}
+                                onClick={gps ? handleAccommodation : undefined}
+                                disabled={!gps}
+                                title="เช็คอินที่พัก"
+                            >
+                                <MapIcon size={32} />
+                                <span className={styles.updateBtnText}>ที่พัก</span>
+                            </button>
+
+                            <button
+                                className={`${styles.updateBtn} ${styles.checkoutBtn}`}
+                                onClick={gps ? handleCheckout : undefined}
+                                disabled={!gps}
+                                title="สิ้นสุดการเดินทาง"
+                            >
+                                <CheckCircle size={32} />
+                                <span className={styles.updateBtnText}>Check-out</span>
                             </button>
                         </div>
 

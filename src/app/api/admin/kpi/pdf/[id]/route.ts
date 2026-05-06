@@ -186,11 +186,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             y -= hH;
 
             // Body
+            const LH = 14; // Line height for Thai
             for (const item of secItems) {
-                const wrapObj = wrapText(item.objective, CW[0] - 8, fontRegular, 7);
-                const wrapInd = wrapText(item.indicator, CW[1] - 8, fontRegular, 7);
+                const wrapObj = wrapText(item.objective || "", CW[0] - 8, fontBold, 7);
+                const wrapInd = wrapText(item.indicator || "", CW[1] - 8, fontRegular, 7);
                 const wrapRes = wrapText(item.result_description || "-", CW[3] - 8, fontRegular, 7);
-                const rowH = Math.max(wrapObj.length, wrapInd.length, wrapRes.length) * 10 + 10;
+                const rowH = Math.max(wrapObj.length, wrapInd.length, wrapRes.length) * LH + 10;
 
                 if (y - rowH < 60) {
                     page = pdf.addPage(PAGE_SIZE);
@@ -198,9 +199,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                 }
 
                 page.drawRectangle({ x: ML, y: y - rowH, width: FULL_W, height: rowH, borderColor: BLACK, borderWidth: 0.5 });
-                wrapObj.forEach((l, i) => page.drawText(l, { x: CX[0] + 4, y: y - 12 - (i * 10), size: 7, font: fontBold }));
-                wrapInd.forEach((l, i) => page.drawText(l, { x: CX[1] + 4, y: y - 12 - (i * 10), size: 7, font: fontRegular, color: GRAY_TEXT }));
-                wrapRes.forEach((l, i) => page.drawText(l, { x: CX[3] + 4, y: y - 12 - (i * 10), size: 7, font: fontRegular }));
+                wrapObj.forEach((l, i) => page.drawText(l, { x: CX[0] + 4, y: y - 16 - (i * LH), size: 7, font: fontBold }));
+                wrapInd.forEach((l, i) => page.drawText(l, { x: CX[1] + 4, y: y - 16 - (i * LH), size: 7, font: fontRegular, color: GRAY_TEXT }));
+                wrapRes.forEach((l, i) => page.drawText(l, { x: CX[3] + 4, y: y - 16 - (i * LH), size: 7, font: fontRegular }));
 
                 const weight = Number(item.weight);
                 const empS = Number(item.employee_score || 0);
@@ -329,19 +330,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         // --- Comments Section ---
         const drawCommentBox = (label: string, text: string, currentY: number) => {
+            const CLH = 16; // Comment Line Height
             const wrapped = wrapText(text || "-", FULL_W - 20, fontRegular, 9);
-            const boxH = Math.max(wrapped.length * 14 + 20, 40);
+            const boxH = Math.max(wrapped.length * CLH + 15, 60);
 
-            if (currentY - boxH < 60) {
+            if (currentY - boxH - 20 < 60) {
                 page = pdf.addPage(PAGE_SIZE);
                 currentY = height - 60;
             }
 
             page.drawText(label, { x: ML, y: currentY, size: 9, font: fontBold });
             page.drawRectangle({ x: ML, y: currentY - boxH - 5, width: FULL_W, height: boxH, borderColor: GRAY_BORDER, borderWidth: 0.5 });
-            wrapped.forEach((l, i) => page.drawText(l, { x: ML + 10, y: currentY - 20 - (i * 14), size: 9, font: fontRegular }));
+            wrapped.forEach((l, i) => page.drawText(l, { x: ML + 10, y: currentY - 22 - (i * CLH), size: 9, font: fontRegular }));
 
-            return currentY - boxH - 25;
+            return currentY - boxH - 30;
         };
 
         y = drawCommentBox("ความเห็นพนักงาน (Employee Comments):", evalData.employee_comment || "", y);
@@ -376,43 +378,49 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 function wrapText(txt: string, maxW: number, font: any, size: number): string[] {
     if (!txt) return [""];
-    const lines: string[] = [];
-
-    // First try splitting by spaces (for mixed English/Thai or spaced Thai)
-    const segments = txt.split(" ");
-    let currentLine = "";
-
-    for (const segment of segments) {
-        // If a single segment (word) is already too long, we must break it by character
-        if (font.widthOfTextAtSize(segment, size) > maxW) {
-            // Flush current line if not empty
-            if (currentLine) {
-                lines.push(currentLine.trim());
-                currentLine = "";
-            }
-
-            // Character-by-character split for long Thai strings
-            let charLine = "";
-            for (const char of segment) {
-                if (font.widthOfTextAtSize(charLine + char, size) < maxW) {
-                    charLine += char;
+    const result: string[] = [];
+    
+    // Split by hard newlines first
+    const paragraphs = txt.split(/\r?\n/);
+    
+    for (const p of paragraphs) {
+        if (p.trim() === "") {
+            result.push("");
+            continue;
+        }
+        
+        let currentLine = "";
+        const segments = p.split(" ");
+        
+        for (const segment of segments) {
+            if (font.widthOfTextAtSize(segment, size) > maxW) {
+                if (currentLine) {
+                    result.push(currentLine.trim());
+                    currentLine = "";
+                }
+                // Thai-style char splitting for long words
+                let charLine = "";
+                for (const char of segment) {
+                    if (font.widthOfTextAtSize(charLine + char, size) < maxW) {
+                        charLine += char;
+                    } else {
+                        result.push(charLine);
+                        charLine = char;
+                    }
+                }
+                currentLine = charLine;
+            } else {
+                const testLine = currentLine ? currentLine + " " + segment : segment;
+                if (font.widthOfTextAtSize(testLine, size) < maxW) {
+                    currentLine = testLine;
                 } else {
-                    lines.push(charLine);
-                    charLine = char;
+                    result.push(currentLine.trim());
+                    currentLine = segment;
                 }
             }
-            currentLine = charLine;
-        } else {
-            const testLine = currentLine ? currentLine + " " + segment : segment;
-            if (font.widthOfTextAtSize(testLine, size) < maxW) {
-                currentLine = testLine;
-            } else {
-                lines.push(currentLine.trim());
-                currentLine = segment;
-            }
         }
+        if (currentLine) result.push(currentLine.trim());
     }
-
-    if (currentLine) lines.push(currentLine.trim());
-    return lines.length > 0 ? lines : [""];
+    
+    return result.length > 0 ? result : ["-"];
 }

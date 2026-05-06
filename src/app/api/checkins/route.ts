@@ -174,8 +174,7 @@ export async function POST(req: Request) {
     const yesterdayISO = `${yesterdayBangkok.getFullYear()}-${String(yesterdayBangkok.getMonth() + 1).padStart(2, '0')}-${String(yesterdayBangkok.getDate()).padStart(2, '0')}`;
     const yesterday_date_key = new Date(yesterdayISO);
 
-    // For Check-out: also fetch yesterday's check-ins if post-midnight
-    const [branch, project, todaysCheckins, yesterdaysCheckins] = await Promise.all([
+    const [branch, project, todaysCheckins, yesterdaysCheckins, empWithPosition] = await Promise.all([
         prisma.branches.findUnique({ where: { id: branch_id } }),
         customer_id ? prisma.projects.findUnique({ where: { id: customer_id } }) : Promise.resolve(null),
         prisma.checkins.findMany({
@@ -185,7 +184,11 @@ export async function POST(req: Request) {
         isPostMidnight ? prisma.checkins.findMany({
             where: { emp_id: auth.emp.emp_id, date_key: yesterday_date_key },
             select: { type: true, customer_id: true, project_name: true }
-        }) : Promise.resolve([] as { type: string; customer_id: number | null; project_name: string | null }[])
+        }) : Promise.resolve([] as { type: string; customer_id: number | null; project_name: string | null }[]),
+        prisma.employees.findUnique({
+            where: { emp_id: auth.emp.emp_id },
+            include: { job_positions: { select: { is_ot_eligible: true } } }
+        })
     ]);
 
     if (!branch)
@@ -397,6 +400,57 @@ export async function POST(req: Request) {
             }
         };
 
+        // Case 3: Auto-Trigger OT Request (New Requirement)
+        if (type === "Check-out" && is_trip && empWithPosition?.job_positions?.is_ot_eligible) {
+            const handleAutoOT = async () => {
+                try {
+                    const now = getBangkokWallClock();
+                    const workEndH = 17;
+                    const workEndM = 0;
+                    
+                    const otThresholdH = 17;
+                    const otThresholdM = 30; // OT eligibility starts after 17:30
+                    
+                    const nowMin = now.getHours() * 60 + now.getMinutes();
+                    const thresholdMin = otThresholdH * 60 + otThresholdM;
+                    
+                    if (nowMin >= thresholdMin) {
+                        // Check if OT request already exists for today
+                        const existingOt = await prisma.ot_requests.findFirst({
+                            where: {
+                                emp_id: auth.emp.emp_id,
+                                date_for: effective_date_key,
+                                status: { not: "rejected" }
+                            }
+                        });
+                        
+                        if (!existingOt) {
+                            const startTime = new Date(now);
+                            startTime.setHours(workEndH, workEndM, 0, 0);
+                            
+                            const totalHours = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                            
+                            await prisma.ot_requests.create({
+                                data: {
+                                    emp_id: auth.emp.emp_id,
+                                    date_for: effective_date_key,
+                                    start_time: startTime,
+                                    end_time: now,
+                                    total_hours: Number(totalHours.toFixed(2)),
+                                    reason: "Trip Log Check-out / อัตโนมัติ",
+                                    status: "pending",
+                                    supervisor_id: (auth.emp as any).supervisor_id || null
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("[API/CHECKIN] Auto-OT Error:", e);
+                }
+            };
+            handleAutoOT();
+        }
+
         // 🔥 Execute without await to avoid blocking the main API response
         handleNotification();
     }
@@ -405,5 +459,6 @@ export async function POST(req: Request) {
         ok: true,
         id: row.id.toString(), // 🔥 FIX BigInt
         distance: Math.round(distance),
+        auto_ot: type === "Check-out" && is_trip && empWithPosition?.job_positions?.is_ot_eligible
     });
 }

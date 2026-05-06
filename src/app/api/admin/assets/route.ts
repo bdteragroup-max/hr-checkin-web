@@ -20,7 +20,7 @@ export async function GET(req: Request) {
             where: whereClause,
             include: {
                 asset_borrowings: {
-                    where: { status: "borrowed" },
+                    where: { status: { in: ["borrowed", "reserved"] } },
                     include: {
                         employee: { select: { name: true, nickname: true } }
                     }

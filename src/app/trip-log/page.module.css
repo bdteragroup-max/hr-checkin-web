@@ -240,12 +240,13 @@
 .mainBtnContainer {
     margin: 24px 0;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .updateBtn {
-    width: 140px;
-    height: 140px;
+    width: 100px;
+    height: 100px;
     background: var(--red);
     background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
     border: none;
@@ -255,7 +256,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     cursor: pointer;
     box-shadow: var(--shadow-red);
     transition: all 0.2s;
@@ -263,9 +264,25 @@
     overflow: hidden;
 }
 
+.updateBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.accommodationBtn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.28);
+}
+
+.checkoutBtn {
+    background: linear-gradient(135deg, #e8450a 0%, #c23b08 100%);
+    box-shadow: 0 4px 16px rgba(232, 69, 10, 0.28);
+}
+
 .updateBtnText {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
 }

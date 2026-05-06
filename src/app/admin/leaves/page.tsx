@@ -21,6 +21,7 @@ type LeaveRow = {
     days?: number;
     minutes?: number;
     handover_person?: string | null;
+    attachment_url?: string | null;
     employees?: {
         supervisor_id?: string | null;
         departments?: {
@@ -481,9 +482,10 @@ export default function AdminLeavesPage() {
                                                 <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
                                                 <th style={{ width: "12%" }}>ประเภท (Type)</th>
                                                 <th style={{ width: "18%" }}>วันที่ (Date)</th>
-                                                <th style={{ width: "12%", textAlign: "center" }}>จำนวน (Duration)</th>
-                                                <th style={{ width: "20%" }}>เหตุผล (Reason)</th>
-                                                <th style={{ width: "12%" }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "10%", textAlign: "center" }}>จำนวน (Duration)</th>
+                                                <th style={{ width: "15%" }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "10%" }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "60px", textAlign: "center" }}>ไฟล์</th>
                                                 <th style={{ width: "140px", textAlign: "center" }}>จัดการ</th>
                                             </tr>
                                         </thead>
@@ -512,6 +514,13 @@ export default function AdminLeavesPage() {
                                                             </div>
                                                         </td>
                                                         <td style={{ color: "var(--text2)", fontSize: 11, fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
+                                                        <td style={{ textAlign: "center" }}>
+                                                            {r.attachment_url ? (
+                                                                <a href={r.attachment_url} target="_blank" rel="noreferrer" title="ดูเอกสารแนบ" style={{ color: "var(--blue)" }}>
+                                                                    <DocumentTextIcon width={24} style={{ margin: "0 auto" }} />
+                                                                </a>
+                                                            ) : "—"}
+                                                        </td>
                                                         <td>
                                                             <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
                                                                 <span className={badgeClass(r.status)} style={{ fontSize: 10, padding: "2px 8px" }}>
@@ -562,11 +571,12 @@ export default function AdminLeavesPage() {
                                         <thead>
                                             <tr>
                                                 <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
-                                                <th style={{ width: "12%" }}>ประเภท (Type)</th>
+                                                <th style={{ width: "10%" }}>ประเภท (Type)</th>
                                                 <th style={{ width: "18%" }}>วันที่ (Date)</th>
                                                 <th style={{ width: "10%", textAlign: "center" }}>จํานวน (Days)</th>
-                                                <th style={{ width: "22%" }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "17%" }}>เหตุผล (Reason)</th>
                                                 <th style={{ width: "10%" }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "60px", textAlign: "center" }}>ไฟล์</th>
                                                 <th style={{ width: "160px", textAlign: "center" }}>สถานะ / จัดการ</th>
                                             </tr>
                                         </thead>
@@ -614,6 +624,13 @@ export default function AdminLeavesPage() {
                                                         </div>
                                                     </td>
                                                     <td style={{ fontSize: 11, color: "var(--text2)", fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
+                                                    <td style={{ textAlign: "center" }}>
+                                                        {r.attachment_url ? (
+                                                            <a href={r.attachment_url} target="_blank" rel="noreferrer" title="ดูเอกสารแนบ" style={{ color: "var(--blue)" }}>
+                                                                <DocumentTextIcon width={24} style={{ margin: "0 auto" }} />
+                                                            </a>
+                                                        ) : "—"}
+                                                    </td>
                                                     <td>
                                                         <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
                                                             <span className={badgeClass(r.status)}>

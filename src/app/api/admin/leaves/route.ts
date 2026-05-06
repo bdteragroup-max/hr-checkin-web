@@ -78,6 +78,7 @@ export async function GET(req: Request) {
                 supervisor_id: true,
                 supervisor_approved_at: true,
                 handover_person: true,
+                attachment_url: true,
                 employees: {
                     select: {
                         name: true,

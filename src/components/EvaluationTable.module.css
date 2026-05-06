@@ -1,0 +1,110 @@
+.tableWrapper {
+    width: 100%;
+    border: 1px solid #000;
+    overflow: hidden;
+    margin: 20px 0;
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+    box-sizing: border-box;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background-color: #fff;
+    /* Borders are handled by cells, but we ensure no collapse issues */
+}
+
+.table th, 
+.table td {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    line-height: 1.6;
+    box-sizing: border-box;
+    vertical-align: middle;
+    font-size: 13px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.table th {
+    background-color: #f8fafc;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Column Sizes */
+.topicCol { width: 24%; }
+.scoreCol { width: 5%; }
+.weightCol { width: 7%; }
+.totalCol { width: 8%; }
+.commentCol { width: auto; }
+
+/* Cell Styles */
+.topicCell {
+    text-align: left;
+    padding-left: 10px;
+}
+
+.checkCell {
+    text-align: center;
+    font-weight: bold;
+}
+
+.rangeContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+}
+
+.rangeLabel {
+    font-size: 10px;
+    border-bottom: 0.5px solid #ccc;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.rangeCheck {
+    font-size: 16px;
+}
+
+.centerCell {
+    text-align: center;
+}
+
+.centerCellBold {
+    text-align: center;
+    font-weight: bold;
+}
+
+.commentCell {
+    text-align: left;
+}
+
+.commentContent {
+    max-width: 100%;
+}
+
+/* Footer Styles */
+.footerLabel,
+.footerTotal,
+.footerGrade {
+    font-weight: bold;
+    background-color: #f1f5f9;
+    text-align: center;
+    font-size: 14px;
+    padding: 10px;
+}
+
+.footerTotal {
+    text-align: left;
+    padding-left: 30px;
+}
+
+/* Zebra Stripe */
+.table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
