@@ -61,11 +61,16 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }
 
+        const supervisor = await prisma.employees.findUnique({
+            where: { emp_id: user.emp_id },
+            select: { name: true }
+        });
+
         const updated = await prisma.general_welfare_claims.update({
             where: { id },
             data: {
                 supervisor_status: status,
-                supervisor_approved_by: user.name || user.emp_id,
+                supervisor_approved_by: supervisor?.name || user.emp_id,
                 supervisor_approved_at: new Date(),
                 remark: remark ? `${claim.remark || ""}\n[Supervisor]: ${remark}` : claim.remark
             }
