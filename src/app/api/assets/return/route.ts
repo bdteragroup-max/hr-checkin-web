@@ -40,10 +40,17 @@ export async function POST(req: Request) {
 
         // Process in a transaction
         const result = await prisma.$transaction(async (tx) => {
+            const safeParseDate = (dateStr: string) => {
+                if (!dateStr) return new Date();
+                if (dateStr.includes("Z") || (dateStr.includes("+") && dateStr.includes("T"))) return new Date(dateStr);
+                if (dateStr.includes("T")) return new Date(`${dateStr}+07:00`);
+                return new Date(`${dateStr}T00:00:00+07:00`);
+            };
+
             const updatedBorrowing = await tx.asset_borrowings.update({
                 where: { id: Number(borrowing_id) },
                 data: {
-                    actual_return_date: new Date(actual_return_date),
+                    actual_return_date: safeParseDate(actual_return_date),
                     condition_at_return: condition_at_return || null,
                     is_damaged: is_damaged || false,
                     photo_url_return: photo_url_return || null,

@@ -14,8 +14,37 @@ import {
     DocumentTextIcon,
     CheckCircleIcon,
     ClockIcon,
-    ClipboardDocumentListIcon
+    ClipboardDocumentListIcon,
+    ArrowLeftIcon
 } from "@heroicons/react/24/outline";
+
+/** 24-hour time picker using two selects */
+function TimePicker({ value, onChange, required }: { value: string; onChange: (v: string) => void; required?: boolean }) {
+    const [h, m] = (value || "00:00").split(":");
+    const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+    const mins = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+    return (
+        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            <select
+                value={h}
+                onChange={e => onChange(`${e.target.value}:${m}`)}
+                required={required}
+                style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", border: "1px solid var(--border, #e2e8f0)", fontSize: "14px", backgroundColor: "var(--surface, #fff)", color: "var(--text1, #0f172a)", cursor: "pointer" }}
+            >
+                {hours.map(hh => <option key={hh} value={hh}>{hh}</option>)}
+            </select>
+            <span style={{ fontWeight: 700, color: "var(--text3, #64748b)", fontSize: "16px" }}>:</span>
+            <select
+                value={m}
+                onChange={e => onChange(`${h}:${e.target.value}`)}
+                required={required}
+                style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", border: "1px solid var(--border, #e2e8f0)", fontSize: "14px", backgroundColor: "var(--surface, #fff)", color: "var(--text1, #0f172a)", cursor: "pointer" }}
+            >
+                {mins.map(mm => <option key={mm} value={mm}>{mm}</option>)}
+            </select>
+        </div>
+    );
+}
 
 type Asset = {
     id: number;
@@ -46,13 +75,17 @@ export default function AssetBorrowPage() {
     const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
     const [returnData, setReturnData] = useState({
         actual_return_date: new Date().toISOString().split("T")[0],
+        actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
         is_damaged: false
     });
 
+    const now = new Date();
     const [formData, setFormData] = useState({
-        borrow_date: new Date().toISOString().split("T")[0],
+        borrow_date: now.toISOString().split("T")[0],
+        borrow_time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         expected_return_date: "",
+        expected_return_time: "17:00",
         location: "",
         remark: ""
     });
@@ -119,6 +152,9 @@ export default function AssetBorrowPage() {
             return;
         }
 
+        const borrowDatetime = `${formData.borrow_date}T${formData.borrow_time}:00`;
+        const returnDatetime = `${formData.expected_return_date}T${formData.expected_return_time}:00`;
+
         setSubmitting(true);
         try {
             const res = await fetch("/api/assets/borrow", {
@@ -126,7 +162,10 @@ export default function AssetBorrowPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     asset_id: selectedAsset.id,
-                    ...formData,
+                    borrow_date: borrowDatetime,
+                    expected_return_date: returnDatetime,
+                    location: formData.location,
+                    remark: formData.remark,
                     photo_url_borrow: borrowPhoto
                 })
             });
@@ -136,9 +175,12 @@ export default function AssetBorrowPage() {
                 setAlert({ visible: true, message: "บันทึกการยืนอุปกรณ์เรียบร้อยแล้ว", type: "ok" });
                 setSelectedAsset(null);
                 setBorrowPhoto(null);
+                const n = new Date();
                 setFormData({
-                    borrow_date: new Date().toISOString().split("T")[0],
+                    borrow_date: n.toISOString().split("T")[0],
+                    borrow_time: n.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     expected_return_date: "",
+                    expected_return_time: "17:00",
                     location: "",
                     remark: ""
                 });
@@ -156,8 +198,10 @@ export default function AssetBorrowPage() {
     function openReturnModal(borrowing: any) {
         setSelectedReturn(borrowing);
         setReturnPhoto(null);
+        const now = new Date();
         setReturnData({
-            actual_return_date: new Date().toISOString().split("T")[0],
+            actual_return_date: now.toISOString().split("T")[0],
+            actual_return_time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
             condition_at_return: "",
             is_damaged: false
         });
@@ -171,6 +215,8 @@ export default function AssetBorrowPage() {
             return;
         }
 
+        const returnDatetime = `${returnData.actual_return_date}T${returnData.actual_return_time}:00`;
+
         setSubmitting(true);
         try {
             const res = await fetch("/api/assets/return", {
@@ -178,7 +224,9 @@ export default function AssetBorrowPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     borrowing_id: selectedReturn.id,
-                    ...returnData,
+                    actual_return_date: returnDatetime,
+                    condition_at_return: returnData.condition_at_return,
+                    is_damaged: returnData.is_damaged,
                     photo_url_return: returnPhoto
                 })
             });
@@ -265,7 +313,9 @@ export default function AssetBorrowPage() {
 
                                         {asset.image_url && (
                                             <div className={styles.assetImageWrap}>
-                                                <img src={asset.image_url} alt={asset.name} className={styles.assetImage} />
+                                                <div className={styles.museumFrame}>
+                                                    <img src={asset.image_url} alt={asset.name} className={styles.assetImage} />
+                                                </div>
                                             </div>
                                         )}
 
@@ -339,7 +389,7 @@ export default function AssetBorrowPage() {
                         <form onSubmit={handleSubmit} className={styles.form}>
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
-                                    <label>วันที่เริ่มยืม</label>
+                                    <label>วันที่เริ่มยืม <span style={{ color: "#dc2626" }}>*</span></label>
                                     <input
                                         type="date"
                                         value={formData.borrow_date}
@@ -348,7 +398,13 @@ export default function AssetBorrowPage() {
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
-                                    <label>กำหนดวันคืน</label>
+                                    <label>เวลาที่ยืม <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={formData.borrow_time} onChange={v => setFormData({ ...formData, borrow_time: v })} required />
+                                </div>
+                            </div>
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label>กำหนดวันคืน <span style={{ color: "#dc2626" }}>*</span></label>
                                     <input
                                         type="date"
                                         value={formData.expected_return_date}
@@ -356,6 +412,10 @@ export default function AssetBorrowPage() {
                                         onChange={e => setFormData({ ...formData, expected_return_date: e.target.value })}
                                         required
                                     />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label>เวลาที่คืน <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={formData.expected_return_time} onChange={v => setFormData({ ...formData, expected_return_time: v })} required />
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
@@ -382,8 +442,10 @@ export default function AssetBorrowPage() {
                                 <div className={styles.photoUploadBox}>
                                     {borrowPhoto ? (
                                         <div className={styles.photoPreview}>
-                                            <img src={borrowPhoto} alt="Borrow Condition" />
-                                            <button type="button" className={styles.removePhoto} onClick={() => setBorrowPhoto(null)}><XMarkIcon width={20} /></button>
+                                            <div className={styles.museumFrame}>
+                                                <img src={borrowPhoto} alt="Borrow Condition" />
+                                                <button type="button" className={styles.removePhoto} onClick={() => setBorrowPhoto(null)}><XMarkIcon width={20} /></button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className={styles.uploadTrigger}>
@@ -427,7 +489,9 @@ export default function AssetBorrowPage() {
                                 <div className={styles.compareItem}>
                                     <label>รูปสภาพเมื่อยืม</label>
                                     {selectedReturn.photo_url_borrow ? (
-                                        <img src={selectedReturn.photo_url_borrow} alt="Before" className={styles.compareImg} />
+                                        <div className={styles.museumFrame}>
+                                            <img src={selectedReturn.photo_url_borrow} alt="Before" className={styles.compareImg} />
+                                        </div>
                                     ) : (
                                         <div className={styles.noPhoto}>ไม่มีรูปภาพ</div>
                                     )}
@@ -438,8 +502,10 @@ export default function AssetBorrowPage() {
                                     <div className={styles.photoUploadBox}>
                                         {returnPhoto ? (
                                             <div className={styles.photoPreview}>
-                                                <img src={returnPhoto} alt="Return Condition" className={styles.compareImg} />
-                                                <button type="button" className={styles.removePhoto} onClick={() => setReturnPhoto(null)}><XMarkIcon width={20} /></button>
+                                                <div className={styles.museumFrame}>
+                                                    <img src={returnPhoto} alt="Return Condition" className={styles.compareImg} />
+                                                    <button type="button" className={styles.removePhoto} onClick={() => setReturnPhoto(null)}><XMarkIcon width={20} /></button>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className={styles.uploadTrigger}>
@@ -460,14 +526,20 @@ export default function AssetBorrowPage() {
                                 </div>
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label>วันที่คืนจริง</label>
-                                <input
-                                    type="date"
-                                    value={returnData.actual_return_date}
-                                    onChange={e => setReturnData({ ...returnData, actual_return_date: e.target.value })}
-                                    required
-                                />
+                            <div className={styles.formRow}>
+                                <div className={styles.formGroup}>
+                                    <label>วันที่คืนจริง <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <input
+                                        type="date"
+                                        value={returnData.actual_return_date}
+                                        onChange={e => setReturnData({ ...returnData, actual_return_date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label>เวลาที่คืนจริง <span style={{ color: "#dc2626" }}>*</span></label>
+                                    <TimePicker value={returnData.actual_return_time} onChange={v => setReturnData({ ...returnData, actual_return_time: v })} required />
+                                </div>
                             </div>
 
                             <div className={styles.formGroup}>

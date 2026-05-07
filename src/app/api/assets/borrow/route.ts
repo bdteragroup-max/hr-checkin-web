@@ -17,6 +17,7 @@ export async function POST(req: Request) {
         } = body;
 
         if (!asset_id || !borrow_date || !expected_return_date) {
+            console.warn("[API/assets/borrow] 400: Missing required fields", { asset_id, borrow_date, expected_return_date });
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
         }
 
@@ -41,22 +42,49 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "ASSET_NOT_FOUND" }, { status: 404 });
         }
 
-        const borrowStart = new Date(`${borrow_date}+07:00`);
-        const borrowEnd = new Date(`${expected_return_date}+07:00`);
+        let isDateOnly = false;
+        const safeParseDate = (dateStr: string) => {
+            if (!dateStr) return new Date(NaN);
+            // If already has timezone (Z or + with T), parse directly
+            if (dateStr.includes("Z") || (dateStr.includes("+") && dateStr.includes("T"))) {
+                return new Date(dateStr);
+            }
+            // If has time (T) but no timezone, add +07:00
+            if (dateStr.includes("T")) {
+                return new Date(`${dateStr}+07:00`);
+            }
+            // If date only (no T), add T00:00:00+07:00
+            isDateOnly = true;
+            return new Date(`${dateStr}T00:00:00+07:00`);
+        };
+
+        const borrowStart = safeParseDate(borrow_date);
+        const borrowEnd = safeParseDate(expected_return_date);
         const now = new Date(); // now is already UTC-aware/local-aware correctly
 
         // Validate dates
         if (isNaN(borrowStart.getTime()) || isNaN(borrowEnd.getTime())) {
+            console.warn("[API/assets/borrow] 400: Invalid date format", { borrow_date, expected_return_date });
             return NextResponse.json({ error: "INVALID_DATE", message: "Invalid date format." }, { status: 400 });
         }
 
         if (borrowEnd <= borrowStart) {
+            console.warn("[API/assets/borrow] 400: Invalid date range (End <= Start)", { borrowStart, borrowEnd });
             return NextResponse.json({ error: "INVALID_DATE_RANGE", message: "Return time must be after borrow time." }, { status: 400 });
         }
 
-        // Cannot borrow in the past (allow up to 2 hours grace period for logging)
+        // Cannot borrow in the past
+        // If it's a date-only input, we allow "today" or later.
+        // If it has time, we allow up to 2 hours grace period.
         const gracePeriod = new Date(now.getTime() - 120 * 60 * 1000);
-        if (borrowStart < gracePeriod) {
+        if (isDateOnly) {
+            const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }); // YYYY-MM-DD
+            if (borrow_date < todayStr) {
+                console.warn("[API/assets/borrow] 400: Borrow date in the past", { borrow_date, todayStr });
+                return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow for a past date." }, { status: 400 });
+            }
+        } else if (borrowStart < gracePeriod) {
+            console.warn("[API/assets/borrow] 400: Borrow start in the past (Grace Period)", { borrowStart, now });
             return NextResponse.json({ error: "INVALID_DATE", message: "Cannot borrow starting in the past (more than 2 hours ago)." }, { status: 400 });
         }
 
@@ -85,6 +113,7 @@ export async function POST(req: Request) {
                 timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric",
                 hour: "2-digit", minute: "2-digit"
             });
+            console.warn("[API/assets/borrow] 400: Time overlap detected", { asset_id, borrowStart, borrowEnd });
             return NextResponse.json({ 
                 error: "TIME_OVERLAP", 
                 message: `รถนี้ถูกจองในช่วงเวลาที่ซ้อนทับกัน (${conflictStart} - ${conflictEnd})` 
