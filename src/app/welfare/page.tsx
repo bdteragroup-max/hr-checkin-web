@@ -73,7 +73,7 @@ export default function WelfarePage() {
     const [msg, setMsg] = useState<{ text: string, type: 'ok' | 'bad' } | null>(null);
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
-    const showAlert = (message: string, type: 'ok' | 'bad' = 'bad') => {
+    const showAlert = (message: string, type: 'ok' | 'error' = 'error') => {
         setAlert({ visible: true, message, type });
     };
 
