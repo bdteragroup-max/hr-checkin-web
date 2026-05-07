@@ -516,9 +516,13 @@ export default function AdminLeavesPage() {
                                                         <td style={{ color: "var(--text2)", fontSize: 11, fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
                                                         <td style={{ textAlign: "center" }}>
                                                             {r.attachment_url ? (
-                                                                <a href={r.attachment_url} target="_blank" rel="noreferrer" title="ดูเอกสารแนบ" style={{ color: "var(--blue)" }}>
-                                                                    <DocumentTextIcon width={24} style={{ margin: "0 auto" }} />
-                                                                </a>
+                                                                <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
+                                                                    {r.attachment_url.split(",").map((url, i) => (
+                                                                        <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i+1}`} style={{ color: "var(--blue)" }}>
+                                                                            <DocumentTextIcon width={24} />
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
                                                             ) : "—"}
                                                         </td>
                                                         <td>
@@ -626,9 +630,13 @@ export default function AdminLeavesPage() {
                                                     <td style={{ fontSize: 11, color: "var(--text2)", fontWeight: 500, lineHeight: 1.4 }}>{r.handover_person || "—"}</td>
                                                     <td style={{ textAlign: "center" }}>
                                                         {r.attachment_url ? (
-                                                            <a href={r.attachment_url} target="_blank" rel="noreferrer" title="ดูเอกสารแนบ" style={{ color: "var(--blue)" }}>
-                                                                <DocumentTextIcon width={24} style={{ margin: "0 auto" }} />
-                                                            </a>
+                                                            <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
+                                                                {r.attachment_url.split(",").map((url, i) => (
+                                                                    <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i+1}`} style={{ color: "var(--blue)" }}>
+                                                                        <DocumentTextIcon width={24} />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
                                                         ) : "—"}
                                                     </td>
                                                     <td>

@@ -154,16 +154,66 @@ export default function CarBorrowPage() {
         }
     }
 
+    async function compressImage(file: File): Promise<File | Blob> {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_SIZE = 1600; // Resize to max 1600px
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
+                            } else {
+                                resolve(file);
+                            }
+                        },
+                        "image/jpeg",
+                        0.8 // 80% quality
+                    );
+                };
+            };
+        });
+    }
+
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, type: "borrow" | "return", slot: string) {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setUploading(`${type}-${slot}`);
-        const form = new FormData();
-        form.append("file", file);
-        form.append("prefix", `car-${type}-${slot}`);
-
+        
         try {
+            // Compress image before upload
+            const processedFile = file.type.startsWith("image/") ? await compressImage(file) : file;
+
+            const form = new FormData();
+            form.append("file", processedFile);
+            form.append("prefix", `car-${type}-${slot}`);
+
             const res = await fetch("/api/upload", { method: "POST", body: form });
             const data = await res.json();
             if (data.ok) {
@@ -173,12 +223,15 @@ export default function CarBorrowPage() {
                     setReturnPhotos(prev => ({ ...prev, [slot]: data.url }));
                 }
             } else {
-                setAlert({ visible: true, message: data.error || "Upload Failed", type: "error" });
+                setAlert({ visible: true, message: data.error === "FILE_TOO_LARGE" ? "ไฟล์รูปภาพใหญ่เกินไป กรุณาลดความละเอียด" : (data.error || "Upload Failed"), type: "error" });
             }
         } catch (err) {
             console.error(err);
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง", type: "error" });
         } finally {
             setUploading(null);
+            // Clear the input value so the same file can be selected again if needed
+            e.target.value = "";
         }
     }
 
@@ -781,7 +834,14 @@ export default function CarBorrowPage() {
                                                         onChange={(e) => handlePhotoUpload(e, "return", slot.id)}
                                                     />
                                                     <label htmlFor={`return-${slot.id}`} className={styles.uploadBtn}>
-                                                        {uploading === `return-${slot.id}` ? "..." : <><CameraIcon width={20} /> ถ่ายรูป</>}
+                                                        {uploading === `return-${slot.id}` ? (
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                <ClockIcon width={16} className="animate-spin" />
+                                                                <span>กำลังอัปโหลด...</span>
+                                                            </div>
+                                                        ) : (
+                                                            <><CameraIcon width={20} /> ถ่ายรูป</>
+                                                        )}
                                                     </label>
                                                 </div>
                                             )}

@@ -14,6 +14,7 @@ import {
     PaperAirplaneIcon,
     CalendarIcon
 } from "@heroicons/react/24/solid";
+import SearchableSelect from "@/components/SearchableSelect";
 import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS, formatDateShortThai } from "@/utils/time";
 
 const getLeaveHourOptions = (dateStr: string) => {
@@ -238,8 +239,8 @@ export default function LeavePage() {
     }, [endDate, endHour]);
 
     const [reason, setReason] = useState("");
-    const [attachmentUrl, setAttachmentUrl] = useState("");
-    const [fileName, setFileName] = useState("");
+    const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
+    const [fileNames, setFileNames] = useState<string[]>([]);
 
     const [alert, setAlert] = useState<AlertModal>({ visible: false, message: "", type: "error" });
     const closeAlert = useCallback(() => setAlert(p => ({ ...p, visible: false })), []);
@@ -267,6 +268,11 @@ export default function LeavePage() {
         setAlert({ visible: true, message, type });
     }
 
+    const cleanText = (val: string) => {
+        // Allow Thai, English, Numbers, spaces, and parentheses for nicknames.
+        return val.replace(/[^a-zA-Z0-9\u0E00-\u0E7F\s()]/g, "");
+    };
+
     async function load() {
         const r = await fetch("/api/leave", { cache: "no-store" });
         if (!r.ok) { window.location.href = "/"; return; }
@@ -293,34 +299,41 @@ export default function LeavePage() {
     }
 
     async function uploadFile(file: File) {
-        setUploading(true); setFileName(file.name);
+        setUploading(true);
         try {
             const fd = new FormData(); fd.append("file", file, file.name);
             const r = await fetch("/api/upload", { method: "POST", body: fd });
             const data = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(data?.error || "UPLOAD_FAILED");
-            setAttachmentUrl(String(data.url || ""));
+            
+            const newUrl = String(data.url || "");
+            setAttachmentUrls(prev => [...prev, newUrl]);
+            setFileNames(prev => [...prev, file.name]);
+            
             showAlert("อัปโหลดเอกสารแนบสำเร็จ", "ok");
         } catch {
-            setFileName(""); setAttachmentUrl("");
-            if (fileRef.current) fileRef.current.value = "";
             showAlert("อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
-        } finally { setUploading(false); }
+        } finally { 
+            setUploading(false); 
+            if (fileRef.current) fileRef.current.value = "";
+        }
     }
 
-    async function removeFile() {
-        if (!attachmentUrl) return;
+    async function removeFile(index: number) {
+        const urlToRemove = attachmentUrls[index];
+        if (!urlToRemove) return;
+        
         setUploading(true);
         try {
             await fetch("/api/upload", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: attachmentUrl })
+                body: JSON.stringify({ url: urlToRemove })
             });
         } catch { }
-        setAttachmentUrl("");
-        setFileName("");
-        if (fileRef.current) fileRef.current.value = "";
+        
+        setAttachmentUrls(prev => prev.filter((_, i) => i !== index));
+        setFileNames(prev => prev.filter((_, i) => i !== index));
         setUploading(false);
     }
 
@@ -332,7 +345,7 @@ export default function LeavePage() {
             leave_type_id: leaveTypeId,
             start_at: startAt, end_at: endAt,
             reason: reason || null,
-            attachment_url: attachmentUrl || null,
+            attachment_url: attachmentUrls.length > 0 ? attachmentUrls.join(",") : null,
             handover_person: handoverPerson,
         };
         if (editingId) payload.id = editingId;
@@ -364,7 +377,7 @@ export default function LeavePage() {
             return;
         }
         setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
-        setAttachmentUrl(""); setFileName("");
+        setAttachmentUrls([]); setFileNames([]);
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
         await load();
@@ -373,7 +386,7 @@ export default function LeavePage() {
 
     function cancelEdit() {
         setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
-        setAttachmentUrl(""); setFileName("");
+        setAttachmentUrls([]); setFileNames([]);
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
     }
@@ -397,10 +410,13 @@ export default function LeavePage() {
         setEndDate(`${enYear}-${enMonth}-${enDay}`);
         setEndHour(String(dEnd.getHours()).padStart(2, '0'));
         setEndMin(String(dEnd.getMinutes()).padStart(2, '0'));
-        setHandoverPerson((item as any).handover_person || "");
-        setReason(item.reason || "");
-        setAttachmentUrl(item.attachment_url || "");
-        setFileName(item.attachment_url ? "มีไฟล์แนบอยู่แล้ว" : "");
+        setHandoverPerson(cleanText((item as any).handover_person || ""));
+        setReason(cleanText(item.reason || ""));
+        
+        const urls = item.attachment_url ? item.attachment_url.split(",") : [];
+        setAttachmentUrls(urls);
+        setFileNames(urls.map(() => "ไฟล์แนบเดิม"));
+        
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -442,7 +458,7 @@ export default function LeavePage() {
         }
         window.addEventListener("keydown", onKeyDown, { passive: false });
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [canSubmit, startAt, endAt, reason, attachmentUrl]);
+    }, [canSubmit, startAt, endAt, reason, attachmentUrls]);
 
     return (
         <div className={styles.page}>
@@ -601,25 +617,24 @@ export default function LeavePage() {
                         {/* Handover Person */}
                         <div style={{ marginBottom: 16 }}>
                             <label className={styles.label}>ผู้รับผิดชอบงานแทน *</label>
-                            <input 
-                                className={styles.input} 
-                                value={handoverPerson} 
-                                onChange={e => setHandoverPerson(e.target.value)} 
-                                placeholder="ระบุชื่อผู้ที่จะรับผิดชอบงานในช่วงที่ลา..."
-                                list="colleagues-list"
-                                required
+                            <SearchableSelect 
+                                options={colleagues.map(name => ({ value: name, label: name }))}
+                                value={handoverPerson}
+                                onChange={val => setHandoverPerson(val)}
+                                placeholder="เลือกหรือค้นหาชื่อผู้ที่จะรับผิดชอบงานแทน..."
                             />
-                            <datalist id="colleagues-list">
-                                {colleagues.map(name => (
-                                    <option key={name} value={name} />
-                                ))}
-                            </datalist>
                         </div>
 
                         {/* Reason & Action */}
                         <div style={{ marginBottom: 16 }}>
                             <label className={styles.label}>เหตุผลการลา *</label>
-                            <textarea className={styles.textarea} value={reason} onChange={e => setReason(e.target.value)} placeholder="ระบุรายละเอียดที่จำเป็น..." required />
+                            <textarea 
+                                className={styles.textarea} 
+                                value={reason} 
+                                onChange={e => setReason(cleanText(e.target.value))} 
+                                placeholder="ระบุรายละเอียดที่จำเป็น..." 
+                                required 
+                            />
                         </div>
 
                         <div className={styles.uploadBox}>
@@ -627,23 +642,31 @@ export default function LeavePage() {
                                 <div>
                                     <div className={styles.uploadTitle}>เอกสารแนบ</div>
                                     <div className={styles.uploadSub}>
-                                        {requireAttachment ? "บังคับแนบเอกสาร (ลาเกิน 2 วัน)" : "JPG, PNG, PDF (ถ้ามี)"}
+                                        {requireAttachment ? "บังคับแนบเอกสาร (ลาเกิน 2 วัน)" : "แนบรูปภาพหรือ PDF (ได้มากกว่า 1 ไฟล์)"}
                                     </div>
                                 </div>
                                 <button className={styles.btnOutline} onClick={() => fileRef.current?.click()} disabled={uploading} type="button">
                                     {uploading ? "กำลังอัปโหลด..." : "เลือกไฟล์"}
                                 </button>
                             </div>
-                            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" style={{ display: "none" }}
-                                onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} />
-                            {fileName && (
-                                <div className={styles.filePreviewRow}>
-                                    <div className={styles.fileName}>{fileName}</div>
-                                    <button type="button" className={styles.btnRemoveFile} onClick={removeFile} disabled={uploading}>
+                            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" multiple style={{ display: "none" }}
+                                onChange={e => { 
+                                    const files = e.target.files; 
+                                    if (files) {
+                                        for (let i = 0; i < files.length; i++) {
+                                            uploadFile(files[i]);
+                                        }
+                                    }
+                                }} />
+                            
+                            {attachmentUrls.map((url, idx) => (
+                                <div key={url} className={styles.filePreviewRow} style={{ marginTop: 8 }}>
+                                    <div className={styles.fileName}>{fileNames[idx] || "ไฟล์แนบ"}</div>
+                                    <button type="button" className={styles.btnRemoveFile} onClick={() => removeFile(idx)} disabled={uploading}>
                                         <TrashIcon width={14} /> ลบ
                                     </button>
                                 </div>
-                            )}
+                            ))}
                         </div>
 
                         <button className={styles.btnPrimaryFull} disabled={!canSubmit || loading} onClick={submit}>

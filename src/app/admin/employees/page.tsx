@@ -12,7 +12,9 @@ import {
     TrashIcon,
     CheckCircleIcon,
     NoSymbolIcon,
-    XCircleIcon
+    XCircleIcon,
+    ArrowDownTrayIcon,
+    InformationCircleIcon
 } from "@heroicons/react/24/outline";
 import SearchableSelect from "@/components/SearchableSelect";
 import { formatDateThai } from "@/utils/time";
@@ -150,6 +152,16 @@ export default function AdminEmployeesPage() {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     }
+
+    const handleExport = () => {
+        const params = new URLSearchParams();
+        if (statusFilter !== "all") params.append("status", statusFilter);
+        if (typeFilter !== "all") params.append("salary_type", typeFilter);
+        if (branchFilter !== "all") params.append("branch", branchFilter);
+        if (deptFilter !== "all") params.append("dept", String(deptFilter));
+        
+        window.location.href = `/api/admin/employees/export?${params.toString()}`;
+    };
 
     const branchName = (id: string | null) => {
         if (!id) return "—";
@@ -527,9 +539,49 @@ export default function AdminEmployeesPage() {
                                     <option key={d.id} value={d.id}>{d.name}</option>
                                 ))}
                             </select>
-                            <button className={styles.btnRefresh} onClick={load} disabled={loading}>
+                            <button className={styles.btnRefresh} onClick={load} disabled={loading} title="รีเฟรช">
                                 ↻
                             </button>
+                            <button 
+                                className={styles.btnGhost} 
+                                onClick={handleExport} 
+                                disabled={loading}
+                                style={{ height: 38 }}
+                                title="ส่งออกไฟล์ CSV"
+                            >
+                                <ArrowDownTrayIcon width={18} />
+                                Export
+                            </button>
+                        </div>
+
+                        {/* Export Guide */}
+                        <div style={{
+                            margin: "0 20px 16px",
+                            padding: "16px",
+                            background: "linear-gradient(135deg, #f8f9fb 0%, #f1f3f6 100%)",
+                            borderRadius: "12px",
+                            border: "1px solid var(--line)",
+                            display: "flex",
+                            gap: "14px",
+                            alignItems: "flex-start"
+                        }}>
+                            <div style={{
+                                background: "var(--surface)",
+                                padding: "8px",
+                                borderRadius: "10px",
+                                boxShadow: "var(--shadow-xs)",
+                                color: "var(--red)"
+                            }}>
+                                <InformationCircleIcon width={24} />
+                            </div>
+                            <div>
+                                <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>คู่มือการส่งออกข้อมูล (Data Export Guide)</h4>
+                                <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-3)", lineHeight: 1.5 }}>
+                                    ท่านสามารถกรองข้อมูลพนักงานตาม <b>สาขา, แผนก, ประเภทเงินเดือน</b> หรือ <b>สถานะ</b> โดยใช้ตัวเลือกด้านบน 
+                                    ระบบจะแสดงรายการที่ตรงตามเงื่อนไขโดยอัตโนมัติ และท่านสามารถกดปุ่ม <b>Export</b> เพื่อดาวน์โหลดไฟล์ CSV 
+                                    สำหรับนำไปใช้งานต่อใน Excel ได้ทันที
+                                </p>
+                            </div>
                         </div>
 
                         {/* Table */}

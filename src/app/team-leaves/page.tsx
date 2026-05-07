@@ -201,10 +201,12 @@ export default function TeamLeavesPage() {
                                     </div>
 
                                     {x.attachment_url && (
-                                        <div style={{ marginBottom: 16 }}>
-                                            <a href={x.attachment_url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "var(--blue)", textDecoration: "underline", display: "inline-flex", alignItems: 'center', gap: 6, background: "var(--surface-2)", padding: "4px 10px", borderRadius: 6 }}>
-                                                <PaperClipIcon width={14} /> ดูเอกสารแนบ
-                                            </a>
+                                        <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            {x.attachment_url.split(",").map((url, i) => (
+                                                <a key={i} href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "var(--blue)", textDecoration: "underline", display: "inline-flex", alignItems: 'center', gap: 6, background: "var(--surface-2)", padding: "4px 10px", borderRadius: 6 }}>
+                                                    <PaperClipIcon width={14} /> เอกสารแนบ {i + 1}
+                                                </a>
+                                            ))}
                                         </div>
                                     )}
 

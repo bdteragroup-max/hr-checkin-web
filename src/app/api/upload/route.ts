@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "INVALID_FILE_TYPE" }, { status: 400 });
     }
 
-    const maxBytes = 5 * 1024 * 1024; // 5MB
+    const maxBytes = 15 * 1024 * 1024; // 15MB
     if (file.size > maxBytes) {
         return NextResponse.json({ error: "FILE_TOO_LARGE" }, { status: 400 });
     }

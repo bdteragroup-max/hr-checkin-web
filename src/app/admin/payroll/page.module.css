@@ -33,7 +33,46 @@
 
 .filters {
   display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: var(--text4);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text);
+  background: white;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(200, 41, 30, 0.1);
+}
+
+.searchInput::placeholder {
+  color: var(--text4);
+  font-weight: 400;
 }
 
 .input {

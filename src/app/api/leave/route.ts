@@ -254,10 +254,13 @@ export async function GET() {
                 is_active: true,
                 emp_id: { not: emp.emp_id }
             },
-            select: { name: true },
+            select: { name: true, nickname: true },
             orderBy: { name: 'asc' }
         });
-        colleagues = matching.map(m => m.name);
+        colleagues = matching.map(m => {
+            if (m.nickname) return `${m.name} (${m.nickname})`;
+            return m.name;
+        });
     }
 
     return NextResponse.json({ ok: true, types, list, colleagues });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import styles from "./page.module.css";
-import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 type PayrollResult = {
     emp_id: string;
@@ -68,6 +68,7 @@ export default function PayrollPage() {
     const [cycle, setCycle] = useState<{ start: string; end: string; is_published?: boolean } | null>(null);
     const [loading, setLoading] = useState(true);
     const [publishing, setPublishing] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
     // Edit Modal State
     const [showModal, setShowModal] = useState(false);
@@ -310,6 +311,15 @@ export default function PayrollPage() {
 
     const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num));
 
+    const filteredData = useMemo(() => {
+        if (!searchTerm.trim()) return data;
+        const s = searchTerm.toLowerCase();
+        return data.filter(d => 
+            d.name.toLowerCase().includes(s) || 
+            d.emp_id.toLowerCase().includes(s)
+        );
+    }, [data, searchTerm]);
+
     const groupedData = useMemo(() => {
         const companies = [
             { key: "TG", title: "บริษัท เทอรา กรุ้ป จำกัด (TG)" },
@@ -321,9 +331,9 @@ export default function PayrollPage() {
         return companies.map(comp => {
             let filtered = [];
             if (comp.key === "OTHER") {
-                filtered = data.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2)));
+                filtered = filteredData.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2)));
             } else {
-                filtered = data.filter(d => d.emp_id.toUpperCase().startsWith(comp.key));
+                filtered = filteredData.filter(d => d.emp_id.toUpperCase().startsWith(comp.key));
             }
 
             // Sub-group by Division
@@ -341,12 +351,13 @@ export default function PayrollPage() {
 
             return { title: comp.title, divisions, totalCount: filtered.length };
         }).filter(g => g.totalCount > 0);
-    }, [data]);
+    }, [filteredData]);
+
 
     const offSiteSummary = useMemo(() => {
         const summary: { [division: string]: { [role: string]: { count: number, amount: number } } } = {};
 
-        data.forEach(p => {
+        filteredData.forEach(p => {
             if (p.travel_site_allowance <= 0) return;
 
             const div = p.division || "ไม่ระบุฝ่าย (Unassigned)";
@@ -365,7 +376,7 @@ export default function PayrollPage() {
         });
 
         return summary;
-    }, [data]);
+    }, [filteredData]);
 
 
     if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูลเงินเดือน...</div>;
@@ -380,6 +391,16 @@ export default function PayrollPage() {
                     </p>
                 </div>
                 <div className={styles.filters}>
+                    <div className={styles.searchBox}>
+                        <MagnifyingGlassIcon className={styles.searchIcon} width={18} />
+                        <input 
+                            type="text" 
+                            className={styles.searchInput} 
+                            placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..." 
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                     <select className={styles.input} value={month} onChange={e => setMonth(Number(e.target.value))}>
                         {Array.from({ length: 12 }, (_, i) => (
                             <option key={i + 1} value={i + 1}>เดือน {i + 1}</option>
