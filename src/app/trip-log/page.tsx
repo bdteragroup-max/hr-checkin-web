@@ -9,20 +9,18 @@ import {
     Navigation,
     CheckCircle,
     History,
-    RotateCcw,
     Map as MapIcon,
-    AlertTriangle,
     Loader2,
     ArrowLeft,
-    ClipboardList
 } from "lucide-react";
-import Link from "next/link";
 import { formatTime24h } from "@/utils/time";
+import AlertModal, { AlertState } from "@/components/AlertModal";
+import WorkPlanModal from "@/components/WorkPlanModal";
 
 /* ──────────────────────────────────────────
    TYPES & UTILS
 ────────────────────────────────────────── */
-interface Me { emp_id: string; name: string; branch_id: string | null; }
+interface Me { emp_id: string; name: string; branch_id: string | null; is_checkin_exempt?: boolean; }
 interface TripItem {
     id: string;
     timestamp: string;
@@ -60,24 +58,33 @@ export default function TripLogPage() {
     const [history, setHistory] = useState<TripItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-
-    // Form State
+    // Form State — single field: locationName is required, no separate remark
     const [locationName, setLocationName] = useState("");
-    const [remark, setRemark] = useState("");
     const [gps, setGps] = useState<{ lat: number; lon: number; acc: number } | null>(null);
 
     // Flow: 'log' | 'camera' | 'submitting'
     const [step, setStep] = useState<'log' | 'camera' | 'submitting'>('log');
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isCameraReady, setIsCameraReady] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'update' | 'accommodation' | 'checkout'>('update');
+    const [showWorkPlan, setShowWorkPlan] = useState(false);
+    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
+    const [isPlanLoading, setIsPlanLoading] = useState(true);
+
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me]);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const locationInputRef = useRef<HTMLInputElement>(null);
 
     // Alert State
-    const [alertData, setAlertData] = useState<{ type: 'success' | 'warning' | 'error', msg: string } | null>(null);
+    const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
     // Initial Load
     useEffect(() => {
@@ -90,7 +97,6 @@ export default function TripLogPage() {
 
                 await refreshHistory();
 
-                // Start GPS
                 if (navigator.geolocation) {
                     navigator.geolocation.watchPosition(
                         (p) => setGps({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
@@ -98,6 +104,14 @@ export default function TripLogPage() {
                         { enableHighAccuracy: true }
                     );
                 }
+
+                // Check if work plan is already submitted today
+                const planRes = await fetch("/api/work-plans");
+                const planData = await planRes.json();
+                if (planData.ok && planData.plan) {
+                    setPlanSubmittedToday(true);
+                }
+                setIsPlanLoading(false);
             } catch (e) {
                 console.error(e);
             } finally {
@@ -128,11 +142,25 @@ export default function TripLogPage() {
     }
 
     /* ── CAMERA ── */
-    async function startCamera() {
+    async function openCamera(action: 'update' | 'accommodation' | 'checkout') {
         if (!locationName.trim()) {
-            setAlertData({ type: 'warning', msg: "กรุณาระบุสถานที่ก่อนถ่ายรูป" });
+            setAlert({ visible: true, message: "กรุณาระบุสถานที่หรือชื่อลูกค้าก่อน", type: "error" });
+            locationInputRef.current?.focus();
             return;
         }
+
+        // If no plan today, show modal before camera
+        if (!planSubmittedToday && !me?.is_checkin_exempt) {
+            setPendingAction(action);
+            setShowWorkPlan(true);
+            return;
+        }
+
+        proceedToCamera(action);
+    }
+
+    async function proceedToCamera(action: 'update' | 'accommodation' | 'checkout') {
+        setPendingAction(action);
         setStep('camera');
         setPhotoPreview(null);
         setIsCameraReady(false);
@@ -147,8 +175,28 @@ export default function TripLogPage() {
                 videoRef.current.onloadedmetadata = () => setIsCameraReady(true);
             }
         } catch (e) {
-            setAlertData({ type: 'error', msg: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง" });
+            setAlert({ visible: true, message: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง", type: "error" });
             setStep('log');
+        }
+    }
+
+    async function handleWorkPlanSubmit(data: any) {
+        try {
+            const res = await fetch("/api/work-plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.ok) {
+                setPlanSubmittedToday(true);
+                setShowWorkPlan(false);
+                proceedToCamera(pendingAction);
+            } else {
+                throw new Error(result.error || "Failed to submit plan");
+            }
+        } catch (e: any) {
+            setAlert({ visible: true, message: "บันทึกแผนงานไม่สำเร็จ: " + e.message, type: "error" });
         }
     }
 
@@ -168,44 +216,39 @@ export default function TripLogPage() {
             if (!ctx) return;
             ctx.drawImage(v, 0, 0);
 
-            // Watermark
+            // Watermark — locationName appears as the location line
             const w = c.width;
             const h = c.height;
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.fillRect(0, h - 80, w, 80);
+            ctx.fillStyle = "rgba(0,0,0,0.55)";
+            ctx.fillRect(0, h - 90, w, 90);
+
             ctx.fillStyle = "white";
-            ctx.font = "bold 24px Sarabun";
-            ctx.fillText(me?.name || "", 20, h - 45);
-            ctx.font = "18px Sarabun";
-            ctx.fillText(`${getThaiDateStr()} ${getThaiTimeStr()} น.`, 20, h - 20);
+            ctx.font = "bold 26px Sarabun";
+            ctx.textAlign = "left";
+            ctx.fillText(me?.name || "", 20, h - 55);
+
+            ctx.font = "20px Sarabun";
+            ctx.fillText(`📍 ${locationName}`, 20, h - 28);
+
+            ctx.font = "16px Sarabun";
+            ctx.fillText(`${getThaiDateStr()} ${getThaiTimeStr()} น.`, 20, h - 8);
+
             ctx.textAlign = "right";
-            ctx.fillText("Smart Journey Tracking", w - 20, h - 20);
+            ctx.font = "14px Sarabun";
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            ctx.fillText("Smart Journey Tracking", w - 20, h - 8);
 
             setPhotoPreview(c.toDataURL("image/jpeg", 0.85));
             stopCamera();
         } catch (e) {
-            setAlertData({ type: 'error', msg: "เกิดข้อผิดพลาดในการถ่ายรูป" });
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการถ่ายรูป", type: "error" });
         }
     }
 
-    /* ── ACTIONS ── */
-    async function handleCheckout() {
-        if (!gps) return;
-        setLocationName("สิ้นสุดการเดินทาง");
-        setStep('camera');
-        (window as any).isTripCheckout = true;
-    }
-
-    async function handleAccommodation() {
-        if (!gps) return;
-        setLocationName("เช็คอินที่พัก");
-        setStep('camera');
-        (window as any).isTripCheckout = true;
-    }
-
+    /* ── SUBMIT ── */
     async function handleUpdate() {
         if (!photoPreview) return;
-        const isCheckout = (window as any).isTripCheckout;
+        const isCheckout = pendingAction === 'checkout' || pendingAction === 'accommodation';
         setStep('submitting');
         try {
             const blob = await (await fetch(photoPreview)).blob();
@@ -215,17 +258,23 @@ export default function TripLogPage() {
             const upData = await resUp.json();
             if (!resUp.ok) throw new Error(upData.error);
 
+            const typeMap = {
+                update: "Trip-Update",
+                accommodation: "Check-out",
+                checkout: "Check-out",
+            };
+
             const resSave = await fetch("/api/checkins", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    type: isCheckout ? "Check-out" : "Trip-Update",
+                    type: typeMap[pendingAction],
                     is_trip: true,
                     lat: gps?.lat,
                     lon: gps?.lon,
                     accuracy: gps?.acc,
                     photo_url: upData.url,
-                    remark: `${locationName}${remark ? ' | ' + remark : ''}`,
+                    remark: locationName,
                     branch_name: locationName,
                     branch_id: me?.branch_id
                 })
@@ -233,22 +282,23 @@ export default function TripLogPage() {
             const saveData = await resSave.json();
             if (!resSave.ok) throw new Error(saveData.error || "บันทึกล้มเหลว");
 
-            let successMsg = isCheckout ? "สิ้นสุดการเดินทางเรียบร้อยแล้ว" : "บันทึกพิกัดการเดินทางและแจ้งเตือนเรียบร้อยแล้ว";
+            let successMsg = isCheckout
+                ? "สิ้นสุดการเดินทางเรียบร้อยแล้ว"
+                : "บันทึกพิกัดการเดินทางเรียบร้อยแล้ว";
             if (saveData.auto_ot) {
-                successMsg += "\n(ระบบได้ส่งคำขอ OT อัตโนมัติให้คุณเรียบร้อยแล้ว)";
+                successMsg += "\n(ระบบส่งคำขอ OT อัตโนมัติให้แล้ว)";
             }
 
-            setAlertData({ type: 'success', msg: successMsg });
+            setAlert({ visible: true, message: successMsg, type: "ok" });
             setLocationName("");
-            setRemark("");
             setPhotoPreview(null);
             setStep('log');
-            (window as any).isTripCheckout = false;
             await refreshHistory();
         } catch (e: any) {
-            setAlertData({ type: 'error', msg: e.message || "เกิดข้อผิดพลาดในการบันทึก" });
+            let msg = e.message || "เกิดข้อผิดพลาดในการบันทึก";
+            if (msg === "WORK_PLAN_REQUIRED") msg = "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ";
+            setAlert({ visible: true, message: msg, type: "error" });
             setStep('log');
-            (window as any).isTripCheckout = false;
         }
     }
 
@@ -261,7 +311,8 @@ export default function TripLogPage() {
     return (
         <div className={styles.wrapper}>
             <div className={styles.wrap}>
-                {/* ── HERO SECTION ── */}
+
+                {/* ── HERO ── */}
                 <header className={styles.hero}>
                     <h1 className={styles.heroH1}>เดินทางต่างจังหวัด</h1>
                     <div className={styles.heroMeta}>
@@ -276,84 +327,43 @@ export default function TripLogPage() {
                     </div>
                 </header>
 
-
-
-                {/* ── UPDATE FORM ── */}
+                {/* ── LOG FORM ── */}
                 {step === 'log' && (
                     <div className={styles.card}>
+                        {/* GPS Status */}
                         <div className={styles.sectionLabel}>
-                            <div className={styles.dot} />
-                            <span>อัปเดตสถานะการเดินทาง</span>
-                        </div>
-
-                        <div className={styles.mainBtnContainer}>
-                            <button
-                                className={styles.updateBtn}
-                                onClick={gps ? startCamera : undefined}
-                                disabled={!gps}
-                                title="บันทึกพิกัด"
-                            >
-                                <Navigation size={32} />
-                                <span className={styles.updateBtnText}>Update</span>
-                            </button>
-
-                            <button
-                                className={`${styles.updateBtn} ${styles.accommodationBtn}`}
-                                onClick={gps ? handleAccommodation : undefined}
-                                disabled={!gps}
-                                title="เช็คอินที่พัก"
-                            >
-                                <MapIcon size={32} />
-                                <span className={styles.updateBtnText}>ที่พัก</span>
-                            </button>
-
-                            <button
-                                className={`${styles.updateBtn} ${styles.checkoutBtn}`}
-                                onClick={gps ? handleCheckout : undefined}
-                                disabled={!gps}
-                                title="สิ้นสุดการเดินทาง"
-                            >
-                                <CheckCircle size={32} />
-                                <span className={styles.updateBtnText}>Check-out</span>
-                            </button>
-                        </div>
-
-                        {/* GPS Info */}
-                        <div style={{
-                            background: gps ? 'var(--ok-bg)' : 'var(--red-dim)',
-                            border: `1.5px solid ${gps ? 'var(--ok-bdr)' : 'var(--red-border)'}`,
-                            borderRadius: 12,
-                            padding: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            marginBottom: 20
-                        }}>
-                            <div style={{
-                                width: 10, height: 10, borderRadius: '50%',
-                                background: gps ? 'var(--ok)' : 'var(--red)',
-                                boxShadow: gps ? '0 0 10px var(--ok)' : 'none'
+                            <div className={styles.dot} style={{
+                                background: gps
+                                    ? (gps.acc < 50 ? 'var(--ok)' : '#f59e0b')
+                                    : 'var(--red)'
                             }} />
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: gps ? 'var(--ok)' : 'var(--red)' }}>
-                                    {gps ? 'พิกัด GPS แม่นยำพร้อมใช้งาน' : 'Waiting for GPS verification'}
-                                </div>
-                                {gps && <div style={{ fontSize: 11, color: 'var(--text3)' }}>ความแม่นยำ +/- {Math.round(gps.acc)} เมตร</div>}
-                            </div>
+                            <span>
+                                {gps
+                                    ? `GPS พร้อม · ±${Math.round(gps.acc)} ม.`
+                                    : 'กำลังค้นหาสัญญาณ GPS...'}
+                            </span>
                         </div>
 
-                        <div style={{ marginBottom: 16 }}>
-                            <label className={styles.label}>ระบุสถานที่ หรือ ชื่อลูกค้า</label>
+                        {/* Location Input — required, single field */}
+                        <div style={{ marginBottom: 14 }}>
+                            <label className={styles.label}>
+                                สถานที่ / ชื่อลูกค้า <span style={{ color: 'var(--red)' }}>*</span>
+                            </label>
                             <input
+                                ref={locationInputRef}
                                 type="text"
                                 className={styles.input}
-                                placeholder="เช่น บ้านลูกค้า A, ไซต์งาน B..."
+                                placeholder="เช่น บ้านคุณสมศักดิ์ อ.วังน้อย, ไซต์งาน A อยุธยา..."
                                 value={locationName}
                                 onChange={(e) => setLocationName(e.target.value)}
                             />
+                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 5 }}>
+                                ข้อมูลนี้จะแสดงบน watermark รูปถ่ายและ timeline
+                            </div>
                         </div>
 
-                        <div>
+                        {/* Quick Tags */}
+                        <div style={{ marginBottom: 20 }}>
                             <label className={styles.label}>เลือกสถานะด่วน</label>
                             <div className={styles.quickTags}>
                                 {QUICK_TAGS.map(t => (
@@ -366,6 +376,39 @@ export default function TripLogPage() {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className={styles.mainBtnContainer}>
+                            <button
+                                className={styles.updateBtn}
+                                onClick={() => gps && openCamera('update')}
+                                disabled={!gps}
+                                title="บันทึกพิกัด"
+                            >
+                                <Navigation size={32} />
+                                <span className={styles.updateBtnText}>Update</span>
+                            </button>
+
+                            <button
+                                className={`${styles.updateBtn} ${styles.accommodationBtn}`}
+                                onClick={() => gps && openCamera('accommodation')}
+                                disabled={!gps}
+                                title="เช็คอินที่พัก"
+                            >
+                                <MapIcon size={32} />
+                                <span className={styles.updateBtnText}>ที่พัก</span>
+                            </button>
+
+                            <button
+                                className={`${styles.updateBtn} ${styles.checkoutBtn}`}
+                                onClick={() => gps && openCamera('checkout')}
+                                disabled={!gps}
+                                title="สิ้นสุดการเดินทาง"
+                            >
+                                <CheckCircle size={32} />
+                                <span className={styles.updateBtnText}>Check-out</span>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -384,7 +427,7 @@ export default function TripLogPage() {
                         </div>
                     ) : (
                         <div className={styles.timeline}>
-                            {history.map((item, i) => (
+                            {history.map((item) => (
                                 <div key={item.id} className={styles.timelineItem}>
                                     <div className={styles.timelineDot} />
                                     <div className={styles.timelineContent}>
@@ -392,10 +435,18 @@ export default function TripLogPage() {
                                             <div className={styles.timelineLocation}>{item.location}</div>
                                             <div className={styles.timelineTime}>{formatTime24h(item.timestamp)} น.</div>
                                         </div>
-                                        {item.remark && <div className={styles.timelineNote}>{item.remark}</div>}
+                                        {item.remark && (
+                                            <div className={styles.timelineNote}>{item.remark}</div>
+                                        )}
                                         {item.photo_url && (
                                             <div className={styles.timelinePhoto}>
-                                                <Image src={item.photo_url} alt="Trip Stop" width={500} height={300} style={{ width: '100%', height: 'auto' }} />
+                                                <Image
+                                                    src={item.photo_url}
+                                                    alt="Trip Stop"
+                                                    width={500}
+                                                    height={300}
+                                                    style={{ width: '100%', height: 'auto' }}
+                                                />
                                             </div>
                                         )}
                                     </div>
@@ -410,9 +461,31 @@ export default function TripLogPage() {
             {step === 'camera' && (
                 <div className={styles.alertOverlay}>
                     <div className={styles.alertModal} style={{ position: 'relative', maxWidth: 440 }}>
-                        <div className={styles.sectionLabel} style={{ marginBottom: 20 }}>
+                        <div className={styles.sectionLabel} style={{ marginBottom: 16 }}>
                             <div className={styles.dot} />
-                            <span>ถ่ายรูปเพื่อยืนยันพิกัด</span>
+                            <span>
+                                {pendingAction === 'checkout' && 'สิ้นสุดการเดินทาง'}
+                                {pendingAction === 'accommodation' && 'เช็คอินที่พัก'}
+                                {pendingAction === 'update' && 'บันทึกพิกัด'}
+                            </span>
+                        </div>
+
+                        {/* Location preview badge */}
+                        <div style={{
+                            background: 'var(--red-dim)',
+                            border: '1px solid var(--red-border)',
+                            borderRadius: 10,
+                            padding: '8px 12px',
+                            marginBottom: 14,
+                            fontSize: 13,
+                            color: 'var(--red)',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                        }}>
+                            <MapPin size={14} />
+                            {locationName}
                         </div>
 
                         <div className={styles.camWrap}>
@@ -425,8 +498,8 @@ export default function TripLogPage() {
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                padding: '24px',
-                                background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                                padding: '20px 24px',
+                                background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
                                 display: 'flex',
                                 justifyContent: 'space-around',
                                 alignItems: 'center',
@@ -434,36 +507,44 @@ export default function TripLogPage() {
                             }}>
                                 {!photoPreview ? (
                                     <>
-                                        <button onClick={() => { stopCamera(); setStep('log'); }} className={styles.btnSecondary} style={{ borderRadius: '50%', padding: '12px' }}>
-                                            <ArrowLeft size={24} />
+                                        <button
+                                            onClick={() => { stopCamera(); setStep('log'); }}
+                                            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', padding: 10, cursor: 'pointer' }}
+                                        >
+                                            <ArrowLeft size={22} color="white" />
                                         </button>
-                                        <button onClick={capturePhoto} disabled={!isCameraReady} style={{
-                                            width: 68, height: 68, borderRadius: '50%',
-                                            background: 'white', border: '6px solid rgba(255,255,255,0.3)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}>
-                                            <Camera size={32} color="var(--red)" />
+                                        <button
+                                            onClick={capturePhoto}
+                                            disabled={!isCameraReady}
+                                            style={{
+                                                width: 68, height: 68, borderRadius: '50%',
+                                                background: 'white', border: '5px solid rgba(255,255,255,0.35)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                cursor: isCameraReady ? 'pointer' : 'not-allowed',
+                                                opacity: isCameraReady ? 1 : 0.5
+                                            }}
+                                        >
+                                            <Camera size={30} color="var(--red)" />
                                         </button>
                                         <div style={{ width: 44 }} />
                                     </>
                                 ) : (
                                     <>
-                                        <button onClick={() => { setPhotoPreview(null); startCamera(); }} className={styles.btnSecondary} style={{ borderRadius: 20, padding: '8px 24px' }}>ถ่ายใหม่</button>
-                                        <button onClick={handleUpdate} className={`${styles.btn} ${styles.btnPrimary}`} style={{ borderRadius: 20, padding: '8px 28px' }}>ใช้รูปนี้</button>
+                                        <button
+                                            onClick={() => { setPhotoPreview(null); openCamera(pendingAction); }}
+                                            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '8px 20px', color: 'white', cursor: 'pointer', fontSize: 14 }}
+                                        >
+                                            ถ่ายใหม่
+                                        </button>
+                                        <button
+                                            onClick={handleUpdate}
+                                            style={{ background: 'var(--red)', border: 'none', borderRadius: 20, padding: '8px 28px', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}
+                                        >
+                                            ✓ ยืนยัน
+                                        </button>
                                     </>
                                 )}
                             </div>
-                        </div>
-
-                        <div style={{ textAlign: 'left', marginTop: 12 }}>
-                            <label className={styles.label}>บันทึกเพิ่มเติม</label>
-                            <input
-                                type="text"
-                                className={styles.input}
-                                placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)..."
-                                value={remark}
-                                onChange={(e) => setRemark(e.target.value)}
-                            />
                         </div>
                     </div>
                 </div>
@@ -472,40 +553,30 @@ export default function TripLogPage() {
             {/* ── SUBMITTING OVERLAY ── */}
             {step === 'submitting' && (
                 <div className={styles.alertOverlay}>
-                    <div className={styles.alertModal} style={{ maxWidth: 300 }}>
-                        <Loader2 className="animate-spin" size={48} color="var(--red)" style={{ margin: '0 auto 16px' }} />
-                        <h4 style={{ fontSize: 18, fontWeight: 700 }}>กำลังอัปเดต...</h4>
-                        <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 8 }}>ระบบกำลังส่งข้อมูลไปยังกลุ่ม LINE เพื่อแจ้งเตือนหัวหน้างาน</p>
+                    <div className={styles.card} style={{ maxWidth: 300, textAlign: 'center', padding: '36px 20px' }}>
+                        <Loader2 size={40} color="var(--red)" className="animate-spin" style={{ margin: '0 auto 16px' }} />
+                        <h4 style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--font-display)' }}>กำลังบันทึกข้อมูล</h4>
+                        <p style={{ color: 'var(--text3)', fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
+                            อัปโหลดพิกัดและรูปถ่าย<br />กรุณารอสักครู่...
+                        </p>
                     </div>
                 </div>
             )}
 
-            {/* ── LED ALERT MODAL ── */}
-            {alertData && (
-                <div className={styles.alertOverlay} onClick={() => setAlertData(null)}>
-                    <div className={`${styles.alertModal} ${styles.ledModal} ${alertData.type === 'success' ? styles.ledModalSuccess : ''}`} onClick={e => e.stopPropagation()}>
-                        <div className={styles.ledTitle}>
-                            {alertData.type === 'success' ? 'SYSTEM OK' : alertData.type === 'warning' ? 'SYSTEM WARNING' : 'SYSTEM ERROR'}
-                        </div>
-                        <p className={styles.ledMsg}>{alertData.msg}</p>
-                        <button 
-                            className={styles.btnPrimary} 
-                            style={{ 
-                                background: alertData.type === 'success' ? 'var(--ok)' : 'var(--red)',
-                                borderColor: 'transparent',
-                                borderRadius: 30,
-                                padding: '10px 40px',
-                                textTransform: 'uppercase',
-                                fontSize: 12,
-                                letterSpacing: 1
-                            }}
-                            onClick={() => setAlertData(null)}
-                        >
-                            Acknowledge
-                        </button>
-                    </div>
-                </div>
-            )}
+            <AlertModal
+                alert={alert}
+                onClose={() => setAlert({ ...alert, visible: false })}
+            />
+
+            <WorkPlanModal
+                isOpen={showWorkPlan}
+                onClose={() => {
+                    setShowWorkPlan(false);
+                    setStep('log'); // Reset to log if cancelled
+                }}
+                onSubmit={handleWorkPlanSubmit}
+                employeeName={me?.name || ""}
+            />
 
             <canvas ref={canvasRef} style={{ display: "none" }} />
         </div>

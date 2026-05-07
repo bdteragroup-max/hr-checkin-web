@@ -739,6 +739,188 @@ export async function POST(req: Request) {
                                 }, [claim.employee.line_user_id]);
                             }
                         }
+                    } else if (action === "approve_welfare" || action === "reject_welfare") {
+                        console.log(`[LINE WEBHOOK] Querying welfare claim: ${targetId}`);
+                        const claim = await prisma.general_welfare_claims.findUnique({
+                            where: { id: targetId! },
+                            include: { employees: { select: { name: true, nickname: true, emp_id: true, supervisor_id: true, line_user_id: true } } }
+                        });
+
+                        if (!claim) {
+                            await sendReplyMessage(replyToken, "❌ ไม่พบข้อมูลคำขอสวัสดิการ");
+                            continue;
+                        }
+
+                        // Auth Check: Supervisor or HR
+                        const hrLineConfig = process.env.HR_LINE_USER_ID || "";
+                        const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
+                        const isHr = hrLineIds.includes(lineUserId || "");
+                        
+                        const supervisor = await prisma.employees.findUnique({
+                            where: { emp_id: claim.employees.supervisor_id || "" }
+                        });
+                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
+
+                        if (!isHr && !isSupervisor) {
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
+                            continue;
+                        }
+
+                        // Welfare Role Guard: 
+                        // Supervisor can act if supervisor_status is pending
+                        // HR can act if supervisor_status is approved AND status is pending
+                        let canAct = false;
+                        let roleError = "";
+
+                        if (isSupervisor && claim.supervisor_status === "pending") {
+                            canAct = true;
+                        } else if (isHr) {
+                            if (claim.supervisor_status === "pending") {
+                                roleError = "⚠️ คำขอนี้ยังไม่ผ่านการอนุมัติจากหัวหน้างาน";
+                            } else if (claim.status !== "pending") {
+                                const statusMap: any = { approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ" };
+                                roleError = `⚠️ คำขอนี้ดำเนินการเสร็จสิ้นแล้ว (${statusMap[claim.status]})`;
+                            } else {
+                                canAct = true;
+                            }
+                        } else if (isSupervisor && claim.supervisor_status !== "pending") {
+                            const statusMap: any = { approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ" };
+                            roleError = `⚠️ คุณดำเนินการไปแล้ว (${statusMap[claim.supervisor_status]})`;
+                        } else {
+                            roleError = "⚠️ คุณไม่สามารถดำเนินการในขั้นตอนนี้ได้";
+                        }
+
+                        if (!canAct) {
+                            await sendReplyMessage(replyToken, roleError);
+                            continue;
+                        }
+
+                        const { sendWelfareApprovalFlexMessage, sendEmployeeWelfareStatusNotification, sendHrWelfareNotification } = await import("@/utils/lineMessaging");
+                        const WELFARE_TITLES: any = {
+                            CHILD_EDUCATION: "ทุนการศึกษาบุตร",
+                            MARRIAGE: "เงินแสดงความยินดีมงคลสมรส",
+                            CHILDBIRTH: "เงินรับขวัญบุตร",
+                            ORDINATION: "เงินช่วยเหลืองานอุปสมบท",
+                            FUNERAL: "เงินช่วยเหลืองานฌาปนกิจ"
+                        };
+                        const welfareTitle = WELFARE_TITLES[claim.welfare_type] || claim.welfare_type;
+                        const empDisplayName = claim.employees.nickname ? `${claim.employees.name} (${claim.employees.nickname})` : claim.employees.name;
+                        const approver = await prisma.employees.findFirst({ where: { line_user_id: lineUserId }, select: { name: true } });
+                        const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
+                        
+                        const urls = claim.attachment_url ? (claim.attachment_url.startsWith('[') ? JSON.parse(claim.attachment_url) : [claim.attachment_url]) : [];
+
+                        if (action === "approve_welfare") {
+                            if (isSupervisor && claim.supervisor_status === "pending") {
+                                // Supervisor Approved -> Move to HR
+                                await prisma.general_welfare_claims.update({
+                                    where: { id: targetId! },
+                                    data: {
+                                        supervisor_status: "approved",
+                                        supervisor_approved_by: approverName,
+                                        supervisor_approved_at: new Date(),
+                                    }
+                                });
+
+                                // Feedback to Supervisor
+                                await sendWelfareApprovalFlexMessage(lineUserId!, {
+                                    id: claim.id,
+                                    empName: empDisplayName,
+                                    welfareType: welfareTitle,
+                                    amount: Number(claim.amount).toLocaleString(),
+                                    createdAt: claim.created_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    approvedBy: approverName,
+                                    metadata: claim.metadata as any,
+                                    attachmentUrls: urls
+                                }, true, replyToken);
+
+                                // Notify HR
+                                await sendHrWelfareNotification({
+                                    id: claim.id,
+                                    empName: empDisplayName,
+                                    welfareType: welfareTitle,
+                                    amount: Number(claim.amount).toLocaleString(),
+                                    createdAt: claim.created_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    metadata: claim.metadata as any,
+                                    attachmentUrls: urls,
+                                    supervisorName: approverName
+                                });
+
+                                // Notify Employee (Optional status update)
+                                if (claim.employees.line_user_id) {
+                                    await sendEmployeeWelfareStatusNotification(claim.employees.line_user_id, {
+                                        empName: empDisplayName,
+                                        welfareType: welfareTitle,
+                                        amount: Number(claim.amount).toLocaleString(),
+                                        status: "pending_hr",
+                                        approvedBy: approverName
+                                    });
+                                }
+                            } else if (isHr) {
+                                // HR Final Approved
+                                await prisma.general_welfare_claims.update({
+                                    where: { id: targetId! },
+                                    data: {
+                                        status: "approved",
+                                        approved_by: approverName,
+                                        approved_at: new Date(),
+                                    }
+                                });
+
+                                // Feedback to HR
+                                await sendWelfareApprovalFlexMessage(lineUserId!, {
+                                    id: claim.id,
+                                    empName: empDisplayName,
+                                    welfareType: welfareTitle,
+                                    amount: Number(claim.amount).toLocaleString(),
+                                    createdAt: claim.created_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                    approvedBy: approverName,
+                                    metadata: claim.metadata as any,
+                                    attachmentUrls: urls
+                                }, true, replyToken);
+
+                                // Final Notify Employee
+                                if (claim.employees.line_user_id) {
+                                    await sendEmployeeWelfareStatusNotification(claim.employees.line_user_id, {
+                                        empName: empDisplayName,
+                                        welfareType: welfareTitle,
+                                        amount: Number(claim.amount).toLocaleString(),
+                                        status: "approved",
+                                        approvedBy: approverName
+                                    });
+                                }
+                            }
+                        } else {
+                            // Reject Logic (Either supervisor or HR can reject)
+                            await prisma.general_welfare_claims.update({
+                                where: { id: targetId! },
+                                data: { 
+                                    status: "rejected",
+                                    supervisor_status: isSupervisor ? "rejected" : claim.supervisor_status
+                                }
+                            });
+
+                            await sendWelfareApprovalFlexMessage(lineUserId!, {
+                                id: claim.id,
+                                empName: empDisplayName,
+                                welfareType: welfareTitle,
+                                amount: Number(claim.amount).toLocaleString(),
+                                createdAt: claim.created_at.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                                metadata: claim.metadata as any,
+                                attachmentUrls: urls,
+                                approvedBy: approverName + " (ไม่อนุมัติ)"
+                            }, true, replyToken);
+
+                            if (claim.employees.line_user_id) {
+                                await sendEmployeeWelfareStatusNotification(claim.employees.line_user_id, {
+                                    empName: empDisplayName,
+                                    welfareType: welfareTitle,
+                                    amount: Number(claim.amount).toLocaleString(),
+                                    status: "rejected",
+                                    approvedBy: approverName
+                                });
+                            }
+                        }
                     }
                 } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;

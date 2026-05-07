@@ -34,7 +34,10 @@ export async function GET() {
             is_supervisor: subsCount > 0,
             base_salary: Number(emp.base_salary),
             birth_date: emp.birth_date,
+            hire_date: emp.hire_date,
+            gender: emp.gender,
             line_user_id: emp.line_user_id,
+            is_checkin_exempt: emp.is_checkin_exempt,
             has_published_payslips: publishedPayslipCount > 0
         });
     } catch (err: any) {

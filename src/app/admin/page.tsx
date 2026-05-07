@@ -197,7 +197,8 @@ function AdminPageInner() {
     const [notifs, setNotifs] = useState<{
         arrivals: any[],
         birthdays: any[],
-        pendingClaimsCount: number
+        pendingClaimsCount: number,
+        missingPlansCount: number
     } | null>(null);
 
     /* ── Attendance ── */
@@ -682,7 +683,7 @@ function AdminPageInner() {
     function renderDashboard() {
         return (
             <>
-                {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0) && (
+            {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0 || notifs.missingPlansCount > 0) && (
                     <div className={styles.notifTray}>
                         {notifs.arrivals.map(a => (
                             <div key={a.emp_id} className={styles.notifItem}>
@@ -708,6 +709,14 @@ function AdminPageInner() {
                                 </div>
                                 <span className={styles.notifArrow}><ChevronRightIcon width={16} /></span>
                             </Link>
+                        )}
+                        {notifs.missingPlansCount > 0 && (
+                            <div className={styles.notifItem} style={{ background: '#fff7ed', border: '1px solid #ffedd5' }}>
+                                <span className={styles.notifIcon} style={{ color: '#f97316' }}><ClipboardDocumentListIcon width={20} /></span>
+                                <div className={styles.notifText}>
+                                    มีพนักงาน <b>{notifs.missingPlansCount} คน</b> ยังไม่ได้ส่งแผนงานประจำวัน
+                                </div>
+                            </div>
                         )}
                     </div>
                 )}

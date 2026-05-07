@@ -23,8 +23,9 @@ import {
     ChevronRightIcon
 } from "@heroicons/react/24/solid";
 import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
-import { Camera, RotateCcw, X } from "lucide-react";
+import { Camera, RotateCcw, X, Loader2 as LucideLoader } from "lucide-react";
 import { formatDateThai, formatTime24h, formatTimeFull24h, getBangkokWallClock } from "@/utils/time";
+import WorkPlanModal from "@/components/WorkPlanModal";
 
 /* ──────────────────────────────────────────
    CONFIG — เวลาเริ่ม/เลิกงาน (24h)
@@ -42,6 +43,7 @@ interface Me {
     branch_id: string | null; 
     line_user_id?: string | null; 
     is_supervisor?: boolean;
+    is_checkin_exempt?: boolean;
 }
 interface Branch { id: string; name: string; centerLat?: number; centerLon?: number; radiusM?: number }
 interface TodayItem {
@@ -346,6 +348,16 @@ export default function AppPage() {
     const [warnings, setWarnings] = useState<{ id: number; date: string; reason: string }[]>([]);
     const [birthdays, setBirthdays] = useState<{ emp_id: string; name: string }[]>([]);
 
+    const [showWorkPlan, setShowWorkPlan] = useState(false);
+    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
+    const [isPlanLoading, setIsPlanLoading] = useState(true);
+
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me]);
+
 
 
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -412,10 +424,19 @@ export default function AppPage() {
                 if (checkinsData.dateKey) setTodayKey(checkinsData.dateKey);
                 if (warningsData.ok && warningsData.warnings) setWarnings(warningsData.warnings);
                 if (birthdaysData.ok && birthdaysData.list) setBirthdays(birthdaysData.list);
+                
+                // Check if work plan is already submitted today
+                const planRes = await fetch("/api/work-plans");
+                const planData = await planRes.json();
+                if (planData.ok && planData.plan) {
+                    setPlanSubmittedToday(true);
+                }
+                setIsPlanLoading(false);
 
                 setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
             } catch (error) {
                 console.error("Initialization failed:", error);
+                setIsPlanLoading(false);
                 setStatus(<span><ExclamationTriangleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />เกิดข้อผิดพลาดในการโหลด</span>, "bad");
             }
         })();
@@ -628,6 +649,17 @@ export default function AppPage() {
         if (!empId) { showAlert("กรอกรหัสพนักงานก่อน"); return; }
         if (!empName) { showAlert("กรอกชื่อ-นามสกุลก่อน"); return; }
         if (!selectedBranch) { showAlert("กรุณาเลือกสาขา"); return; }
+
+        // If it's a Check-in and plan hasn't been submitted, show modal
+        if (type === "Check-in" && !planSubmittedToday) {
+            setShowWorkPlan(true);
+            return;
+        }
+
+        proceedToGps();
+    }
+
+    async function proceedToGps() {
         setStep(2);
         const g = await readGPS();
         if (!g.pass) {
@@ -637,6 +669,27 @@ export default function AppPage() {
         }
         setStep(3);
         await startCamera(facingMode);
+    }
+
+    async function handleWorkPlanSubmit(data: any) {
+        try {
+            const res = await fetch("/api/work-plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.ok) {
+                setPlanSubmittedToday(true);
+                setShowWorkPlan(false);
+                // After submitting plan, proceed with check-in flow
+                proceedToGps();
+            } else {
+                throw new Error(result.error || "Failed to submit plan");
+            }
+        } catch (e: any) {
+            showAlert("บันทึกแผนงานไม่สำเร็จ: " + e.message);
+        }
     }
 
     /* ── Capture ── */
@@ -718,6 +771,7 @@ export default function AppPage() {
                 OUT_OF_RADIUS: `อยู่นอกพื้นที่ (${data.distance}m / ${data.radius_m}m)`,
                 DUPLICATE_TODAY: "วันนี้ทำรายการแล้ว",
                 MUST_CHECKIN_FIRST: "ต้อง Check-in ก่อน",
+                WORK_PLAN_REQUIRED: "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ",
             };
             const errMsg = errMap[data?.error] || data?.error || "เกิดข้อผิดพลาด";
             showAlert(errMsg);
@@ -953,6 +1007,7 @@ export default function AppPage() {
                                 </div>
                             </>
                         )}
+
                     </div>
 
                     <canvas ref={rawCanvasRef} style={{ display: "none" }} />
@@ -1004,8 +1059,20 @@ export default function AppPage() {
                 </div>
             )}
 
-            {/* ── ALERT MODAL ── */}
+            {/* ── MODALS ── */}
             <AlertModal alert={alert} onClose={closeAlert} />
+
+            <WorkPlanModal
+                isOpen={showWorkPlan}
+                onClose={() => {
+                    setShowWorkPlan(false);
+                    setStep(1); // Return to start if modal closed/cancelled
+                }}
+                onSubmit={handleWorkPlanSubmit}
+                employeeName={empName}
+            />
+
+            <canvas ref={canvasRef} style={{ display: "none" }} />
         </>
     );
 }

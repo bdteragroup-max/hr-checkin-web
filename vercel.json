@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/approval-reminders?secret=hr-checkin-secret-123",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/work-plan-report?secret=hr-checkin-secret-123",
+      "schedule": "0 * * * *"
     }
   ]
 }

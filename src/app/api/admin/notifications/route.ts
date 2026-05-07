@@ -34,10 +34,19 @@ export async function GET() {
             return b.getMonth() === now.getMonth() && b.getDate() === now.getDate();
         });
 
-        // 3. Pending Birthday Claims
         const pendingClaimsCount = await prisma.birthday_claims.count({
             where: { status: "pending" }
         });
+        
+        // 4. Missing Daily Work Plans
+        const todayStart = new Date(now.toISOString().split('T')[0] + 'T00:00:00Z');
+        const activeEmpsCount = await prisma.employees.count({
+            where: { is_active: true, is_checkin_exempt: false }
+        });
+        const submittedPlansCount = await prisma.daily_work_plans.count({
+            where: { date: todayStart }
+        });
+        const missingPlansCount = Math.max(0, activeEmpsCount - submittedPlansCount);
 
         return NextResponse.json({
             ok: true,
@@ -55,7 +64,8 @@ export async function GET() {
                 }
                 return { ...a, name };
             }),
-            pendingClaimsCount
+            pendingClaimsCount,
+            missingPlansCount
         });
     } catch (e) {
         return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });

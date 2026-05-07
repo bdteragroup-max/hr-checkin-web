@@ -215,17 +215,27 @@ export default function AdminAssetsPage() {
     }
 
     async function handleReturn() {
-        if (!selectedAsset || !selectedAsset.asset_borrowings[0]) return;
+        if (!selectedAsset) return;
+
+        const currentBorrow = selectedAsset.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
 
         setProcessing(true);
         try {
+            const bodyPayload: any = {
+                ...returnData
+            };
+
+            if (currentBorrow) {
+                bodyPayload.borrowing_id = currentBorrow.id;
+            } else {
+                bodyPayload.force_reset = true;
+                bodyPayload.asset_id = selectedAsset.id;
+            }
+
             const res = await fetch("/api/admin/assets/return", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    borrowing_id: selectedAsset.asset_borrowings[0].id,
-                    ...returnData
-                })
+                body: JSON.stringify(bodyPayload)
             });
 
             const data = await res.json();

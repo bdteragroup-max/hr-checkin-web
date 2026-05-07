@@ -1,6 +1,6 @@
 /* ============================================
    TRIP LOG — DESIGN ALIGNMENT
-   Aligning with Main App Design System
+   Aligning with Main App (app/page.module.css)
    ============================================ */
 
 @import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
@@ -58,7 +58,7 @@
     position: relative;
 }
 
-/* Dot pattern background */
+/* Dot pattern background (Same as main app) */
 .wrapper::before {
     content: "";
     position: fixed;
@@ -202,45 +202,11 @@
     box-shadow: 0 0 0 3px var(--red-dim);
 }
 
-/* ── Buttons ── */
-.btn {
-    font-family: var(--font-th);
-    font-size: 14px;
-    font-weight: 700;
-    padding: 13px 18px;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--gray-300);
-    cursor: pointer;
-    transition: all 0.18s;
-}
-
-.btnPrimary {
-    background: var(--red);
-    border-color: var(--red);
-    color: #fff;
-    box-shadow: var(--shadow-red);
-}
-
-.btnPrimary:hover:not(:disabled) {
-    background: var(--red-dark);
-    transform: translateY(-1px);
-}
-
-.btnSecondary {
-    background: var(--white);
-    color: var(--text2);
-    border-color: var(--gray-300);
-}
-
-.btnSecondary:hover {
-    background: var(--gray-100);
-}
-
-/* ── Action Button (Special Trip Round Button) ── */
+/* ── Action Button (Circular to match main app) ── */
 .mainBtnContainer {
     margin: 24px 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     gap: 12px;
 }
 
@@ -264,6 +230,18 @@
     overflow: hidden;
 }
 
+.updateBtn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    pointer-events: none;
+}
+
+.updateBtn:active {
+    transform: scale(0.95);
+}
+
 .updateBtn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -271,13 +249,13 @@
 }
 
 .accommodationBtn {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.28);
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 4px 16px rgba(22, 163, 74, 0.28);
 }
 
 .checkoutBtn {
-    background: linear-gradient(135deg, #e8450a 0%, #c23b08 100%);
-    box-shadow: 0 4px 16px rgba(232, 69, 10, 0.28);
+    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+    box-shadow: 0 4px 16px rgba(234, 88, 12, 0.28);
 }
 
 .updateBtnText {
@@ -308,9 +286,10 @@
 }
 
 .tagBtnActive {
-    background: var(--red-dim) !important;
+    background: var(--red) !important;
     border-color: var(--red) !important;
-    color: var(--red) !important;
+    color: white !important;
+    box-shadow: var(--shadow-red);
 }
 
 /* ── Timeline ── */
@@ -335,10 +314,6 @@
     margin-bottom: 24px;
 }
 
-.timelineItem:last-child {
-    margin-bottom: 0;
-}
-
 .timelineDot {
     position: absolute;
     left: -28px;
@@ -353,18 +328,12 @@
 }
 
 .timelineContent {
-    background: var(--gray-50);
+    background: var(--white);
     border-radius: 12px;
     padding: 14px;
-    border: 1px solid var(--gray-100);
-    transition: transform 0.2s;
-}
-
-.timelineContent:hover {
-    transform: translateX(4px);
-    background: var(--white);
-    border-color: var(--gray-200);
-    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
 }
 
 .timelineHeader {
@@ -397,17 +366,10 @@
     margin-top: 10px;
     border-radius: 10px;
     overflow: hidden;
-    aspect-ratio: 16/9;
     background: var(--gray-200);
 }
 
-.timelinePhoto img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* ── Camera UI (Same as app) ── */
+/* ── Camera UI (Same as main app) ── */
 .camWrap {
     position: relative;
     margin: 16px 0;
@@ -415,6 +377,7 @@
     overflow: hidden;
     background: #000;
     aspect-ratio: 4/3;
+    border: 1px solid var(--gray-200);
 }
 
 .video {
@@ -423,23 +386,7 @@
     object-fit: cover;
 }
 
-/* ── Status Badge ── */
-.statusBadge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: var(--red-dim);
-    color: var(--red);
-    border: 1px solid var(--red-border);
-}
-
-/* ── Alert Modal (Same as app) ── */
+/* ── Alert Modal (Same as main app) ── */
 .alertOverlay {
     position: fixed;
     inset: 0;
@@ -458,41 +405,4 @@
     border-radius: 20px;
     padding: 24px;
     text-align: center;
-}
-
-/* 🔥 LED MODAL STYLING 🔥 */
-.ledModal {
-    background: linear-gradient(145deg, #0f172a, #1e293b) !important;
-    border: 2px solid var(--red);
-    box-shadow: 0 0 30px rgba(217, 48, 37, 0.45);
-    color: white !important;
-    animation: ledPulse 2s infinite ease-in-out;
-}
-
-.ledModalSuccess {
-    border-color: var(--ok);
-    box-shadow: 0 0 30px rgba(22, 163, 74, 0.45);
-}
-
-.ledTitle {
-    font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-    color: white;
-    text-shadow: 0 0 10px rgba(255,255,255,0.3);
-}
-
-.ledMsg {
-    font-size: 15px;
-    color: #e2e8f0;
-    line-height: 1.6;
-    margin-bottom: 24px;
-}
-
-@keyframes ledPulse {
-    0% { transform: scale(1); box-shadow: 0 0 20px rgba(217, 48, 37, 0.3); }
-    50% { transform: scale(1.02); box-shadow: 0 0 40px rgba(217, 48, 37, 0.7); }
-    100% { transform: scale(1); box-shadow: 0 0 20px rgba(217, 48, 37, 0.3); }
 }

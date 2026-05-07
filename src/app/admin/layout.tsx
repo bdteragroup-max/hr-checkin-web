@@ -170,6 +170,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className={styles.navIcon}><GiftIcon width={20} /></span>สวัสดิการวันเกิด
                             </Link>
 
+                            {/* ✅ General Welfare Claims */}
+                            <Link
+                                href="/admin/welfare"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/welfare") ? styles.active : ""}`}
+                            >
+                                <span className={styles.navIcon}><BanknotesIcon width={20} /></span>สวัสดิการและเงินช่วยเหลือ
+                            </Link>
+
                              {/* ✅ Travel & Off-Site Claims */}
                               <Link
                                   href="/admin/travel-claims"

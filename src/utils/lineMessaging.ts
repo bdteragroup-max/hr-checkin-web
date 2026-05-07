@@ -2495,3 +2495,364 @@ export async function sendManagementCommissionSummary(data: {
 
   return sendLineMessage(managementId, [flexMessage]);
 }
+
+export async function sendWorkPlanNotification(
+  targetId: string,
+  data: {
+    empName: string;
+    deptName?: string;
+    morningPlan: string;
+    morningLoc: string;
+    afternoonPlan: string;
+    afternoonLoc: string;
+    otPlan?: string;
+    otLoc?: string;
+    otAttendant?: string;
+  }
+) {
+  const empName = await formatNameDb(data.empName);
+  
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "📋 แผนงานประจำวัน", weight: "bold", size: "lg", color: "#b91c1c" },
+        { type: "text", text: `คุณ ${empName}`, size: "sm", color: "#4b5563", margin: "xs" },
+        { type: "text", text: `แผนก: ${data.deptName || "-"}`, size: "xs", color: "#6b7280" }
+      ],
+      backgroundColor: "#fef2f2",
+      paddingAll: "16px"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        // Morning
+        {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            { type: "text", text: "🕒 เช้า (08:00 - 12:00)", weight: "bold", size: "sm", color: "#111827" },
+            { type: "text", text: `📍 ${data.morningLoc}`, size: "xs", color: "#ef4444", margin: "xs" },
+            { type: "text", text: data.morningPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" }
+          ]
+        },
+        { type: "separator" },
+        // Afternoon
+        {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            { type: "text", text: "🕒 บ่าย (13:00 - 17:00)", weight: "bold", size: "sm", color: "#111827" },
+            { type: "text", text: `📍 ${data.afternoonLoc}`, size: "xs", color: "#ef4444", margin: "xs" },
+            { type: "text", text: data.afternoonPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" }
+          ]
+        }
+      ]
+    }
+  };
+
+  if (data.otPlan) {
+    contents.body.contents.push(
+      { type: "separator" },
+      {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "🌙 ล่วงเวลา (หลัง 17:00)", weight: "bold", size: "sm", color: "#7c3aed" },
+          { type: "text", text: `📍 ${data.otLoc || "-"}`, size: "xs", color: "#8b5cf6", margin: "xs" },
+          { type: "text", text: data.otPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" },
+          { type: "text", text: `👤 ผู้ดูแล: ${data.otAttendant || "-"}`, size: "xs", color: "#6b7280", margin: "sm" }
+        ]
+      }
+    );
+  }
+
+  return sendLineMessage(targetId, [{ type: "flex", altText: `แผนงาน: ${empName}`, contents }]);
+}
+
+export async function sendWelfareApprovalFlexMessage(
+  lineUserId: string,
+  data: {
+    id: string;
+    empName: string;
+    welfareType: string;
+    amount: string;
+    createdAt: string;
+    remark?: string;
+    metadata?: Record<string, any>;
+    attachmentUrls?: string[];
+    supervisorName?: string;
+    approvedBy?: string;
+  },
+  isProcessed: boolean = false,
+  replyToken?: string
+) {
+  // Format names with nicknames
+  if (data.empName) data.empName = await formatNameDb(data.empName);
+  if (data.supervisorName) data.supervisorName = await formatNameDb(data.supervisorName);
+  if (data.approvedBy) data.approvedBy = await formatNameDb(data.approvedBy);
+
+  const bodyContents: any[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "สวัสดิการ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.welfareType, color: "#1d4ed8", size: "sm", weight: "bold", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "จำนวนเงิน:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: `฿${data.amount}.-`, color: "#dc2626", size: "sm", weight: "bold", flex: 7 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "วันที่ยื่น:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.createdAt, color: "#111111", size: "sm", flex: 7 }
+      ]
+    }
+  ];
+
+  if (data.metadata) {
+    const metaLabels: Record<string, string> = {
+      child_name: "ชื่อบุตร",
+      education_level: "ระดับการศึกษา",
+      gpa: "เกรดเฉลี่ย",
+      service_years_at_claim: "อายุงานที่ยื่น"
+    };
+
+    // Helper for education levels
+    const eduLevels: Record<string, string> = {
+      "P1_3": "ประถม (ป.1 - ป.3)",
+      "P4_6": "ประถม (ป.4 - ป.6)",
+      "M1_3": "มัธยมต้น (ม.1 - ม.3)",
+      "M4_6": "มัธยมปลาย / ปวช.",
+      "DIP_BACH": "ปวส. / ปริญญาตรี"
+    };
+
+    Object.entries(data.metadata).forEach(([k, v]) => {
+      let displayVal = v;
+      if (k === 'education_level') displayVal = eduLevels[v] || v;
+      
+      bodyContents.push({
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          { type: "text", text: `${metaLabels[k] || k}:`, color: "#888888", size: "xs", flex: 3 },
+          { type: "text", text: String(displayVal), color: "#111111", size: "xs", flex: 7, wrap: true }
+        ]
+      });
+    });
+  }
+
+  if (data.remark) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "หมายเหตุ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.remark, color: "#111111", size: "sm", flex: 7, wrap: true }
+      ]
+    });
+  }
+
+  if (isProcessed && data.approvedBy) {
+    bodyContents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "ผู้อนุมัติ:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.approvedBy, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }
+      ]
+    });
+  }
+
+  // Attachments Grid
+  if (data.attachmentUrls && data.attachmentUrls.length > 0) {
+    const images = data.attachmentUrls.filter(url => url.match(/\.(jpeg|jpg|gif|png|webp)/i));
+    const others = data.attachmentUrls.filter(url => !url.match(/\.(jpeg|jpg|gif|png|webp)/i));
+
+    if (images.length > 0) {
+      bodyContents.push({ type: "separator", margin: "md" });
+      const grid = generateImageGrid(images);
+      if (grid) bodyContents.push(grid);
+    }
+
+    if (others.length > 0) {
+      others.forEach((url, i) => {
+        bodyContents.push({
+          type: "button",
+          style: "link",
+          height: "sm",
+          action: {
+            type: "uri",
+            label: `เปิดไฟล์แนบ ${others.length > 1 ? i + 1 : ""}`,
+            uri: url
+          }
+        });
+      });
+    }
+  }
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: isProcessed ? "สวัสดิการ (ดำเนินการแล้ว)" : "คำขออนุมัติสวัสดิการ",
+          weight: "bold",
+          size: "lg",
+          color: isProcessed ? "#64748b" : "#1d4ed8"
+        }
+      ],
+      backgroundColor: isProcessed ? "#f1f5f9" : "#eff6ff"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "xs",
+      contents: bodyContents
+    },
+    footer: {
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      contents: isProcessed ? [
+        {
+          type: "text",
+          text: `ดำเนินการแล้วโดย: ${data.approvedBy || "ผู้อนุมัติ"}`,
+          color: "#16a34a",
+          size: "xs",
+          weight: "bold",
+          align: "center",
+          margin: "md"
+        }
+      ] : [
+        {
+          type: "button",
+          style: "primary",
+          color: "#22c55e",
+          action: {
+            type: "postback",
+            label: "อนุมัติ",
+            data: `action=approve_welfare&id=${data.id}`,
+            displayText: "ฉันอนุมัติสวัสดิการนี้"
+          }
+        },
+        {
+          type: "button",
+          style: "primary",
+          color: "#ef4444",
+          action: {
+            type: "postback",
+            label: "ไม่อนุมัติ",
+            data: `action=reject_welfare&id=${data.id}`,
+            displayText: "ฉันไม่อนุมัติสวัสดิการนี้"
+          }
+        }
+      ]
+    }
+  };
+
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `คำขอสวัสดิการ: ${data.empName}`, contents }], replyToken);
+}
+
+export async function sendEmployeeWelfareStatusNotification(
+  lineUserId: string,
+  data: {
+    empName: string;
+    welfareType: string;
+    amount: string;
+    status: "approved" | "rejected" | "pending_hr";
+    approvedBy?: string;
+  }
+) {
+  if (data.empName) data.empName = await formatNameDb(data.empName);
+  if (data.approvedBy) data.approvedBy = await formatNameDb(data.approvedBy);
+
+  const statusConfig = {
+    pending_hr: { headerText: "หัวหน้าอนุมัติแล้ว", headerBg: "#fff7ed", headerColor: "#ea580c", badgeText: "รอ HR ตรวจสอบ", badgeColor: "#ea580c" },
+    approved: { headerText: "อนุมัติแล้ว", headerBg: "#f0fdf4", headerColor: "#16a34a", badgeText: "อนุมัติแล้ว", badgeColor: "#16a34a" },
+    rejected: { headerText: "ไม่อนุมัติ", headerBg: "#fef2f2", headerColor: "#dc2626", badgeText: "ไม่อนุมัติ", badgeColor: "#dc2626" },
+  };
+
+  const cfg = statusConfig[data.status];
+  
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: cfg.headerText, weight: "bold", size: "lg", color: cfg.headerColor }],
+      backgroundColor: cfg.headerBg
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สวัสดิการ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.welfareType, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "จำนวนเงิน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `฿${data.amount}.-`, color: "#dc2626", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "separator", margin: "md" },
+        { type: "box", layout: "horizontal", margin: "md", contents: [{ type: "text", text: "สถานะ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: cfg.badgeText, color: cfg.badgeColor, size: "sm", weight: "bold", flex: 7 }] }
+      ]
+    }
+  };
+
+  if (data.approvedBy) {
+    contents.body.contents.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "โดย:", color: "#888888", size: "sm", flex: 3 },
+        { type: "text", text: data.approvedBy, color: "#111111", size: "sm", flex: 7 }
+      ]
+    });
+  }
+
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `สถานะสวัสดิการ: ${data.welfareType}`, contents }]);
+}
+
+export async function sendHrWelfareNotification(
+  data: {
+    id: string;
+    empName: string;
+    welfareType: string;
+    amount: string;
+    createdAt: string;
+    remark?: string;
+    metadata?: Record<string, any>;
+    attachmentUrls?: string[];
+    supervisorName?: string;
+  }
+) {
+  const hrLineConfig = process.env.HR_LINE_USER_ID || "";
+  if (!hrLineConfig) return false;
+  const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
+
+  const results = await Promise.all(
+    hrLineIds.map(id => sendWelfareApprovalFlexMessage(id, data))
+  );
+  return results.every(r => r === true);
+}

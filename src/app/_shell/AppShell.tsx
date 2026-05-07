@@ -41,6 +41,7 @@ const NAV_MAIN_BASE = [
     { id: "meeting-rooms", href: "/meeting-rooms", icon: BuildingOffice2Icon, label: "จองห้องประชุม", sub: "Meeting Rooms" },
     { id: "kpi", href: "/kpi", icon: PresentationChartLineIcon, label: "KPI ของฉัน", sub: "My KPIs" },
     { id: "commission", href: "/commission-claims", icon: BanknotesIcon, label: "เบิกค่าคอม", sub: "Commission" },
+    { id: "welfare", href: "/welfare", icon: BanknotesIcon, label: "สวัสดิการและเงินช่วยเหลือ", sub: "Welfare" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
@@ -109,6 +110,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-commission", href: "/team/commission-claims", icon: BanknotesIcon, label: "อนุมัติค่าคอมทีม", sub: "Team Commission" });
         navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
         navMain.push({ id: "team-kpi", href: "/team/kpi", icon: PresentationChartLineIcon, label: "จัดการ KPI ทีม", sub: "KPI Management" });
+        navMain.push({ id: "team-welfare", href: "/team/welfare", icon: BanknotesIcon, label: "อนุมัติสวัสดิการทีม", sub: "Team Welfare" });
     }
 
     // NOTE: Do not show Sidebar on Login or Admin pages

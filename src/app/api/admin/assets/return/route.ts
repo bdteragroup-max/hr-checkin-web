@@ -4,7 +4,19 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { borrowing_id, actual_return_date, condition_at_return, is_damaged } = body;
+        const { borrowing_id, actual_return_date, condition_at_return, is_damaged, force_reset, asset_id } = body;
+
+        // Handle Force Reset (when asset is stuck as 'borrowed' but no active borrowing record exists)
+        if (force_reset && asset_id) {
+            await prisma.assets.update({
+                where: { id: Number(asset_id) },
+                data: {
+                    status: is_damaged ? "damaged" : "available",
+                    updated_at: new Date()
+                }
+            });
+            return NextResponse.json({ ok: true, message: "Asset forcefully reset to available." });
+        }
 
         if (!borrowing_id || !actual_return_date) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
@@ -19,7 +31,7 @@ export async function POST(req: Request) {
             }
         });
 
-        if (!borrowing || borrowing.status !== "borrowed") {
+        if (!borrowing || !["borrowed", "reserved"].includes(borrowing.status)) {
             return NextResponse.json({ error: "BORROWING_NOT_FOUND_OR_ALREADY_RETURNED" }, { status: 400 });
         }
 

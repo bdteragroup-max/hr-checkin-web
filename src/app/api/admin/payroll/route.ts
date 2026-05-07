@@ -102,6 +102,14 @@ export async function GET(request: Request) {
             }
         });
 
+        // 2.12 Fetch Approved Welfare Claims in this cycle
+        const welfareClaims = await prisma.general_welfare_claims.findMany({
+            where: {
+                status: "approved",
+                approved_at: { gte: startDate, lte: endDate }
+            }
+        });
+
         // 3. Process each employee
         const results = employees.map(emp => {
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
@@ -430,13 +438,16 @@ export async function GET(request: Request) {
                 else if (yrs >= 10) long_service_allowance = 15000;
             }
 
-            const totalHolidayAllowance = 0;
+            // 4.5 General Welfare Claims
+            const empWelfare = welfareClaims.filter(w => w.emp_id === emp.emp_id);
+            const welfare_amount = empWelfare.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
             const normalOtPay = normal_1_5x_hours * hourlyWage * 1.5;
             const holiday1xPay = holiday_1x_hours * hourlyWage * 1;
             const holiday3xPay = holiday_3x_hours * hourlyWage * 3;
             const totalOtAmount = normalOtPay + holiday1xPay + holiday3xPay;
 
-            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance;
+            const totalHolidayAllowance = 0;
+            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + welfare_amount;
 
             const student_loan = Number(adj?.student_loan || 0);
 
@@ -539,6 +550,7 @@ export async function GET(request: Request) {
                 bonus,
                 other_deductions,
                 other_benefits,
+                welfare_amount,
                 gross_pay: grossPay,
                 net_pay: finalNetPay,
                 bank_name: (emp as any).bank_name || "-",

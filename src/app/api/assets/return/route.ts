@@ -21,7 +21,7 @@ export async function POST(req: Request) {
             where: { 
                 id: Number(borrowing_id),
                 emp_id: payload.emp_id,
-                status: "borrowed"
+                status: { in: ["borrowed", "reserved"] }
             },
             include: { 
                 assets: true,

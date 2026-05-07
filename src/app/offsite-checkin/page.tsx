@@ -14,13 +14,14 @@ import {
     ClockIcon,
     ClipboardDocumentListIcon
 } from "@heroicons/react/24/solid";
-import { Camera, RotateCcw, ArrowRight } from "lucide-react";
+import { Camera, RotateCcw, ArrowRight, Loader2 } from "lucide-react";
 import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
+import WorkPlanModal from "@/components/WorkPlanModal";
 
 /* ──────────────────────────────────────────
    TYPES
 ────────────────────────────────────────── */
-interface Me { emp_id: string; name: string; branch_id: string | null; }
+interface Me { emp_id: string; name: string; branch_id: string | null; is_checkin_exempt?: boolean; }
 interface Branch { id: string; name: string; }
 interface TodayItem {
     id: number | string;
@@ -216,6 +217,18 @@ export default function OffsiteCheckinPage() {
     const [gps, setGps] = useState<GpsState>({ ok: false, lat: null, lon: null, accuracy: null });
     const [checkType, setCheckType] = useState<"Offsite-In" | "Offsite-Out">("Offsite-In");
 
+    // Work Plan State
+    const [showWorkPlan, setShowWorkPlan] = useState(false);
+    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
+    const [isPlanLoading, setIsPlanLoading] = useState(true);
+    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me]);
+
     // Camera
     const [cameraReady, setCameraReady] = useState(false);
     const [isCameraStarting, setIsCameraStarting] = useState(false);
@@ -231,7 +244,16 @@ export default function OffsiteCheckinPage() {
         (async () => {
             const r = await fetch("/api/me");
             if (!r.ok) return (window.location.href = "/");
-            setMe(await r.json());
+            const meData = await r.json();
+            setMe(meData);
+
+            // Check if plan submitted today
+            const wp = await fetch("/api/work-plans");
+            const wpData = await wp.json();
+            if (wpData.ok && wpData.plan) {
+                setPlanSubmittedToday(true);
+            }
+            setIsPlanLoading(false);
 
             const b = await fetch("/api/branches");
             const bd = await b.json();
@@ -423,6 +445,17 @@ export default function OffsiteCheckinPage() {
         if (!preview || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
         if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
 
+        // Mandatory Work Plan Check
+        if (!planSubmittedToday && !me.is_checkin_exempt) {
+            setPendingAction(() => () => executeSubmit(targetType));
+            setShowWorkPlan(true);
+            return;
+        }
+
+        executeSubmit(targetType);
+    }
+
+    async function executeSubmit(targetType: "Offsite-In" | "Offsite-Out") {
         setIsSubmitting(true);
         setCheckType(targetType);
         capturePhoto(targetType, true);
@@ -442,10 +475,10 @@ export default function OffsiteCheckinPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     type: targetType,
-                    branch_id: me.branch_id || branches[0]?.id || "UNKNOWN",
+                    branch_id: me?.branch_id || branches[0]?.id || "UNKNOWN",
                     lat: gps.lat, lon: gps.lon, accuracy: gps.accuracy,
                     photo_url: upData.url,
-                    emp_id: me.emp_id, name: me.name,
+                    emp_id: me?.emp_id, name: me?.name,
                     remark: actualRemark,
                 }),
             });
@@ -475,7 +508,7 @@ export default function OffsiteCheckinPage() {
                 hasShared: false,
                 isMandatory: targetType === "Offsite-Out",
                 shareData: {
-                    name: me.name,
+                    name: me?.name || "",
                     type: targetType,
                     location: locationName.trim(),
                     time: formatTimeFull24h(getThaiTime()) + " น.",
@@ -495,9 +528,31 @@ export default function OffsiteCheckinPage() {
             stopCamera();
 
         } catch (e: any) {
-            showAlert(e.message || "เกิดข้อผิดพลาดในการบันทึก");
+            let msg = e.message || "เกิดข้อผิดพลาดในการบันทึก";
+            if (msg === "WORK_PLAN_REQUIRED") msg = "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ";
+            showAlert(msg);
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    async function handleWorkPlanSubmit(data: any) {
+        try {
+            const res = await fetch("/api/work-plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                setPlanSubmittedToday(true);
+                setShowWorkPlan(false);
+                if (pendingAction) {
+                    pendingAction();
+                    setPendingAction(null);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to submit work plan", e);
         }
     }
 
@@ -814,8 +869,17 @@ export default function OffsiteCheckinPage() {
                     )}
                 </div>
 
+                <AlertModal alert={alert} onClose={closeAlert} />
+
+                <WorkPlanModal
+                    isOpen={showWorkPlan}
+                    onClose={() => {
+                        setShowWorkPlan(false);
+                    }}
+                    onSubmit={handleWorkPlanSubmit}
+                    employeeName={me?.name || ""}
+                />
             </div>
-            <AlertModal alert={alert} onClose={closeAlert} />
         </div>
     );
 }

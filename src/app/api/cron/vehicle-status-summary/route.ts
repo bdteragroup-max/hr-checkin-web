@@ -38,12 +38,16 @@ export async function GET(req: Request) {
 
     try {
         const todayStr = getTodayBangkokISO();
-        const today = new Date(todayStr);
+        const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+        const endOfDay = new Date(`${todayStr}T23:59:59+07:00`);
 
         // 1. Borrowed Today
         const borrowedToday = await prisma.asset_borrowings.findMany({
             where: {
-                borrow_date: today
+                borrow_date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
             },
             include: {
                 employee: { select: { name: true } },
@@ -54,7 +58,10 @@ export async function GET(req: Request) {
         // 2. Returned Today
         const returnedToday = await prisma.asset_borrowings.findMany({
             where: {
-                actual_return_date: today
+                actual_return_date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
             },
             include: {
                 employee: { select: { name: true } },
@@ -76,7 +83,7 @@ export async function GET(req: Request) {
 
         const lines = [
             "📊 สรุปสถานะการใช้รถประจำวัน",
-            `วันที่: ${today.toLocaleDateString("th-TH")}`,
+            `วันที่: ${startOfDay.toLocaleDateString("th-TH")}`,
             "---------------------------"
         ];
 

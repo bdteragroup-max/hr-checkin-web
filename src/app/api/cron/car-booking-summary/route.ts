@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { formatDateThai } from "@/utils/time";
+import { formatDateThai, getTodayBangkokISO } from "@/utils/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,15 +40,18 @@ export async function GET(req: Request) {
     }
 
     try {
-        // 1. Get TODAY's Date in Bangkok
-        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-        const isoDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
-        const todayDate = new Date(`${isoDate}T00:00:00Z`);
+        // 1. Get TODAY's Date Range in Bangkok
+        const todayStr = getTodayBangkokISO();
+        const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+        const endOfDay = new Date(`${todayStr}T23:59:59+07:00`);
 
         // 2. Fetch Car Borrowings for TODAY
         const borrowings = await prisma.asset_borrowings.findMany({
             where: {
-                borrow_date: todayDate,
+                borrow_date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                },
                 assets: {
                     vehicle_type: { not: null }
                 }
@@ -77,7 +80,7 @@ export async function GET(req: Request) {
         });
 
         const carsLeft = totalVehicles - vehiclesOut;
-        const dateLabel = formatDateThai(todayDate);
+        const dateLabel = formatDateThai(startOfDay);
 
         // 4. Format Flex Message
         const flex = {

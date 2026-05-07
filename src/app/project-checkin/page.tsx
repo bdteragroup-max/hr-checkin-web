@@ -18,8 +18,9 @@ import {
     PencilSquareIcon,
     ClipboardDocumentListIcon
 } from "@heroicons/react/24/solid";
-import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut } from "lucide-react";
+import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut, Loader2 } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateShortThai } from "@/utils/time";
+import WorkPlanModal from "@/components/WorkPlanModal";
 
 /* ──────────────────────────────────────────
    CONFIG 
@@ -31,7 +32,7 @@ const OT_THRESHOLD_MIN = 30;
 /* ──────────────────────────────────────────
    TYPES
 ────────────────────────────────────────── */
-interface Me { emp_id: string; name: string; branch_id: string | null; }
+interface Me { emp_id: string; name: string; branch_id: string | null; is_checkin_exempt?: boolean; }
 interface Project {
     id: number;
     code: string | null;
@@ -270,11 +271,32 @@ export default function ProjectCheckinPage() {
     const [newCusGps, setNewCusGps] = useState<{ lat: number, lng: number } | null>(null);
     const [isSavingCus, setIsSavingCus] = useState(false);
 
+    // Work Plan State
+    const [showWorkPlan, setShowWorkPlan] = useState(false);
+    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
+    const [isPlanLoading, setIsPlanLoading] = useState(true);
+    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me]);
+
     useEffect(() => {
         (async () => {
             const r = await fetch("/api/me");
             if (!r.ok) return (window.location.href = "/");
-            setMe(await r.json());
+            const meData = await r.json();
+            setMe(meData);
+
+            // Check if plan submitted today
+            const wp = await fetch("/api/work-plans");
+            const wpData = await wp.json();
+            if (wpData.ok && wpData.plan) {
+                setPlanSubmittedToday(true);
+            }
+            setIsPlanLoading(false);
 
             const b = await fetch("/api/branches");
             const bd = await b.json();
@@ -562,6 +584,17 @@ export default function ProjectCheckinPage() {
         if (!preview || !selectedCustomer || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
         if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
 
+        // Mandatory Work Plan Check
+        if (!planSubmittedToday && !me.is_checkin_exempt) {
+            setPendingAction(() => () => executeSubmit(targetType));
+            setShowWorkPlan(true);
+            return;
+        }
+
+        executeSubmit(targetType);
+    }
+
+    async function executeSubmit(targetType: "Project-In" | "Project-Out") {
         setIsSubmitting(true);
         // 🔥 Redraw watermark with correct type from RAW frame
         setCheckType(targetType);
@@ -580,12 +613,12 @@ export default function ProjectCheckinPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     type: targetType,
-                    branch_id: me.branch_id || branches[0]?.id || "UNKNOWN",
+                    branch_id: me?.branch_id || branches[0]?.id || "UNKNOWN",
                     lat: gps.lat, lon: gps.lon, accuracy: gps.accuracy,
                     photo_url: upData.url,
-                    emp_id: me.emp_id, name: me.name,
-                    project_name: selectedCustomer.name,
-                    customer_id: selectedCustomer.id,
+                    emp_id: me?.emp_id, name: me?.name,
+                    project_name: selectedCustomer?.name,
+                    customer_id: selectedCustomer?.id,
                     remark
                 }),
             });
@@ -597,7 +630,7 @@ export default function ProjectCheckinPage() {
             if (targetType === "Project-Out") {
                 const matchIn = today.filter(x => x.type.startsWith("Project") || x.type === "Check-in").find(c => 
                     (c.type === "Project-In" || c.type === "Check-in") && 
-                    c.project_name === selectedCustomer.name
+                    c.project_name === selectedCustomer?.name
                 );
                 if (matchIn) {
                     const diffMs = new Date().getTime() - new Date(matchIn.timestamp).getTime();
@@ -615,9 +648,9 @@ export default function ProjectCheckinPage() {
                 hasShared: false,
                 isMandatory: targetType === "Project-Out",
                 shareData: {
-                    name: me.name,
+                    name: me?.name || "",
                     type: targetType,
-                    location: selectedCustomer.name,
+                    location: selectedCustomer?.name || "",
                     time: formatTimeFull24h(getThaiTime()) + " น.",
                     remark: remark,
                     photoUrl: upData.url,
@@ -635,9 +668,31 @@ export default function ProjectCheckinPage() {
             stopCamera(); // Stop camera after successful submission
 
         } catch (e: any) {
-            showAlert(e.message || "เกิดข้อผิดพลาดในการบันทึก");
+            let msg = e.message || "เกิดข้อผิดพลาดในการบันทึก";
+            if (msg === "WORK_PLAN_REQUIRED") msg = "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ";
+            showAlert(msg);
         } finally {
             setIsSubmitting(false);
+        }
+    }
+
+    async function handleWorkPlanSubmit(data: any) {
+        try {
+            const res = await fetch("/api/work-plans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                setPlanSubmittedToday(true);
+                setShowWorkPlan(false);
+                if (pendingAction) {
+                    pendingAction();
+                    setPendingAction(null);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to submit work plan", e);
         }
     }
 

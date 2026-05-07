@@ -49,6 +49,7 @@ type PayrollResult = {
     bonus: number;
     other_deductions: number;
     other_benefits: number;
+    welfare_amount: number;
     base_salary_original: number;
     is_salary_overridden: boolean;
     gross_pay: number;
@@ -505,6 +506,7 @@ export default function PayrollPage() {
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>คอมมิชชั่น</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัส</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รายได้อื่นๆ</th>
+                                                <th className={styles.thRight} style={{ minWidth: 100 }}>สวัสดิการอื่นๆ</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หัก กยศ.</th>
@@ -731,7 +733,7 @@ export default function PayrollPage() {
                                                         )}
                                                     </td>
 
-                                                    {/* Other Benefits */}
+                                                    {/* Other Benefits (Adjustments) */}
                                                     <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-other_benefits` ? styles.cellSaving : ""}`}
                                                         onClick={() => { setActiveCell({ empId: p.emp_id, field: "other_benefits" }); setTempValue(p.other_benefits > 0 ? String(p.other_benefits) : ""); }}>
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "other_benefits" ? (
@@ -741,6 +743,13 @@ export default function PayrollPage() {
                                                                 {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
                                                             </span>
                                                         )}
+                                                    </td>
+
+                                                    {/* General Welfare (Automated) */}
+                                                    <td className={styles.tdRight}>
+                                                        <span style={{ fontWeight: 600, color: p.welfare_amount > 0 ? "var(--purple)" : "inherit" }}>
+                                                            {p.welfare_amount > 0 ? formatB(p.welfare_amount) : "-"}
+                                                        </span>
                                                     </td>
 
                                                     <td className={styles.tdRight}>

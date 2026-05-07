@@ -115,6 +115,7 @@ export async function GET(request: Request) {
         });
         const warnings = await prisma.employee_warnings.findMany({ where: { emp_id: p.emp_id, date: { gte: startDate, lte: endDate } } });
         const travelClaims = await prisma.travel_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", date: { gte: startDate, lte: endDate } } });
+        const welfareClaims = await prisma.general_welfare_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", approved_at: { gte: startDate, lte: endDate } } });
 
         const adj = publishedData;
         const isOverridden = adj.override_salary !== null && adj.override_salary !== undefined;
@@ -335,9 +336,10 @@ export async function GET(request: Request) {
         const bonus = Number(adj.bonus || 0);
         const other_deductions = Number(adj.other_deductions || 0);
         const other_benefits = Number(adj.other_benefits || 0);
+        const welfare_amount = welfareClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
         // Combined Income Other (as requested by user)
-        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + other_benefits;
+        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + other_benefits + welfare_amount;
 
         // Final Pay Calculation
         const totalIncome = baseSalary + totalOtAmount + commissions + bonus + totalOtherIncome + insurance_income;
@@ -463,7 +465,7 @@ export async function GET(request: Request) {
         // --- ROW 2: Income Values ---
         const ot23 = holiday1xPay + holiday3xPay;
         const allowanceAmount = travel_site_allowance;
-        const otherIncomeRemaining = telephone_allowance + position_allowance + other_benefits + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
+        const otherIncomeRemaining = telephone_allowance + position_allowance + other_benefits + welfare_amount + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
 
         drawVal(formatB(baseSalary), 0, Y[1]);
         drawVal(normalOtPay > 0 ? formatB(normalOtPay) : "-", 1, Y[1]);
