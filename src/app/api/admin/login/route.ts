@@ -60,7 +60,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "INVALID_CREDENTIALS" }, { status: 401 });
     }
 
-    const token = signToken({ emp_id: admin.username, role: "admin" });
+    // Fetch role using raw query to bypass generated client limitations
+    const roleResult: any[] = await prisma.$queryRaw`SELECT role FROM admins WHERE username = ${username} LIMIT 1`;
+    const role = roleResult[0]?.role || "SUPER_ADMIN";
+
+    const token = signToken({ emp_id: admin.username, role });
 
     const res = NextResponse.json({
         ok: true,

@@ -277,11 +277,11 @@ export default function ProjectCheckinPage() {
     const [isPlanLoading, setIsPlanLoading] = useState(true);
     const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me]);
+    // useEffect(() => {
+    //     if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+    //         setShowWorkPlan(true);
+    //     }
+    // }, [isPlanLoading, planSubmittedToday, me]);
 
     useEffect(() => {
         (async () => {

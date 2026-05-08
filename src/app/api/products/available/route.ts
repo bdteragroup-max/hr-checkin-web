@@ -7,28 +7,19 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const category = searchParams.get("category");
-        const categoryExclude = searchParams.get("category_exclude");
 
         const whereClause: any = { status: "available" };
         if (category) {
             whereClause.category = category;
-        } else if (categoryExclude) {
-            whereClause.OR = [
-                { category: { not: categoryExclude } },
-                { category: null }
-            ];
         }
 
-        console.log("[API/assets/available] searchParams:", { category, categoryExclude });
-        console.log("[API/assets/available] whereClause:", whereClause);
-
         const now = new Date();
-        const availableAssets = await prisma.assets.findMany({
+        const availableProducts = await prisma.products.findMany({
             where: {
                 ...whereClause,
-                // Exclude assets that have an active borrowing right now
+                // Exclude products that have an active borrowing right now
                 NOT: {
-                    asset_borrowings: {
+                    product_borrowings: {
                         some: {
                             status: { in: ["borrowed", "reserved"] },
                             borrow_date: { lte: now },
@@ -38,7 +29,7 @@ export async function GET(req: Request) {
                 }
             },
             include: {
-                asset_borrowings: {
+                product_borrowings: {
                     where: {
                         status: { in: ["borrowed", "reserved"] },
                         expected_return_date: { gt: now }
@@ -52,11 +43,11 @@ export async function GET(req: Request) {
                     take: 3
                 }
             },
-            orderBy: { name: "asc" }
+            orderBy: { product_name: "asc" }
         });
-        return NextResponse.json(availableAssets);
+        return NextResponse.json(availableProducts);
     } catch (e: any) {
-        console.error("[API/assets/available] GET Error:", e);
+        console.error("[API/products/available] GET Error:", e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

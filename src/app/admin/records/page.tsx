@@ -322,7 +322,7 @@ export default function RecordsPage() {
                                         <th style={{ width: 140 }}>วันที่</th>
                                         <th>บันทึกเช็คอิน</th>
                                         <th>บันทึกเช็คเอาท์</th>
-                                        <th style={{ textAlign: "center" }}>สาย (นาที)</th>
+                                        <th>แผนงานประจำวัน</th>
                                         <th style={{ textAlign: "center" }}>สถานะ</th>
                                     </tr>
                                 </thead>
@@ -348,10 +348,40 @@ export default function RecordsPage() {
                                                         </>
                                                     ) : <span style={{ color: "var(--text5)" }}>—</span>}
                                                 </td>
-                                                <td style={{ textAlign: "center" }}>
-                                                    {d.late_mins > 0 ? (
-                                                        <span style={{ color: "var(--late)", fontWeight: 800 }}>{d.late_mins}</span>
-                                                    ) : <span style={{ color: "var(--text5)" }}>-</span>}
+                                                <td>
+                                                    {d.work_plan ? (
+                                                        <div style={{ 
+                                                            fontSize: 11, 
+                                                            display: "flex", 
+                                                            flexDirection: "column", 
+                                                            gap: 4,
+                                                            minWidth: 200,
+                                                            padding: "6px 10px",
+                                                            background: "rgba(59, 130, 246, 0.05)",
+                                                            border: "1px solid rgba(59, 130, 246, 0.2)",
+                                                            borderRadius: 8
+                                                        }}>
+                                                            <div style={{ display: "flex", gap: 6 }}>
+                                                                <span style={{ color: "#3b82f6", fontWeight: 700, minWidth: 28 }}>เช้า:</span>
+                                                                <span style={{ color: "var(--text2)" }}>{d.work_plan.morning}</span>
+                                                                <span style={{ color: "var(--text4)", fontSize: 10 }}>({d.work_plan.morning_loc})</span>
+                                                            </div>
+                                                            <div style={{ display: "flex", gap: 6 }}>
+                                                                <span style={{ color: "#3b82f6", fontWeight: 700, minWidth: 28 }}>บ่าย:</span>
+                                                                <span style={{ color: "var(--text2)" }}>{d.work_plan.afternoon}</span>
+                                                                <span style={{ color: "var(--text4)", fontSize: 10 }}>({d.work_plan.afternoon_loc})</span>
+                                                            </div>
+                                                            {d.work_plan.ot && (
+                                                                <div style={{ display: "flex", gap: 6, borderTop: "1px dashed rgba(59, 130, 246, 0.2)", paddingTop: 4, marginTop: 2 }}>
+                                                                    <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 28 }}>OT:</span>
+                                                                    <span style={{ color: "var(--text2)" }}>{d.work_plan.ot}</span>
+                                                                    {d.work_plan.ot_attendant && <span style={{ color: "var(--text4)", fontSize: 10 }}>[ผช. {d.work_plan.ot_attendant}]</span>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ color: "var(--text5)", fontSize: 11 }}>— ไม่มีแผนงาน —</span>
+                                                    )}
                                                 </td>
                                                 <td style={{ textAlign: "center" }}>
                                                     <span style={{

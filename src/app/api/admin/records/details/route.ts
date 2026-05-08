@@ -65,6 +65,13 @@ export async function GET(req: Request) {
             where: { date: { gte: startDate, lte: endDate } }
         });
 
+        const workPlans = await prisma.daily_work_plans.findMany({
+            where: {
+                emp_id,
+                date: { gte: startDate, lte: endDate }
+            }
+        });
+
         const holidayMap = new Map<string, string>();
         holidays.forEach(h => holidayMap.set(h.date.toISOString().split("T")[0], h.name));
 
@@ -99,6 +106,8 @@ export async function GET(req: Request) {
                 const checkInDateStr = c.date_key.toISOString().split("T")[0];
                 return checkInDateStr === dateStr;
             });
+
+            const workPlan = workPlans.find(wp => wp.date.toISOString().split("T")[0] === dateStr);
 
             const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
             const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
@@ -151,6 +160,15 @@ export async function GET(req: Request) {
                 late_mins: inRecord?.late_min || 0,
                 status,
                 is_weekend: isSunday,
+                work_plan: workPlan ? {
+                    morning: workPlan.morning_plan,
+                    morning_loc: workPlan.morning_location,
+                    afternoon: workPlan.afternoon_plan,
+                    afternoon_loc: workPlan.afternoon_location,
+                    ot: workPlan.ot_plan,
+                    ot_loc: workPlan.ot_location,
+                    ot_attendant: workPlan.ot_attendant
+                } : null
             });
         }
 

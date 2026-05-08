@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
 import { 
     PlusIcon, 
@@ -12,15 +13,19 @@ import {
     ClockIcon,
     UserIcon,
     ClipboardDocumentListIcon,
-    XMarkIcon
+    XMarkIcon,
+    MagnifyingGlassIcon
 } from "@heroicons/react/24/outline";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import AdminBorrowModal from "@/components/AdminBorrowModal";
+import { HandThumbUpIcon } from "@heroicons/react/24/outline";
 
 type Asset = {
     id: number;
     asset_id: string;
     name: string;
     category: string | null;
+    company_name?: string | null;
     status: "available" | "borrowed" | "maintenance" | "damaged";
     asset_borrowings: Array<{
         id: number;
@@ -33,6 +38,18 @@ type Asset = {
 };
 
 export default function AdminAssetsPage() {
+    return (
+        <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>กำลังโหลด...</div>}>
+            <AdminAssetsPageInner />
+        </Suspense>
+    );
+}
+
+function AdminAssetsPageInner() {
+    const searchParams = useSearchParams();
+    const type = searchParams.get("type") || "item";
+    const isEquipment = type === "equipment";
+
     const [assets, setAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
@@ -48,6 +65,8 @@ export default function AdminAssetsPage() {
         condition_at_return: "",
         is_damaged: false
     });
+
+    const [showBorrowModal, setShowBorrowModal] = useState(false);
     const [processing, setProcessing] = useState(false);
 
     // Asset Form Modal State
@@ -64,6 +83,10 @@ export default function AdminAssetsPage() {
     });
     const [assetSaving, setAssetSaving] = useState(false);
 
+    // Filtering State
+    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [searchQuery, setSearchQuery] = useState("");
+
     // History Modal State
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -72,10 +95,25 @@ export default function AdminAssetsPage() {
     async function loadAssets() {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/assets?category_exclude=Car");
+            const url = isEquipment 
+                ? "/api/admin/assets?category_exclude=Car"
+                : "/api/admin/products";
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
-                setAssets(data);
+                
+                // Normalize for UI
+                const normalized = data.map((p: any) => ({
+                    id: p.id,
+                    asset_id: p.product_code || p.asset_id,
+                    name: p.product_name || p.name,
+                    category: p.category,
+                    company_name: p.company_name || p.company_owner,
+                    status: p.status,
+                    asset_borrowings: p.product_borrowings || p.asset_borrowings || []
+                }));
+                
+                setAssets(normalized);
             }
         } catch (e) {
             console.error(e);
@@ -86,7 +124,7 @@ export default function AdminAssetsPage() {
 
     useEffect(() => {
         loadAssets();
-    }, []);
+    }, [type]);
 
     function openAddModal() {
         setIsEditing(false);
@@ -101,8 +139,8 @@ export default function AdminAssetsPage() {
             asset_id: asset.asset_id, 
             name: asset.name, 
             category: asset.category || "", 
-            avg_category: "",
-            description: "", // todo: add to fetch if needed
+            avg_category: asset.company_name || "",
+            description: "", 
             status: asset.status 
         });
         setShowAssetModal(true);
@@ -112,13 +150,30 @@ export default function AdminAssetsPage() {
         e.preventDefault();
         setAssetSaving(true);
         try {
-            const url = isEditing ? `/api/admin/assets/${assetForm.id}` : "/api/admin/assets";
+            const url = isEquipment 
+                ? (isEditing ? `/api/admin/assets/${assetForm.id}` : "/api/admin/assets")
+                : (isEditing ? `/api/admin/products/${assetForm.id}` : "/api/admin/products");
             const method = isEditing ? "PATCH" : "POST";
+
+            const body: any = isEquipment ? {
+                asset_id: assetForm.asset_id,
+                name: assetForm.name,
+                category: assetForm.category,
+                description: assetForm.description,
+                status: assetForm.status
+            } : {
+                product_code: assetForm.asset_id,
+                product_name: assetForm.name,
+                category: assetForm.category,
+                company_name: assetForm.avg_category,
+                description: assetForm.description,
+                status: assetForm.status
+            };
 
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(assetForm)
+                body: JSON.stringify(body)
             });
 
             const data = await res.json();
@@ -140,7 +195,7 @@ export default function AdminAssetsPage() {
         setPendingDelete({ id, name });
         setAlert({ 
             visible: true, 
-            message: `คุณแน่ใจหรือไม่ที่จะลบอุปกรณ์ "${name}"?`, 
+            message: `คุณแน่ใจหรือไม่ที่จะลบ${isEquipment ? 'อุปกรณ์' : 'สินค้า'} "${name}"?`, 
             type: "error" 
         });
     }
@@ -151,7 +206,8 @@ export default function AdminAssetsPage() {
         setPendingDelete(null);
 
         try {
-            const res = await fetch(`/api/admin/assets/${id}`, { method: "DELETE" });
+            const url = isEquipment ? `/api/admin/assets/${id}` : `/api/admin/products/${id}`;
+            const res = await fetch(url, { method: "DELETE" });
             const data = await res.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ลบข้อมูลเรียบร้อยแล้ว", type: "ok" });
@@ -187,7 +243,8 @@ export default function AdminAssetsPage() {
                 bodyPayload.asset_id = selectedAsset.id;
             }
 
-            const res = await fetch("/api/admin/assets/return", {
+            const url = isEquipment ? "/api/admin/assets/return" : "/api/products/return";
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(bodyPayload)
@@ -195,7 +252,7 @@ export default function AdminAssetsPage() {
 
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: "รับคืนอุปกรณ์เรียบร้อยแล้ว", type: "ok" });
+                setAlert({ visible: true, message: `รับคืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}เรียบร้อยแล้ว`, type: "ok" });
                 setShowReturnModal(false);
                 loadAssets();
             } else {
@@ -213,7 +270,10 @@ export default function AdminAssetsPage() {
         setShowHistoryModal(true);
         setHistoryLoading(true);
         try {
-            const res = await fetch(`/api/admin/assets/${asset.id}/history`);
+            const url = isEquipment 
+                ? `/api/admin/assets/${asset.id}/history`
+                : `/api/products/history?id=${asset.id}`; // I'll need to create this or use my borrowings
+            const res = await fetch(url);
             const data = await res.json();
             if (data.ok) {
                 setAssetHistory(data.history);
@@ -254,30 +314,71 @@ export default function AdminAssetsPage() {
             
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>จัดการอุปกรณ์ (Assets)</h1>
-                    <p className={styles.subtitle}>จัดการอุปกรณ์บริษัท การยืม-คืน และประวัติการใช้งาน</p>
+                    <h1 className={styles.title}>{isEquipment ? "จัดการอุปกรณ์ (Equipment)" : "จัดการสินค้า (Borrow Item)"}</h1>
+                    <p className={styles.subtitle}>จัดการ{isEquipment ? "อุปกรณ์บริษัท" : "สินค้า/สิ่งของส่วนกลาง"} การยืม-คืน และประวัติการใช้งาน</p>
                 </div>
-                <button className={styles.addBtn} onClick={openAddModal}>
-                    <PlusIcon width={20} /> เพิ่มอุปกรณ์
-                </button>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div className={styles.searchWrapper}>
+                        <MagnifyingGlassIcon width={18} className={styles.searchIcon} />
+                        <input 
+                            type="text" 
+                            placeholder={`ค้นหา${isEquipment ? 'รหัส, ชื่ออุปกรณ์' : 'รหัส, ชื่อสินค้า'}...`} 
+                            className={styles.searchInput}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <button className={styles.addBtn} onClick={openAddModal}>
+                        <PlusIcon width={20} /> เพิ่ม{isEquipment ? "อุปกรณ์" : "สินค้า"}
+                    </button>
+                </div>
             </div>
 
             <div className={styles.statsBar}>
-                <div className={styles.statCard}>
+                <div 
+                    className={`${styles.statCard} ${filterStatus === "all" ? styles.active : ""}`}
+                    onClick={() => setFilterStatus("all")}
+                >
                     <span className={styles.statLabel}>ทั้งหมด</span>
                     <span className={styles.statVal}>{assets.length}</span>
                 </div>
-                <div className={styles.statCard}>
-                    <span className={styles.statLabel}>กำลังถูกยืม</span>
-                    <span className={styles.statVal}>{assets.filter(a => a.status === "borrowed").length}</span>
-                </div>
-                <div className={styles.statCard}>
+                <div 
+                    className={`${styles.statCard} ${filterStatus === "available" ? styles.active : ""}`}
+                    onClick={() => setFilterStatus("available")}
+                >
                     <span className={styles.statLabel}>พร้อมใช้งาน</span>
-                    <span className={styles.statVal}>{assets.filter(a => a.status === "available").length}</span>
+                    <span className={styles.statVal} style={{ color: "var(--ok)" }}>
+                        {assets.filter(a => {
+                            const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed");
+                            return !currentBorrow && a.status === "available";
+                        }).length}
+                    </span>
                 </div>
-                <div className={styles.statCard}>
+                <div 
+                    className={`${styles.statCard} ${filterStatus === "borrowed" ? styles.active : ""}`}
+                    onClick={() => setFilterStatus("borrowed")}
+                >
+                    <span className={styles.statLabel}>ถูกยืม</span>
+                    <span className={styles.statVal} style={{ color: "var(--blue)" }}>
+                        {assets.filter(a => {
+                            const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed");
+                            return !!currentBorrow;
+                        }).length}
+                    </span>
+                </div>
+                <div 
+                    className={`${styles.statCard} ${filterStatus === "maintenance" ? styles.active : ""}`}
+                    onClick={() => setFilterStatus("maintenance")}
+                >
+                    <span className={styles.statLabel}>ซ่อมบำรุง</span>
+                    <span className={styles.statVal} style={{ color: "var(--late)" }}>{assets.filter(a => a.status === "maintenance").length}</span>
+                </div>
+                <div 
+                    className={`${styles.statCard} ${filterStatus === "damaged" ? styles.active : ""}`}
+                    onClick={() => setFilterStatus("damaged")}
+                >
                     <span className={styles.statLabel}>ชำรุด</span>
-                    <span className={styles.statVal} style={{ color: "#dc2626" }}>{assets.filter(a => a.status === "damaged").length}</span>
+                    <span className={styles.statVal} style={{ color: "var(--bad)" }}>{assets.filter(a => a.status === "damaged").length}</span>
                 </div>
             </div>
 
@@ -285,7 +386,7 @@ export default function AdminAssetsPage() {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>อุปกรณ์</th>
+                            <th>{isEquipment ? "อุปกรณ์" : "สินค้า"}</th>
                             <th>สถานะ</th>
                             <th>ผู้ยืมปัจจุบัน</th>
                             <th>กำหนดคืน</th>
@@ -295,22 +396,40 @@ export default function AdminAssetsPage() {
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={5} className={styles.loading}>กำลังโหลด...</td></tr>
-                        ) : assets.length === 0 ? (
-                            <tr><td colSpan={5} className={styles.loading}>ไม่มีข้อมูลอุปกรณ์</td></tr>
-                        ) : (
-                            assets.map(asset => {
+                        ) : (() => {
+                            const filtered = assets.filter(asset => {
+                                const matchesSearch = 
+                                    asset.asset_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    asset.name.toLowerCase().includes(searchQuery.toLowerCase());
+                                
                                 const currentBorrow = asset.asset_borrowings.find(b => b.status === "borrowed");
+                                const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
+                                
+                                const matchesStatus = filterStatus === "all" || effectiveStatus === filterStatus;
+                                return matchesSearch && matchesStatus;
+                            });
+
+                            if (filtered.length === 0) {
+                                return <tr><td colSpan={5} className={styles.loading}>ไม่พบข้อมูล{isEquipment ? "อุปกรณ์" : "สินค้า"}</td></tr>;
+                            }
+
+                            return filtered.map(asset => {
+                                const currentBorrow = asset.asset_borrowings.find(b => b.status === "borrowed");
+                                const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
                                 return (
                                     <tr key={asset.id}>
                                         <td>
                                             <div className={styles.assetName}>{asset.name}</div>
-                                            <div className={styles.assetId}>{asset.asset_id} • {asset.category}</div>
+                                            <div className={styles.assetId}>
+                                                {asset.asset_id} • {asset.category}
+                                                {!isEquipment && asset.company_name && ` • ${asset.company_name}`}
+                                            </div>
                                         </td>
                                         <td>
-                                            <span className={`${styles.statusBadge} ${styles[asset.status]}`}>
-                                                {asset.status === "available" ? "พร้อมใช้งาน" : 
-                                                 asset.status === "borrowed" ? "ถูกยืม" : 
-                                                 asset.status === "damaged" ? "ชำรุด" : "ซ่อมบำรุง"}
+                                            <span className={`${styles.statusBadge} ${styles[effectiveStatus]}`}>
+                                                {effectiveStatus === "available" ? "พร้อมใช้งาน" : 
+                                                 effectiveStatus === "borrowed" ? "ถูกยืม" : 
+                                                 effectiveStatus === "damaged" ? "ชำรุด" : "ซ่อมบำรุง"}
                                             </span>
                                         </td>
                                         <td>
@@ -331,7 +450,7 @@ export default function AdminAssetsPage() {
                                         </td>
                                         <td>
                                             <div className={styles.actions}>
-                                                {asset.status === "borrowed" && (
+                                                {effectiveStatus === "borrowed" && (
                                                     <button 
                                                         className={styles.returnBtn}
                                                         onClick={() => openReturnModal(asset)}
@@ -353,7 +472,16 @@ export default function AdminAssetsPage() {
                                                 >
                                                     <PencilSquareIcon width={16} />
                                                 </button>
-                                                {asset.status !== "borrowed" && (
+                                                {effectiveStatus === "available" && (
+                                                    <button 
+                                                        className={styles.borrowActionBtn}
+                                                        onClick={() => { setSelectedAsset(asset); setShowBorrowModal(true); }}
+                                                        title="ทำเรื่องยืม (Admin)"
+                                                    >
+                                                        <HandThumbUpIcon width={16} /> ยืม
+                                                    </button>
+                                                )}
+                                                {effectiveStatus !== "borrowed" && (
                                                     <button 
                                                         className={styles.deleteBtn}
                                                         onClick={() => handleDelete(asset.id, asset.name)}
@@ -366,8 +494,8 @@ export default function AdminAssetsPage() {
                                         </td>
                                     </tr>
                                 );
-                            })
-                        )}
+                            });
+                        })()}
                     </tbody>
                 </table>
             </div>
@@ -377,16 +505,16 @@ export default function AdminAssetsPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
-                            <h2>{isEditing ? "แก้ไขข้อมูลอุปกรณ์" : "เพิ่มอุปกรณ์ใหม่"}</h2>
-                            <p>{isEditing ? "ปรับปรุงรายละเอียดของอุปกรณ์ในระบบ" : "ลงทะเบียนอุปกรณ์ใหม่เข้าสู่ระบบ"}</p>
+                            <h2>{isEditing ? `แก้ไขข้อมูล${isEquipment ? 'อุปกรณ์' : 'สินค้า'}` : `เพิ่ม${isEquipment ? 'อุปกรณ์' : 'สินค้า'}ใหม่`}</h2>
+                            <p>{isEditing ? `ปรับปรุงรายละเอียดของ${isEquipment ? 'อุปกรณ์' : 'สินค้า'}ในระบบ` : `ลงทะเบียน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}ใหม่เข้าสู่ระบบ`}</p>
                         </div>
                         <form onSubmit={handleAssetSubmit}>
                             <div className={styles.modalBody}>
                                 <div className={styles.inputGroup}>
-                                    <label>Asset ID (รหัสอุปกรณ์)</label>
+                                    <label>{isEquipment ? "Asset ID (รหัสอุปกรณ์)" : "Product Code (รหัสสินค้า)"}</label>
                                     <input 
                                         type="text" 
-                                        placeholder="เช่น NB-001, PRJ-05"
+                                        placeholder={isEquipment ? "เช่น NB-001" : "เช่น P-001"}
                                         value={assetForm.asset_id}
                                         onChange={e => setAssetForm({...assetForm, asset_id: e.target.value})}
                                         required
@@ -394,15 +522,26 @@ export default function AdminAssetsPage() {
                                     />
                                 </div>
                                 <div className={styles.inputGroup}>
-                                    <label>ชื่ออุปกรณ์</label>
+                                    <label>{isEquipment ? "ชื่ออุปกรณ์" : "ชื่อสินค้า"}</label>
                                     <input 
                                         type="text" 
-                                        placeholder="เช่น Laptop Dell Vostro"
+                                        placeholder={isEquipment ? "เช่น Laptop" : "เช่น สินค้า A"}
                                         value={assetForm.name}
                                         onChange={e => setAssetForm({...assetForm, name: e.target.value})}
                                         required
                                     />
                                 </div>
+                                {!isEquipment && (
+                                    <div className={styles.inputGroup}>
+                                        <label>Company Name (บริษัทเจ้าของ)</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="ระบุชื่อบริษัท"
+                                            value={assetForm.avg_category}
+                                            onChange={e => setAssetForm({...assetForm, avg_category: e.target.value})}
+                                        />
+                                    </div>
+                                )}
                                 <div className={styles.inputGroup}>
                                     <label>หมวดหมู่</label>
                                     <select 
@@ -410,12 +549,21 @@ export default function AdminAssetsPage() {
                                         onChange={e => setAssetForm({...assetForm, category: e.target.value})}
                                     >
                                         <option value="">เลือกหมวดหมู่...</option>
-                                        <option value="Notebook">Notebook</option>
-                                        <option value="PC">PC / Monitor</option>
-                                        <option value="Peripheral">Peripheral (Mouse/Keyboard)</option>
-                                        <option value="Camera">Camera</option>
-                                        <option value="Tool">Tool (เครื่องมือช่าง)</option>
-                                        <option value="Other">Other</option>
+                                        {isEquipment ? (
+                                            <>
+                                                <option value="Tool">Tool (เครื่องมือช่าง)</option>
+                                                <option value="Machine">Machine (เครื่องจักร)</option>
+                                                <option value="Safety">Safety Gear</option>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value="Stationery">Stationery (เครื่องเขียน)</option>
+                                                <option value="Consumable">Consumable (วัสดุสิ้นเปลือง)</option>
+                                                <option value="Furniture">Furniture (เฟอร์นิเจอร์)</option>
+                                                <option value="Marketing">Marketing Material</option>
+                                                <option value="Other">Other (อื่นๆ)</option>
+                                            </>
+                                        )}
                                     </select>
                                 </div>
                                 {isEditing && (
@@ -426,6 +574,7 @@ export default function AdminAssetsPage() {
                                             onChange={e => setAssetForm({...assetForm, status: e.target.value as any})}
                                         >
                                             <option value="available">พร้อมใช้งาน</option>
+                                            <option value="borrowed">ถูกยืม</option>
                                             <option value="maintenance">ซ่อมบำรุง</option>
                                             <option value="damaged">ชำรุด</option>
                                         </select>
@@ -448,7 +597,7 @@ export default function AdminAssetsPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
-                            <h2>รับคืนอุปกรณ์</h2>
+                            <h2>รับคืน{isEquipment ? 'อุปกรณ์' : 'สินค้า'}</h2>
                             <p>{selectedAsset.name} ({selectedAsset.asset_id})</p>
                         </div>
                         <div className={styles.modalBody}>
@@ -461,9 +610,9 @@ export default function AdminAssetsPage() {
                                 />
                             </div>
                             <div className={styles.inputGroup}>
-                                <label>สภาพอุปกรณ์เมื่อคืน</label>
+                                <label>สภาพ{isEquipment ? 'อุปกรณ์' : 'สินค้า'}เมื่อคืน</label>
                                 <textarea 
-                                    placeholder="ระบุความเสียหาย หรือ สภาพหลังการใช้งาน..."
+                                    placeholder={isEquipment ? "ระบุความเสียหาย หรือ สภาพหลังการใช้งาน..." : "ระบุสภาพของสินค้า..."}
                                     value={returnData.condition_at_return}
                                     onChange={e => setReturnData({...returnData, condition_at_return: e.target.value})}
                                 />
@@ -477,7 +626,7 @@ export default function AdminAssetsPage() {
                                 />
                                 <label htmlFor="is_damaged">
                                     <ExclamationTriangleIcon width={18} style={{ color: "#dc2626" }} /> 
-                                    อุปกรณ์ชำรุด / เสียหาย
+                                    {isEquipment ? 'อุปกรณ์' : 'สินค้า'}ชำรุด / เสียหาย
                                 </label>
                             </div>
                         </div>
@@ -497,7 +646,7 @@ export default function AdminAssetsPage() {
                         <div className={styles.modalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
                                 <h2>ประวัติการยืม: {selectedAsset.name}</h2>
-                                <p>รหัสคุณครุภัณฑ์: {selectedAsset.asset_id}</p>
+                                <p>รหัส{isEquipment ? 'ครุภัณฑ์' : 'สินค้า'}: {selectedAsset.asset_id}</p>
                             </div>
                             <button className={styles.editBtn} onClick={() => setShowHistoryModal(false)}>
                                 <XMarkIcon width={24} />
@@ -567,6 +716,17 @@ export default function AdminAssetsPage() {
                     </div>
                 </div>
             )}
+            {/* Admin Borrow Modal */}
+            <AdminBorrowModal 
+                isOpen={showBorrowModal}
+                onClose={() => { setShowBorrowModal(false); setSelectedAsset(null); }}
+                asset={selectedAsset}
+                type={type as any}
+                onSuccess={() => {
+                    loadAssets();
+                    setAlert({ visible: true, message: `บันทึกการยืม${isEquipment ? 'อุปกรณ์' : 'สินค้า'}สำเร็จ`, type: "ok" });
+                }}
+            />
         </div>
     );
 }

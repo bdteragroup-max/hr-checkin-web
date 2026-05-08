@@ -2856,3 +2856,148 @@ export async function sendHrWelfareNotification(
   );
   return results.every(r => r === true);
 }
+
+/**
+ * Sends a real-time Product Borrowing notification
+ */
+export async function sendProductBorrowNotification(
+  data: {
+    empName: string;
+    productName: string;
+    productCode: string;
+    borrowDate: string;
+    returnDate: string;
+    location: string;
+    jobTitle?: string;
+    branchName?: string;
+    photoUrl?: string;
+    extraTargetIds?: string[];
+    remark?: string;
+    companyName?: string;
+  }
+) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+  }
+
+  const hrManagerId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  // Merge extra targets
+  if (data.extraTargetIds && data.extraTargetIds.length > 0) {
+    const uniqueExtras = data.extraTargetIds.filter(id => id && !targetIds.includes(id));
+    targetIds = [...targetIds, ...uniqueExtras];
+  }
+
+  if (targetIds.length === 0) return false;
+
+  const photos = parsePhotoData(data.photoUrl);
+  const heroComponent = generateImageGrid(photos);
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "บันทึกการยืมสินค้า / สิ่งของ", weight: "bold", size: "lg", color: "#1e293b" }
+      ],
+      backgroundColor: "#fefce8"
+    },
+    hero: heroComponent || undefined,
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "box", layout: "vertical", spacing: "sm", contents: [
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+          ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+          ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#ca8a04", size: "sm", weight: "bold", flex: 7 }] },
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+          ...(data.remark ? [{ type: "text", text: `หมายเหตุ: ${data.remark}`, size: "xs", color: "#6b7280", margin: "md", style: "italic", wrap: true }] : [])
+        ] }
+      ]
+    }
+  };
+
+  const results = await Promise.all(
+    targetIds.map(id => sendLineMessage(id, [{ type: "flex", altText: `ยืมสินค้า: ${data.productName}`, contents }]))
+  );
+  return results.every(r => r);
+}
+
+/**
+ * Sends a real-time Product Returning notification
+ */
+export async function sendProductReturnNotification(
+  data: {
+    empName: string;
+    productName: string;
+    productCode: string;
+    actualReturnDate: string;
+    condition: string;
+    isDamaged: boolean;
+    jobTitle?: string;
+    photoUrl?: string;
+    extraTargetIds?: string[];
+    companyName?: string;
+  }
+) {
+  // Format names with nicknames
+  if (data) {
+    if ((data as any).empName) (data as any).empName = await formatNameDb((data as any).empName);
+  }
+
+  const hrManagerId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  let targetIds = [hrManagerId, managementId].filter(id => !!id) as string[];
+
+  // Merge extra targets
+  if (data.extraTargetIds && data.extraTargetIds.length > 0) {
+    const uniqueExtras = data.extraTargetIds.filter(id => id && !targetIds.includes(id));
+    targetIds = [...targetIds, ...uniqueExtras];
+  }
+
+  if (targetIds.length === 0) return false;
+
+  const photos = parsePhotoData(data.photoUrl);
+  const heroComponent = generateImageGrid(photos);
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "แจ้งคืนสินค้า / สิ่งของ", weight: "bold", size: "lg", color: "#1e293b" }
+      ],
+      backgroundColor: "#f0fdf4"
+    },
+    hero: heroComponent || undefined,
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "box", layout: "vertical", spacing: "sm", contents: [
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+          ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }] },
+          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพสินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition || "ปกติ", color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", flex: 7, wrap: true }] }
+        ] }
+      ]
+    }
+  };
+
+  const results = await Promise.all(
+    targetIds.map(id => sendLineMessage(id, [{ type: "flex", altText: `คืนสินค้า: ${data.productName}`, contents }]))
+  );
+  return results.every(r => r);
+}

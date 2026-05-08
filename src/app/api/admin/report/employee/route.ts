@@ -58,6 +58,13 @@ export async function GET(req: Request) {
             new Date(h.date).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" })
         ));
 
+        const workPlans = await prisma.daily_work_plans.findMany({
+            where: {
+                emp_id,
+                date: { gte: start, lte: end }
+            }
+        });
+
         const map: Record<string, any> = {};
 
         // 1. Process Check-ins
@@ -132,6 +139,21 @@ export async function GET(req: Request) {
                     map[d].note = l.reason || map[d].note || "";
                 }
             }
+        }
+
+        // 3. Mix in Work Plans
+        for (const wp of workPlans) {
+            const d = new Date(wp.date).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+            map[d] ||= { date: d, note: "" };
+            map[d].workPlan = {
+                morning: wp.morning_plan,
+                morning_loc: wp.morning_location,
+                afternoon: wp.afternoon_plan,
+                afternoon_loc: wp.afternoon_location,
+                ot: wp.ot_plan,
+                ot_loc: wp.ot_location,
+                ot_attendant: wp.ot_attendant
+            };
         }
 
         const dailyRows = Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));

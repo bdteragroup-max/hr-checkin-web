@@ -8,13 +8,18 @@ export async function POST(req: Request) {
         const token = (await cookies()).get("token")?.value;
         if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-        const payload = verifyToken(token) as { emp_id: string };
+        const payload = verifyToken(token) as { emp_id: string; role: string };
         const body = await req.json();
         const { 
             asset_id, borrow_date, expected_return_date, location, remark, photo_url_borrow,
             borrow_vehicle_status, borrow_is_clean, borrow_is_lights_ok, borrow_is_tires_ok,
-            borrow_is_body_ok, borrow_is_insurance_ok, borrow_inspection_remark
+            borrow_is_body_ok, borrow_is_insurance_ok, borrow_inspection_remark,
+            borrower_emp_id
         } = body;
+
+        // If admin or warehouse manager, they can borrow for someone else. Otherwise, use payload.emp_id
+        const isAdmin = payload.role === "admin" || payload.role === "SUPER_ADMIN" || payload.role === "WAREHOUSE_MANAGER";
+        const targetEmpId = (isAdmin && borrower_emp_id) ? borrower_emp_id : payload.emp_id;
 
         if (!asset_id || !borrow_date || !expected_return_date) {
             console.warn("[API/assets/borrow] 400: Missing required fields", { asset_id, borrow_date, expected_return_date });
@@ -23,7 +28,7 @@ export async function POST(req: Request) {
 
         // Fetch employee details (Job and Branch)
         const employee = await prisma.employees.findUnique({
-            where: { emp_id: payload.emp_id },
+            where: { emp_id: targetEmpId },
             include: { 
                 job_positions: true,
                 branches: true
@@ -126,7 +131,7 @@ export async function POST(req: Request) {
             const borrowing = await tx.asset_borrowings.create({
                 data: {
                     asset_id: Number(asset_id),
-                    emp_id: payload.emp_id,
+                    emp_id: targetEmpId,
                     borrow_date: borrowStart,
                     expected_return_date: borrowEnd,
                     location: location || null,

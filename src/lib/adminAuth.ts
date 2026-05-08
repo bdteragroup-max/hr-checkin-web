@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
 export type AdminTokenPayload = {
-    emp_id: string; // admin.username ถูกใส่ใน emp_id ตาม /api/admin/login
-    role: "admin";
+    emp_id: string; // admin.username
+    role: string;
 };
 
 function getSecret(): string {
@@ -24,11 +24,17 @@ export async function requireAdmin(): Promise<AdminTokenPayload> {
     const emp_id = decoded?.emp_id;
     const role = decoded?.role;
 
-    if (role !== "admin" || typeof emp_id !== "string" || !emp_id) {
+    if (typeof emp_id !== "string" || !emp_id || typeof role !== "string") {
+        throw new Error("FORBIDDEN");
+    }
+    
+    // We expect a role like "SUPER_ADMIN" or "WAREHOUSE_MANAGER"
+    // The previous role "admin" is also allowed for backward compatibility during migration
+    if (role !== "admin" && !role.includes("_ADMIN") && !role.includes("_MANAGER")) {
         throw new Error("FORBIDDEN");
     }
 
-    return { emp_id, role: "admin" };
+    return { emp_id, role };
 }
 
 export async function isAdminLoggedIn(): Promise<boolean> {

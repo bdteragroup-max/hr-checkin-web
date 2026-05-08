@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import {
@@ -53,9 +54,22 @@ type Asset = {
     description: string | null;
     image_url: string | null;
     status: string;
+    company_name?: string | null;
 };
 
 export default function AssetBorrowPage() {
+    return (
+        <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>กำลังโหลด...</div>}>
+            <AssetBorrowPageInner />
+        </Suspense>
+    );
+}
+
+function AssetBorrowPageInner() {
+    const searchParams = useSearchParams();
+    const type = searchParams.get("type") || "item";
+    const isEquipment = type === "equipment";
+
     const [activeTab, setActiveTab] = useState<"borrow" | "my">("borrow");
     const [assets, setAssets] = useState<Asset[]>([]);
     const [myBorrowings, setMyBorrowings] = useState<any[]>([]);
@@ -92,19 +106,52 @@ export default function AssetBorrowPage() {
 
     useEffect(() => {
         loadData();
-    }, [activeTab]);
+    }, [activeTab, type]);
 
     async function loadData() {
         setLoading(true);
         try {
             if (activeTab === "borrow") {
-                const res = await fetch("/api/assets/available?category_exclude=Car");
+                const url = isEquipment 
+                    ? "/api/assets/available?category_exclude=Car"
+                    : "/api/products/available";
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Failed to fetch");
+                }
                 const data = await res.json();
-                setAssets(Array.isArray(data) ? data : []);
+                console.log(`[AssetBorrowPage] Loaded ${isEquipment ? 'Equipment' : 'Items'}:`, data);
+                
+                // Map product fields to asset fields for UI consistency if needed
+                const normalized = Array.isArray(data) ? data.map((item: any) => ({
+                    id: item.id,
+                    asset_id: item.product_code || item.asset_id,
+                    name: item.product_name || item.name,
+                    description: item.description,
+                    image_url: item.image_url,
+                    status: item.status,
+                    company_name: item.company_name || item.company_owner
+                })) : [];
+                
+                setAssets(normalized);
             } else {
-                const res = await fetch("/api/assets/my?category_exclude=Car");
+                const url = isEquipment 
+                    ? "/api/assets/my?category_exclude=Car"
+                    : "/api/products/my";
+                const res = await fetch(url);
                 const data = await res.json();
-                setMyBorrowings(Array.isArray(data) ? data : []);
+                
+                // Normalize my borrowings
+                const normalized = Array.isArray(data) ? data.map((b: any) => ({
+                    ...b,
+                    assets: b.product ? {
+                        asset_id: b.product.product_code,
+                        name: b.product.product_name
+                    } : b.assets
+                })) : [];
+                
+                setMyBorrowings(normalized);
             }
         } catch (e) {
             console.error(e);
@@ -157,22 +204,26 @@ export default function AssetBorrowPage() {
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/assets/borrow", {
+            const url = isEquipment ? "/api/assets/borrow" : "/api/products/borrow";
+            const bodyPayload: any = {
+                borrow_date: borrowDatetime,
+                expected_return_date: returnDatetime,
+                location: formData.location,
+                remark: formData.remark,
+                photo_url_borrow: borrowPhoto
+            };
+            if (isEquipment) bodyPayload.asset_id = selectedAsset.id;
+            else bodyPayload.product_id = selectedAsset.id;
+
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    asset_id: selectedAsset.id,
-                    borrow_date: borrowDatetime,
-                    expected_return_date: returnDatetime,
-                    location: formData.location,
-                    remark: formData.remark,
-                    photo_url_borrow: borrowPhoto
-                })
+                body: JSON.stringify(bodyPayload)
             });
 
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: "บันทึกการยืนอุปกรณ์เรียบร้อยแล้ว", type: "ok" });
+                setAlert({ visible: true, message: `บันทึกการยืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}เรียบร้อยแล้ว`, type: "ok" });
                 setSelectedAsset(null);
                 setBorrowPhoto(null);
                 const n = new Date();
@@ -219,7 +270,8 @@ export default function AssetBorrowPage() {
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/assets/return", {
+            const url = isEquipment ? "/api/assets/return" : "/api/products/return";
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -233,7 +285,7 @@ export default function AssetBorrowPage() {
 
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: "แจ้งคืนอุปกรณ์เรียบร้อยแล้ว", type: "ok" });
+                setAlert({ visible: true, message: `แจ้งคืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}เรียบร้อยแล้ว`, type: "ok" });
                 setShowReturnModal(false);
                 loadData();
             } else {
@@ -258,9 +310,9 @@ export default function AssetBorrowPage() {
             <div className={styles.wrap}>
                 {/* ── Hero Title ── */}
                 <div className={styles.hero}>
-                    <h1 className={styles.heroH1}>ระบบจัดการอุปกรณ์</h1>
+                    <h1 className={styles.heroH1}>{isEquipment ? "ระบบจัดการอุปกรณ์" : "ระบบยืมสินค้า/สิ่งของ"}</h1>
                     <div className={styles.heroP} style={{ fontSize: 13, color: "var(--text3)", marginTop: -6, marginBottom: 12 }}>
-                        ยืม-คืนอุปกรณ์บริษัท
+                        ยืม-คืน{isEquipment ? "อุปกรณ์บริษัท" : "สินค้าและสิ่งของส่วนกลาง"}
                     </div>
                 </div>
 
@@ -270,7 +322,7 @@ export default function AssetBorrowPage() {
                         className={`${styles.tab} ${activeTab === "borrow" ? styles.tabActive : ""}`}
                         onClick={() => setActiveTab("borrow")}
                     >
-                        <CubeIcon width={18} /> ยืมอุปกรณ์
+                        <CubeIcon width={18} /> ยืม{isEquipment ? "อุปกรณ์" : "สินค้า"}
                     </button>
                     <button
                         className={`${styles.tab} ${activeTab === "my" ? styles.tabActive : ""}`}
@@ -307,7 +359,14 @@ export default function AssetBorrowPage() {
                             <div className={styles.assetGrid}>
                                 {filteredAssets.map(asset => (
                                     <div key={asset.id} className={styles.card}>
-                                        <span className={styles.assetId}>{asset.asset_id}</span>
+                                        <div className={styles.myHeader}>
+                                            <span className={styles.assetId}>{asset.asset_id}</span>
+                                            {asset.company_name && (
+                                                <div style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "var(--surface2)", fontWeight: 700, color: "var(--text3)" }}>
+                                                    {asset.company_name}
+                                                </div>
+                                            )}
+                                        </div>
                                         <h3 className={styles.assetName}>{asset.name}</h3>
                                         <p className={styles.assetDesc}>{asset.description || "—"}</p>
 
@@ -323,7 +382,7 @@ export default function AssetBorrowPage() {
                                             className={`${styles.btn} ${styles.btnPrimary}`}
                                             onClick={() => setSelectedAsset(asset)}
                                         >
-                                            ดำเนินการยืมอุปกรณ์
+                                            ดำเนินการยืม{isEquipment ? "อุปกรณ์" : "สินค้า"}
                                         </button>
                                     </div>
                                 ))}
@@ -368,7 +427,7 @@ export default function AssetBorrowPage() {
                                             className={styles.btn}
                                             onClick={() => openReturnModal(b)}
                                         >
-                                            ดำเนินการคืนอุปกรณ์
+                                            ดำเนินการคืน{isEquipment ? "อุปกรณ์" : "สินค้า"}
                                         </button>
                                     </div>
                                 ))}
@@ -383,7 +442,7 @@ export default function AssetBorrowPage() {
                 <div className={styles.modalOverlay} onClick={() => !submitting && setSelectedAsset(null)}>
                     <div className={styles.modal} onClick={e => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2>ยืมอุปกรณ์: {selectedAsset.name}</h2>
+                            <h2>ยืม{isEquipment ? "อุปกรณ์" : "สินค้า"}: {selectedAsset.name}</h2>
                             <button className={styles.closeBtn} onClick={() => setSelectedAsset(null)}><XMarkIcon width={20} /></button>
                         </div>
                         <form onSubmit={handleSubmit} className={styles.form}>
@@ -468,7 +527,7 @@ export default function AssetBorrowPage() {
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setSelectedAsset(null)} disabled={submitting}>ยกเลิก</button>
                                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || uploading}>
-                                    {submitting ? "กำลังบันทึก..." : "ยืนยันการยืมอุปกรณ์"}
+                                    {submitting ? "กำลังบันทึก..." : `ยืนยันการยืม${isEquipment ? 'อุปกรณ์' : 'สินค้า'}`}
                                 </button>
                             </div>
                         </form>
@@ -481,7 +540,7 @@ export default function AssetBorrowPage() {
                 <div className={styles.modalOverlay} onClick={() => !submitting && setShowReturnModal(false)}>
                     <div className={styles.modal} onClick={e => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2>คืนอุปกรณ์: {selectedReturn.assets.name}</h2>
+                            <h2>คืน{isEquipment ? "อุปกรณ์" : "สินค้า"}: {selectedReturn.assets.name}</h2>
                             <button className={styles.closeBtn} onClick={() => setShowReturnModal(false)}><XMarkIcon width={20} /></button>
                         </div>
                         <form onSubmit={handleReturnSubmit} className={styles.form}>
@@ -563,7 +622,7 @@ export default function AssetBorrowPage() {
                             <div className={styles.modalActions}>
                                 <button type="button" className={styles.btn} onClick={() => setShowReturnModal(false)} disabled={submitting}>ยกเลิก</button>
                                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || uploading}>
-                                    {submitting ? "กำลังดำเนินการ..." : "ยืนยันการคืนอุปกรณ์"}
+                                    {submitting ? "กำลังดำเนินการ..." : `ยืนยันการคืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}`}
                                 </button>
                             </div>
                         </form>

@@ -208,7 +208,7 @@ export async function POST(req: Request) {
     }
 
     const isProject = type.startsWith("Project");
-    const isOffsite = type.startsWith("Offsite") || type === "Trip-Update";
+    const isOffsite = type.startsWith("Offsite") || type === "Trip-Update" || is_trip;
 
     let targetLat = Number(branch.center_lat);
     let targetLon = Number(branch.center_lon);

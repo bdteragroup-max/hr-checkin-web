@@ -179,6 +179,17 @@ function tabFromQuery(t: string | null): TabKey {
 ══════════════════════════════════════════════ */
 function AdminPageInner() {
     const searchParams = useSearchParams();
+    const [admin, setAdmin] = useState<any>(null);
+
+    useEffect(() => {
+        fetch("/api/admin/me")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) setAdmin(data.admin);
+            }).catch(() => { });
+    }, []);
+
+    const role = admin?.role || "SUPER_ADMIN";
 
     /* ── Global ── */
     const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
@@ -291,9 +302,14 @@ function AdminPageInner() {
     /* ✅ sync activeTab with URL (?tab=...) */
     useEffect(() => {
         const t = tabFromQuery(searchParams.get("tab"));
+        // Strict enforcement: Warehouse Manager can only see 'dashboard' tab on this page
+        if (role === "WAREHOUSE_MANAGER" && t !== "dashboard") {
+            setActiveTab("dashboard");
+            return;
+        }
         setActiveTab(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams]);
+    }, [searchParams, role]);
 
     /* ─────────────────────────────────── */
     /*  INIT                               */
@@ -681,6 +697,30 @@ function AdminPageInner() {
     }
 
     function renderDashboard() {
+        if (role?.toUpperCase() === "WAREHOUSE_MANAGER") {
+            return (
+                <div className={styles.emptyState} style={{ padding: "80px 20px" }}>
+                    <div className={styles.emptyIcon} style={{ background: "var(--red-light)", color: "var(--red)", width: 80, height: 80, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                        <InboxStackIcon width={40} />
+                    </div>
+                    <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text1)", marginBottom: 12 }}>ระบบจัดการคลังสินค้า (Warehouse)</h2>
+                    <p style={{ color: "var(--text3)", fontSize: 16, maxWidth: 400, margin: "0 auto 32px", lineHeight: 1.6 }}>
+                        ยินดีต้อนรับเข้าสู่ระบบจัดการอุปกรณ์และพาหนะ <br />
+                        กรุณาเลือกเมนู <b>"ระบบอุปกรณ์"</b> หรือ <b>"ระบบพาหนะ"</b> <br />
+                        เพื่อเริ่มจัดการข้อมูลการยืม-คืน
+                    </p>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                        <Link href="/admin/assets" className={styles.btnPrimary} style={{ padding: "10px 24px" }}>
+                            ไปที่ระบบอุปกรณ์
+                        </Link>
+                        <Link href="/admin/cars" className={styles.btnOutline} style={{ padding: "10px 24px" }}>
+                            ไปที่ระบบพาหนะ
+                        </Link>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <>
             {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0 || notifs.missingPlansCount > 0) && (
