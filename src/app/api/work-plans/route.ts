@@ -12,11 +12,17 @@ export async function GET() {
         const payload = verifyToken(token);
         if (!payload) return NextResponse.json({ error: "INVALID_TOKEN" }, { status: 401 });
 
-        const today = getTodayBangkokISO();
+        const todayStr = getTodayBangkokISO();
+        const startOfDay = new Date(`${todayStr}T00:00:00.000Z`);
+        const endOfDay = new Date(`${todayStr}T23:59:59.999Z`);
+
         const plan = await prisma.daily_work_plans.findFirst({
             where: {
                 emp_id: payload.emp_id,
-                date: new Date(today)
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
             }
         });
 
@@ -59,13 +65,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
         }
 
-        const today = getTodayBangkokISO();
+        const todayStr = getTodayBangkokISO();
+        const targetDate = new Date(`${todayStr}T00:00:00.000Z`);
 
         const plan = await prisma.daily_work_plans.upsert({
             where: {
                 emp_id_date: {
                     emp_id: payload.emp_id,
-                    date: new Date(today)
+                    date: targetDate
                 }
             },
             update: {
@@ -79,7 +86,7 @@ export async function POST(req: Request) {
             },
             create: {
                 emp_id: payload.emp_id,
-                date: new Date(today),
+                date: targetDate,
                 morning_plan,
                 morning_location,
                 afternoon_plan,

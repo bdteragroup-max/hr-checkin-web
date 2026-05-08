@@ -231,7 +231,7 @@ export default function TeamRecordsPage() {
                     </div>
                 )}
 
-                <div style={{ width: 1, height: 40, background: "var(--line)", alignSelf: "center", margin: "18px 8px 0" }} />
+                <div className={styles.separator} style={{ width: 1, height: 40, background: "var(--line)", alignSelf: "center", margin: "18px 8px 0" }} />
 
                 <div className={styles.filterGroup} style={{ position: "relative", flex: 1, maxWidth: 450 }} ref={dropdownRef}>
                     <div className={styles.filterLabel} style={{ display: "flex", alignItems: "center", gap: 6 }}>

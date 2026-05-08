@@ -71,11 +71,11 @@ export default function TripLogPage() {
     const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
     const [isPlanLoading, setIsPlanLoading] = useState(true);
 
-    // useEffect(() => {
-    //     if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
-    //         setShowWorkPlan(true);
-    //     }
-    // }, [isPlanLoading, planSubmittedToday, me]);
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me]);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);

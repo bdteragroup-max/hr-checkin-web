@@ -190,7 +190,13 @@ export async function POST(req: Request) {
             include: { job_positions: { select: { is_ot_eligible: true } } }
         }),
         prisma.daily_work_plans.findFirst({
-            where: { emp_id: auth.emp.emp_id, date: date_key }
+            where: { 
+                emp_id: auth.emp.emp_id, 
+                date: {
+                    gte: new Date(`${getTodayBangkokISO()}T00:00:00.000Z`),
+                    lte: new Date(`${getTodayBangkokISO()}T23:59:59.999Z`)
+                }
+            }
         })
     ]);
 
