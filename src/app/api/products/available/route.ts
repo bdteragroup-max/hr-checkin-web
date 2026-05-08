@@ -7,31 +7,40 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const category = searchParams.get("category");
+        const includeBorrowed = searchParams.get("include_borrowed") === "true";
 
-        const whereClause: any = { status: "available" };
+        const whereClause: any = {};
+        if (!includeBorrowed) {
+            whereClause.status = "available";
+        }
+        
         if (category) {
             whereClause.category = category;
         }
 
         const now = new Date();
-        const availableProducts = await prisma.products.findMany({
-            where: {
-                ...whereClause,
-                // Exclude products that have an active borrowing right now
-                NOT: {
-                    product_borrowings: {
-                        some: {
-                            status: { in: ["borrowed", "reserved"] },
-                            borrow_date: { lte: now },
-                            expected_return_date: { gt: now }
-                        }
+        
+        // Final where clause
+        const finalWhere: any = { ...whereClause };
+        if (!includeBorrowed) {
+            finalWhere.NOT = {
+                product_borrowings: {
+                    some: {
+                        status: { in: ["borrowed", "reserved"] },
+                        borrow_date: { lte: now },
+                        expected_return_date: { gt: now }
                     }
                 }
-            },
+            };
+        }
+
+        const availableProducts = await prisma.products.findMany({
+            where: finalWhere,
             include: {
                 product_borrowings: {
                     where: {
                         status: { in: ["borrowed", "reserved"] },
+                        borrow_date: { lte: now },
                         expected_return_date: { gt: now }
                     },
                     include: {
@@ -39,8 +48,7 @@ export async function GET(req: Request) {
                             select: { name: true, nickname: true }
                         }
                     },
-                    orderBy: { borrow_date: "asc" },
-                    take: 3
+                    orderBy: { borrow_date: "asc" }
                 }
             },
             orderBy: { product_name: "asc" }

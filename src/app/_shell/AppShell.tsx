@@ -112,6 +112,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
         navMain.push({ id: "team-kpi", href: "/team/kpi", icon: PresentationChartLineIcon, label: "จัดการ KPI ทีม", sub: "KPI Management" });
         navMain.push({ id: "team-welfare", href: "/team/welfare", icon: BanknotesIcon, label: "อนุมัติสวัสดิการทีม", sub: "Team Welfare" });
+        navMain.push({ id: "team-records", href: "/team/records", icon: ClipboardDocumentListIcon, label: "ประวัติการเช็คอินทีม", sub: "Team Records" });
     }
 
     // NOTE: Do not show Sidebar on Login or Admin pages

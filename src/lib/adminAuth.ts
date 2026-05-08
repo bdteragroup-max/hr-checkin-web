@@ -37,6 +37,70 @@ export async function requireAdmin(): Promise<AdminTokenPayload> {
     return { emp_id, role };
 }
 
+/** 
+ * Allows both Admin tokens and Regular User tokens (if they are a supervisor) 
+ */
+export async function requireAdminOrSupervisor(): Promise<{ username: string; emp_id: string; role: string; isSupervisorOnly: boolean }> {
+    const cookieStore = await cookies();
+    
+    const adminToken = cookieStore.get("admin_token")?.value;
+    const userToken = cookieStore.get("token")?.value;
+
+    let adminPayload: JwtPayload | null = null;
+    let userPayload: JwtPayload | null = null;
+
+    if (adminToken) {
+        try {
+            adminPayload = jwt.verify(adminToken, getSecret()) as JwtPayload;
+        } catch (e) {}
+    }
+
+    if (userToken) {
+        try {
+            userPayload = jwt.verify(userToken, getSecret()) as JwtPayload;
+        } catch (e) {}
+    }
+
+    // If Admin token exists, they have access. 
+    if (adminPayload) {
+        return { 
+            username: adminPayload.emp_id, // admin.username
+            emp_id: userPayload?.emp_id || adminPayload.emp_id, // Prefer real employee ID if linked
+            role: adminPayload.role, 
+            isSupervisorOnly: false 
+        };
+    }
+
+    if (!userPayload?.emp_id) throw new Error("UNAUTHORIZED");
+
+    // Verify if they are a supervisor in the DB
+    const { prisma } = await import("@/lib/prisma");
+    const emp = await prisma.employees.findUnique({
+        where: { emp_id: userPayload.emp_id },
+        select: { is_active: true }
+    });
+
+    const isSupervisorOfSomeone = await prisma.employees.findFirst({
+        where: {
+            OR: [
+                { supervisor_id: userPayload.emp_id },
+                { secondary_supervisor_id: userPayload.emp_id }
+            ]
+        }
+    });
+
+    if (!emp?.is_active || !isSupervisorOfSomeone) {
+        throw new Error("FORBIDDEN");
+    }
+
+    return { 
+        username: userPayload.emp_id, 
+        emp_id: userPayload.emp_id, 
+        role: "SUPERVISOR", 
+        isSupervisorOnly: true 
+    };
+}
+
 export async function isAdminLoggedIn(): Promise<boolean> {
     try {
         await requireAdmin();

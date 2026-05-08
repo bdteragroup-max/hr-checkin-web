@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
 
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month"); // e.g. "2026-01"
@@ -32,8 +32,22 @@ export async function GET(req: Request) {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
 
+        const teamOnly = url.searchParams.get("team") === "1";
+ 
+         const subordinateFilter: any = {};
+         if (auth.isSupervisorOnly || teamOnly) {
+             subordinateFilter.OR = [
+                 { supervisor_id: auth.emp_id },
+                 { secondary_supervisor_id: auth.emp_id }
+             ];
+         }
+
         const emps = await prisma.employees.findMany({
-            where: { is_active: true, is_checkin_exempt: false } as any, 
+            where: { 
+                is_active: true, 
+                is_checkin_exempt: false,
+                ...subordinateFilter
+            } as any, 
             select: {
                 emp_id: true,
                 name: true,

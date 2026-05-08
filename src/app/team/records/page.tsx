@@ -1,15 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import styles from "../page.module.css";
+import styles from "./page.module.css";
 import { 
     DocumentTextIcon, 
     ArrowDownTrayIcon, 
-    FunnelIcon,
-    ArrowPathIcon,
     CheckCircleIcon,
-    XCircleIcon,
-    UserIcon,
     Bars3CenterLeftIcon,
     MagnifyingGlassIcon,
     ChevronDownIcon,
@@ -39,12 +35,9 @@ interface RecordSummary {
     total_work_days_period: number;
 }
 
-export default function RecordsPage() {
+export default function TeamRecordsPage() {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
-
-    // Helper to get YYYY-MM formatted string
-    const formatMonth = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 
     const formatDate = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -72,7 +65,7 @@ export default function RecordsPage() {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetch("/api/admin/employees")
+        fetch("/api/admin/employees?team=1")
             .then(r => r.json())
             .then(json => {
                 if (json.ok) setEmployees(json.list || []);
@@ -98,8 +91,6 @@ export default function RecordsPage() {
     const calcRange = (monthsBack: number) => {
         const eMonth = currentMonth;
         const eYear = currentYear;
-        // The end date is always the 25th of the current month
-        // The start date is the 26th of the month (monthsBack) ago
         let sMonth = currentMonth - monthsBack;
         let sYear = currentYear;
         while (sMonth <= 0) { sMonth += 12; sYear -= 1; }
@@ -119,13 +110,13 @@ export default function RecordsPage() {
         if (!startDate || !endDate) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/records?start_date=${startDate}&end_date=${endDate}`);
+            const res = await fetch(`/api/admin/records?start_date=${startDate}&end_date=${endDate}&team=1`);
             const json = await res.json();
             if (json.ok) setData(json.summary || []);
             else showToast(json.error || "Failed to load records", "bad");
 
             if (filterEmpId !== "all") {
-                const resDet = await fetch(`/api/admin/records/details?emp_id=${filterEmpId}&start_date=${startDate}&end_date=${endDate}`);
+                const resDet = await fetch(`/api/admin/records/details?emp_id=${filterEmpId}&start_date=${startDate}&end_date=${endDate}&team=1`);
                 const jsonDet = await resDet.json();
                 if (jsonDet.ok) setDetails(jsonDet.details || []);
             }
@@ -142,7 +133,7 @@ export default function RecordsPage() {
 
     function exportFile(type: "pdf" | "excel") {
         showToast("กำลังเตรียมไฟล์...");
-        const p = new URLSearchParams({ start_date: startDate, end_date: endDate });
+        const p = new URLSearchParams({ start_date: startDate, end_date: endDate, team: "1" });
         if (filterEmpId !== "all") p.set("emp_id", filterEmpId);
         window.location.href = `/api/admin/export/records_${type}?${p.toString()}`;
     }
@@ -158,17 +149,15 @@ export default function RecordsPage() {
     }, [employees, searchTerm]);
 
     const selectedEmployeeName = useMemo(() => {
-        if (filterEmpId === "all") return "ทุกคน (สรุปภาพรวม)";
+        if (filterEmpId === "all") return "ทุกคนในทีม (สรุปภาพรวม)";
         const found = employees.find(e => e.emp_id === filterEmpId);
         return found ? `${found.emp_id} - ${found.name}` : filterEmpId;
     }, [employees, filterEmpId]);
 
-    // Added sorting: Ascending (1st of the month first)
     const sortedDetails = useMemo(() => {
         return [...details].sort((a, b) => a.date.localeCompare(b.date));
     }, [details]);
 
-    // Summary data for just the selected employee (if individual)
     const selectedSummaryData = useMemo(() => {
         if (filterEmpId === "all") return data;
         return data.filter(d => d.emp_id === filterEmpId);
@@ -185,8 +174,8 @@ export default function RecordsPage() {
 
             <div className={styles.pageHeader}>
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                    <h1 className={styles.pageTitle}>สถิติย้อนหลัง (Historical Records)</h1>
-                    <div className={styles.pageSubtitle}>ตรวจสอบและวิเคราะห์สถิติการเข้างานย้อนหลังของพนักงาน</div>
+                    <h1 className={styles.pageTitle}>ประวัติการเช็คอินทีม (Team Records)</h1>
+                    <div className={styles.pageSubtitle}>ตรวจสอบและวิเคราะห์สถิติการเข้างานย้อนหลังของทีมงานในความดูแล</div>
                 </div>
                 
                 <div style={{ display: "flex", gap: "12px" }}>
@@ -200,14 +189,14 @@ export default function RecordsPage() {
             </div>
 
             {/* Filter Section */}
-            <div className={styles.filterBar} style={{ background: "var(--surface)", padding: "18px 24px", borderRadius: "16px", border: "1px solid var(--line)", marginBottom: 24, boxShadow: "var(--shadow-sm)" }}>
+            <div className={styles.filterBar} style={{ background: "var(--surface)", padding: "24px", borderRadius: "18px", border: "1px solid var(--line)", marginBottom: 32, boxShadow: "var(--shadow-sm)" }}>
                 <div className={styles.filterGroup}>
                     <div className={styles.filterLabel} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <CalendarIcon width={14} /> ช่วงเวลา
                     </div>
                     <select 
                         className={styles.input} 
-                        style={{ width: "160px" }}
+                        style={{ width: "180px" }}
                         value={rangeType}
                         onChange={(e) => setRangeType(e.target.value as any)}
                     >
@@ -242,18 +231,18 @@ export default function RecordsPage() {
                     </div>
                 )}
 
-                <div style={{ width: 1, height: 32, background: "var(--line)", alignSelf: "center", margin: "18px 8px 0" }} />
+                <div style={{ width: 1, height: 40, background: "var(--line)", alignSelf: "center", margin: "18px 8px 0" }} />
 
-                <div className={styles.filterGroup} style={{ position: "relative", flex: 1, maxWidth: 400 }} ref={dropdownRef}>
+                <div className={styles.filterGroup} style={{ position: "relative", flex: 1, maxWidth: 450 }} ref={dropdownRef}>
                     <div className={styles.filterLabel} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <UserGroupIcon width={14} /> เลือกพนักงาน (Search)
+                        <UserGroupIcon width={14} /> เลือกพนักงานในทีม
                     </div>
                     <div 
                         className={styles.input} 
                         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", background: isDropdownOpen ? "var(--surface2)" : "var(--surface)" }}
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
-                        <span style={{ color: filterEmpId === "all" ? "var(--text3)" : "var(--text)", fontWeight: 600 }}>{selectedEmployeeName}</span>
+                        <span style={{ color: filterEmpId === "all" ? "var(--text3)" : "var(--text)", fontWeight: 700 }}>{selectedEmployeeName}</span>
                         <ChevronDownIcon width={16} style={{ color: "var(--text4)", transform: isDropdownOpen ? "rotate(180deg)" : "none", transition: "0.2s" }} />
                     </div>
 
@@ -263,36 +252,36 @@ export default function RecordsPage() {
                             border: "1.5px solid var(--line2)", borderRadius: "12px", marginTop: 8, 
                             boxShadow: "var(--shadow-md)", zIndex: 1000, overflow: "hidden" 
                         }}>
-                            <div style={{ padding: 10, borderBottom: "1px solid var(--line)", background: "var(--surface2)" }}>
+                            <div style={{ padding: 12, borderBottom: "1px solid var(--line)", background: "var(--surface2)" }}>
                                 <div style={{ position: "relative" }}>
                                     <MagnifyingGlassIcon width={16} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text4)" }} />
                                     <input 
                                         type="text" 
-                                        placeholder="พิมพ์เพื่อหาชื่อหรือรหัส..." 
+                                        placeholder="พิมพ์เพื่อหาชื่อหรือรหัสพนักงาน..." 
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
                                         autoFocus
                                         onClick={e => e.stopPropagation()}
-                                        style={{ width: "100%", padding: "8px 12px 8px 32px", border: "1px solid var(--line2)", borderRadius: "8px", fontSize: 13, outline: "none" }}
+                                        style={{ width: "100%", padding: "10px 12px 10px 36px", border: "1px solid var(--line2)", borderRadius: "10px", fontSize: 14, outline: "none" }}
                                     />
                                 </div>
                             </div>
-                            <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                            <div style={{ maxHeight: 320, overflowY: "auto" }}>
                                 <div 
-                                    style={{ padding: "10px 16px", cursor: "pointer", fontSize: 13, fontWeight: filterEmpId === "all" ? 700 : 500, color: filterEmpId === "all" ? "var(--red)" : "var(--text2)", background: filterEmpId === "all" ? "var(--red-lt)" : "transparent" }}
+                                    style={{ padding: "12px 20px", cursor: "pointer", fontSize: 14, fontWeight: filterEmpId === "all" ? 800 : 600, color: filterEmpId === "all" ? "var(--red)" : "var(--text2)", background: filterEmpId === "all" ? "var(--red-lt)" : "transparent" }}
                                     onClick={() => { setFilterEmpId("all"); setIsDropdownOpen(false); setSearchTerm(""); }}
                                 >
-                                    ทุกคน (สรุปภาพรวม)
+                                    ทุกคนในทีม (สรุปภาพรวม)
                                 </div>
                                 {filteredEmployees.length === 0 ? (
-                                    <div style={{ padding: "20px 16px", textAlign: "center", color: "var(--text4)", fontSize: 12 }}>ไม่พบข้อมูลพนักงาน</div>
+                                    <div style={{ padding: "24px 20px", textAlign: "center", color: "var(--text4)", fontSize: 13 }}>ไม่พบข้อมูลพนักงาน</div>
                                 ) : filteredEmployees.map(e => (
                                     <div 
                                         key={e.emp_id} 
-                                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: 13, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 700 : 500, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent" }}
+                                        style={{ padding: "12px 20px", cursor: "pointer", fontSize: 14, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 800 : 600, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent" }}
                                         onClick={() => { setFilterEmpId(e.emp_id); setIsDropdownOpen(false); setSearchTerm(""); }}
                                     >
-                                        <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 11, marginRight: 8 }}>{e.emp_id}</span>
+                                        <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 12, marginRight: 10 }}>{e.emp_id}</span>
                                         {e.name}
                                     </div>
                                 ))}
@@ -302,24 +291,24 @@ export default function RecordsPage() {
                 </div>
             </div>
 
-            {/* REORDERED: Detailed Table shown at the TOP when an individual is selected */}
+            {/* Detailed Table */}
             {filterEmpId !== "all" && (
-                <div className={styles.tableWrap} style={{ marginBottom: 24 }}>
-                    <div className={styles.tableHeader} style={{ background: "var(--surface2)" }}>
-                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <DocumentTextIcon width={20} style={{ color: "var(--red)" }} /> 
-                            รายละเอียดการลงเวลารายวัน: <span style={{ color: "var(--red)", fontWeight: 800 }}>{selectedEmployeeName}</span>
+                <div className={styles.tableWrap} style={{ marginBottom: 32 }}>
+                    <div className={styles.tableHeader}>
+                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <DocumentTextIcon width={22} style={{ color: "var(--red)" }} /> 
+                            รายละเอียดรายวันของ: <span style={{ color: "var(--red)", fontWeight: 800 }}>{selectedEmployeeName}</span>
                         </div>
                     </div>
                     
                     <div className={styles.tableScroll}>
                         {loading && sortedDetails.length === 0 ? (
-                            <div className={styles.loader} style={{ height: 160 }}><div className={styles.spinner} />กำลังโหลดรายละเอียด...</div>
+                            <div className={styles.loader} style={{ height: 200 }}><div className={styles.spinner} />กำลังดึงข้อมูลรายละเอียด...</div>
                         ) : (
                             <table className={styles.table}>
                                 <thead>
                                     <tr>
-                                        <th style={{ width: 140 }}>วันที่</th>
+                                        <th style={{ width: 160 }}>วันที่</th>
                                         <th>บันทึกเช็คอิน</th>
                                         <th>บันทึกเช็คเอาท์</th>
                                         <th>แผนงานประจำวัน</th>
@@ -331,64 +320,64 @@ export default function RecordsPage() {
                                         const isHighlight = d.is_weekend || d.status.includes("วันหยุด");
                                         return (
                                             <tr key={i} style={{ background: isHighlight ? "var(--surface2)" : "transparent" }}>
-                                                <td><span style={{ fontWeight: 600, color: d.is_weekend ? "var(--text4)" : "var(--text)" }}>{d.date}</span></td>
+                                                <td><span style={{ fontWeight: 700, color: d.is_weekend ? "var(--text4)" : "var(--text)" }}>{d.date}</span></td>
                                                 <td>
                                                     {d.in_time ? (
                                                         <>
-                                                            <div style={{ fontWeight: 700, color: "var(--ok)", display: "flex", alignItems: "center", gap: 6 }}>
+                                                            <div style={{ fontWeight: 800, color: "var(--ok)", display: "flex", alignItems: "center", gap: 6 }}>
                                                                 {d.in_time}
                                                                 {d.is_trip && <span style={{ fontSize: 10, background: "var(--red)", color: "#fff", padding: "1px 6px", borderRadius: 4, letterSpacing: 0.5 }}>TRIP</span>}
                                                             </div>
-                                                            <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>{d.in_loc || "-"}</div>
+                                                            <div style={{ fontSize: 12, color: "var(--text4)", marginTop: 4 }}>{d.in_loc || "-"}</div>
                                                         </>
                                                     ) : <span style={{ color: "var(--text5)" }}>—</span>}
                                                 </td>
                                                 <td>
                                                     {d.out_time ? (
                                                         <>
-                                                            <div style={{ fontWeight: 700, color: "var(--warn)" }}>{d.out_time}</div>
-                                                            <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>{d.out_loc || "-"}</div>
+                                                            <div style={{ fontWeight: 800, color: "var(--warn)" }}>{d.out_time}</div>
+                                                            <div style={{ fontSize: 12, color: "var(--text4)", marginTop: 4 }}>{d.out_loc || "-"}</div>
                                                         </>
                                                     ) : <span style={{ color: "var(--text5)" }}>—</span>}
                                                 </td>
                                                 <td>
                                                     {d.work_plan ? (
                                                         <div style={{ 
-                                                            fontSize: 11, 
+                                                            fontSize: 12, 
                                                             display: "flex", 
                                                             flexDirection: "column", 
-                                                            gap: 4,
-                                                            minWidth: 200,
-                                                            padding: "6px 10px",
-                                                            background: "rgba(59, 130, 246, 0.05)",
-                                                            border: "1px solid rgba(59, 130, 246, 0.2)",
-                                                            borderRadius: 8
+                                                            gap: 6,
+                                                            minWidth: 250,
+                                                            padding: "10px 14px",
+                                                            background: "rgba(59, 130, 246, 0.04)",
+                                                            border: "1px solid rgba(59, 130, 246, 0.15)",
+                                                            borderRadius: 10
                                                         }}>
-                                                            <div style={{ display: "flex", gap: 6 }}>
-                                                                <span style={{ color: "#3b82f6", fontWeight: 700, minWidth: 28 }}>เช้า:</span>
+                                                            <div style={{ display: "flex", gap: 8 }}>
+                                                                <span style={{ color: "#3b82f6", fontWeight: 800, minWidth: 32 }}>เช้า:</span>
                                                                 <span style={{ color: "var(--text2)" }}>{d.work_plan.morning}</span>
-                                                                <span style={{ color: "var(--text4)", fontSize: 10 }}>({d.work_plan.morning_loc})</span>
+                                                                <span style={{ color: "var(--text4)", fontSize: 11 }}>({d.work_plan.morning_loc})</span>
                                                             </div>
-                                                            <div style={{ display: "flex", gap: 6 }}>
-                                                                <span style={{ color: "#3b82f6", fontWeight: 700, minWidth: 28 }}>บ่าย:</span>
+                                                            <div style={{ display: "flex", gap: 8 }}>
+                                                                <span style={{ color: "#3b82f6", fontWeight: 800, minWidth: 32 }}>บ่าย:</span>
                                                                 <span style={{ color: "var(--text2)" }}>{d.work_plan.afternoon}</span>
-                                                                <span style={{ color: "var(--text4)", fontSize: 10 }}>({d.work_plan.afternoon_loc})</span>
+                                                                <span style={{ color: "var(--text4)", fontSize: 11 }}>({d.work_plan.afternoon_loc})</span>
                                                             </div>
                                                             {d.work_plan.ot && (
-                                                                <div style={{ display: "flex", gap: 6, borderTop: "1px dashed rgba(59, 130, 246, 0.2)", paddingTop: 4, marginTop: 2 }}>
-                                                                    <span style={{ color: "#f59e0b", fontWeight: 700, minWidth: 28 }}>OT:</span>
+                                                                <div style={{ display: "flex", gap: 8, borderTop: "1px dashed rgba(59, 130, 246, 0.2)", paddingTop: 6, marginTop: 4 }}>
+                                                                    <span style={{ color: "#f59e0b", fontWeight: 800, minWidth: 32 }}>OT:</span>
                                                                     <span style={{ color: "var(--text2)" }}>{d.work_plan.ot}</span>
-                                                                    {d.work_plan.ot_attendant && <span style={{ color: "var(--text4)", fontSize: 10 }}>[ผช. {d.work_plan.ot_attendant}]</span>}
+                                                                    {d.work_plan.ot_attendant && <span style={{ color: "var(--text4)", fontSize: 11 }}>[ผช. {d.work_plan.ot_attendant}]</span>}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span style={{ color: "var(--text5)", fontSize: 11 }}>— ไม่มีแผนงาน —</span>
+                                                        <span style={{ color: "var(--text5)", fontSize: 12 }}>— ไม่มีแผนงาน —</span>
                                                     )}
                                                 </td>
                                                 <td style={{ textAlign: "center" }}>
                                                     <span style={{
-                                                        padding: "5px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase",
+                                                        padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 900,
                                                         background: d.status === "มาทำงาน" ? "var(--ok-bg)" :
                                                                    d.status === "มาสาย" ? "var(--late-bg)" :
                                                                    d.status === "ขาด" ? "var(--bad-bg)" :
@@ -412,7 +401,7 @@ export default function RecordsPage() {
                                     })}
                                     {sortedDetails.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} style={{ padding: 40, textAlign: "center", color: "var(--text5)" }}>ไม่มีรายละเอียดประวัติในช่วงเวลานี้</td>
+                                            <td colSpan={5} style={{ padding: 60, textAlign: "center", color: "var(--text5)" }}>ไม่มีประวัติการลงเวลาในช่วงนี้</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -425,24 +414,24 @@ export default function RecordsPage() {
             {/* Summary Table */}
             <div className={styles.tableWrap}>
                 <div className={styles.tableHeader}>
-                    <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <Bars3CenterLeftIcon width={20} /> {filterEmpId === "all" ? "ตารางสรุปภาพรวมสถิติพนักงาน" : "สรุปภาพรวมสถิติรายบุคคล"}
+                    <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Bars3CenterLeftIcon width={22} /> {filterEmpId === "all" ? "สรุปภาพรวมสถิติทีมงาน" : "สรุปภาพรวมสถิติรายบุคคล"}
                     </div>
                 </div>
 
                 <div className={styles.tableScroll}>
                     {loading ? (
-                        <div className={styles.loader} style={{ height: 200 }}><div className={styles.spinner} />กำลังประมวลผลข้อมูล...</div>
+                        <div className={styles.loader} style={{ height: 250 }}><div className={styles.spinner} />กำลังวิเคราะห์ข้อมูลทีมงาน...</div>
                     ) : selectedSummaryData.length === 0 ? (
                         <div className={styles.emptyState}>
-                            <span className={styles.emptyIcon}><InboxIcon width={32} /></span>
-                            ไม่พบข้อมูลในช่วงที่กำหนด
+                            <span className={styles.emptyIcon}><InboxIcon width={36} /></span>
+                            ไม่พบข้อมูลสถิติในช่วงเวลานี้
                         </div>
                     ) : (
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: 120 }}>รหัส</th>
+                                    <th style={{ width: 140 }}>รหัสพนักงาน</th>
                                     <th>พนักงาน / สาขา</th>
                                     <th style={{ textAlign: "center" }}>มาทำงาน</th>
                                     <th style={{ textAlign: "center" }}>ขาดงาน</th>
@@ -455,28 +444,28 @@ export default function RecordsPage() {
                                     <tr key={row.emp_id}>
                                         <td><span className={styles.monoText}>{row.emp_id}</span></td>
                                         <td>
-                                            <div style={{ fontWeight: 700, color: "var(--text)" }}>{row.name}</div>
-                                            <div style={{ fontSize: 12, color: "var(--text4)", marginTop: 2 }}>{row.branch_id || "ไม่ระบุสำนักงาน"}</div>
+                                            <div style={{ fontWeight: 800, color: "var(--text)", fontSize: 15 }}>{row.name}</div>
+                                            <div style={{ fontSize: 13, color: "var(--text4)", marginTop: 4 }}>{row.branch_id || "ไม่ระบุสำนักงาน"}</div>
                                         </td>
-                                        <td style={{ textAlign: "center", fontWeight: 700, color: "var(--ok)" }}>{row.present_days} <small style={{ color: "var(--text5)", fontWeight: 400 }}>วัน</small></td>
+                                        <td style={{ textAlign: "center", fontWeight: 800, color: "var(--ok)", fontSize: 16 }}>{row.present_days} <small style={{ color: "var(--text5)", fontWeight: 500, fontSize: 12 }}>วัน</small></td>
                                         <td style={{ textAlign: "center" }}>
                                             {row.absent_days > 0 ? (
-                                                <span className={`${styles.badge} ${styles.absent}`} style={{ minWidth: 40 }}>{row.absent_days}</span>
+                                                <span className={`${styles.badge} ${styles.absent}`} style={{ minWidth: 44 }}>{row.absent_days}</span>
                                             ) : <span style={{ color: "var(--text5)" }}>-</span>}
                                         </td>
                                         <td style={{ textAlign: "center" }}>
                                             {row.leave_days > 0 ? (
                                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <span className={`${styles.badge} ${styles.leave}`} style={{ minWidth: 40, fontWeight: 900 }}>{row.leave_days}</span>
-                                                    {row.pending_leave_days > 0 && <small style={{ fontSize: 9, color: "var(--warn)", marginTop: 2 }}>รอ {row.pending_leave_days}</small>}
+                                                    <span className={`${styles.badge} ${styles.leave}`} style={{ minWidth: 44, fontWeight: 900 }}>{row.leave_days}</span>
+                                                    {row.pending_leave_days > 0 && <small style={{ fontSize: 10, color: "var(--warn)", marginTop: 4, fontWeight: 700 }}>รออนุมัติ {row.pending_leave_days}</small>}
                                                 </div>
                                             ) : <span style={{ color: "var(--text5)" }}>-</span>}
                                         </td>
                                         <td style={{ textAlign: "center" }}>
                                             {row.late_count > 0 ? (
                                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <span style={{ color: "var(--late)", fontWeight: 800, fontSize: 14 }}>{row.late_count} <small style={{ fontWeight: 400, color: "var(--text5)" }}>ครั้ง</small></span>
-                                                    <small style={{ color: "var(--text4)", fontSize: 10 }}>สายรวม {row.late_mins} นาที</small>
+                                                    <span style={{ color: "var(--late)", fontWeight: 900, fontSize: 16 }}>{row.late_count} <small style={{ fontWeight: 500, color: "var(--text5)", fontSize: 12 }}>ครั้ง</small></span>
+                                                    <small style={{ color: "var(--text4)", fontSize: 11, fontWeight: 600 }}>สายรวม {row.late_mins} นาที</small>
                                                 </div>
                                             ) : <span style={{ color: "var(--text5)" }}>-</span>}
                                         </td>

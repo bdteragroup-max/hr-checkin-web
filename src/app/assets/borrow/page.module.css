@@ -480,6 +480,105 @@
   font-weight: 700;
 }
 
+.assetId {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.borrowedBadge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ea580c;
+    background: #fff7ed;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #ffedd5;
+}
+
+.summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 0 4px;
+}
+
+.summaryItem {
+    flex: 1;
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+}
+
+.summaryActive {
+    border-color: var(--red);
+    background: #fff5f5;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.1);
+}
+
+.summaryActive .summaryValue {
+    color: var(--red);
+}
+
+.summaryLabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.summaryValue {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.borrowerInfo {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px dashed #e2e8f0;
+}
+
+.borrowerTitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.borrowerDetail {
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.borrowerDate {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.cardBorrowed {
+    opacity: 0.85;
+    border-color: #ffedd5;
+    background: #fffcf9;
+}
+
 .myDetails {
   background: var(--gray-50);
   padding: 10px;

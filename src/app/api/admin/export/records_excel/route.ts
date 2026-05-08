@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ function formatTime(d: Date) {
 
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
 
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month");
@@ -20,6 +20,15 @@ export async function GET(req: Request) {
         const paramStartDate = url.searchParams.get("start_date");
         const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
+
+        const teamOnly = url.searchParams.get("team") === "1";
+        const subordinateFilter: any = {};
+        if (auth.isSupervisorOnly || teamOnly) {
+            subordinateFilter.OR = [
+                { supervisor_id: auth.emp_id },
+                { secondary_supervisor_id: auth.emp_id }
+            ];
+        }
 
         let start: Date;
         let end: Date;
@@ -51,7 +60,12 @@ export async function GET(req: Request) {
 
         if (emp_id) {
             // ================== INDIVIDUAL EXPORT ==================
-            const emp = await prisma.employees.findUnique({ where: { emp_id } });
+            const emp = await prisma.employees.findUnique({ 
+                where: { 
+                    emp_id,
+                    ...subordinateFilter
+                } as any
+            });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
             const sheet = workbook.addWorksheet("Attendance Details");
@@ -68,7 +82,11 @@ export async function GET(req: Request) {
         } else {
             // ================== EVERYONE EXPORT ==================
             const emps = await prisma.employees.findMany({
-                where: { is_active: true, is_checkin_exempt: false } as any,
+                where: { 
+                    is_active: true, 
+                    is_checkin_exempt: false,
+                    ...subordinateFilter
+                } as any,
                 select: { emp_id: true, name: true, branch_id: true },
                 orderBy: { emp_id: "asc" },
             });
@@ -152,9 +170,7 @@ export async function GET(req: Request) {
 
             // 2. Individual Sheets
             for (const e of emps) {
-                // Excel sheet names must be unique and <= 31 chars
                 let sheetName = `${e.emp_id} - ${e.name}`.slice(0, 31);
-                // Ensure unique name (though emp_id should already guarantee this)
                 const sheet = workbook.addWorksheet(sheetName);
                 await fillEmployeeSheet(sheet, e.emp_id, e.name, start, end, holidayMap);
             }

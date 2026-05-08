@@ -26,6 +26,7 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
     const [returnDate, setReturnDate] = useState("");
     const [location, setLocation] = useState("");
     const [remark, setRemark] = useState("");
+    const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -69,7 +70,8 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
                 borrow_date: borrowDate,
                 expected_return_date: returnDate,
                 location,
-                remark
+                remark,
+                quantity: Number(quantity)
             };
             
             if (isEquipment) {
@@ -209,6 +211,20 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
                                 placeholder="สภาพเบื้องต้น หรือจุดประสงค์การยืม..."
                                 value={remark}
                                 onChange={e => setRemark(e.target.value)}
+                            />
+                        </div>
+ 
+                        <div className={styles.inputGroup} style={{ marginTop: 16 }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 14, fontWeight: 600 }}>
+                                <DocumentTextIcon width={16} /> จำนวนที่ยืม (ชิ้น) *
+                            </label>
+                            <input 
+                                type="number" 
+                                className={styles.input}
+                                value={quantity}
+                                onChange={e => setQuantity(Number(e.target.value))}
+                                min={1}
+                                required
                             />
                         </div>
                     </div>

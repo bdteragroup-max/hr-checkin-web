@@ -16,8 +16,21 @@ export async function GET(req: Request) {
 
         const payload = verifyToken(token) as { emp_id: string };
 
+        // 1. Find subordinates
+        const subordinates = await prisma.employees.findMany({
+            where: {
+                OR: [
+                    { supervisor_id: payload.emp_id },
+                    { secondary_supervisor_id: payload.emp_id }
+                ]
+            },
+            select: { emp_id: true }
+        });
+        const subIds = subordinates.map(s => s.emp_id);
+        const allIds = [payload.emp_id, ...subIds];
+
         const whereClause: any = { 
-            emp_id: payload.emp_id, 
+            emp_id: { in: allIds }, 
             status: { in: ["borrowed", "reserved"] } 
         };
         if (category) {
@@ -29,7 +42,8 @@ export async function GET(req: Request) {
         const borrowings = await prisma.asset_borrowings.findMany({
             where: whereClause,
             include: {
-                assets: true
+                assets: true,
+                employee: { select: { name: true, nickname: true, emp_id: true } }
             },
             orderBy: { borrow_date: "desc" }
         });

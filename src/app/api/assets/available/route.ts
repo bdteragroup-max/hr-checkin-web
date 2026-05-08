@@ -8,8 +8,13 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const category = searchParams.get("category");
         const categoryExclude = searchParams.get("category_exclude");
+        const includeBorrowed = searchParams.get("include_borrowed") === "true";
 
-        const whereClause: any = { status: "available" };
+        const whereClause: any = {};
+        if (!includeBorrowed) {
+            whereClause.status = "available";
+        }
+
         if (category) {
             whereClause.category = category;
         } else if (categoryExclude) {
@@ -19,37 +24,35 @@ export async function GET(req: Request) {
             ];
         }
 
-        console.log("[API/assets/available] searchParams:", { category, categoryExclude });
-        console.log("[API/assets/available] whereClause:", whereClause);
-
+        console.log("[API/assets/available] searchParams:", { category, categoryExclude, includeBorrowed });
+        
         const now = new Date();
-        const availableAssets = await prisma.assets.findMany({
-            where: {
-                ...whereClause,
-                // Exclude assets that have an active borrowing right now
-                NOT: {
-                    asset_borrowings: {
-                        some: {
-                            status: { in: ["borrowed", "reserved"] },
-                            borrow_date: { lte: now },
-                            expected_return_date: { gt: now }
-                        }
+        const finalWhere: any = { ...whereClause };
+        if (!includeBorrowed) {
+            finalWhere.NOT = {
+                asset_borrowings: {
+                    some: {
+                        status: { in: ["borrowed", "reserved"] },
+                        borrow_date: { lte: now },
+                        expected_return_date: { gt: now }
                     }
                 }
-            },
+            };
+        }
+
+        const availableAssets = await prisma.assets.findMany({
+            where: finalWhere,
             include: {
                 asset_borrowings: {
                     where: {
-                        status: { in: ["borrowed", "reserved"] },
-                        expected_return_date: { gt: now }
+                        status: { in: ["borrowed", "reserved"] }
                     },
                     include: {
                         employee: {
                             select: { name: true, nickname: true }
                         }
                     },
-                    orderBy: { borrow_date: "asc" },
-                    take: 3
+                    orderBy: { borrow_date: "asc" }
                 }
             },
             orderBy: { name: "asc" }

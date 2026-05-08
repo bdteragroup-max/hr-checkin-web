@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const { 
-            asset_id, name, category, description,
+            asset_id, name, category, description, stock,
             company_owner, vehicle_type, brand, vehicle_model, main_user, usage_remark 
         } = body;
 
@@ -93,6 +93,7 @@ export async function POST(req: Request) {
                 vehicle_model: vehicle_model || null,
                 main_user: main_user || null,
                 usage_remark: usage_remark || null,
+                stock: stock !== undefined ? Number(stock) : 50,
                 status: "available"
             }
         });

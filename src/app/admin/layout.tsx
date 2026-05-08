@@ -65,6 +65,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         const upRole = role.toUpperCase();
         if (upRole === "SUPER_ADMIN" || upRole === "ADMIN") return true;
         
+        if (upRole === "SUPERVISOR") {
+            // Supervisor can ONLY see records page
+            return path === "/admin/records" || path.startsWith("/admin/records/");
+        }
+
         if (upRole === "WAREHOUSE_MANAGER") {
             // Warehouse Manager can only see Dashboard, Assets (Items/Equipment), and Cars
             const allowedPaths = [
@@ -300,13 +305,22 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                  </Link>
                              )}
 
-                             {/* ✅ Car Management */}
                             {hasAccess("/admin/cars") && (
                                 <Link
                                     href="/admin/cars"
                                     className={`${styles.navItem} ${pathname.startsWith("/admin/cars") ? styles.active : ""}`}
                                 >
                                     <span className={styles.navIcon}><TruckIcon width={20} /></span>ระบบพาหนะ (Cars)
+                                </Link>
+                            )}
+
+                            {/* ✅ Vehicle Reports (Grouped for Warehouse Manager) */}
+                            {admin?.role?.toUpperCase() === "WAREHOUSE_MANAGER" && (
+                                <Link
+                                    href="/admin/reports/vehicles"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/reports/vehicles") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><PresentationChartLineIcon width={20} /></span>รายงานยานพาหนะ
                                 </Link>
                             )}
 
@@ -350,6 +364,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                     <span className={styles.navIcon}><PresentationChartLineIcon width={20} /></span>สถิติย้อนหลัง
                                 </Link>
                             )}
+
+
 
 
                         </nav>

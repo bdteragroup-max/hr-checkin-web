@@ -14,11 +14,19 @@ import {
     UserIcon,
     ClipboardDocumentListIcon,
     XMarkIcon,
-    MagnifyingGlassIcon
+    MagnifyingGlassIcon,
+    ArrowPathIcon,
+    ChevronLeftIcon,
+    CalendarIcon,
+    CheckIcon,
+    MapPinIcon,
+    InboxStackIcon,
+    HandThumbUpIcon,
+    ChartBarIcon,
+    ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import AdminBorrowModal from "@/components/AdminBorrowModal";
-import { HandThumbUpIcon } from "@heroicons/react/24/outline";
 
 type Asset = {
     id: number;
@@ -27,13 +35,16 @@ type Asset = {
     category: string | null;
     company_name?: string | null;
     status: "available" | "borrowed" | "maintenance" | "damaged";
+    stock: number;
+    borrowed_count: number;
     asset_borrowings: Array<{
         id: number;
         emp_id: string;
-        employee: { name: string };
+        employee: { name: string, nickname?: string };
         borrow_date: string;
         expected_return_date: string;
         status: string;
+        quantity: number;
     }>;
 };
 
@@ -79,9 +90,47 @@ function AdminAssetsPageInner() {
         avg_category: "", // internal placeholder
         category: "",
         description: "",
+        stock: 50,
         status: "available"
     });
     const [assetSaving, setAssetSaving] = useState(false);
+
+    // Report States
+    const [viewMode, setViewMode] = useState<"list" | "dashboard">("dashboard");
+    const [reportData, setReportData] = useState<any>(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportStart, setReportStart] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    });
+    const [reportEnd, setReportEnd] = useState(() => new Date().toISOString().split('T')[0]);
+
+    async function loadReport() {
+        setReportLoading(true);
+        try {
+            const params = new URLSearchParams({ 
+                start: reportStart, 
+                end: reportEnd,
+                type: type // item or equipment
+            });
+            const res = await fetch(`/api/admin/reports/products?${params.toString()}`);
+            const json = await res.json();
+            if (json.ok) {
+                setReportData(json.stats);
+            }
+        } catch (e) {
+            console.error("Load report failed", e);
+        } finally {
+            setReportLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (viewMode === "dashboard") {
+            loadReport();
+        }
+    }, [viewMode]);
 
     // Filtering State
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -103,15 +152,30 @@ function AdminAssetsPageInner() {
                 const data = await res.json();
                 
                 // Normalize for UI
-                const normalized = data.map((p: any) => ({
-                    id: p.id,
-                    asset_id: p.product_code || p.asset_id,
-                    name: p.product_name || p.name,
-                    category: p.category,
-                    company_name: p.company_name || p.company_owner,
-                    status: p.status,
-                    asset_borrowings: p.product_borrowings || p.asset_borrowings || []
-                }));
+                const normalized = data.map((p: any) => {
+                    const borrowings = p.product_borrowings || p.asset_borrowings || [];
+                    const activeBorrowings = borrowings.filter((b: any) => b.status === "borrowed" || b.status === "reserved");
+                    let borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + (b.quantity || 1), 0);
+                    
+                    // For equipment, if status says borrowed but no records found, force it to 1 for display
+                    if (isEquipment && p.status === "borrowed" && borrowedCount === 0) {
+                        borrowedCount = 1;
+                    }
+
+                    const stock = isEquipment ? 1 : (p.stock || 0);
+
+                    return {
+                        id: p.id,
+                        asset_id: p.product_code || p.asset_id,
+                        name: p.product_name || p.name,
+                        category: p.category,
+                        company_name: p.company_name || p.company_owner,
+                        status: p.status,
+                        stock: stock,
+                        borrowed_count: borrowedCount,
+                        asset_borrowings: borrowings
+                    };
+                });
                 
                 setAssets(normalized);
             }
@@ -141,6 +205,7 @@ function AdminAssetsPageInner() {
             category: asset.category || "", 
             avg_category: asset.company_name || "",
             description: "", 
+            stock: asset.stock,
             status: asset.status 
         });
         setShowAssetModal(true);
@@ -167,6 +232,7 @@ function AdminAssetsPageInner() {
                 category: assetForm.category,
                 company_name: assetForm.avg_category,
                 description: assetForm.description,
+                stock: assetForm.stock,
                 status: assetForm.status
             };
 
@@ -272,7 +338,7 @@ function AdminAssetsPageInner() {
         try {
             const url = isEquipment 
                 ? `/api/admin/assets/${asset.id}/history`
-                : `/api/products/history?id=${asset.id}`; // I'll need to create this or use my borrowings
+                : `/api/products/history?id=${asset.id}`;
             const res = await fetch(url);
             const data = await res.json();
             if (data.ok) {
@@ -293,10 +359,189 @@ function AdminAssetsPageInner() {
                 if (typeof parsed === 'object' && parsed !== null) {
                     return Object.values(parsed).filter(val => typeof val === 'string' && !!val) as string[];
                 }
-                if (Array.isArray(parsed)) return parsed.filter(v => !!v);
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("JSON parse error for photo_url:", e);
+        }
         return [photoUrl];
+    }
+
+    function renderReport() {
+        if (!reportData) return <div className={styles.loading}>กำลังโหลดข้อมูลรายงาน...</div>;
+        const { statusDistribution, topProducts, topEmployees, borrowingsPerDay, recentBorrowings } = reportData;
+        const maxDayCount = Math.max(...borrowingsPerDay.map((d: any) => d.count), 1);
+
+        return (
+            <div className={styles.reportContainer}>
+                {/* Filter Bar */}
+                <div className={styles.filterBar}>
+                    <div className={styles.filterGroup}>
+                        <label className={styles.filterLabel}>ตั้งแต่วันที่</label>
+                        <input 
+                            type="date" 
+                            className={styles.dateInput} 
+                            value={reportStart} 
+                            onChange={(e) => setReportStart(e.target.value)} 
+                        />
+                    </div>
+                    <div className={styles.filterGroup}>
+                        <label className={styles.filterLabel}>ถึงวันที่</label>
+                        <input 
+                            type="date" 
+                            className={styles.dateInput} 
+                            value={reportEnd} 
+                            onChange={(e) => setReportEnd(e.target.value)} 
+                        />
+                    </div>
+                    <button className={styles.actionBtn} onClick={loadReport} disabled={reportLoading}>
+                        {reportLoading ? "กำลังโหลด..." : "ค้นหาข้อมูล"}
+                    </button>
+                    <div style={{ flex: 1 }}></div>
+                    <button className={styles.exportBtn} onClick={() => window.print()} style={{ 
+                        background: "#f1f5f9", 
+                        border: "1px solid #e2e8f0", 
+                        padding: "8px 16px", 
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer"
+                    }}>
+                        <ArrowDownTrayIcon width={16} /> พิมพ์รายงาน
+                    </button>
+                </div>
+
+                {/* Status Grid */}
+                <div className={styles.statsGrid} style={{ marginBottom: 32 }}>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>พร้อมใช้งาน (รวม)</span>
+                        <div className={styles.statValue} style={{ color: "#16a34a" }}>{statusDistribution.available}</div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>กำลังถูกยืม (รวม)</span>
+                        <div className={styles.statValue} style={{ color: "#ea580c" }}>{statusDistribution.borrowed}</div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>ชำรุด/ซ่อม (หมวดหมู่)</span>
+                        <div className={styles.statValue} style={{ color: "#dc2626" }}>{statusDistribution.damaged + statusDistribution.maintenance}</div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statLabel}>จำนวนสต็อกทั้งหมด</span>
+                        <div className={styles.statValue}>{statusDistribution.total}</div>
+                    </div>
+                </div>
+
+                {/* 30-Day Activity Chart */}
+                <div className={styles.chartCard}>
+                    <div className={styles.chartTitle}>
+                        <ChartBarIcon width={20} /> ความถี่การเบิก{isEquipment ? "อุปกรณ์" : "สินค้า"}รายวัน
+                    </div>
+                    <div className={styles.chartBarWrapper}>
+                        {borrowingsPerDay.length === 0 ? (
+                            <div style={{ width: '100%', textAlign: 'center', color: '#94a3b8' }}>ไม่มีข้อมูลการใช้งาน</div>
+                        ) : (
+                            borrowingsPerDay.map((d: any, idx: number) => (
+                                <div 
+                                    key={idx} 
+                                    className={styles.chartBar} 
+                                    style={{ height: `${(d.count / maxDayCount) * 100}%` }}
+                                    data-value={`${d.date}: ${d.count} ชิ้น`}
+                                />
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className={styles.grid2Col}>
+                    {/* Top Products Table */}
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}>
+                            <div className={styles.cardTitle}><InboxStackIcon width={18} style={{ display: "inline", marginRight: 8 }} /> {isEquipment ? "อุปกรณ์" : "สินค้า"}ที่ใช้บ่อยที่สุด</div>
+                        </div>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.miniTable}>
+                                <thead>
+                                    <tr>
+                                        <th>{isEquipment ? "ชื่ออุปกรณ์" : "ชื่อสินค้า"}</th>
+                                        <th style={{ textAlign: "right" }}>จำนวน (ชิ้น)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {topProducts.map((p: any, idx: number) => (
+                                        <tr key={idx}>
+                                            <td style={{ fontWeight: 600 }}>{p.name}</td>
+                                            <td style={{ textAlign: "right", fontWeight: 700 }}>{p.count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Top Employees Table */}
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}>
+                            <div className={styles.cardTitle}><UserIcon width={18} style={{ display: "inline", marginRight: 8 }} /> พนักงานที่เบิกบ่อยที่สุด</div>
+                        </div>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.miniTable}>
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อพนักงาน</th>
+                                        <th style={{ textAlign: "right" }}>จำนวน (ชิ้น)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {topEmployees.map((e: any, idx: number) => (
+                                        <tr key={idx}>
+                                            <td style={{ fontWeight: 600 }}>{e.name}</td>
+                                            <td style={{ textAlign: "right", fontWeight: 700 }}>{e.count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent Log */}
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div className={styles.cardTitle}><ClockIcon width={18} style={{ display: "inline", marginRight: 8 }} /> ประวัติการเบิก{isEquipment ? "อุปกรณ์" : "สินค้า"}ล่าสุด</div>
+                    </div>
+                    <div className={styles.tableWrapper}>
+                        <table className={styles.miniTable}>
+                            <thead>
+                                <tr>
+                                    <th>วันที่</th>
+                                    <th>พนักงาน</th>
+                                    <th>{isEquipment ? "อุปกรณ์" : "สินค้า"}</th>
+                                    <th>จำนวน</th>
+                                    <th>สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentBorrowings.map((b: any, idx: number) => (
+                                    <tr key={idx}>
+                                        <td>{new Date(b.borrow_date).toLocaleDateString('th-TH')}</td>
+                                        <td style={{ fontWeight: 600 }}>{b.employee.name}</td>
+                                        <td>{b.product?.product_name || b.assets?.name}</td>
+                                        <td>{b.quantity || 1} ชิ้น</td>
+                                        <td>
+                                            <span className={`${styles.badge} ${styles[b.status] || styles.borrowed}`}>
+                                                {b.status === "borrowed" ? "กำลังยืม" : b.status === "returned" ? "คืนแล้ว" : "รอดำเนินการ"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -314,73 +559,101 @@ function AdminAssetsPageInner() {
             
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>{isEquipment ? "จัดการอุปกรณ์ (Equipment)" : "จัดการสินค้า (Borrow Item)"}</h1>
-                    <p className={styles.subtitle}>จัดการ{isEquipment ? "อุปกรณ์บริษัท" : "สินค้า/สิ่งของส่วนกลาง"} การยืม-คืน และประวัติการใช้งาน</p>
+                    <h1 className={styles.title}>{isEquipment ? "ระบบจัดการอุปกรณ์" : "ระบบจัดการสินค้า"}</h1>
+                    <p className={styles.subtitle}>จัดการข้อมูลและติดตามสถานะการยืม-คืน{isEquipment ? "อุปกรณ์" : "สินค้า"}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div className={styles.searchWrapper}>
-                        <MagnifyingGlassIcon width={18} className={styles.searchIcon} />
-                        <input 
-                            type="text" 
-                            placeholder={`ค้นหา${isEquipment ? 'รหัส, ชื่ออุปกรณ์' : 'รหัส, ชื่อสินค้า'}...`} 
-                            className={styles.searchInput}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <button className={styles.addBtn} onClick={openAddModal}>
-                        <PlusIcon width={20} /> เพิ่ม{isEquipment ? "อุปกรณ์" : "สินค้า"}
+                    {viewMode === "list" && (
+                        <div className={styles.searchWrapper} style={{ minWidth: 300 }}>
+                            <MagnifyingGlassIcon width={18} className={styles.searchIcon} />
+                            <input 
+                                type="text" 
+                                className={styles.searchInput}
+                                placeholder={`ค้นหาชื่อ${isEquipment ? 'อุปกรณ์' : 'สินค้า'}...`}
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    )}
+                    <button className={styles.addBtn} onClick={() => openAddModal()}>
+                        <PlusIcon width={20} /> เพิ่ม{isEquipment ? 'อุปกรณ์' : 'สินค้า'}ใหม่
                     </button>
                 </div>
             </div>
 
-            <div className={styles.statsBar}>
-                <div 
-                    className={`${styles.statCard} ${filterStatus === "all" ? styles.active : ""}`}
-                    onClick={() => setFilterStatus("all")}
+            <div className={styles.viewToggle} style={{ marginBottom: 24 }}>
+                <button 
+                    className={`${styles.toggleBtn} ${viewMode === "list" ? styles.active : ""}`}
+                    onClick={() => setViewMode("list")}
                 >
-                    <span className={styles.statLabel}>ทั้งหมด</span>
-                    <span className={styles.statVal}>{assets.length}</span>
-                </div>
-                <div 
-                    className={`${styles.statCard} ${filterStatus === "available" ? styles.active : ""}`}
-                    onClick={() => setFilterStatus("available")}
+                    <ClipboardDocumentListIcon width={18} style={{ display: "inline", marginRight: 6, verticalAlign: "text-bottom" }} />
+                    จัดการรายการ{isEquipment ? 'อุปกรณ์' : 'สินค้า'}
+                </button>
+                <button 
+                    className={`${styles.toggleBtn} ${viewMode === "dashboard" ? styles.active : ""}`}
+                    onClick={() => setViewMode("dashboard")}
                 >
-                    <span className={styles.statLabel}>พร้อมใช้งาน</span>
-                    <span className={styles.statVal} style={{ color: "var(--ok)" }}>
-                        {assets.filter(a => {
-                            const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed");
-                            return !currentBorrow && a.status === "available";
-                        }).length}
-                    </span>
-                </div>
-                <div 
-                    className={`${styles.statCard} ${filterStatus === "borrowed" ? styles.active : ""}`}
-                    onClick={() => setFilterStatus("borrowed")}
-                >
-                    <span className={styles.statLabel}>ถูกยืม</span>
-                    <span className={styles.statVal} style={{ color: "var(--blue)" }}>
-                        {assets.filter(a => {
-                            const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed");
-                            return !!currentBorrow;
-                        }).length}
-                    </span>
-                </div>
-                <div 
-                    className={`${styles.statCard} ${filterStatus === "maintenance" ? styles.active : ""}`}
-                    onClick={() => setFilterStatus("maintenance")}
-                >
-                    <span className={styles.statLabel}>ซ่อมบำรุง</span>
-                    <span className={styles.statVal} style={{ color: "var(--late)" }}>{assets.filter(a => a.status === "maintenance").length}</span>
-                </div>
-                <div 
-                    className={`${styles.statCard} ${filterStatus === "damaged" ? styles.active : ""}`}
-                    onClick={() => setFilterStatus("damaged")}
-                >
-                    <span className={styles.statLabel}>ชำรุด</span>
-                    <span className={styles.statVal} style={{ color: "var(--bad)" }}>{assets.filter(a => a.status === "damaged").length}</span>
-                </div>
+                    <ChartBarIcon width={18} style={{ display: "inline", marginRight: 6, verticalAlign: "text-bottom" }} />
+                    Dashboard & รายงาน
+                </button>
             </div>
+
+            {viewMode === "dashboard" ? (
+                renderReport()
+            ) : (
+                <>
+
+                <div className={styles.statsBar}>
+                    <div 
+                        className={`${styles.statCard} ${filterStatus === "all" ? styles.active : ""}`}
+                        onClick={() => setFilterStatus("all")}
+                    >
+                        <span className={styles.statLabel}>ทั้งหมด</span>
+                        <span className={styles.statVal}>{assets.length}</span>
+                    </div>
+                    <div 
+                        className={`${styles.statCard} ${filterStatus === "available" ? styles.active : ""}`}
+                        onClick={() => setFilterStatus("available")}
+                    >
+                        <span className={styles.statLabel}>พร้อมใช้งาน</span>
+                        <span className={styles.statVal} style={{ color: "#16a34a" }}>
+                            {assets.filter(a => {
+                                const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
+                                return !currentBorrow && a.status === "available";
+                            }).length}
+                        </span>
+                    </div>
+                    <div 
+                        className={`${styles.statCard} ${filterStatus === "borrowed" ? styles.active : ""}`}
+                        onClick={() => setFilterStatus("borrowed")}
+                    >
+                        <span className={styles.statLabel}>กำลังถูกยืม</span>
+                        <span className={styles.statVal} style={{ color: "#2563eb" }}>
+                            {assets.filter(a => {
+                                const currentBorrow = a.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
+                                return !!currentBorrow || a.status === "borrowed";
+                            }).length}
+                        </span>
+                    </div>
+                    <div 
+                        className={`${styles.statCard} ${filterStatus === "maintenance" ? styles.active : ""}`}
+                        onClick={() => setFilterStatus("maintenance")}
+                    >
+                        <span className={styles.statLabel}>ซ่อมบำรุง</span>
+                        <span className={styles.statVal} style={{ color: "#ea580c" }}>
+                            {assets.filter(a => a.status === "maintenance").length}
+                        </span>
+                    </div>
+                    <div 
+                        className={`${styles.statCard} ${filterStatus === "damaged" ? styles.active : ""}`}
+                        onClick={() => setFilterStatus("damaged")}
+                    >
+                        <span className={styles.statLabel}>ชำรุด</span>
+                        <span className={styles.statVal} style={{ color: "#dc2626" }}>
+                            {assets.filter(a => a.status === "damaged").length}
+                        </span>
+                    </div>
+                </div>
 
             <div className={styles.tableCard}>
                 <table className={styles.table}>
@@ -388,8 +661,8 @@ function AdminAssetsPageInner() {
                         <tr>
                             <th>{isEquipment ? "อุปกรณ์" : "สินค้า"}</th>
                             <th>สถานะ</th>
+                            <th>สต็อก (พร้อม/ทั้งหมด)</th>
                             <th>ผู้ยืมปัจจุบัน</th>
-                            <th>กำหนดคืน</th>
                             <th>จัดการ</th>
                         </tr>
                     </thead>
@@ -433,18 +706,39 @@ function AdminAssetsPageInner() {
                                             </span>
                                         </td>
                                         <td>
-                                            {currentBorrow ? (
-                                                <div className={styles.borrowerInfo}>
-                                                    <UserIcon width={14} />
-                                                    {currentBorrow.employee.name}
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <div style={{ 
+                                                    flex: 1, 
+                                                    height: 6, 
+                                                    background: "#f1f5f9", 
+                                                    borderRadius: 3, 
+                                                    overflow: "hidden",
+                                                    minWidth: 60
+                                                }}>
+                                                    <div style={{ 
+                                                        width: `${(asset.stock - asset.borrowed_count) / asset.stock * 100}%`, 
+                                                        height: "100%", 
+                                                        background: asset.stock - asset.borrowed_count > 0 ? "#16a34a" : "#dc2626" 
+                                                    }} />
                                                 </div>
-                                            ) : "—"}
+                                                <span style={{ fontSize: 12, fontWeight: 700 }}>
+                                                    {asset.stock - asset.borrowed_count} / {asset.stock}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
-                                            {currentBorrow ? (
-                                                <div className={styles.dateInfo}>
-                                                    <ClockIcon width={14} />
-                                                    {new Date(currentBorrow.expected_return_date).toLocaleDateString("th-TH")}
+                                            {asset.borrowed_count > 0 ? (
+                                                <div className={styles.borrowerInfo} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, color: "#1e293b", fontSize: "13px" }}>
+                                                        <UserIcon width={14} />
+                                                        {asset.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved")?.employee?.name || "ไม่ระบุชื่อ"}
+                                                    </div>
+                                                    {asset.asset_borrowings.filter(b => b.status === "borrowed" || b.status === "reserved").map((b, i) => (
+                                                        <div key={i} style={{ fontSize: "11px", color: "#64748b", background: "#f8fafc", padding: "4px 8px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                                                            <div><span style={{ fontWeight: 600, color: "#2563eb" }}>ยืม:</span> {new Date(b.borrow_date).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}</div>
+                                                            <div><span style={{ fontWeight: 600, color: "#dc2626" }}>คืน:</span> {new Date(b.expected_return_date).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}</div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             ) : "—"}
                                         </td>
@@ -499,6 +793,8 @@ function AdminAssetsPageInner() {
                     </tbody>
                 </table>
             </div>
+            </>
+            )}
 
             {/* Asset Add/Edit Modal */}
             {showAssetModal && (
@@ -565,6 +861,17 @@ function AdminAssetsPageInner() {
                                             </>
                                         )}
                                     </select>
+                                </div>
+                                <div className={styles.inputGroup}>
+                                    <label>จำนวนสต็อกทั้งหมด</label>
+                                    <input 
+                                        type="number" 
+                                        placeholder="ระบุจำนวนสต็อก"
+                                        value={assetForm.stock}
+                                        onChange={e => setAssetForm({...assetForm, stock: Number(e.target.value)})}
+                                        required
+                                        min={1}
+                                    />
                                 </div>
                                 {isEditing && (
                                     <div className={styles.inputGroup}>

@@ -16,11 +16,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
         }
 
-        // Find borrowing record and ensure it belongs to this employee
+        // Find borrowing record and ensure it belongs to this employee or their supervisor
         const borrowing = await prisma.asset_borrowings.findFirst({
             where: { 
                 id: Number(borrowing_id),
-                emp_id: payload.emp_id,
+                OR: [
+                    { emp_id: payload.emp_id },
+                    { 
+                        employee: { 
+                            OR: [
+                                { supervisor_id: payload.emp_id },
+                                { secondary_supervisor_id: payload.emp_id }
+                            ]
+                        } 
+                    }
+                ],
                 status: { in: ["borrowed", "reserved"] }
             },
             include: { 

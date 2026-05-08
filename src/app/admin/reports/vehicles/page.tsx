@@ -15,11 +15,20 @@ import {
 export default function VehicleReportPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    
+    // Filters
+    const [startDate, setStartDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    });
+    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     async function loadReport() {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/reports/vehicles");
+            const params = new URLSearchParams({ start: startDate, end: endDate });
+            const res = await fetch(`/api/admin/reports/vehicles?${params.toString()}`);
             const json = await res.json();
             if (json.ok) {
                 setData(json.stats);
@@ -31,9 +40,46 @@ export default function VehicleReportPage() {
         }
     }
 
+    async function handleDelete() {
+        if (!confirm(`⚠️ คำเตือน: คุณแน่ใจหรือไม่ที่จะลบข้อมูลการยืมรถทั้งหมดในช่วงวันที่ ${startDate} ถึง ${endDate}?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`)) return;
+
+        try {
+            const params = new URLSearchParams({ start: startDate, end: endDate });
+            const res = await fetch(`/api/admin/reports/vehicles?${params.toString()}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.ok) {
+                alert(`ลบข้อมูลเรียบร้อยแล้ว (${json.deletedCount} รายการ)`);
+                loadReport();
+            } else {
+                alert("เกิดข้อผิดพลาด: " + json.error);
+            }
+        } catch (e) {
+            alert("Delete failed");
+        }
+    }
+
+    async function handleTriggerSummary() {
+        if (!confirm("ต้องการส่งสรุปสถานะรถยนต์ประจำวันไปยัง LINE Management หรือไม่?")) return;
+        
+        try {
+            // Using the existing cron endpoint - requires secret
+            const res = await fetch("/api/cron/vehicle-status-summary?secret=hr-checkin-secret-123");
+            const json = await res.json();
+            if (json.ok) {
+                alert("ส่งรายงานสรุปเรียบร้อยแล้ว!");
+            } else {
+                alert("ไม่สามารถส่งรายงานได้: " + json.error);
+            }
+        } catch (e) {
+            alert("Trigger summary failed");
+        }
+    }
+
     useEffect(() => {
         loadReport();
     }, []);
+
+    const isFiltered = startDate !== "" || endDate !== "";
 
     if (loading) return (
         <div className={styles.container}>
@@ -44,20 +90,13 @@ export default function VehicleReportPage() {
         </div>
     );
 
-    if (!data || data.statusDistribution.total === 0) return (
-        <div className={styles.container}>
-            <div className={styles.emptyStateBox}>
-                <TruckIcon width={64} color="#e2e8f0" />
-                <h2>ไม่พบข้อมูลยานพาหนะ</h2>
-                <p>ยังไม่มีการลงทะเบียนรถยนต์ในระบบ หรือไม่มีข้อมูลการยืมในช่วงนี้</p>
-                <button className={styles.exportBtn} style={{ marginTop: 16 }} onClick={loadReport}>
-                    <ArrowPathIcon width={18} /> ลองใหม่อีกครั้ง
-                </button>
-            </div>
-        </div>
-    );
-
-    const { statusDistribution, topVehicles, topEmployees, borrowingsPerDay, recentBorrowings } = data;
+    const { statusDistribution, topVehicles, topEmployees, borrowingsPerDay, recentBorrowings } = data || { 
+        statusDistribution: { available: 0, borrowed: 0, damaged: 0, maintenance: 0, total: 0 },
+        topVehicles: [],
+        topEmployees: [],
+        borrowingsPerDay: [],
+        recentBorrowings: []
+    };
 
     // Calculate max for chart scaling
     const maxDayCount = Math.max(...borrowingsPerDay.map((d: any) => d.count), 1);
@@ -67,10 +106,46 @@ export default function VehicleReportPage() {
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>รายงานสรุปการใช้รถยนต์</h1>
-                    <p className={styles.subtitle}>ข้อมูลย้อนหลัง 30 วัน และสถานะปัจจุบันของยานพาหนะทั้งหมด</p>
+                    <p className={styles.subtitle}>
+                        {isFiltered ? `ข้อมูลระหว่างวันที่ ${startDate} ถึง ${endDate}` : "ข้อมูลย้อนหลัง 30 วัน และสถานะปัจจุบันของยานพาหนะทั้งหมด"}
+                    </p>
                 </div>
-                <button className={styles.exportBtn} onClick={() => window.print()}>
-                    <ArrowDownTrayIcon width={18} /> พิมพ์รายงาน (PDF)
+                <div style={{ display: 'flex', gap: 12 }}>
+                    <button className={styles.actionBtn} onClick={handleTriggerSummary}>
+                        <ArrowPathIcon width={18} /> ส่งสรุปรายวัน (LINE)
+                    </button>
+                    <button className={styles.exportBtn} onClick={() => window.print()}>
+                        <ArrowDownTrayIcon width={18} /> พิมพ์รายงาน (PDF)
+                    </button>
+                </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className={styles.filterBar}>
+                <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>ตั้งแต่วันที่</label>
+                    <input 
+                        type="date" 
+                        className={styles.dateInput} 
+                        value={startDate} 
+                        onChange={(e) => setStartDate(e.target.value)} 
+                    />
+                </div>
+                <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>ถึงวันที่</label>
+                    <input 
+                        type="date" 
+                        className={styles.dateInput} 
+                        value={endDate} 
+                        onChange={(e) => setEndDate(e.target.value)} 
+                    />
+                </div>
+                <button className={styles.actionBtn} onClick={loadReport}>
+                    ค้นหาข้อมูล
+                </button>
+                <div style={{ flex: 1 }}></div>
+                <button className={`${styles.actionBtn} ${styles.danger}`} onClick={handleDelete}>
+                    <ExclamationTriangleIcon width={18} /> ล้างข้อมูลช่วงนี้
                 </button>
             </div>
 

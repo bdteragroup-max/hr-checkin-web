@@ -12,11 +12,12 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { 
             product_id, borrow_date, expected_return_date, location, remark, photo_url_borrow,
-            borrower_emp_id
+            borrower_emp_id, quantity
         } = body;
 
         const isAdmin = payload.role === "admin" || payload.role === "SUPER_ADMIN" || payload.role === "WAREHOUSE_MANAGER";
         const targetEmpId = (isAdmin && borrower_emp_id) ? borrower_emp_id : payload.emp_id;
+        const borrowQty = Number(quantity) || 1;
 
         if (!product_id || !borrow_date || !expected_return_date) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "INVALID_DATE_RANGE" }, { status: 400 });
         }
 
-        const overlapping = await prisma.product_borrowings.findFirst({
+        const overlapping = await prisma.product_borrowings.findMany({
             where: {
                 product_id: Number(product_id),
                 status: { in: ["borrowed", "reserved"] },
@@ -64,11 +65,19 @@ export async function POST(req: Request) {
                     { borrow_date: { lt: borrowEnd } },
                     { expected_return_date: { gt: borrowStart } }
                 ]
-            }
+            },
+            select: { quantity: true }
         });
 
-        if (overlapping) {
-            return NextResponse.json({ error: "TIME_OVERLAP" }, { status: 400 });
+        const totalBorrowed = overlapping.reduce((sum, b) => sum + (b.quantity || 1), 0);
+        const availableStock = (product.stock || 0) - totalBorrowed;
+
+        if (availableStock < borrowQty) {
+            return NextResponse.json({ 
+                error: "INSUFFICIENT_STOCK", 
+                available: availableStock,
+                total_borrowed: totalBorrowed 
+            }, { status: 400 });
         }
 
         const isFuture = borrowStart > now;
@@ -83,11 +92,13 @@ export async function POST(req: Request) {
                     location: location || null,
                     condition_at_borrow: remark || null,
                     photo_url_borrow: photo_url_borrow || null,
-                    status: isFuture ? "reserved" : "borrowed"
+                    status: isFuture ? "reserved" : "borrowed",
+                    quantity: borrowQty
                 }
             });
             
-            if (!isFuture) {
+            // Only update status to "borrowed" if stock is completely depleted
+            if (!isFuture && (availableStock - borrowQty) <= 0) {
                 await tx.products.update({
                     where: { id: Number(product_id) },
                     data: { status: "borrowed" }
@@ -120,7 +131,7 @@ export async function POST(req: Request) {
                     empName: formatName(employee.name, employee.nickname),
                     jobTitle: employee.job_positions?.title,
                     branchName: employee.branches?.name,
-                    productName: product.product_name,
+                    productName: `${product.product_name} (จำนวน: ${borrowQty})`,
                     productCode: product.product_code || String(product.id),
                     borrowDate: borrowStart.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                     returnDate: borrowEnd.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),

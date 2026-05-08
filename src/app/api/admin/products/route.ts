@@ -13,21 +13,23 @@ export async function GET(req: Request) {
             whereClause.category = category;
         }
 
-        const products = await prisma.products.findMany({
-            where: whereClause,
+        const products: any[] = await prisma.$queryRaw`
+            SELECT id, product_code, product_name, category, company_name, description, status, stock 
+            FROM products 
+            ORDER BY product_name ASC
+        `;
+
+        // Manually fetch borrowings since include won't work with queryRaw
+        const allBorrowings = await prisma.product_borrowings.findMany({
+            where: { status: { in: ["borrowed", "reserved"] } },
             include: {
-                product_borrowings: {
-                    where: { status: { in: ["borrowed", "reserved"] } },
-                    include: {
-                        employee: { select: { name: true, nickname: true } }
-                    }
-                }
-            },
-            orderBy: { product_name: "asc" }
+                employee: { select: { name: true, nickname: true } }
+            }
         });
 
         const formattedProducts = products.map((p: any) => {
-            const formattedBorrowings = p.product_borrowings.map((b: any) => {
+            const productBorrowings = allBorrowings.filter(b => b.product_id === p.id);
+            const formattedBorrowings = productBorrowings.map((b: any) => {
                 const nickname = b.employee?.nickname;
                 let finalName = b.employee?.name || "";
                 if (nickname && !finalName.includes(`(${nickname})`)) {
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const { 
-            product_code, product_name, category, company_name, description 
+            product_code, product_name, category, company_name, description, stock 
         } = body;
 
         if (!product_code || !product_name) {
@@ -73,16 +75,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "PRODUCT_CODE_ALREADY_EXISTS" }, { status: 400 });
         }
 
-        const newProduct = await prisma.products.create({
-            data: {
-                product_code,
-                product_name,
-                category: category || null,
-                company_name: company_name || null,
-                description: description || null,
-                status: "available"
-            }
-        });
+        await prisma.$executeRaw`
+            INSERT INTO products (product_code, product_name, category, company_name, description, stock, status, created_at, updated_at)
+            VALUES (
+                ${product_code}, 
+                ${product_name}, 
+                ${category || null}, 
+                ${company_name || null}, 
+                ${description || null}, 
+                ${stock !== undefined ? Number(stock) : 50}, 
+                'available',
+                NOW(),
+                NOW()
+            )
+        `;
+
+        const newProduct = await prisma.$queryRaw`SELECT * FROM products WHERE product_code = ${product_code} LIMIT 1`;
+
 
         return NextResponse.json({ ok: true, data: newProduct });
     } catch (e: any) {

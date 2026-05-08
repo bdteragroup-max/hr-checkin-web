@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ function formatTime(d: Date) {
 
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
 
         const url = new URL(req.url);
         const emp_id = url.searchParams.get("emp_id");
@@ -41,7 +41,22 @@ export async function GET(req: Request) {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
 
-        const emp = await prisma.employees.findUnique({ where: { emp_id } });
+        const teamOnly = url.searchParams.get("team") === "1";
+ 
+         const subordinateFilter: any = {};
+         if (auth.isSupervisorOnly || teamOnly) {
+             subordinateFilter.OR = [
+                 { supervisor_id: auth.emp_id },
+                 { secondary_supervisor_id: auth.emp_id }
+             ];
+         }
+
+        const emp = await prisma.employees.findUnique({ 
+            where: { 
+                emp_id,
+                ...subordinateFilter
+            } as any
+        });
         if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
         const checkins = await prisma.checkins.findMany({
@@ -151,6 +166,8 @@ export async function GET(req: Request) {
                 if (loc) outLocs.add(loc);
             });
 
+            const isTrip = inRecord?.is_trip || outRecord?.is_trip || dayCheckins.some(c => c.is_trip);
+
             reports.push({
                 date: dateStr,
                 in_time: inRecord ? formatTime(inRecord.timestamp) : null,
@@ -159,6 +176,7 @@ export async function GET(req: Request) {
                 out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : null,
                 late_mins: inRecord?.late_min || 0,
                 status,
+                is_trip: isTrip,
                 is_weekend: isSunday,
                 work_plan: workPlan ? {
                     morning: workPlan.morning_plan,

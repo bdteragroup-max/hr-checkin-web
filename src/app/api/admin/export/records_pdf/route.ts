@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
@@ -20,7 +20,7 @@ function formatTime(d: Date) {
 
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
 
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month");
@@ -28,6 +28,15 @@ export async function GET(req: Request) {
         const paramStartDate = url.searchParams.get("start_date");
         const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
+
+        const teamOnly = url.searchParams.get("team") === "1";
+        const subordinateFilter: any = {};
+        if (auth.isSupervisorOnly || teamOnly) {
+            subordinateFilter.OR = [
+                { supervisor_id: auth.emp_id },
+                { secondary_supervisor_id: auth.emp_id }
+            ];
+        }
 
         let start: Date;
         let end: Date;
@@ -58,7 +67,6 @@ export async function GET(req: Request) {
         const fontRegular = await pdf.embedFont(fontRegularBytes, { subset: true });
         const fontBold = fontBoldBytes ? await pdf.embedFont(fontBoldBytes, { subset: true }) : fontRegular;
 
-        // Configuration for Landscape A4
         const PAGE_WIDTH = 841.89;
         const PAGE_HEIGHT = 595.28;
         const MARGIN = 40;
@@ -93,8 +101,12 @@ export async function GET(req: Request) {
         };
 
         if (emp_id) {
-            // ================== DETAILED INDIVIDUAL EXPORT ==================
-            const emp = await prisma.employees.findUnique({ where: { emp_id } });
+            const emp = await prisma.employees.findUnique({ 
+                where: { 
+                    emp_id,
+                    ...subordinateFilter
+                } as any
+            });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
             drawText(`Detailed Attendance Log: ${emp.name} (${emp_id})`, MARGIN, y, 16, true);
@@ -124,7 +136,6 @@ export async function GET(req: Request) {
                 }
             });
 
-            // Table Header
             const colWidths = [80, 50, 200, 50, 200, 150];
             const headers = ["วันที่", "เข้า", "สถานที่เช็คอิน", "ออก", "สถานที่เช็คเอาท์", "สถานะ"];
             
@@ -205,7 +216,6 @@ export async function GET(req: Request) {
                     currX += colWidths[i];
                 });
 
-                // Draw thin line under row
                 page.drawLine({
                     start: { x: MARGIN, y: y - 5 },
                     end: { x: PAGE_WIDTH - MARGIN, y: y - 5 },
@@ -217,10 +227,6 @@ export async function GET(req: Request) {
             }
 
         } else {
-            // ================== AGGREGATE SUMMARY EXPORT ==================
-            // Summary remains Portrait for now as it's a different report, 
-            // but let's make it look better if possible.
-            // (Reverting to Portrait for Summary)
             page = pdf.addPage([595.28, 841.89]);
             y = 800;
 
@@ -236,7 +242,10 @@ export async function GET(req: Request) {
             drawPortrait(`Historical Records: ${periodLabel}`, 18, true);
             
             const emps = await prisma.employees.findMany({
-                where: { is_active: true },
+                where: { 
+                    is_active: true,
+                    ...subordinateFilter
+                } as any,
                 select: { emp_id: true, name: true, branch_id: true },
                 orderBy: { emp_id: "asc" },
             });
@@ -303,7 +312,7 @@ export async function GET(req: Request) {
         const saved = await pdf.save();
         const bytes = Uint8Array.from(saved as unknown as Uint8Array);
         const body = Buffer.from(bytes) as unknown as BodyInit;
-        let filename = emp_id ? `${emp_id}_records_${periodLabel.replace(/ to /g, "_")}.pdf` : `historical_records_ALL_${periodLabel.replace(/ to /g, "_")}.pdf`;
+        let filename = emp_id ? `${emp_id}_records_${periodLabel.replace(/ /g, "_")}.pdf` : `historical_records_ALL_${periodLabel.replace(/ /g, "_")}.pdf`;
 
         return new Response(body, {
             headers: {

@@ -370,6 +370,8 @@ model assets {
   category         String?            @db.VarChar(100)
   status           String             @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
   description      String?
+  stock            Int                @default(50)
+  image_url        String?
 
   // --- Extended Vehicle Specific Fields ---
   company_owner    String?            @db.VarChar(100)  // TERA GROUP, TERA POWER
@@ -398,6 +400,7 @@ model asset_borrowings {
   photo_url_borrow      String?
   photo_url_return      String?
   status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
+  quantity              Int       @default(1)
   created_at            DateTime  @default(now()) @db.Timestamptz(6)
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
 
@@ -648,6 +651,7 @@ model products {
   company_name     String?            @db.VarChar(100)       // 1. Company Name
   description      String?
   status           String             @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
+  stock            Int                @default(50)
   image_url        String?
   created_at       DateTime           @default(now()) @db.Timestamptz(6)
   updated_at       DateTime           @default(now()) @db.Timestamptz(6)
@@ -668,6 +672,7 @@ model product_borrowings {
   photo_url_borrow      String?
   photo_url_return      String?
   status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
+  quantity              Int       @default(1)
   created_at            DateTime  @default(now()) @db.Timestamptz(6)
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
 

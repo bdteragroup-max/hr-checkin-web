@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
@@ -16,7 +16,9 @@ import {
     CheckCircleIcon,
     ClockIcon,
     ClipboardDocumentListIcon,
-    ArrowLeftIcon
+    ArrowLeftIcon,
+    UserIcon,
+    InboxStackIcon
 } from "@heroicons/react/24/outline";
 
 /** 24-hour time picker using two selects */
@@ -54,7 +56,15 @@ type Asset = {
     description: string | null;
     image_url: string | null;
     status: string;
+    stock: number;
+    borrowed_count: number;
     company_name?: string | null;
+    current_borrowings: Array<{
+        borrower_name: string;
+        borrow_date: string;
+        expected_return_date: string;
+        quantity: number;
+    }>;
 };
 
 export default function AssetBorrowPage() {
@@ -77,6 +87,7 @@ function AssetBorrowPageInner() {
     const [search, setSearch] = useState("");
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<"all" | "available" | "borrowed">("all");
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
     // Photo states
@@ -101,8 +112,38 @@ function AssetBorrowPageInner() {
         expected_return_date: "",
         expected_return_time: "17:00",
         location: "",
-        remark: ""
+        remark: "",
+        quantity: 1
     });
+
+    const filteredAssets = useMemo(() => {
+        let result = assets;
+        
+        // For equipment, hide borrowed items by default in 'all' and 'available' views
+        if (isEquipment) {
+            if (statusFilter === "all" || statusFilter === "available") {
+                result = result.filter(a => (a.stock - a.borrowed_count) > 0);
+            } else if (statusFilter === "borrowed") {
+                result = result.filter(a => a.borrowed_count > 0);
+            }
+        } else {
+            // For items (products), keep original behavior
+            if (statusFilter === "available") {
+                result = result.filter(a => (a.stock - a.borrowed_count) > 0);
+            } else if (statusFilter === "borrowed") {
+                result = result.filter(a => a.borrowed_count > 0);
+            }
+        }
+
+        // Apply search filter
+        if (!search) return result;
+        const low = search.toLowerCase();
+        return result.filter(a => 
+            a.name.toLowerCase().includes(low) || 
+            a.asset_id.toLowerCase().includes(low) ||
+            a.description?.toLowerCase().includes(low)
+        );
+    }, [assets, search, statusFilter, isEquipment]);
 
     useEffect(() => {
         loadData();
@@ -113,8 +154,8 @@ function AssetBorrowPageInner() {
         try {
             if (activeTab === "borrow") {
                 const url = isEquipment 
-                    ? "/api/assets/available?category_exclude=Car"
-                    : "/api/products/available";
+                    ? "/api/assets/available?category_exclude=Car&include_borrowed=true"
+                    : "/api/admin/products"; // Use products API for items to match admin
                 const res = await fetch(url);
                 if (!res.ok) {
                     const err = await res.json();
@@ -123,16 +164,65 @@ function AssetBorrowPageInner() {
                 const data = await res.json();
                 console.log(`[AssetBorrowPage] Loaded ${isEquipment ? 'Equipment' : 'Items'}:`, data);
                 
-                // Map product fields to asset fields for UI consistency if needed
-                const normalized = Array.isArray(data) ? data.map((item: any) => ({
-                    id: item.id,
-                    asset_id: item.product_code || item.asset_id,
-                    name: item.product_name || item.name,
-                    description: item.description,
-                    image_url: item.image_url,
-                    status: item.status,
-                    company_name: item.company_name || item.company_owner
-                })) : [];
+                // Map fields based on type to ensure correct borrowing information
+                const normalized = Array.isArray(data) ? data.map((item: any) => {
+                    if (isEquipment) {
+                        // Equipment (Assets) - 1:1 tracking
+                        // Find any active borrowing (borrowed or reserved)
+                        const currentBorrow = (item.asset_borrowings || []).find((b: any) => 
+                            ["borrowed", "reserved"].includes(b.status)
+                        );
+                        const borrowerName = currentBorrow?.employee?.nickname 
+                            ? `${currentBorrow.employee.name} (${currentBorrow.employee.nickname})`
+                            : currentBorrow?.employee?.name || "";
+
+                        return {
+                            id: item.id,
+                            asset_id: item.asset_id,
+                            name: item.name,
+                            description: item.description,
+                            image_url: item.image_url,
+                            status: currentBorrow ? "borrowed" : (item.status || "available"),
+                            stock: 1,
+                            borrowed_count: currentBorrow ? 1 : (item.status === "borrowed" ? 1 : 0),
+                            company_name: item.company_owner || item.company_name,
+                            current_borrowings: currentBorrow ? [{
+                                borrower_name: borrowerName,
+                                borrow_date: currentBorrow.borrow_date,
+                                expected_return_date: currentBorrow.expected_return_date,
+                                quantity: 1
+                            }] : []
+                        };
+                    } else {
+                        // Items (Products) - Quantity-based tracking
+                        const borrowings = item.product_borrowings || [];
+                        const activeBorrowings = borrowings.map((b: any) => ({
+                            borrower_name: b.employee?.nickname 
+                                ? `${b.employee.name} (${b.employee.nickname})`
+                                : b.employee?.name || "ไม่ระบุชื่อ",
+                            borrow_date: b.borrow_date,
+                            expected_return_date: b.expected_return_date,
+                            quantity: b.quantity || 1
+                        }));
+
+                        const borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + b.quantity, 0);
+                        const stock = item.stock || 0;
+                        const available = stock - borrowedCount;
+
+                        return {
+                            id: item.id,
+                            asset_id: item.product_code,
+                            name: item.product_name,
+                            description: item.description,
+                            image_url: item.image_url,
+                            status: available > 0 ? "available" : "borrowed",
+                            stock: stock,
+                            borrowed_count: borrowedCount,
+                            company_name: item.company_name,
+                            current_borrowings: activeBorrowings
+                        };
+                    }
+                }) : [];
                 
                 setAssets(normalized);
             } else {
@@ -210,7 +300,8 @@ function AssetBorrowPageInner() {
                 expected_return_date: returnDatetime,
                 location: formData.location,
                 remark: formData.remark,
-                photo_url_borrow: borrowPhoto
+                photo_url_borrow: borrowPhoto,
+                quantity: formData.quantity
             };
             if (isEquipment) bodyPayload.asset_id = selectedAsset.id;
             else bodyPayload.product_id = selectedAsset.id;
@@ -233,7 +324,8 @@ function AssetBorrowPageInner() {
                     expected_return_date: "",
                     expected_return_time: "17:00",
                     location: "",
-                    remark: ""
+                    remark: "",
+                    quantity: 1
                 });
                 loadData();
             } else {
@@ -298,10 +390,7 @@ function AssetBorrowPageInner() {
         }
     }
 
-    const filteredAssets = assets.filter(a =>
-        a.name.toLowerCase().includes(search.toLowerCase()) ||
-        a.asset_id.toLowerCase().includes(search.toLowerCase())
-    );
+
 
     return (
         <div className={styles.wrapper}>
@@ -334,6 +423,38 @@ function AssetBorrowPageInner() {
 
                 {activeTab === "borrow" ? (
                     <>
+                        {/* Summary Section */}
+                        <div className={styles.summary}>
+                            <div 
+                                className={`${styles.summaryItem} ${statusFilter === "all" ? styles.summaryActive : ""}`}
+                                onClick={() => setStatusFilter("all")}
+                                style={{ cursor: "pointer", transition: "all 0.2s" }}
+                            >
+                                <span className={styles.summaryLabel}>ทั้งหมด</span>
+                                <span className={styles.summaryValue}>{assets.length}</span>
+                            </div>
+                            <div 
+                                className={`${styles.summaryItem} ${statusFilter === "available" ? styles.summaryActive : ""}`}
+                                onClick={() => setStatusFilter("available")}
+                                style={{ cursor: "pointer", transition: "all 0.2s" }}
+                            >
+                                <span className={styles.summaryLabel}>พร้อมใช้งาน</span>
+                                <span className={styles.summaryValue} style={{ color: "#16a34a" }}>
+                                    {assets.filter(a => (a.stock - a.borrowed_count) > 0).length}
+                                </span>
+                            </div>
+                            <div 
+                                className={`${styles.summaryItem} ${statusFilter === "borrowed" ? styles.summaryActive : ""}`}
+                                onClick={() => setStatusFilter("borrowed")}
+                                style={{ cursor: "pointer", transition: "all 0.2s" }}
+                            >
+                                <span className={styles.summaryLabel}>ถูกยืมแล้ว</span>
+                                <span className={styles.summaryValue} style={{ color: "#ea580c" }}>
+                                    {assets.filter(a => a.borrowed_count > 0).length}
+                                </span>
+                            </div>
+                        </div>
+
                         <div className={styles.searchBar}>
                             <div className={styles.searchIcon}><MagnifyingGlassIcon width={20} /></div>
                             <input
@@ -357,20 +478,59 @@ function AssetBorrowPageInner() {
                             </div>
                         ) : (
                             <div className={styles.assetGrid}>
-                                {filteredAssets.map(asset => (
-                                    <div key={asset.id} className={styles.card}>
+                            {filteredAssets.map(asset => {
+                                const isBorrowed = asset.status === "borrowed";
+                                return (
+                                    <div key={asset.id} className={`${styles.card} ${isBorrowed ? styles.cardBorrowed : ""}`}>
                                         <div className={styles.myHeader}>
                                             <span className={styles.assetId}>{asset.asset_id}</span>
-                                            {asset.company_name && (
-                                                <div style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "var(--surface2)", fontWeight: 700, color: "var(--text3)" }}>
-                                                    {asset.company_name}
-                                                </div>
-                                            )}
                                         </div>
                                         <h3 className={styles.assetName}>{asset.name}</h3>
-                                        <p className={styles.assetDesc}>{asset.description || "—"}</p>
+                                        
+                                        <div className={styles.assetDesc} style={{ marginBottom: 12 }}>
+                                            {asset.description || "—"}
+                                        </div>
 
-                                        {asset.image_url && (
+
+                                        {asset.current_borrowings.length > 0 && (
+                                            <div className={styles.borrowerInfo} style={{ 
+                                                maxHeight: "200px", 
+                                                overflowY: "auto", 
+                                                marginBottom: 16,
+                                                background: "#eff6ff",
+                                                border: "1px solid #bfdbfe",
+                                                borderRadius: "12px",
+                                                padding: "12px"
+                                            }}>
+                                                <div className={styles.borrowerTitle} style={{ color: "#1d4ed8", fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: "6px" }}>
+                                                    <UserIcon width={16} /> ข้อมูลการยืมปัจจุบัน
+                                                </div>
+                                                {asset.current_borrowings.map((b, idx) => (
+                                                    <div key={idx} style={{ 
+                                                        background: "white",
+                                                        padding: "10px",
+                                                        borderRadius: "8px",
+                                                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                                                    }}>
+                                                        <div style={{ color: "#1e293b", fontWeight: 700, fontSize: "14px", marginBottom: "6px" }}>
+                                                            {b.borrower_name}
+                                                        </div>
+                                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                                                            <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                                                <div style={{ fontWeight: 700, color: "#1d4ed8" }}>ยืมตั้งแต่วันที่:</div>
+                                                                {new Date(b.borrow_date).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}
+                                                            </div>
+                                                            <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                                                <div style={{ fontWeight: 700, color: "#dc2626" }}>กำหนดคืนวันที่:</div>
+                                                                {new Date(b.expected_return_date).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {asset.image_url && !isBorrowed && (
                                             <div className={styles.assetImageWrap}>
                                                 <div className={styles.museumFrame}>
                                                     <img src={asset.image_url} alt={asset.name} className={styles.assetImage} />
@@ -379,14 +539,17 @@ function AssetBorrowPageInner() {
                                         )}
 
                                         <button
-                                            className={`${styles.btn} ${styles.btnPrimary}`}
-                                            onClick={() => setSelectedAsset(asset)}
+                                            className={`${styles.btn} ${asset.stock - asset.borrowed_count <= 0 ? styles.btnDisabled : styles.btnPrimary}`}
+                                            onClick={() => asset.stock - asset.borrowed_count > 0 && setSelectedAsset(asset)}
+                                            disabled={asset.stock - asset.borrowed_count <= 0}
+                                            style={asset.stock - asset.borrowed_count <= 0 ? { background: "#f1f5f9", color: "#94a3b8", cursor: "not-allowed", border: "1px solid #e2e8f0" } : {}}
                                         >
-                                            ดำเนินการยืม{isEquipment ? "อุปกรณ์" : "สินค้า"}
+                                            {asset.stock - asset.borrowed_count <= 0 ? "ไม่พร้อมใช้งาน" : `ดำเนินการยืม${isEquipment ? 'อุปกรณ์' : 'สินค้า'}`}
                                         </button>
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })}
+                        </div>
                         )}
                     </>
                 ) : (
@@ -412,6 +575,24 @@ function AssetBorrowPageInner() {
                                         <h3 className={styles.assetName}>{b.assets.name}</h3>
 
                                         <div className={styles.myDetails}>
+                                            {b.employee && (
+                                                <div className={styles.myDetailItem} style={{ 
+                                                    marginBottom: 12, 
+                                                    padding: "6px 10px", 
+                                                    background: "#eff6ff", 
+                                                    borderRadius: 6, 
+                                                    color: "#1d4ed8", 
+                                                    fontWeight: 700,
+                                                    fontSize: "12px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 6,
+                                                    border: "1px solid #dbeafe"
+                                                }}>
+                                                    <UserIcon width={14} />
+                                                    ผู้ยืม: {b.employee.nickname ? `${b.employee.name} (${b.employee.nickname})` : b.employee.name}
+                                                </div>
+                                            )}
                                             <div className={styles.myDetailItem}>
                                                 <span>วันที่ยืม:</span> {new Date(b.borrow_date).toLocaleDateString("th-TH")}
                                             </div>
@@ -492,6 +673,16 @@ function AssetBorrowPageInner() {
                                     placeholder="เช่น รอยขีดข่วนเดิม หรืออุปกรณ์ไม่ครบ..."
                                     value={formData.remark}
                                     onChange={e => setFormData({ ...formData, remark: e.target.value })}
+                                />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>จำนวนที่ยืม <span style={{ color: "#dc2626" }}>*</span></label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={formData.quantity}
+                                    onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                                    required
                                 />
                             </div>
 

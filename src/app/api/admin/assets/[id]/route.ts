@@ -7,7 +7,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const id = Number(idStr);
         const body = await req.json();
         const { 
-            asset_id, name, category, description, status,
+            asset_id, name, category, description, status, stock,
             company_owner, vehicle_type, brand, vehicle_model, main_user, usage_remark 
         } = body;
 
@@ -29,6 +29,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
                 category,
                 description,
                 status,
+                stock: stock !== undefined ? Number(stock) : undefined,
                 company_owner: company_owner !== undefined ? company_owner : undefined,
                 vehicle_type: vehicle_type !== undefined ? vehicle_type : undefined,
                 brand: brand !== undefined ? brand : undefined,

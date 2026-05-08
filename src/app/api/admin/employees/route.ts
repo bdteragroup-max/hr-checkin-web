@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdmin, requireAdminOrSupervisor } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
@@ -82,13 +82,22 @@ function jsonError(msg: string, status: number) {
 
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
         const { searchParams } = new URL(req.url);
         const minimal = searchParams.get("minimal") === "1";
+        const teamOnly = searchParams.get("team") === "1";
+
+        const subordinateFilter: any = {};
+        if (auth.isSupervisorOnly || teamOnly) {
+            subordinateFilter.OR = [
+                { supervisor_id: auth.emp_id },
+                { secondary_supervisor_id: auth.emp_id }
+            ];
+        }
 
         if (minimal) {
             const list = await prisma.employees.findMany({
-                where: { is_active: true },
+                where: { is_active: true, ...subordinateFilter },
                 select: { name: true, nickname: true, birth_date: true },
             });
             const formattedList = list.map(emp => {
@@ -102,6 +111,7 @@ export async function GET(req: Request) {
         }
 
         const list = await prisma.employees.findMany({
+            where: subordinateFilter,
             orderBy: { created_at: "desc" },
             take: 500,
             select: {
