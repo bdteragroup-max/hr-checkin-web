@@ -192,7 +192,7 @@ function AdminAssetsPageInner() {
 
     function openAddModal() {
         setIsEditing(false);
-        setAssetForm({ id: undefined, asset_id: "", name: "", avg_category: "", category: "", description: "", status: "available" });
+        setAssetForm({ id: undefined, asset_id: "", name: "", avg_category: "", category: "", description: "", stock: 0, status: "available" });
         setShowAssetModal(true);
     }
 
