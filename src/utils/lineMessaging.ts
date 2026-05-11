@@ -2,18 +2,18 @@ import { prisma } from "@/lib/prisma";
 
 const nameCache = new Map<string, string>();
 async function formatNameDb(name: string | undefined): Promise<string> {
-    if (!name || name.includes('(')) return name || "";
-    if (nameCache.has(name)) return nameCache.get(name)!;
-    try {
-        const emp = await prisma.employees.findFirst({ where: { name }, select: { nickname: true } });
-        if (emp && emp.nickname) {
-            const res = name + ' (' + emp.nickname + ')';
-            nameCache.set(name, res);
-            return res;
-        }
-    } catch(e) {}
-    nameCache.set(name, name);
-    return name;
+  if (!name || name.includes('(')) return name || "";
+  if (nameCache.has(name)) return nameCache.get(name)!;
+  try {
+    const emp = await prisma.employees.findFirst({ where: { name }, select: { nickname: true } });
+    if (emp && emp.nickname) {
+      const res = name + ' (' + emp.nickname + ')';
+      nameCache.set(name, res);
+      return res;
+    }
+  } catch (e) { }
+  nameCache.set(name, name);
+  return name;
 }
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -1521,11 +1521,11 @@ export async function sendProbationSummaryToManagement(data: {
  * 1. Notify Employee when Supervisor sets KPI
  */
 export async function sendKpiDefineNotification(
-    lineUserId: string,
-    data: {
-        evaluationNo: number;
-        supervisorName: string;
-    }
+  lineUserId: string,
+  data: {
+    evaluationNo: number;
+    supervisorName: string;
+  }
 ) {
   // Format names with nicknames
   if (data) {
@@ -1534,47 +1534,47 @@ export async function sendKpiDefineNotification(
     if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
   }
 
-    if (!lineUserId) return false;
-    const contents: any = {
-        type: "bubble",
-        header: {
-            type: "box",
-            layout: "vertical",
-            contents: [{ type: "text", text: "แจ้งเตือนการกำหนด KPI", weight: "bold", size: "lg", color: "#ffffff" }],
-            backgroundColor: "#d93025"
+  if (!lineUserId) return false;
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "แจ้งเตือนการกำหนด KPI", weight: "bold", size: "lg", color: "#ffffff" }],
+      backgroundColor: "#d93025"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: `หัวหน้างานได้กำหนดตัวชี้วัด KPI ของคุณแล้ว`, size: "sm", color: "#111111", wrap: true },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", weight: "bold" },
+            { type: "text", text: `ผู้กำหนด: ${data.supervisorName}`, size: "sm", color: "#64748b" }
+          ]
         },
-        body: {
-            type: "box",
-            layout: "vertical",
-            spacing: "md",
-            contents: [
-                { type: "text", text: `หัวหน้างานได้กำหนดตัวชี้วัด KPI ของคุณแล้ว`, size: "sm", color: "#111111", wrap: true },
-                {
-                    type: "box",
-                    layout: "vertical",
-                    spacing: "xs",
-                    contents: [
-                        { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", weight: "bold" },
-                        { type: "text", text: `ผู้กำหนด: ${data.supervisorName}`, size: "sm", color: "#64748b" }
-                    ]
-                },
-                { type: "separator", margin: "md" },
-                { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินตนเอง' ในขั้นตอนต่อไป", size: "xs", color: "#d93025", weight: "bold", wrap: true }
-            ]
-        }
-    };
-    return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนการกำหนด KPI", contents }]);
+        { type: "separator", margin: "md" },
+        { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินตนเอง' ในขั้นตอนต่อไป", size: "xs", color: "#d93025", weight: "bold", wrap: true }
+      ]
+    }
+  };
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนการกำหนด KPI", contents }]);
 }
 
 /**
  * 2. Notify Supervisor when Employee self-rates
  */
 export async function sendKpiSelfRateNotification(
-    lineUserId: string,
-    data: {
-        empName: string;
-        evaluationNo: number;
-    }
+  lineUserId: string,
+  data: {
+    empName: string;
+    evaluationNo: number;
+  }
 ) {
   // Format names with nicknames
   if (data) {
@@ -1583,47 +1583,47 @@ export async function sendKpiSelfRateNotification(
     if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
   }
 
-    if (!lineUserId) return false;
-    const contents: any = {
-        type: "bubble",
-        header: {
-            type: "box",
-            layout: "vertical",
-            contents: [{ type: "text", text: "แจ้งเตือนการประเมินตนเองเสร็จสิ้น", weight: "bold", size: "lg", color: "#ffffff" }],
-            backgroundColor: "#fa6400"
+  if (!lineUserId) return false;
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "แจ้งเตือนการประเมินตนเองเสร็จสิ้น", weight: "bold", size: "lg", color: "#ffffff" }],
+      backgroundColor: "#fa6400"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: `พนักงานใต้บังคับบัญชาของคุณดำเนินการประเมินตนเองเสร็จแล้ว`, size: "sm", color: "#111111", wrap: true },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
+            { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+          ]
         },
-        body: {
-            type: "box",
-            layout: "vertical",
-            spacing: "md",
-            contents: [
-                { type: "text", text: `พนักงานใต้บังคับบัญชาของคุณดำเนินการประเมินตนเองเสร็จแล้ว`, size: "sm", color: "#111111", wrap: true },
-                {
-                    type: "box",
-                    layout: "vertical",
-                    spacing: "xs",
-                    contents: [
-                        { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
-                        { type: "text", text: `ครั้งที่ประเมิน: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
-                    ]
-                },
-                { type: "separator", margin: "md" },
-                { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินผล' ขั้นสุดท้าย", size: "xs", color: "#fa6400", weight: "bold", wrap: true }
-            ]
-        }
-    };
-    return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการประเมินตนเอง: ${data.empName}`, contents }]);
+        { type: "separator", margin: "md" },
+        { type: "text", text: "กรุณาเข้าระบบเพื่อดำเนินการ 'ประเมินผล' ขั้นสุดท้าย", size: "xs", color: "#fa6400", weight: "bold", wrap: true }
+      ]
+    }
+  };
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการประเมินตนเอง: ${data.empName}`, contents }]);
 }
 
 /**
  * 3. Notify HR when Supervisor evaluates
  */
 export async function sendKpiEvaluateHrAlert(data: {
-    empName: string;
-    supervisorName: string;
-    evaluationNo: number;
-    totalScore: number;
-    grade: string;
+  empName: string;
+  supervisorName: string;
+  evaluationNo: number;
+  totalScore: number;
+  grade: string;
 }) {
   // Format names with nicknames
   if (data) {
@@ -1632,65 +1632,65 @@ export async function sendKpiEvaluateHrAlert(data: {
     if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
   }
 
-    const hrLineUserId = process.env.HR_LINE_USER_ID;
-    if (!hrLineUserId) return false;
+  const hrLineUserId = process.env.HR_LINE_USER_ID;
+  if (!hrLineUserId) return false;
 
-    const contents: any = {
-        type: "bubble",
-        header: {
-            type: "box",
-            layout: "vertical",
-            contents: [{ type: "text", text: "แจ้งเตือนผลการประเมิน KPI (ส่งถึง HR)", weight: "bold", size: "lg", color: "#ffffff" }],
-            backgroundColor: "#0369a1"
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "แจ้งเตือนผลการประเมิน KPI (ส่งถึง HR)", weight: "bold", size: "lg", color: "#ffffff" }],
+      backgroundColor: "#0369a1"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: `หัวหน้างานได้ส่งผลการประเมิน KPI มายังฝ่ายบุคคลแล้ว`, size: "sm", color: "#111111", wrap: true },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
+            { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
+            { type: "text", text: `ประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+          ]
         },
-        body: {
-            type: "box",
-            layout: "vertical",
-            spacing: "md",
-            contents: [
-                { type: "text", text: `หัวหน้างานได้ส่งผลการประเมิน KPI มายังฝ่ายบุคคลแล้ว`, size: "sm", color: "#111111", wrap: true },
-                {
-                    type: "box",
-                    layout: "vertical",
-                    spacing: "xs",
-                    contents: [
-                        { type: "text", text: `พนักงาน: ${data.empName}`, size: "sm", weight: "bold" },
-                        { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
-                        { type: "text", text: `ประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
-                    ]
-                },
-                {
-                    type: "box",
-                    layout: "horizontal",
-                    margin: "md",
-                    contents: [
-                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
-                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
-                    ]
-                },
-                {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                        { type: "text", text: "เกรดที่ได้:", size: "sm", color: "#64748b", flex: 4 },
-                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 6 }
-                    ]
-                }
-            ]
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "md",
+          contents: [
+            { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
+            { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "เกรดที่ได้:", size: "sm", color: "#64748b", flex: 4 },
+            { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 6 }
+          ]
         }
-    };
+      ]
+    }
+  };
 
-    return sendLineMessage(hrLineUserId, [{ type: "flex", altText: `ผลการประเมิน KPI: ${data.empName}`, contents }]);
+  return sendLineMessage(hrLineUserId, [{ type: "flex", altText: `ผลการประเมิน KPI: ${data.empName}`, contents }]);
 }
 
 /**
  * 4. Notify Management with Summary
  */
 export async function sendKpiManagementSummary(data: {
-    empName: string;
-    supervisorName: string;
-    totalScore: number;
-    grade: string;
+  empName: string;
+  supervisorName: string;
+  totalScore: number;
+  grade: string;
 }) {
   // Format names with nicknames
   if (data) {
@@ -1699,112 +1699,112 @@ export async function sendKpiManagementSummary(data: {
     if ((data as any).hrName) (data as any).hrName = await formatNameDb((data as any).hrName);
   }
 
-    const managementId = process.env.MANAGEMENT_LINE_USER_ID;
-    if (!managementId) return false;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  if (!managementId) return false;
 
-    const contents: any = {
-        type: "bubble",
-        header: {
-            type: "box",
-            layout: "vertical",
-            contents: [{ type: "text", text: "สรุปผลการประเมิน KPI (ฝ่ายบริหาร)", weight: "bold", size: "md", color: "#1e293b" }],
-            backgroundColor: "#f8fafc"
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "สรุปผลการประเมิน KPI (ฝ่ายบริหาร)", weight: "bold", size: "md", color: "#1e293b" }],
+      backgroundColor: "#f8fafc"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "พนักงาน:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: data.empName, size: "sm", weight: "bold", flex: 7 }
+          ]
         },
-        body: {
-            type: "box",
-            layout: "vertical",
-            spacing: "md",
-            contents: [
-                {
-                    type: "box", layout: "horizontal", contents: [
-                        { type: "text", text: "พนักงาน:", size: "sm", color: "#64748b", flex: 3 },
-                        { type: "text", text: data.empName, size: "sm", weight: "bold", flex: 7 }
-                    ]
-                },
-                {
-                    type: "box", layout: "horizontal", contents: [
-                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 3 },
-                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 7 }
-                    ]
-                },
-                {
-                    type: "box", layout: "horizontal", contents: [
-                        { type: "text", text: "เกรดสรุป:", size: "sm", color: "#64748b", flex: 3 },
-                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 7 }
-                    ]
-                },
-                { type: "separator", margin: "sm" },
-                { type: "text", text: `ผู้รับผิดชอบการประเมิน: ${data.supervisorName}`, size: "xxs", color: "#94a3b8", align: "end", margin: "md" }
-            ]
-        }
-    };
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 7 }
+          ]
+        },
+        {
+          type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "เกรดสรุป:", size: "sm", color: "#64748b", flex: 3 },
+            { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#d93025", flex: 7 }
+          ]
+        },
+        { type: "separator", margin: "sm" },
+        { type: "text", text: `ผู้รับผิดชอบการประเมิน: ${data.supervisorName}`, size: "xxs", color: "#94a3b8", align: "end", margin: "md" }
+      ]
+    }
+  };
 
-    return sendLineMessage(managementId, [{ type: "flex", altText: `สรุป KPI: ${data.empName}`, contents }]);
+  return sendLineMessage(managementId, [{ type: "flex", altText: `สรุป KPI: ${data.empName}`, contents }]);
 }
 
 /**
  * 4. Notify Employee when Supervisor evaluates KPI
  */
 export async function sendKpiEvaluateEmployeeNotification(
-    lineUserId: string,
-    data: {
-        evaluationNo: number;
-        totalScore: number;
-        grade: string;
-        supervisorName: string;
-    }
+  lineUserId: string,
+  data: {
+    evaluationNo: number;
+    totalScore: number;
+    grade: string;
+    supervisorName: string;
+  }
 ) {
-    // Format names with nicknames
-    if (data && data.supervisorName) {
-        data.supervisorName = await formatNameDb(data.supervisorName);
-    }
+  // Format names with nicknames
+  if (data && data.supervisorName) {
+    data.supervisorName = await formatNameDb(data.supervisorName);
+  }
 
-    const contents: any = {
-        type: "bubble",
-        header: {
-            type: "box",
-            layout: "vertical",
-            contents: [{ type: "text", text: "ผลการประเมิน KPI ของคุณ", weight: "bold", size: "lg", color: "#ffffff" }],
-            backgroundColor: "#16a34a"
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [{ type: "text", text: "ผลการประเมิน KPI ของคุณ", weight: "bold", size: "lg", color: "#ffffff" }],
+      backgroundColor: "#16a34a"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        { type: "text", text: `หัวหน้างานได้ทำการประเมิน KPI ของคุณเสร็จสิ้นแล้ว`, size: "sm", color: "#111111", wrap: true },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
+            { type: "text", text: `รอบการประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
+          ]
         },
-        body: {
-            type: "box",
-            layout: "vertical",
-            spacing: "md",
-            contents: [
-                { type: "text", text: `หัวหน้างานได้ทำการประเมิน KPI ของคุณเสร็จสิ้นแล้ว`, size: "sm", color: "#111111", wrap: true },
-                {
-                    type: "box",
-                    layout: "vertical",
-                    spacing: "xs",
-                    contents: [
-                        { type: "text", text: `ผู้ประเมิน: ${data.supervisorName}`, size: "sm", color: "#64748b" },
-                        { type: "text", text: `รอบการประเมินครั้งที่: ${data.evaluationNo}`, size: "sm", color: "#64748b" }
-                    ]
-                },
-                {
-                    type: "box",
-                    layout: "horizontal",
-                    margin: "md",
-                    contents: [
-                        { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
-                        { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
-                    ]
-                },
-                {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                        { type: "text", text: "เกรดที่คุณได้รับ:", size: "sm", color: "#64748b", flex: 4 },
-                        { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#16a34a", flex: 6 }
-                    ]
-                },
-                { type: "text", text: "คุณสามารถดูรายละเอียดคะแนนและข้อเสนอแนะเพิ่มเติมได้ในระบบ", size: "xs", color: "#9ca3af", margin: "lg", wrap: true }
-            ]
-        }
-    };
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "md",
+          contents: [
+            { type: "text", text: "คะแนนเฉลี่ย:", size: "sm", color: "#64748b", flex: 4 },
+            { type: "text", text: `${data.totalScore.toFixed(2)}`, size: "sm", weight: "bold", flex: 6 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "เกรดที่คุณได้รับ:", size: "sm", color: "#64748b", flex: 4 },
+            { type: "text", text: data.grade, size: "sm", weight: "bold", color: "#16a34a", flex: 6 }
+          ]
+        },
+        { type: "text", text: "คุณสามารถดูรายละเอียดคะแนนและข้อเสนอแนะเพิ่มเติมได้ในระบบ", size: "xs", color: "#9ca3af", margin: "lg", wrap: true }
+      ]
+    }
+  };
 
-    return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนผลการประเมิน KPI", contents }]);
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: "แจ้งเตือนผลการประเมิน KPI", contents }]);
 }
 
 /**
@@ -1832,7 +1832,7 @@ export async function sendMeetingBookingNotification(
 
   const hrId = process.env.HR_LINE_USER_ID;
   const managementId = process.env.MANAGEMENT_LINE_USER_ID;
-  
+
   // Combine all recipients, removing duplicates and nulls
   const allTargets = Array.from(new Set([...targetLineIds, hrId, managementId].filter(id => !!id)));
 
@@ -1850,13 +1850,13 @@ export async function sendMeetingBookingNotification(
       margin: "md",
       contents: [
         { type: "text", text: "ผู้เข้าร่วม:", color: "#888888", size: "sm" },
-        { 
-          type: "text", 
-          text: data.attendees.map((name, i) => `${i + 1}. ${name}`).join("\n"), 
-          color: "#111111", 
-          size: "sm", 
-          wrap: true, 
-          margin: "xs" 
+        {
+          type: "text",
+          text: data.attendees.map((name, i) => `${i + 1}. ${name}`).join("\n"),
+          color: "#111111",
+          size: "sm",
+          wrap: true,
+          margin: "xs"
         }
       ]
     });
@@ -1884,7 +1884,7 @@ export async function sendMeetingBookingNotification(
   const results = await Promise.all(
     allTargets.map(id => sendLineMessage(id!, [{ type: "flex", altText: `จองห้องประชุม: ${data.purpose}`, contents }]))
   );
-  
+
   return results.every(r => r);
 }
 
@@ -1953,7 +1953,90 @@ export async function sendMeetingBookingCancelledNotification(
   const results = await Promise.all(
     allTargets.map(id => sendLineMessage(id!, [{ type: "flex", altText: `ยกเลิกจองห้องประชุม: ${data.purpose}`, contents }]))
   );
-  
+
+  return results.every(r => r);
+}
+
+export async function sendMeetingBookingUpdatedNotification(
+  data: {
+    roomName: string;
+    floor: number;
+    startTime: string;
+    endTime: string;
+    purpose: string;
+    bookerName: string;
+    attendees: string[];
+    updatedByName?: string;
+  },
+  targetLineIds: string[]
+) {
+  if (data) {
+    if (data.bookerName) data.bookerName = await formatNameDb(data.bookerName);
+    if (data.updatedByName) data.updatedByName = await formatNameDb(data.updatedByName);
+    if (data.attendees && data.attendees.length > 0) {
+      data.attendees = await Promise.all(data.attendees.map(async (name) => await formatNameDb(name)));
+    }
+  }
+
+  const hrId = process.env.HR_LINE_USER_ID;
+  const managementId = process.env.MANAGEMENT_LINE_USER_ID;
+  const allTargets = Array.from(new Set([...targetLineIds, hrId, managementId].filter(id => !!id)));
+
+  const bodyContents: any[] = [
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ห้องประชุม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.roomName} (ชั้น ${data.floor})`, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เวลา:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.startTime} - ${data.endTime}`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "หัวข้อ:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.purpose || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ผู้จอง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.bookerName, color: "#111111", size: "sm", flex: 7 }] },
+  ];
+
+  if (data.attendees.length > 0) {
+    bodyContents.push({
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      contents: [
+        { type: "text", text: "ผู้เข้าร่วม:", color: "#888888", size: "sm" },
+        {
+          type: "text",
+          text: data.attendees.map((name, i) => `${i + 1}. ${name}`).join("\n"),
+          color: "#111111",
+          size: "sm",
+          wrap: true,
+          margin: "xs"
+        }
+      ]
+    });
+  }
+
+  if (data.updatedByName) {
+    bodyContents.push(
+      { type: "separator", margin: "md" },
+      { type: "box", layout: "horizontal", margin: "md", contents: [{ type: "text", text: "แก้ไขโดย:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.updatedByName, color: "#d97706", size: "sm", weight: "bold", flex: 7 }] }
+    );
+  }
+
+  const contents: any = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: "แก้ไขการจองห้องประชุม", weight: "bold", size: "lg", color: "#ffffff" }
+      ],
+      backgroundColor: "#d97706"
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: bodyContents
+    }
+  };
+
+  const results = await Promise.all(
+    allTargets.map(id => sendLineMessage(id!, [{ type: "flex", altText: `แก้ไขการจองห้องประชุม: ${data.purpose}`, contents }]))
+  );
+
   return results.every(r => r);
 }
 
@@ -1981,14 +2064,14 @@ export async function sendTravelClaimNotification(data: {
 
   if (lineUserIds.length === 0) return false;
 
-  const statusColor = data.status === "approved" || data.status === "completed" 
-    ? "#059669" 
+  const statusColor = data.status === "approved" || data.status === "completed"
+    ? "#059669"
     : data.status === "rejected" ? "#dc2626" : "#2563eb";
 
   const statusText = data.status === "pending_supervisor" ? "รออนุมัติ (หัวหน้า)" :
-                     data.status === "pending_admin" ? "รออนุมัติ (HR)" :
-                     data.status === "completed" ? "อนุมัติแล้ว" :
-                     data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
+    data.status === "pending_admin" ? "รออนุมัติ (HR)" :
+      data.status === "completed" ? "อนุมัติแล้ว" :
+        data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
 
   const flexMessage: any = {
     type: "flex",
@@ -2253,14 +2336,14 @@ export async function sendCommissionClaimNotification(data: {
 
   if (lineUserIds.length === 0 && !replyToken) return false;
 
-  const statusColor = data.status === "completed" 
-    ? "#059669" 
+  const statusColor = data.status === "completed"
+    ? "#059669"
     : data.status === "rejected" ? "#dc2626" : "#7c3aed";
 
   const statusText = data.status === "pending_supervisor" ? "รออนุมัติ (หัวหน้า)" :
-                     data.status === "pending_admin" ? "รออนุมัติ (HR)" :
-                     data.status === "completed" ? "อนุมัติแล้ว" :
-                     data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
+    data.status === "pending_admin" ? "รออนุมัติ (HR)" :
+      data.status === "completed" ? "อนุมัติแล้ว" :
+        data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
 
   const totalText = data.totalAmount === "0" || data.totalAmount === "0.00" ? "รอ HR คำนวณ" : `${data.totalAmount} THB`;
   const perPersonText = data.perPerson === "0" || data.perPerson === "0.00" ? "รอ HR คำนวณ" : `${data.perPerson} THB`;
@@ -2511,7 +2594,7 @@ export async function sendWorkPlanNotification(
   }
 ) {
   const empName = await formatNameDb(data.empName);
-  
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -2651,7 +2734,7 @@ export async function sendWelfareApprovalFlexMessage(
     Object.entries(data.metadata).forEach(([k, v]) => {
       let displayVal = v;
       if (k === 'education_level') displayVal = eduLevels[v] || v;
-      
+
       bodyContents.push({
         type: "box",
         layout: "horizontal",
@@ -2798,7 +2881,7 @@ export async function sendEmployeeWelfareStatusNotification(
   };
 
   const cfg = statusConfig[data.status];
-  
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -2912,16 +2995,18 @@ export async function sendProductBorrowNotification(
       layout: "vertical",
       spacing: "md",
       contents: [
-        { type: "box", layout: "vertical", spacing: "sm", contents: [
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-          ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
-          ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#ca8a04", size: "sm", weight: "bold", flex: 7 }] },
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
-          ...(data.remark ? [{ type: "text", text: `หมายเหตุ: ${data.remark}`, size: "xs", color: "#6b7280", margin: "md", style: "italic", wrap: true }] : [])
-        ] }
+        {
+          type: "box", layout: "vertical", spacing: "sm", contents: [
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+            ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+            ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่ยืม:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.borrowDate, color: "#111111", size: "sm", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "กำหนดคืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.returnDate, color: "#ca8a04", size: "sm", weight: "bold", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] },
+            ...(data.remark ? [{ type: "text", text: `หมายเหตุ: ${data.remark}`, size: "xs", color: "#6b7280", margin: "md", style: "italic", wrap: true }] : [])
+          ]
+        }
       ]
     }
   };
@@ -2985,13 +3070,15 @@ export async function sendProductReturnNotification(
       layout: "vertical",
       spacing: "md",
       contents: [
-        { type: "box", layout: "vertical", spacing: "sm", contents: [
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
-          ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }] },
-          { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพสินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition || "ปกติ", color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", flex: 7, wrap: true }] }
-        ] }
+        {
+          type: "box", layout: "vertical", spacing: "sm", contents: [
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.productName} (${data.productCode})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+            ...(data.companyName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "บริษัท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.companyName, color: "#111111", size: "sm", flex: 7 }] }] : []),
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#16a34a", size: "sm", weight: "bold", flex: 7 }] },
+            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพสินค้า:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition || "ปกติ", color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", flex: 7, wrap: true }] }
+          ]
+        }
       ]
     }
   };
