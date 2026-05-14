@@ -42,6 +42,8 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
     const [otLocation, setOtLocation] = useState("");
     const [otLocType, setOtLocType] = useState("สำนักงานใหญ่");
 
+    const [defaultOffice, setDefaultOffice] = useState("สำนักงานใหญ่");
+
     const [otAttendant, setOtAttendant] = useState("");
     const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
     const [loading, setLoading] = useState(false);
@@ -61,6 +63,12 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
             const data = await res.json();
             if (data.ok) {
                 setSupervisors(data.supervisors || []);
+                if (data.defaultOffice) {
+                    setDefaultOffice(data.defaultOffice);
+                    setMorningLocType(data.defaultOffice);
+                    setAfternoonLocType(data.defaultOffice);
+                    setOtLocType(data.defaultOffice);
+                }
             }
         } catch (e) {
             console.error("Failed to fetch supervisors", e);
@@ -96,10 +104,13 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
 
     if (!isOpen) return null;
 
-    const isFormValid = morningPlan && 
-        (["สำนักงานใหญ่", "Work From Home"].includes(morningLocType) || morningLocation) && 
-        afternoonPlan && 
-        (["สำนักงานใหญ่", "Work From Home"].includes(afternoonLocType) || afternoonLocation);
+    const hasValidText = (val: string) => /[a-zA-Z0-9\u0E00-\u0E7F]/.test(val);
+
+    const isFormValid = 
+        hasValidText(morningPlan) && 
+        ([defaultOffice, "Work From Home"].includes(morningLocType) || hasValidText(morningLocation)) && 
+        hasValidText(afternoonPlan) && 
+        ([defaultOffice, "Work From Home"].includes(afternoonLocType) || hasValidText(afternoonLocation));
 
     return (
         <div className={styles.overlay}>
@@ -120,7 +131,7 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
                                     value={morningLocType}
                                     onChange={e => setMorningLocType(e.target.value)}
                                 >
-                                    <option value="สำนักงานใหญ่">ออฟฟิศ</option>
+                                    <option value={defaultOffice}>ออฟฟิศ ({defaultOffice})</option>
                                     <option value="ไซต์งานลูกค้า">ไซต์งาน</option>
                                     <option value="Work From Home">WFH</option>
                                     <option value="Other">อื่น ๆ...</option>
@@ -156,7 +167,7 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
                                     value={afternoonLocType}
                                     onChange={e => setAfternoonLocType(e.target.value)}
                                 >
-                                    <option value="สำนักงานใหญ่">ออฟฟิศ</option>
+                                    <option value={defaultOffice}>ออฟฟิศ ({defaultOffice})</option>
                                     <option value="ไซต์งานลูกค้า">ไซต์งาน</option>
                                     <option value="Work From Home">WFH</option>
                                     <option value="Other">อื่น ๆ...</option>
@@ -204,7 +215,7 @@ export default function WorkPlanModal({ isOpen, onClose, onSubmit, employeeName 
                                         value={otLocType}
                                         onChange={e => setOtLocType(e.target.value)}
                                     >
-                                        <option value="สำนักงานใหญ่">ออฟฟิศ</option>
+                                        <option value={defaultOffice}>ออฟฟิศ ({defaultOffice})</option>
                                         <option value="ไซต์งานลูกค้า">ไซต์งาน</option>
                                         <option value="Work From Home">WFH</option>
                                         <option value="Other">อื่น ๆ...</option>

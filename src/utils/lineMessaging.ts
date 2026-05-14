@@ -2620,7 +2620,7 @@ export async function sendWorkPlanNotification(
           contents: [
             { type: "text", text: "🕒 เช้า (08:00 - 12:00)", weight: "bold", size: "sm", color: "#111827" },
             { type: "text", text: `📍 ${data.morningLoc}`, size: "xs", color: "#ef4444", margin: "xs" },
-            { type: "text", text: data.morningPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" }
+            { type: "text", text: data.morningPlan?.trim() || "-", size: "sm", color: "#374151", wrap: true, margin: "xs" }
           ]
         },
         { type: "separator" },
@@ -2631,7 +2631,7 @@ export async function sendWorkPlanNotification(
           contents: [
             { type: "text", text: "🕒 บ่าย (13:00 - 17:00)", weight: "bold", size: "sm", color: "#111827" },
             { type: "text", text: `📍 ${data.afternoonLoc}`, size: "xs", color: "#ef4444", margin: "xs" },
-            { type: "text", text: data.afternoonPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" }
+            { type: "text", text: data.afternoonPlan?.trim() || "-", size: "sm", color: "#374151", wrap: true, margin: "xs" }
           ]
         }
       ]
@@ -2647,7 +2647,7 @@ export async function sendWorkPlanNotification(
         contents: [
           { type: "text", text: "🌙 ล่วงเวลา (หลัง 17:00)", weight: "bold", size: "sm", color: "#7c3aed" },
           { type: "text", text: `📍 ${data.otLoc || "-"}`, size: "xs", color: "#8b5cf6", margin: "xs" },
-          { type: "text", text: data.otPlan, size: "sm", color: "#374151", wrap: true, margin: "xs" },
+          { type: "text", text: data.otPlan?.trim() || "-", size: "sm", color: "#374151", wrap: true, margin: "xs" },
           { type: "text", text: `👤 ผู้ดูแล: ${data.otAttendant || "-"}`, size: "xs", color: "#6b7280", margin: "sm" }
         ]
       }
@@ -3088,3 +3088,4 @@ export async function sendProductReturnNotification(
   );
   return results.every(r => r);
 }
+

@@ -928,8 +928,8 @@ export default function AppPage() {
 
                             <div className={styles.row} style={{ marginTop: 12 }}>
                                 <div>
-                                    <label className={styles.label}>สาขา</label>
-                                    <select className={styles.select} value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}>
+                                    <label className={styles.label}>สาขาประจำ</label>
+                                    <select className={styles.select} value={selectedBranch} disabled style={{ backgroundColor: "#f3f4f6", cursor: "not-allowed", opacity: 0.8 }}>
                                         <option value="">เลือกสาขา</option>
                                         {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                     </select>

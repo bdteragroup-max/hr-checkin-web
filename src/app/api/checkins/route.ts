@@ -138,7 +138,14 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
 
     const type = String(body?.type || "").trim() as CheckType;
-    const branch_id = String(body?.branch_id || auth.emp.branch_id || "").trim();
+    let branch_id = String(body?.branch_id || auth.emp.branch_id || "").trim();
+
+    // Enforce branch matching: Normal check-in MUST be at the employee's assigned branch
+    if (type === "Check-in" || type === "Check-out") {
+        if (auth.emp.branch_id) {
+            branch_id = auth.emp.branch_id;
+        }
+    }
     const lat = Number(body?.lat);
     const lon = Number(body?.lon);
     const accuracy = body?.accuracy ? Number(body.accuracy) : null;

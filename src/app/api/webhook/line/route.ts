@@ -944,13 +944,6 @@ export async function POST(req: Request) {
                             console.error("[LINE WEBHOOK] DB Count Error:", err.message);
                             await sendReplyMessage(replyToken, "❌ DB Error: " + err.message);
                         }
-                    } else if (text === "!groupid") {
-                        const groupId = event.source?.groupId;
-                        if (groupId) {
-                            await sendReplyMessage(replyToken, `Group ID ของคุณคือ:\n${groupId}`);
-                        } else {
-                            await sendReplyMessage(replyToken, "นี่ไม่ใช่การสนทนาแบบกลุ่ม จึงไม่มี Group ID");
-                        }
                     } else {
                         await sendReplyMessage(replyToken, `ID ของคุณคือ: ${lineUserId}`);
                     }
