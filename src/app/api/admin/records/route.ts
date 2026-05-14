@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         const teamOnly = url.searchParams.get("team") === "1";
  
          const subordinateFilter: any = {};
-         if (auth.isSupervisorOnly) {
+         if (auth.isSupervisorOnly || teamOnly) {
              subordinateFilter.OR = [
                  { supervisor_id: auth.emp_id },
                  { secondary_supervisor_id: auth.emp_id }

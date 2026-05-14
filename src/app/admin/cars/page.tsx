@@ -708,10 +708,13 @@ export default function AdminAssetsPage() {
                                                     <span className={styles.historyLabel}>สถานะ:</span> {item.status === 'borrowed' ? 'อยู่ระหว่างการยืม' : 'คืนแล้ว'}
                                                 </div>
                                                 <div className={styles.historyField}>
-                                                    <span className={styles.historyLabel}>วันที่ยืม:</span> {new Date(item.borrow_date).toLocaleDateString('th-TH')}
+                                                    <span className={styles.historyLabel}>วันที่ยืม:</span> {new Date(item.borrow_date).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                                 <div className={styles.historyField}>
-                                                    <span className={styles.historyLabel}>วันที่คืน:</span> {item.actual_return_date ? new Date(item.actual_return_date).toLocaleDateString('th-TH') : '-'}
+                                                    <span className={styles.historyLabel}>กำหนดคืน:</span> {item.expected_return_date ? new Date(item.expected_return_date).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                                </div>
+                                                <div className={styles.historyField}>
+                                                    <span className={styles.historyLabel}>คืนจริง:</span> {item.actual_return_date ? new Date(item.actual_return_date).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                                                 </div>
                                                 <div className={styles.historyField} style={{ gridColumn: 'span 2' }}>
                                                     <span className={styles.historyLabel}>หมายเหตุ/สภาพเมื่อยืม:</span> {item.condition_at_borrow || '-'}

@@ -362,6 +362,29 @@ export default function CarBorrowPage() {
         }
     }
 
+    async function handleCancelBooking(borrowing_id: number) {
+        if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?")) return;
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/assets/cancel", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ borrowing_id })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                setAlert({ visible: true, message: "ยกเลิกการจองเรียบร้อยแล้ว", type: "ok" });
+                loadData();
+            } else {
+                setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาดในการยกเลิก", type: "error" });
+            }
+        } catch (err: any) {
+            setAlert({ visible: true, message: err.message, type: "error" });
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     const filteredAssets = assets.filter(a =>
         a.name.toLowerCase().includes(search.toLowerCase()) ||
         a.asset_id.toLowerCase().includes(search.toLowerCase())
@@ -528,13 +551,23 @@ export default function CarBorrowPage() {
                                             </div>
                                         </div>
 
-                                        <button
-                                            className={styles.btn}
-                                            onClick={() => openReturnModal(b)}
-                                            style={{ marginTop: 12, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
-                                        >
-                                            ดำเนินการคืนรถ
-                                        </button>
+                                        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                                            <button
+                                                className={styles.btn}
+                                                onClick={() => openReturnModal(b)}
+                                                style={{ flex: 1, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
+                                            >
+                                                ดำเนินการคืนรถ
+                                            </button>
+                                            <button
+                                                className={styles.btn}
+                                                onClick={() => handleCancelBooking(b.id)}
+                                                style={{ flex: 1, backgroundColor: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}
+                                                disabled={submitting}
+                                            >
+                                                ยกเลิกการจอง
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

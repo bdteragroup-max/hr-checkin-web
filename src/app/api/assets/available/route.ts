@@ -33,8 +33,7 @@ export async function GET(req: Request) {
                 asset_borrowings: {
                     some: {
                         status: { in: ["borrowed", "reserved"] },
-                        borrow_date: { lte: now },
-                        expected_return_date: { gt: now }
+                        borrow_date: { lte: now }
                     }
                 }
             };
@@ -45,7 +44,11 @@ export async function GET(req: Request) {
             include: {
                 asset_borrowings: {
                     where: {
-                        status: { in: ["borrowed", "reserved"] }
+                        status: { in: ["borrowed", "reserved"] },
+                        OR: [
+                            { expected_return_date: { gte: now } },
+                            { status: "borrowed" }
+                        ]
                     },
                     include: {
                         employee: {

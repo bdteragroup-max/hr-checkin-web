@@ -261,7 +261,7 @@ export async function POST(req: Request) {
                                 where: { id: targetId! },
                                 data: { status: "rejected" }
                             });
-                            
+
                             await sendLeaveApprovalFlexMessage(lineUserId!, {
                                 id: leaveReq.id,
                                 empName: leaveEmpName,
@@ -416,7 +416,7 @@ export async function POST(req: Request) {
                                 where: { id: Number(targetId!) },
                                 data: { status: "rejected" }
                             });
-                            
+
                             await sendOtApprovalFlexMessage(lineUserId!, {
                                 id: otReq.id,
                                 empName: otEmpName,
@@ -455,7 +455,7 @@ export async function POST(req: Request) {
                         const hrLineConfig = process.env.HR_LINE_USER_ID || "";
                         const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
                         const isHr = hrLineIds.includes(lineUserId || "");
-                        
+
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: claim.supervisor_id || "" }
                         });
@@ -608,7 +608,7 @@ export async function POST(req: Request) {
                         const hrLineConfig = process.env.HR_LINE_USER_ID || "";
                         const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
                         const isHr = hrLineIds.includes(lineUserId || "");
-                        
+
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: claim.supervisor_id || "" }
                         });
@@ -755,7 +755,7 @@ export async function POST(req: Request) {
                         const hrLineConfig = process.env.HR_LINE_USER_ID || "";
                         const hrLineIds = hrLineConfig.split(",").map(id => id.trim());
                         const isHr = hrLineIds.includes(lineUserId || "");
-                        
+
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: claim.employees.supervisor_id || "" }
                         });
@@ -807,7 +807,7 @@ export async function POST(req: Request) {
                         const empDisplayName = claim.employees.nickname ? `${claim.employees.name} (${claim.employees.nickname})` : claim.employees.name;
                         const approver = await prisma.employees.findFirst({ where: { line_user_id: lineUserId }, select: { name: true } });
                         const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
-                        
+
                         const urls = claim.attachment_url ? (claim.attachment_url.startsWith('[') ? JSON.parse(claim.attachment_url) : [claim.attachment_url]) : [];
 
                         if (action === "approve_welfare") {
@@ -894,7 +894,7 @@ export async function POST(req: Request) {
                             // Reject Logic (Either supervisor or HR can reject)
                             await prisma.general_welfare_claims.update({
                                 where: { id: targetId! },
-                                data: { 
+                                data: {
                                     status: "rejected",
                                     supervisor_status: isSupervisor ? "rejected" : claim.supervisor_status
                                 }
@@ -943,6 +943,13 @@ export async function POST(req: Request) {
                         } catch (err: any) {
                             console.error("[LINE WEBHOOK] DB Count Error:", err.message);
                             await sendReplyMessage(replyToken, "❌ DB Error: " + err.message);
+                        }
+                    } else if (text === "!groupid") {
+                        const groupId = event.source?.groupId;
+                        if (groupId) {
+                            await sendReplyMessage(replyToken, `Group ID ของคุณคือ:\n${groupId}`);
+                        } else {
+                            await sendReplyMessage(replyToken, "นี่ไม่ใช่การสนทนาแบบกลุ่ม จึงไม่มี Group ID");
                         }
                     } else {
                         await sendReplyMessage(replyToken, `ID ของคุณคือ: ${lineUserId}`);

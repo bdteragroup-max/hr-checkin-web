@@ -247,8 +247,8 @@ export default function OffsiteCheckinPage() {
             const meData = await r.json();
             setMe(meData);
 
-            // Check if plan submitted today
-            const wp = await fetch("/api/work-plans");
+            // Check work plan
+            const wp = await fetch("/api/work-plans", { cache: "no-store" });
             const wpData = await wp.json();
             if (wpData.ok && wpData.plan) {
                 setPlanSubmittedToday(true);

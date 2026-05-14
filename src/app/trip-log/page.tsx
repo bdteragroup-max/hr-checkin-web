@@ -106,7 +106,7 @@ export default function TripLogPage() {
                 }
 
                 // Check if work plan is already submitted today
-                const planRes = await fetch("/api/work-plans");
+                const planRes = await fetch("/api/work-plans", { cache: "no-store" });
                 const planData = await planRes.json();
                 if (planData.ok && planData.plan) {
                     setPlanSubmittedToday(true);
