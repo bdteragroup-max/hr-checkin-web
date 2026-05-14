@@ -45,9 +45,9 @@ export async function GET() {
                     morningLoc: plan.morning_location,
                     afternoonPlan: plan.afternoon_plan,
                     afternoonLoc: plan.afternoon_location,
-                    otPlan: plan.ot_plan,
-                    otLoc: plan.ot_location,
-                    otAttendant: plan.ot_attendant
+                    otPlan: plan.ot_plan ?? undefined,
+                    otLoc: plan.ot_location ?? undefined,
+                    otAttendant: plan.ot_attendant ?? undefined
                 });
                 sentCount++;
             }
