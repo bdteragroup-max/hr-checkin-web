@@ -17,6 +17,7 @@ import {
 import { Camera, RotateCcw, ArrowRight, Loader2 } from "lucide-react";
 import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
 import WorkPlanModal from "@/components/WorkPlanModal";
+import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
    TYPES
@@ -560,8 +561,9 @@ export default function OffsiteCheckinPage() {
     const checkinsToday = today.filter(x => x.type.startsWith("Offsite"));
 
     return (
-        <div style={{ background: "#f3f4f6", minHeight: "100vh", fontFamily: "'Prompt', 'Sarabun', sans-serif", padding: "16px", color: "#111827" }}>
-            <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 60 }}>
+        <div className={styles.wrapper}>
+            <div className={styles.wrap}>
+                <BirthdayBanner />
 
                 {/* 1. Time Card */}
                 <TimeCard />
@@ -871,15 +873,15 @@ export default function OffsiteCheckinPage() {
 
                 <AlertModal alert={alert} onClose={closeAlert} />
 
-                <WorkPlanModal
-                    isOpen={showWorkPlan}
-                    onClose={() => {
-                        setShowWorkPlan(false);
-                    }}
-                    onSubmit={handleWorkPlanSubmit}
-                    employeeName={me?.name || ""}
-                />
-            </div>
+            <WorkPlanModal
+                isOpen={showWorkPlan}
+                onClose={() => {
+                    setShowWorkPlan(false);
+                }}
+                onSubmit={handleWorkPlanSubmit}
+                employeeName={me?.name || ""}
+            />
         </div>
+    </div>
     );
 }

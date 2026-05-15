@@ -21,6 +21,7 @@ import {
 import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut, Loader2 } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateShortThai } from "@/utils/time";
 import WorkPlanModal from "@/components/WorkPlanModal";
+import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
    CONFIG 
@@ -701,8 +702,9 @@ export default function ProjectCheckinPage() {
     const projectCheckinsToday = today.filter(x => x.type.startsWith("Project"));
 
     return (
-        <div style={{ background: "#f3f4f6", minHeight: "100vh", fontFamily: "'Prompt', 'Sarabun', sans-serif", padding: "16px", color: "#111827" }}>
-            <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 60 }}>
+        <div className={styles.wrapper}>
+            <div className={styles.wrap}>
+                <BirthdayBanner />
 
                 {/* 1. Time Card */}
                 <TimeCard />
@@ -1104,7 +1106,7 @@ export default function ProjectCheckinPage() {
                     )}
                 </div>
 
-            </div>
+
 
             {/* ── ADD CUSTOMER MODAL ── */}
             {showAddCustomer && (
@@ -1151,5 +1153,6 @@ export default function ProjectCheckinPage() {
 
             <AlertModal alert={alert} onClose={closeAlert} />
         </div>
+    </div>
     );
 }

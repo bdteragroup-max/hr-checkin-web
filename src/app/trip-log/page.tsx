@@ -16,6 +16,7 @@ import {
 import { formatTime24h } from "@/utils/time";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import WorkPlanModal from "@/components/WorkPlanModal";
+import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
    TYPES & UTILS
@@ -326,6 +327,8 @@ export default function TripLogPage() {
                         </div>
                     </div>
                 </header>
+
+                <BirthdayBanner />
 
                 {/* ── LOG FORM ── */}
                 {step === 'log' && (

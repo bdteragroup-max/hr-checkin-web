@@ -63,13 +63,33 @@ export async function POST(req: Request) {
         let hasValidDay = false;
         for (const dateKey in scansByDate) {
             const dayScans = scansByDate[dateKey];
-            const hasIn = dayScans.some(s => s.type === "Check-in" || s.type === "Project-In");
-            const hasOut = dayScans.some(s => s.type === "Check-out" || s.type === "Project-Out");
+            
+            // Broaden definitions to include Offsite and Trip records
+            const hasIn = dayScans.some(s => 
+                s.type === "Check-in" || 
+                s.type === "Project-In" || 
+                s.type === "Offsite-In" || 
+                s.type === "Trip-Update"
+            );
+            
+            const hasOut = dayScans.some(s => 
+                s.type === "Check-out" || 
+                s.type === "Project-Out" || 
+                s.type === "Offsite-Out"
+            );
 
             if (hasIn && hasOut) {
                 if (isSales) {
-                    const hasProject = dayScans.some(s => s.type === "Project-In" || s.type === "Project-Out");
-                    if (hasProject) {
+                    // For sales, any external activity (Project, Offsite, or Trip) counts
+                    const hasExternalActivity = dayScans.some(s => 
+                        s.type === "Project-In" || 
+                        s.type === "Project-Out" || 
+                        s.type === "Offsite-In" || 
+                        s.type === "Offsite-Out" || 
+                        s.type === "Trip-Update" || 
+                        s.is_trip
+                    );
+                    if (hasExternalActivity) {
                         hasValidDay = true;
                         break;
                     }
