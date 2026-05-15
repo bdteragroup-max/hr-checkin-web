@@ -32,8 +32,14 @@ export async function GET(req: Request) {
             finalWhere.NOT = {
                 asset_borrowings: {
                     some: {
-                        status: { in: ["borrowed", "reserved"] },
-                        borrow_date: { lte: now }
+                        OR: [
+                            { status: "borrowed" },
+                            {
+                                status: "reserved",
+                                borrow_date: { lte: now },
+                                expected_return_date: { gte: now }
+                            }
+                        ]
                     }
                 }
             };
