@@ -53,6 +53,7 @@ type Emp = {
     line_user_id?: string | null;
     is_checkin_exempt: boolean;
     probation_end_date?: string | null;
+    email?: string | null;
 };
 
 type EditDraft = {
@@ -82,6 +83,7 @@ type EditDraft = {
     probation_end_date: string;
     resignation_date: string;
     secondary_supervisor_id: string;
+    email: string;
 };
 
 type Department = { id: number; name: string };
@@ -131,6 +133,7 @@ export default function AdminEmployeesPage() {
     const [bankName, setBankName] = useState("");
     const [salaryType, setSalaryType] = useState<"monthly" | "daily">("monthly");
     const [lineUserId, setLineUserId] = useState("");
+    const [email, setEmail] = useState("");
     const [isCheckinExempt, setIsCheckinExempt] = useState(false);
     const [probationEndDate, setProbationEndDate] = useState("");
 
@@ -230,6 +233,7 @@ export default function AdminEmployeesPage() {
                     bank_name: bankName.trim() || null,
                     salary_type: salaryType,
                     line_user_id: lineUserId.trim() || null,
+                    email: email.trim() || null,
                     is_checkin_exempt: isCheckinExempt,
                     probation_end_date: isOnTrial && probationEndDate ? probationEndDate : null,
                 }),
@@ -258,6 +262,7 @@ export default function AdminEmployeesPage() {
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
             setSalaryType("monthly");
             setLineUserId("");
+            setEmail("");
             setIsCheckinExempt(false);
             setProbationEndDate("");
             setCreateModalOpen(false);
@@ -304,6 +309,7 @@ export default function AdminEmployeesPage() {
                     bank_name: editDraft.bank_name.trim() || null,
                     salary_type: editDraft.salary_type,
                     line_user_id: editDraft.line_user_id.trim() || null,
+                    email: editDraft.email.trim() || null,
                     is_checkin_exempt: editDraft.is_checkin_exempt,
                     probation_end_date: editDraft.is_on_trial && editDraft.probation_end_date ? editDraft.probation_end_date : null,
                     resignation_date: !editDraft.is_active ? editDraft.resignation_date : null,
@@ -359,6 +365,7 @@ export default function AdminEmployeesPage() {
                 probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
                 resignation_date: new Date().toISOString().split("T")[0], // Default to today
                 secondary_supervisor_id: x.secondary_supervisor_id ?? "",
+                email: x.email || "",
             });
             return;
         }
@@ -602,7 +609,7 @@ export default function AdminEmployeesPage() {
                                             <th>เริ่มงาน</th>
                                             <th>แผนก / ตำแหน่ง</th>
                                             <th>ฐานเงินเดือน</th>
-                                            <th>เบอร์มือถือ</th>
+                                            <th>ติดต่อ</th>
                                             <th>สถานะ</th>
                                             <th style={{ textAlign: "right" }}>จัดการ</th>
                                         </tr>
@@ -679,7 +686,8 @@ export default function AdminEmployeesPage() {
                                                     </div>
                                                 </td>
                                                 <td style={{ color: "var(--text-3)", fontSize: 12 }}>
-                                                    {x.phone_number || "—"}
+                                                    <div>{x.phone_number || "—"}</div>
+                                                    {x.email && <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 2 }}>{x.email}</div>}
                                                 </td>
 
                                                 {/* ── Status badge ── */}
@@ -729,6 +737,7 @@ export default function AdminEmployeesPage() {
                                                                     probation_end_date: x.probation_end_date ? String(x.probation_end_date).slice(0, 10) : "",
                                                                     resignation_date: x.resignation_date ? String(x.resignation_date).slice(0, 10) : "",
                                                                     secondary_supervisor_id: x.secondary_supervisor_id ?? "",
+                                                                    email: x.email || "",
                                                                 });
                                                             }}
                                                         >
@@ -919,9 +928,18 @@ export default function AdminEmployeesPage() {
                             <input type="number" className={styles.input} placeholder="0.00"
                                 value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} />
 
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>เบอร์โทรศัพท์มือถือ</label>
-                            <input type="tel" className={styles.input} placeholder="08XXXXXXXX"
-                                value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                                <div>
+                                    <label className={styles.lbl}>เบอร์โทรศัพท์มือถือ</label>
+                                    <input type="tel" className={styles.input} placeholder="08XXXXXXXX"
+                                        value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className={styles.lbl}>อีเมล (Email)</label>
+                                    <input type="email" className={styles.input} placeholder="email@example.com"
+                                        value={email} onChange={(e) => setEmail(e.target.value)} />
+                                </div>
+                            </div>
 
                             <label className={styles.lbl} style={{ marginTop: 10 }}>PIN (ไม่บังคับ)</label>
                             <input type="password" className={styles.input} placeholder="อย่างน้อย 4 หลัก"
@@ -1186,10 +1204,18 @@ export default function AdminEmployeesPage() {
                                 onChange={(e) => setEditDraft((d) => d && ({ ...d, line_user_id: e.target.value }))} />
                         </div>
 
-                        {/* Phone Number */}
-                        <label className={styles.lbl}>เบอร์โทรศัพท์มือถือ</label>
-                        <input type="tel" className={styles.input} value={editDraft.phone_number} placeholder="08XXXXXXXX"
-                            onChange={(e) => setEditDraft((d) => d && ({ ...d, phone_number: e.target.value }))} />
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                            <div>
+                                <label className={styles.lbl}>เบอร์โทรศัพท์มือถือ</label>
+                                <input type="tel" className={styles.input} value={editDraft.phone_number} placeholder="08XXXXXXXX"
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, phone_number: e.target.value }))} />
+                            </div>
+                            <div>
+                                <label className={styles.lbl}>อีเมล (Email)</label>
+                                <input type="email" className={styles.input} value={editDraft.email} placeholder="email@example.com"
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, email: e.target.value }))} />
+                            </div>
+                        </div>
 
                         {/* Status block */}
                         <div className={`${styles.statusBlock} ${editDraft.is_active ? styles.active : styles.inactive}`}>

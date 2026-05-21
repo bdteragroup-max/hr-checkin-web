@@ -32,6 +32,7 @@ type CreateEmployeeBody = {
     line_user_id?: string | null;
     is_checkin_exempt?: boolean;
     secondary_supervisor_id?: string | null;
+    email?: string | null;
 };
 
 type PatchEmployeeBody = {
@@ -63,6 +64,7 @@ type PatchEmployeeBody = {
     is_checkin_exempt?: boolean;
     resignation_date?: string | null;
     secondary_supervisor_id?: string | null;
+    email?: string | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -146,7 +148,8 @@ export async function GET(req: Request) {
                 line_user_id: true,
                 salary_type: true,
                 is_checkin_exempt: true,
-                resignation_date: true
+                resignation_date: true,
+                email: true
             },
         });
 
@@ -224,6 +227,7 @@ export async function POST(req: Request) {
                 line_user_id: body.line_user_id ? clean(body.line_user_id) : null,
                 is_checkin_exempt: body.is_checkin_exempt ?? false,
                 secondary_supervisor_id: body.secondary_supervisor_id ? clean(body.secondary_supervisor_id) : null,
+                email: body.email ? clean(body.email) : null,
             },
             select: {
                 emp_id: true,
@@ -251,6 +255,7 @@ export async function POST(req: Request) {
                 bank_account_no: true,
                 line_user_id: true,
                 is_checkin_exempt: true,
+                email: true,
             },
         });
 
@@ -384,6 +389,9 @@ export async function PATCH(req: Request) {
         if (body.is_checkin_exempt !== undefined) {
             data.is_checkin_exempt = Boolean(body.is_checkin_exempt);
         }
+        if (body.email !== undefined) {
+            data.email = body.email ? clean(body.email) : null;
+        }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้
         if (body.pin !== undefined) {
@@ -424,6 +432,7 @@ export async function PATCH(req: Request) {
                 line_user_id: true,
                 is_checkin_exempt: true,
                 resignation_date: true,
+                email: true,
             },
         });
 

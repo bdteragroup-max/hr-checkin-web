@@ -111,6 +111,7 @@ model employees {
   national_id_card        String?                @db.VarChar(20)
   salary_type             String?                @default("monthly") @db.VarChar(20)
   line_user_id            String?                @unique @db.VarChar(50)
+  email                   String?                @db.VarChar(100)
   is_checkin_exempt       Boolean                @default(false)
   birthday_claims         birthday_claims[]
   warnings                employee_warnings[]

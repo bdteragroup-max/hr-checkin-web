@@ -29,6 +29,7 @@ import {
 
 const NAV_MAIN_BASE = [
     { id: "checkin", href: "/app", icon: ClockIcon, label: "เช็คอิน", sub: "Check-in" },
+    { id: "directory", href: "/directory", icon: UserGroupIcon, label: "รายชื่อพนักงาน", sub: "Directory" },
     { id: "project-checkin", href: "/project-checkin", icon: BuildingOfficeIcon, label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
     { id: "offsite-checkin", href: "/offsite-checkin", icon: GlobeAltIcon, label: "เช็คอินนอกสถานที่", sub: "Offsite Check-in" },
     { id: "trip-log", href: "/trip-log", icon: MapPinIcon, label: "เดินทางต่างจังหวัด", sub: "Trip Mode" },
@@ -144,7 +145,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     {navMain.map((item, i) => {
                         const active = pathname === item.href || pathname?.startsWith(item.href + "/");
                         return (
-                            <div key={item.href} style={item.isProject ? { marginTop: 12 } : {}}>
+                            <div key={item.href}>
                                 <Link
                                     href={item.href}
                                     data-label={item.label}
