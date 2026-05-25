@@ -19,6 +19,7 @@ interface Booking {
     start_time: string;
     end_time: string;
     purpose: string;
+    meeting_link: string | null;
     minutes: string | null;
     employee: { name: string; emp_id: string; nickname?: string | null };
     room: { name: string; floor: number };
@@ -29,6 +30,7 @@ interface Employee {
     emp_id: string;
     name: string;
     nickname?: string | null;
+    department?: string;
 }
 
 export default function MeetingRoomsPage() {
@@ -70,9 +72,20 @@ export default function MeetingRoomsPage() {
         startTime: "09:00",
         endTime: "10:00",
         purpose: "",
+        meetingLink: "",
         attendee_ids: [] as string[],
         minutes: ""
     });
+
+    const groupedEmployees = useMemo(() => {
+        const groups: Record<string, Employee[]> = {};
+        employees.forEach(emp => {
+            const dept = emp.department || "ไม่ระบุสังกัด";
+            if (!groups[dept]) groups[dept] = [];
+            groups[dept].push(emp);
+        });
+        return groups;
+    }, [employees]);
 
     const weekDays = useMemo(() => {
         return [...Array(7)]
@@ -183,6 +196,7 @@ export default function MeetingRoomsPage() {
                 startTime: format(parseISO(existingBooking.start_time), "HH:mm"),
                 endTime: format(parseISO(existingBooking.end_time), "HH:mm"),
                 purpose: existingBooking.purpose || "",
+                meetingLink: existingBooking.meeting_link || "",
                 attendee_ids: existingBooking.attendees.map(a => a.employee.emp_id),
                 minutes: existingBooking.minutes || ""
             });
@@ -194,6 +208,7 @@ export default function MeetingRoomsPage() {
                 startTime: `${hour.toString().padStart(2, "0")}:00`,
                 endTime: `${(hour + 1).toString().padStart(2, "0")}:00`,
                 purpose: "",
+                meetingLink: "",
                 attendee_ids: [],
                 minutes: ""
             });
@@ -215,6 +230,7 @@ export default function MeetingRoomsPage() {
                     start_time: `${newBooking.date}T${newBooking.startTime}:00`,
                     end_time: `${newBooking.date}T${newBooking.endTime}:00`,
                     purpose: newBooking.purpose,
+                    meeting_link: newBooking.meetingLink,
                     attendee_ids: newBooking.attendee_ids,
                     minutes: newBooking.minutes
                 })
@@ -490,6 +506,17 @@ export default function MeetingRoomsPage() {
                         </div>
 
                         <div className={styles.formGroup}>
+                            <label>ลิงก์การประชุม (Meeting Link) - ถ้ามี</label>
+                            <input 
+                                type="url"
+                                value={newBooking.meetingLink}
+                                onChange={e => setNewBooking({...newBooking, meetingLink: e.target.value})}
+                                placeholder="เช่น https://zoom.us/j/123456789 หรือ Google Meet"
+                                disabled={!isOwner}
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
                             <label>ผู้เข้าร่วมประชุม</label>
                             <div className={styles.dropdownContainer} ref={dropdownRef}>
                                 <div 
@@ -514,28 +541,58 @@ export default function MeetingRoomsPage() {
                                             autoFocus
                                         />
                                         <div className={styles.optionsList}>
-                                            {employees
-                                            .filter(emp => emp.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                                            .map(emp => (
-                                                <div 
-                                                    key={emp.emp_id} 
-                                                    className={`${styles.optionItem} ${newBooking.attendee_ids.includes(emp.emp_id) ? styles.selected : ""}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const ids = newBooking.attendee_ids.includes(emp.emp_id)
-                                                            ? newBooking.attendee_ids.filter(id => id !== emp.emp_id)
-                                                            : [...newBooking.attendee_ids, emp.emp_id];
-                                                        setNewBooking({...newBooking, attendee_ids: ids});
-                                                    }}
-                                                >
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={newBooking.attendee_ids.includes(emp.emp_id)}
-                                                        readOnly
-                                                    />
-                                                    <span>{emp.name}{emp.nickname ? ` (${emp.nickname})` : ""}</span>
-                                                </div>
-                                            ))}
+                                            {searchTerm ? (
+                                                employees
+                                                .filter(emp => emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || (emp.nickname && emp.nickname.toLowerCase().includes(searchTerm.toLowerCase())))
+                                                .map(emp => (
+                                                    <div 
+                                                        key={emp.emp_id} 
+                                                        className={`${styles.optionItem} ${newBooking.attendee_ids.includes(emp.emp_id) ? styles.selected : ""}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const ids = newBooking.attendee_ids.includes(emp.emp_id)
+                                                                ? newBooking.attendee_ids.filter(id => id !== emp.emp_id)
+                                                                : [...newBooking.attendee_ids, emp.emp_id];
+                                                            setNewBooking({...newBooking, attendee_ids: ids});
+                                                        }}
+                                                    >
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={newBooking.attendee_ids.includes(emp.emp_id)}
+                                                            readOnly
+                                                        />
+                                                        <span>{emp.name}{emp.nickname ? ` (${emp.nickname})` : ""}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                Object.entries(groupedEmployees).sort((a,b) => a[0].localeCompare(b[0])).map(([dept, emps]) => (
+                                                    <details key={dept} className={styles.deptGroup}>
+                                                        <summary className={styles.deptHeader}>{dept} ({emps.length})</summary>
+                                                        <div className={styles.deptList}>
+                                                            {emps.map(emp => (
+                                                                <div 
+                                                                    key={emp.emp_id} 
+                                                                    className={`${styles.optionItem} ${newBooking.attendee_ids.includes(emp.emp_id) ? styles.selected : ""}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const ids = newBooking.attendee_ids.includes(emp.emp_id)
+                                                                            ? newBooking.attendee_ids.filter(id => id !== emp.emp_id)
+                                                                            : [...newBooking.attendee_ids, emp.emp_id];
+                                                                        setNewBooking({...newBooking, attendee_ids: ids});
+                                                                    }}
+                                                                >
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={newBooking.attendee_ids.includes(emp.emp_id)}
+                                                                        readOnly
+                                                                    />
+                                                                    <span>{emp.name}{emp.nickname ? ` (${emp.nickname})` : ""}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </details>
+                                                ))
+                                            )}
                                         </div>
                                     </div>
                                 )}

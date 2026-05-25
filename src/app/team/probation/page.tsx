@@ -103,7 +103,7 @@ export default function SupervisorProbationPage() {
                             {filtered.map((emp, i) => (
                                 <div key={emp.emp_id} className={styles.card} style={{ animationDelay: `${i * 0.05}s` }}>
                                     <div className={styles.empInfo}>
-                                        <div className={styles.avatar}>
+                                        <div className={styles.avatar} style={{ background: '#d93025', color: 'white', border: '2px solid #fecaca' }}>
                                             <UserIcon width={24} />
                                         </div>
                                         <div style={{ flex: 1 }}>
@@ -112,7 +112,9 @@ export default function SupervisorProbationPage() {
                                         </div>
                                     </div>
 
-                                    <div className={styles.metaGrid}>
+                                    <div style={{ borderBottom: '1px dashed #e2e8f0', marginBottom: 16 }}></div>
+
+                                    <div className={styles.metaGrid} style={{ border: 'none', padding: 0, marginBottom: 16 }}>
                                         <div className={styles.metaItem}>
                                             <span className={styles.metaLabel}>สังกัด/แผนก</span>
                                             <span className={styles.metaVal}>{emp.department || "-"}</span>
@@ -123,37 +125,26 @@ export default function SupervisorProbationPage() {
                                                 {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-"}
                                             </span>
                                         </div>
-                                        <div className={styles.metaItem}>
-                                            <span className={styles.metaLabel}>รอบการประเมิน (Session)</span>
-                                            <span className={styles.metaVal} style={{ color: '#d93025', fontWeight: 800 }}>
-                                                {emp.is_on_trial ? `ครั้งที่ ${emp.next_round}` : `ประจำเดือน ${new Date().toLocaleDateString("th-TH", { month: 'long', year: 'numeric' })}`}
-                                            </span>
-                                        </div>
                                     </div>
 
-                                    {emp.is_on_trial && emp.evaluation_history && emp.evaluation_history.length > 0 && (
-                                        <div className={styles.historyContainer}>
-                                            <div className={styles.historyTitle}>ประวัติการประเมินที่ผ่านมา:</div>
-                                            <div className={styles.historyGrid}>
-                                                {[1, 2, 3].map(round => {
-                                                    const hist = emp.evaluation_history?.find(h => h.evaluation_no === round);
-                                                    if (!hist) return null;
-
+                                    {emp.is_on_trial && emp.hire_date && (
+                                        <div style={{ marginBottom: 16 }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>รอบการประเมิน (SESSION)</div>
+                                            <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 8, padding: '12px 16px' }}>
+                                                {[1, 2, 3, 4].map((round, idx) => {
+                                                    const dueDays = round === 1 ? 30 : round === 2 ? 60 : round === 3 ? 90 : 119;
                                                     const hire = new Date(emp.hire_date!);
                                                     const target = new Date(hire);
-                                                    target.setDate(hire.getDate() + (round * 30));
-                                                    const actual = new Date(hist.evaluation_date);
-                                                    const diff = Math.floor((actual.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
-                                                    const isDelayed = diff > 0;
-
+                                                    target.setDate(hire.getDate() + dueDays);
+                                                    
                                                     return (
-                                                        <div key={round} className={styles.historyTag}>
-                                                            <span className={styles.tagRound}>ครั้งที่ {round}</span>
-                                                            <span className={styles.tagScore}>{hist.total_score}</span>
-                                                            <span className={styles.tagGrade}>{hist.grade}</span>
-                                                            <span className={isDelayed ? styles.tagDelayed : styles.tagNormal}>
-                                                                {isDelayed ? `ล่าช้า ${diff} วัน` : 'ปกติ'}
-                                                            </span>
+                                                        <div key={round} style={{ 
+                                                            display: 'flex', gap: 12, alignItems: 'center', 
+                                                            padding: '8px 0', 
+                                                            borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none' 
+                                                        }}>
+                                                            <div style={{ color: '#d93025', fontWeight: 800, fontSize: 14, minWidth: 60 }}>ครั้งที่ {round}</div>
+                                                            <div style={{ color: '#475569', fontSize: 13 }}>กำหนดครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}</div>
                                                         </div>
                                                     );
                                                 })}
@@ -183,7 +174,7 @@ export default function SupervisorProbationPage() {
                                             justifyContent: 'center',
                                             gap: '4px'
                                         }}>
-                                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                                            <div style={{ fontSize: '14px', color: '#475569', fontWeight: 700 }}>
                                                 {emp.is_on_trial ? (
                                                     `เปิดให้ประเมินวันที่ ${emp.unlock_date ? new Date(emp.unlock_date).toLocaleDateString("th-TH") : "ไม่ระบุ"}`
                                                 ) : (
@@ -191,7 +182,7 @@ export default function SupervisorProbationPage() {
                                                 )}
                                             </div>
                                             {emp.is_on_trial && (
-                                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                                <div style={{ fontSize: '13px', color: '#94a3b8' }}>
                                                     (กำหนดครบ {emp.next_round === 1 ? 30 : emp.next_round === 2 ? 60 : emp.next_round === 3 ? 90 : 119} วัน: {emp.due_date ? new Date(emp.due_date).toLocaleDateString("th-TH") : "ไม่ระบุ"})
                                                 </div>
                                             )}

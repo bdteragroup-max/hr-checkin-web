@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         const emp_id = decoded.emp_id;
 
         const body = await req.json();
-        const { room_id, start_time, end_time, purpose, attendee_ids } = body;
+        const { room_id, start_time, end_time, purpose, meeting_link, attendee_ids } = body;
 
         console.log("[API/BOOKINGS/POST] Data:", { room_id, start_time, end_time, attendee_ids });
 
@@ -150,6 +150,7 @@ export async function POST(req: Request) {
                 start_time: start,
                 end_time: end,
                 purpose,
+                meeting_link,
                 status: "approved",
                 attendees: {
                     create: (attendee_ids || []).map((id: string) => ({
@@ -190,6 +191,7 @@ export async function POST(req: Request) {
                 startTime: startTimeStr,
                 endTime: endTimeStr,
                 purpose: booking.purpose || "-",
+                meetingLink: booking.meeting_link,
                 bookerName: (booking.employee as any).nickname ? `${booking.employee.name} (${(booking.employee as any).nickname})` : booking.employee.name,
                 attendees: booking.attendees.map((a: any) => a.employee.nickname ? `${a.employee.name} (${a.employee.nickname})` : a.employee.name)
             }, attendeeLineIds);
@@ -328,7 +330,7 @@ export async function PATCH(req: Request) {
         }
 
         const body = await req.json();
-        const { id, room_id, start_time, end_time, purpose, attendee_ids, minutes } = body;
+        const { id, room_id, start_time, end_time, purpose, meeting_link, attendee_ids, minutes } = body;
 
         if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
 
@@ -373,6 +375,7 @@ export async function PATCH(req: Request) {
                 start_time: start_time ? start : undefined,
                 end_time: end_time ? end : undefined,
                 purpose: purpose !== undefined ? purpose : undefined,
+                meeting_link: meeting_link !== undefined ? meeting_link : undefined,
                 minutes: minutes !== undefined ? minutes : undefined,
                 attendees: attendee_ids ? {
                     deleteMany: {},

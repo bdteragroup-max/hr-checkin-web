@@ -828,3 +828,28 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.deptGroup {
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.deptHeader {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text3);
+    cursor: pointer;
+    background: #f1f5f9;
+    user-select: none;
+}
+
+.deptHeader:hover {
+    background: #e2e8f0;
+}
+
+.deptList {
+    padding: 0.25rem;
+}

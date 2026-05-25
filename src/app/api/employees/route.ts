@@ -13,10 +13,16 @@ export async function GET() {
         verifyToken(token);
         const list = await prisma.employees.findMany({
             where: { is_active: true },
-            select: { emp_id: true, name: true, nickname: true },
+            select: { emp_id: true, name: true, nickname: true, departments: { select: { name: true } } },
             orderBy: { name: "asc" }
         });
-        return NextResponse.json(list);
+        const formatted = list.map(emp => ({
+            emp_id: emp.emp_id,
+            name: emp.name,
+            nickname: emp.nickname,
+            department: emp.departments?.name || "ไม่ระบุสังกัด"
+        }));
+        return NextResponse.json(formatted);
     } catch (error) {
         return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }

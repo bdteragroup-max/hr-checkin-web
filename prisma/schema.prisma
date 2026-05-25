@@ -569,6 +569,7 @@ model room_bookings {
   purpose     String?       @db.Text
   status      String        @default("approved") @db.VarChar(20) // approved, cancelled
   minutes     String?       @db.Text
+  meeting_link String?      @db.Text
   created_at  DateTime      @default(now()) @db.Timestamptz(6)
   
   room        meeting_rooms @relation(fields: [room_id], references: [id])

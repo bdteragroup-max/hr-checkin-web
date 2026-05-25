@@ -1818,6 +1818,7 @@ export async function sendMeetingBookingNotification(
     endTime: string;
     purpose: string;
     bookerName: string;
+    meetingLink?: string | null;
     attendees: string[]; // Names
   },
   targetLineIds: string[]
@@ -1879,6 +1880,27 @@ export async function sendMeetingBookingNotification(
       contents: bodyContents
     }
   };
+
+  if (data.meetingLink) {
+    contents.footer = {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          height: "sm",
+          color: "#0ea5e9",
+          action: {
+            type: "uri",
+            label: "เข้าร่วมการประชุม",
+            uri: data.meetingLink.startsWith("http") ? data.meetingLink : `https://${data.meetingLink}`
+          }
+        }
+      ]
+    };
+  }
 
   // Send to all targets
   const results = await Promise.all(
