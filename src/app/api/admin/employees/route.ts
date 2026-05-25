@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireAdminOrSupervisor } from "@/lib/adminAuth";
@@ -23,7 +23,15 @@ type CreateEmployeeBody = {
     is_on_trial?: boolean;
     probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
+    probation_accommodation_allowance?: boolean;
+    probation_meal_allowance?: boolean;
+    probation_travel_allowance?: boolean;
+    fixed_accommodation_allowance?: number | null;
+    fixed_meal_allowance?: number | null;
+    fixed_travel_allowance?: number | null;
+    fixed_tax_deduction?: number | null;
     position_allowance?: number | null;
+    general_allowance?: number | null;
     national_id_card?: string | null;
     address?: string | null;
     bank_name?: string | null;
@@ -54,7 +62,15 @@ type PatchEmployeeBody = {
     is_on_trial?: boolean;
     probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
+    probation_accommodation_allowance?: boolean;
+    probation_meal_allowance?: boolean;
+    probation_travel_allowance?: boolean;
+    fixed_accommodation_allowance?: number | null;
+    fixed_meal_allowance?: number | null;
+    fixed_travel_allowance?: number | null;
+    fixed_tax_deduction?: number | null;
     position_allowance?: number | null;
+    general_allowance?: number | null;
     national_id_card?: string | null;
     address?: string | null;
     bank_name?: string | null;
@@ -140,7 +156,15 @@ export async function GET(req: Request) {
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
+                probation_accommodation_allowance: true,
+                probation_meal_allowance: true,
+                probation_travel_allowance: true,
+                fixed_accommodation_allowance: true,
+                fixed_meal_allowance: true,
+                fixed_travel_allowance: true,
+                fixed_tax_deduction: true,
                 position_allowance: true,
+                general_allowance: true,
                 national_id_card: true,
                 address: true,
                 bank_name: true,
@@ -218,7 +242,15 @@ export async function POST(req: Request) {
                     ? new Date(body.probation_end_date)
                     : null,
                 has_telephone_allowance: body.has_telephone_allowance ?? false,
+                probation_accommodation_allowance: body.probation_accommodation_allowance ?? false,
+                probation_meal_allowance: body.probation_meal_allowance ?? false,
+                probation_travel_allowance: body.probation_travel_allowance ?? false,
+                fixed_accommodation_allowance: body.fixed_accommodation_allowance != null ? Number(body.fixed_accommodation_allowance) : 0,
+                fixed_meal_allowance: body.fixed_meal_allowance != null ? Number(body.fixed_meal_allowance) : 0,
+                fixed_travel_allowance: body.fixed_travel_allowance != null ? Number(body.fixed_travel_allowance) : 0,
+                fixed_tax_deduction: body.fixed_tax_deduction != null ? Number(body.fixed_tax_deduction) : 0,
                 position_allowance: body.position_allowance != null ? Number(body.position_allowance) : 0,
+                general_allowance: body.general_allowance != null ? Number(body.general_allowance) : 0,
                 national_id_card: body.national_id_card ? clean(body.national_id_card) : null,
                 address: body.address ? clean(body.address) : null,
                 bank_name: body.bank_name ? clean(body.bank_name) : null,
@@ -248,7 +280,15 @@ export async function POST(req: Request) {
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
+                probation_accommodation_allowance: true,
+                probation_meal_allowance: true,
+                probation_travel_allowance: true,
+                fixed_accommodation_allowance: true,
+                fixed_meal_allowance: true,
+                fixed_travel_allowance: true,
+                fixed_tax_deduction: true,
                 position_allowance: true,
+                general_allowance: true,
                 national_id_card: true,
                 address: true,
                 bank_name: true,
@@ -363,9 +403,34 @@ export async function PATCH(req: Request) {
         if (body.has_telephone_allowance !== undefined) {
             data.has_telephone_allowance = Boolean(body.has_telephone_allowance);
         }
+        if (body.probation_accommodation_allowance !== undefined) {
+            data.probation_accommodation_allowance = Boolean(body.probation_accommodation_allowance);
+        }
+        if (body.probation_meal_allowance !== undefined) {
+            data.probation_meal_allowance = Boolean(body.probation_meal_allowance);
+        }
+        if (body.probation_travel_allowance !== undefined) {
+            data.probation_travel_allowance = Boolean(body.probation_travel_allowance);
+        }
+
+        if (body.fixed_accommodation_allowance !== undefined) {
+            data.fixed_accommodation_allowance = body.fixed_accommodation_allowance != null ? Number(body.fixed_accommodation_allowance) : 0;
+        }
+        if (body.fixed_meal_allowance !== undefined) {
+            data.fixed_meal_allowance = body.fixed_meal_allowance != null ? Number(body.fixed_meal_allowance) : 0;
+        }
+        if (body.fixed_travel_allowance !== undefined) {
+            data.fixed_travel_allowance = body.fixed_travel_allowance != null ? Number(body.fixed_travel_allowance) : 0;
+        }
+        if (body.fixed_tax_deduction !== undefined) {
+            data.fixed_tax_deduction = body.fixed_tax_deduction != null ? Number(body.fixed_tax_deduction) : 0;
+        }
 
         if (body.position_allowance !== undefined) {
             data.position_allowance = body.position_allowance != null ? Number(body.position_allowance) : 0;
+        }
+        if (body.general_allowance !== undefined) {
+            data.general_allowance = body.general_allowance != null ? Number(body.general_allowance) : 0;
         }
 
         if (body.national_id_card !== undefined) {
@@ -424,7 +489,15 @@ export async function PATCH(req: Request) {
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
+                probation_accommodation_allowance: true,
+                probation_meal_allowance: true,
+                probation_travel_allowance: true,
+                fixed_accommodation_allowance: true,
+                fixed_meal_allowance: true,
+                fixed_travel_allowance: true,
+                fixed_tax_deduction: true,
                 position_allowance: true,
+                general_allowance: true,
                 national_id_card: true,
                 address: true,
                 bank_name: true,

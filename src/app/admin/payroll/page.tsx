@@ -35,6 +35,7 @@ type PayrollResult = {
     long_service_allowance: number;
     telephone_allowance: number;
     position_allowance: number;
+    general_allowance: number;
     travel_site_allowance: number;
     travel_accommodation: number;
 
@@ -84,6 +85,7 @@ export default function PayrollPage() {
         accommodation_allowance_override: "",
         phone_allowance_override: "",
         position_allowance_override: "",
+        general_allowance_override: "",
         travel_site_allowance_override: "",
         travel_accommodation_override: "",
         social_security: "",
@@ -120,6 +122,7 @@ export default function PayrollPage() {
             accommodation_allowance_override: v(raw.accommodation_allowance_override),
             phone_allowance_override: v(raw.phone_allowance_override),
             position_allowance_override: v(raw.position_allowance_override),
+            general_allowance_override: v(raw.general_allowance_override),
             travel_site_allowance_override: v(raw.travel_site_allowance_override),
             travel_accommodation_override: v(raw.travel_accommodation_override),
             social_security: raw.social_security !== null && raw.social_security !== undefined && Number(raw.social_security) !== 0 ? String(raw.social_security) : "",
@@ -155,6 +158,7 @@ export default function PayrollPage() {
                 accommodation_allowance_override: editForm.accommodation_allowance_override,
                 phone_allowance_override: editForm.phone_allowance_override,
                 position_allowance_override: editForm.position_allowance_override,
+                general_allowance_override: editForm.general_allowance_override,
                 travel_site_allowance_override: editForm.travel_site_allowance_override,
                 travel_accommodation_override: editForm.travel_accommodation_override,
                 social_security: editForm.social_security,
@@ -208,6 +212,7 @@ export default function PayrollPage() {
                 accommodation_allowance_override: raw.accommodation_allowance_override,
                 phone_allowance_override: raw.phone_allowance_override,
                 position_allowance_override: raw.position_allowance_override,
+                general_allowance_override: raw.general_allowance_override,
                 travel_site_allowance_override: raw.travel_site_allowance_override,
                 travel_accommodation_override: raw.travel_accommodation_override,
                 social_security: raw.social_security,
@@ -509,6 +514,7 @@ export default function PayrollPage() {
                                                 <th>ตำแหน่ง & แผนก</th>
                                                 <th className={styles.thRight} title="หากมีการปรับฐานเงินเดือนรอบนี้ จะแสดงเป็นสีส้ม">เงินเดือน (฿)</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>เงินประจำตำแหน่ง</th>
+                                                <th className={styles.thRight} style={{ minWidth: 100 }}>เบี้ยเลี้ยง/สวัสดิการ</th>
                                                 <th>เงื่อนไข OT</th>
                                                 <th className={styles.thRight} style={{ minWidth: 120 }}>OT ปกติ 1.5x (ชม)</th>
                                                 <th className={styles.thRight} style={{ minWidth: 120 }}>ทำวันหยุด 1x (ชม)</th>
@@ -580,6 +586,18 @@ export default function PayrollPage() {
                                                         ) : (
                                                             <span style={{ fontWeight: 600, color: p.position_allowance > 0 ? "var(--purple)" : "inherit" }}>
                                                                 {p.position_allowance > 0 ? formatB(p.position_allowance) : "-"}
+                                                            </span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* General Allowance */}
+                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-general_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "general_allowance_override" }); setTempValue(p.general_allowance > 0 ? String(p.general_allowance) : ""); }}>
+                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "general_allowance_override" ? (
+                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "general_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "general_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                        ) : (
+                                                            <span style={{ fontWeight: 600, color: p.general_allowance > 0 ? "var(--purple)" : "inherit" }}>
+                                                                {p.general_allowance > 0 ? formatB(p.general_allowance) : "-"}
                                                             </span>
                                                         )}
                                                     </td>
@@ -902,6 +920,11 @@ export default function PayrollPage() {
                                     <div className={styles.formGroup}>
                                         <label>เงินเดือน (Override)</label>
                                         <input className={styles.input} type="number" value={editForm.override_salary} onChange={e => setEditForm({ ...editForm, override_salary: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.base_salary)}`} />
+                                    </div>
+
+                                    <div>
+                                        <label className={styles.lbl}>เงินเบี้ยเลี้ยง/สวัสดิการ (ทั่วไป)</label>
+                                        <input className={styles.input} type="number" value={editForm.general_allowance_override} onChange={e => setEditForm({ ...editForm, general_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.general_allowance)}`} />
                                     </div>
                                     <div className={styles.formGroup}>
                                         <label>OT ปกติ 1.5x (ชม.)</label>

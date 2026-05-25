@@ -178,11 +178,13 @@ export async function GET(request: Request) {
 
         const isOnTrial = (emp as any).is_on_trial || false;
         let diligence_allowance = 0, meal_allowance = 0, travel_allowance = 0, accommodation_allowance = 0;
-        let long_service_allowance = 0, telephone_allowance = 0, travel_site_allowance = 0, travel_accommodation = 0, position_allowance = 0;
+        let long_service_allowance = 0, telephone_allowance = 0, travel_site_allowance = 0, travel_accommodation = 0, position_allowance = 0, general_allowance = 0;
 
         if (adj.accommodation_allowance_override !== null && adj.accommodation_allowance_override !== undefined) {
             accommodation_allowance = Number(adj.accommodation_allowance_override);
-        } else if (!isDaily && warnings.length === 0 && !isOnTrial && emp.hire_date) {
+        } else if (Number((emp as any).fixed_accommodation_allowance) > 0) {
+            accommodation_allowance = Number((emp as any).fixed_accommodation_allowance);
+        } else if (!isDaily && warnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && emp.hire_date) {
             const hDate = new Date(emp.hire_date);
             let yrs = endDate.getFullYear() - hDate.getFullYear();
             const mDiff = endDate.getMonth() - hDate.getMonth();
@@ -196,7 +198,7 @@ export async function GET(request: Request) {
             else accommodation_allowance = 3000;
         }
 
-        if (!isOnTrial && warnings.length === 0) {
+        if (warnings.length === 0) {
             const hasLate = checkins.some(c => c.late_status === "late");
             const hasLeave = leaveRequests.length > 0;
             let totalPaidDays = 0, validWorkdaysCount = 0;
@@ -221,13 +223,15 @@ export async function GET(request: Request) {
             if (isDaily && !isOverridden) baseSalary = totalPaidDays * baseSalaryInput;
 
             if (adj.diligence_allowance_override !== null && adj.diligence_allowance_override !== undefined) diligence_allowance = Number(adj.diligence_allowance_override);
-            else if (!isDaily && !hasLate && !hasLeave && !missingScanInCycle) diligence_allowance = Number((emp as any).diligence_allowance || 0) || 0;
+            else if (!isDaily && !hasLate && !hasLeave && !missingScanInCycle && !isOnTrial) diligence_allowance = Number((emp as any).diligence_allowance || 0) || 0;
 
             if (adj.meal_allowance_override !== null && adj.meal_allowance_override !== undefined) meal_allowance = Number(adj.meal_allowance_override);
-            else if (!isDaily) meal_allowance = validWorkdaysCount * 100;
+            else if (Number((emp as any).fixed_meal_allowance) > 0) meal_allowance = Number((emp as any).fixed_meal_allowance);
+            else if (!isDaily && (!isOnTrial || (emp as any).probation_meal_allowance)) meal_allowance = validWorkdaysCount * 100;
 
             if (adj.travel_allowance_override !== null && adj.travel_allowance_override !== undefined) travel_allowance = Number(adj.travel_allowance_override);
-            else if (!isDaily) travel_allowance = validWorkdaysCount * 60;
+            else if (Number((emp as any).fixed_travel_allowance) > 0) travel_allowance = Number((emp as any).fixed_travel_allowance);
+            else if (!isDaily && (!isOnTrial || (emp as any).probation_travel_allowance)) travel_allowance = validWorkdaysCount * 60;
         } else {
             if (adj.diligence_allowance_override !== null && adj.diligence_allowance_override !== undefined) diligence_allowance = Number(adj.diligence_allowance_override);
             if (adj.meal_allowance_override !== null && adj.meal_allowance_override !== undefined) meal_allowance = Number(adj.meal_allowance_override);
@@ -236,6 +240,7 @@ export async function GET(request: Request) {
         }
 
         position_allowance = adj.position_allowance_override !== null && adj.position_allowance_override !== undefined ? Number(adj.position_allowance_override) : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
+        general_allowance = adj.general_allowance_override !== null && adj.general_allowance_override !== undefined ? Number(adj.general_allowance_override) : (isDaily ? 0 : (Number((emp as any).general_allowance) || 0));
         // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (Synced with Admin View) ---
         let calculatedPhoneAllowance = 0;
         if (!isDaily && emp.has_telephone_allowance && warnings.length === 0) {
@@ -331,7 +336,10 @@ export async function GET(request: Request) {
             }
         }
 
-        const tax = Number(adj.tax || 0);
+        // Extract fixed_tax_deduction from emp profile
+        const tax = (adj.tax !== null && adj.tax !== undefined && Number(adj.tax) > 0)
+            ? Number(adj.tax)
+            : (Number((emp as any).fixed_tax_deduction) > 0 ? Number((emp as any).fixed_tax_deduction) : 0);
         const commissions = Number(adj.commissions || 0);
         const bonus = Number(adj.bonus || 0);
         const other_deductions = Number(adj.other_deductions || 0);
@@ -339,7 +347,7 @@ export async function GET(request: Request) {
         const welfare_amount = welfareClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
         // Combined Income Other (as requested by user)
-        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + other_benefits + welfare_amount;
+        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + general_allowance + other_benefits + welfare_amount;
 
         // Final Pay Calculation
         const totalIncome = baseSalary + totalOtAmount + commissions + bonus + totalOtherIncome + insurance_income;
@@ -465,7 +473,7 @@ export async function GET(request: Request) {
         // --- ROW 2: Income Values ---
         const ot23 = holiday1xPay + holiday3xPay;
         const allowanceAmount = travel_site_allowance;
-        const otherIncomeRemaining = telephone_allowance + position_allowance + other_benefits + welfare_amount + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
+        const otherIncomeRemaining = telephone_allowance + position_allowance + general_allowance + other_benefits + welfare_amount + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
 
         drawVal(formatB(baseSalary), 0, Y[1]);
         drawVal(normalOtPay > 0 ? formatB(normalOtPay) : "-", 1, Y[1]);

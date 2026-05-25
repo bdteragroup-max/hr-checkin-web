@@ -43,7 +43,15 @@ type Emp = {
     secondary_supervisor?: { name: string } | null;
     is_on_trial: boolean;
     has_telephone_allowance: boolean;
+    probation_accommodation_allowance: boolean;
+    probation_meal_allowance: boolean;
+    probation_travel_allowance: boolean;
+    fixed_accommodation_allowance?: number | null;
+    fixed_meal_allowance?: number | null;
+    fixed_travel_allowance?: number | null;
+    fixed_tax_deduction?: number | null;
     position_allowance?: number | null;
+    general_allowance?: number | null;
     national_id_card?: string | null;
     address?: string | null;
     bank_account_no?: string | null;
@@ -72,7 +80,15 @@ type EditDraft = {
     supervisor_id: string;
     is_on_trial: boolean;
     has_telephone_allowance: boolean;
+    probation_accommodation_allowance: boolean;
+    probation_meal_allowance: boolean;
+    probation_travel_allowance: boolean;
+    fixed_accommodation_allowance: string;
+    fixed_meal_allowance: string;
+    fixed_travel_allowance: string;
+    fixed_tax_deduction: string;
     position_allowance: string;
+    general_allowance: string;
     national_id_card: string;
     address: string;
     bank_account_no: string;
@@ -126,7 +142,15 @@ export default function AdminEmployeesPage() {
     const [secondarySupervisorId, setSecondarySupervisorId] = useState("");
     const [isOnTrial, setIsOnTrial] = useState(false);
     const [hasTelephoneAllowance, setHasTelephoneAllowance] = useState(false);
+    const [probationAccommodationAllowance, setProbationAccommodationAllowance] = useState(false);
+    const [probationMealAllowance, setProbationMealAllowance] = useState(false);
+    const [probationTravelAllowance, setProbationTravelAllowance] = useState(false);
+    const [fixedAccommodationAllowance, setFixedAccommodationAllowance] = useState("");
+    const [fixedMealAllowance, setFixedMealAllowance] = useState("");
+    const [fixedTravelAllowance, setFixedTravelAllowance] = useState("");
+    const [fixedTaxDeduction, setFixedTaxDeduction] = useState("");
     const [positionAllowance, setPositionAllowance] = useState("");
+    const [generalAllowance, setGeneralAllowance] = useState("");
     const [nationalIdCard, setNationalIdCard] = useState("");
     const [address, setAddress] = useState("");
     const [bankAccountNo, setBankAccountNo] = useState("");
@@ -226,7 +250,15 @@ export default function AdminEmployeesPage() {
                     secondary_supervisor_id: secondarySupervisorId || null,
                     is_on_trial: isOnTrial,
                     has_telephone_allowance: hasTelephoneAllowance,
+                    probation_accommodation_allowance: probationAccommodationAllowance,
+                    probation_meal_allowance: probationMealAllowance,
+                    probation_travel_allowance: probationTravelAllowance,
+                    fixed_accommodation_allowance: fixedAccommodationAllowance ? Number(fixedAccommodationAllowance) : 0,
+                    fixed_meal_allowance: fixedMealAllowance ? Number(fixedMealAllowance) : 0,
+                    fixed_travel_allowance: fixedTravelAllowance ? Number(fixedTravelAllowance) : 0,
+                    fixed_tax_deduction: fixedTaxDeduction ? Number(fixedTaxDeduction) : 0,
                     position_allowance: positionAllowance ? Number(positionAllowance) : 0,
+                    general_allowance: generalAllowance ? Number(generalAllowance) : 0,
                     national_id_card: nationalIdCard.trim() || null,
                     address: address.trim() || null,
                     bank_account_no: bankAccountNo.trim() || null,
@@ -258,7 +290,7 @@ export default function AdminEmployeesPage() {
             setDepartmentId(0); setPositionId(0); setBaseSalary(""); setSupervisorId("");
             setSecondarySupervisorId("");
             setIsOnTrial(false); setHasTelephoneAllowance(false);
-            setPositionAllowance("");
+            setPositionAllowance(""); setGeneralAllowance("");
             setNationalIdCard(""); setAddress(""); setBankAccountNo(""); setBankName("");
             setSalaryType("monthly");
             setLineUserId("");
@@ -302,7 +334,15 @@ export default function AdminEmployeesPage() {
                     secondary_supervisor_id: editDraft.secondary_supervisor_id || null,
                     is_on_trial: editDraft.is_on_trial,
                     has_telephone_allowance: editDraft.has_telephone_allowance,
+                    probation_accommodation_allowance: editDraft.probation_accommodation_allowance,
+                    probation_meal_allowance: editDraft.probation_meal_allowance,
+                    probation_travel_allowance: editDraft.probation_travel_allowance,
+                    fixed_accommodation_allowance: editDraft.fixed_accommodation_allowance ? Number(editDraft.fixed_accommodation_allowance) : 0,
+                    fixed_meal_allowance: editDraft.fixed_meal_allowance ? Number(editDraft.fixed_meal_allowance) : 0,
+                    fixed_travel_allowance: editDraft.fixed_travel_allowance ? Number(editDraft.fixed_travel_allowance) : 0,
+                    fixed_tax_deduction: editDraft.fixed_tax_deduction ? Number(editDraft.fixed_tax_deduction) : 0,
                     position_allowance: editDraft.position_allowance ? Number(editDraft.position_allowance) : 0,
+                    general_allowance: editDraft.general_allowance ? Number(editDraft.general_allowance) : 0,
                     national_id_card: editDraft.national_id_card.trim() || null,
                     address: editDraft.address.trim() || null,
                     bank_account_no: editDraft.bank_account_no.trim() || null,
@@ -354,7 +394,15 @@ export default function AdminEmployeesPage() {
                 supervisor_id: x.supervisor_id ?? "",
                 is_on_trial: x.is_on_trial,
                 has_telephone_allowance: x.has_telephone_allowance,
+                probation_accommodation_allowance: x.probation_accommodation_allowance,
+                probation_meal_allowance: x.probation_meal_allowance,
+                probation_travel_allowance: x.probation_travel_allowance,
+                fixed_accommodation_allowance: x.fixed_accommodation_allowance ? String(x.fixed_accommodation_allowance) : "",
+                fixed_meal_allowance: x.fixed_meal_allowance ? String(x.fixed_meal_allowance) : "",
+                fixed_travel_allowance: x.fixed_travel_allowance ? String(x.fixed_travel_allowance) : "",
+                fixed_tax_deduction: x.fixed_tax_deduction ? String(x.fixed_tax_deduction) : "",
                 position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                general_allowance: x.general_allowance ? String(x.general_allowance) : "",
                 national_id_card: x.national_id_card || "",
                 address: x.address || "",
                 bank_account_no: x.bank_account_no || "",
@@ -681,7 +729,10 @@ export default function AdminEmployeesPage() {
                                                             {x.salary_type === "daily" && <span style={{ fontSize: 10, fontWeight: "normal", marginLeft: 4 }}>/ วัน</span>}
                                                         </div>
                                                         {x.position_allowance && Number(x.position_allowance) > 0 && (
-                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Allowance: ฿{Number(x.position_allowance).toLocaleString()}</div>
+                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Pos. Allow.: ฿{Number(x.position_allowance).toLocaleString()}</div>
+                                                        )}
+                                                        {x.general_allowance && Number(x.general_allowance) > 0 && (
+                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Allowance: ฿{Number(x.general_allowance).toLocaleString()}</div>
                                                         )}
                                                     </div>
                                                 </td>
@@ -726,7 +777,15 @@ export default function AdminEmployeesPage() {
                                                                     supervisor_id: x.supervisor_id ?? "",
                                                                     is_on_trial: x.is_on_trial,
                                                                     has_telephone_allowance: x.has_telephone_allowance,
-                                                                    position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                                                                    probation_accommodation_allowance: x.probation_accommodation_allowance,
+                                                                    probation_meal_allowance: x.probation_meal_allowance,
+                                                                    probation_travel_allowance: x.probation_travel_allowance,
+                                                                    fixed_accommodation_allowance: x.fixed_accommodation_allowance ? String(x.fixed_accommodation_allowance) : "",
+                fixed_meal_allowance: x.fixed_meal_allowance ? String(x.fixed_meal_allowance) : "",
+                fixed_travel_allowance: x.fixed_travel_allowance ? String(x.fixed_travel_allowance) : "",
+                fixed_tax_deduction: x.fixed_tax_deduction ? String(x.fixed_tax_deduction) : "",
+                position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                                                                    general_allowance: x.general_allowance ? String(x.general_allowance) : "",
                                                                     national_id_card: x.national_id_card || "",
                                                                     address: x.address || "",
                                                                     bank_account_no: x.bank_account_no || "",
@@ -928,6 +987,42 @@ export default function AdminEmployeesPage() {
                             <input type="number" className={styles.input} placeholder="0.00"
                                 value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} />
 
+                            <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginBottom: 16 }}>
+                                <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการตายตัวรายเดือน (Fixed Monthly Allowances)</div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "10px", alignItems: "end" }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.lbl}>ค่าที่พัก (Accommodation)</label>
+                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedAccommodationAllowance} onChange={(e) => setFixedAccommodationAllowance(e.target.value)} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.lbl}>ค่าอาหาร (Meal)</label>
+                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedMealAllowance} onChange={(e) => setFixedMealAllowance(e.target.value)} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.lbl}>ค่าเดินทาง (Travel)</label>
+                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedTravelAllowance} onChange={(e) => setFixedTravelAllowance(e.target.value)} />
+                                </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.lbl}>หักภาษีรายเดือน (คงที่)</label>
+                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedTaxDeduction} onChange={(e) => setFixedTaxDeduction(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: 11, color: "var(--text-light)" }}>*หากระบุค่าเหล่านี้ จะใช้แทนการคำนวณอัตโนมัติตามวัน/อายุงาน</div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                                <div>
+                                    <label className={styles.lbl}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00"
+                                        value={positionAllowance} onChange={(e) => setPositionAllowance(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className={styles.lbl}>เงินเบี้ยเลี้ยงอื่นๆ (General Allowance) (THB)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00"
+                                        value={generalAllowance} onChange={(e) => setGeneralAllowance(e.target.value)} />
+                                </div>
+                            </div>
+
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
                                 <div>
                                     <label className={styles.lbl}>เบอร์โทรศัพท์มือถือ</label>
@@ -972,14 +1067,26 @@ export default function AdminEmployeesPage() {
                                     <span>รับค่าโทรศัพท์ (Receives Telephone Allowance)</span>
                                 </label>
 
+                                <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
+                                    <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการช่วงทดลองงาน (Probation Allowances)</div>
+                                    <label className={styles.row} style={{ marginBottom: 8 }}>
+                                        <input type="checkbox" checked={probationAccommodationAllowance} onChange={(e) => setProbationAccommodationAllowance(e.target.checked)} />
+                                        <span>รับค่าที่พัก (Accommodation Allowance)</span>
+                                    </label>
+                                    <label className={styles.row} style={{ marginBottom: 8 }}>
+                                        <input type="checkbox" checked={probationMealAllowance} onChange={(e) => setProbationMealAllowance(e.target.checked)} />
+                                        <span>รับค่าอาหาร (Meal Allowance)</span>
+                                    </label>
+                                    <label className={styles.row}>
+                                        <input type="checkbox" checked={probationTravelAllowance} onChange={(e) => setProbationTravelAllowance(e.target.checked)} />
+                                        <span>รับค่าเดินทาง (Travel Allowance)</span>
+                                    </label>
+                                </div>
+
                                 <label className={styles.row} style={{ marginTop: 10 }}>
                                     <input type="checkbox" checked={isCheckinExempt} onChange={(e) => setIsCheckinExempt(e.target.checked)} />
                                     <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
                                 </label>
-
-                                <label className={styles.lbl} style={{ marginTop: 16 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
-                                <input type="number" className={styles.input} placeholder="0.00"
-                                    value={positionAllowance} onChange={(e) => setPositionAllowance(e.target.value)} />
 
                                 <label className={styles.lbl} style={{ marginTop: 16 }}>LINE User ID (สำหรับการแจ้งเตือน)</label>
                                 <input className={styles.input} placeholder="U123456789..."
@@ -1136,6 +1243,42 @@ export default function AdminEmployeesPage() {
                             </div>
                         </div>
 
+                        <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginBottom: 16, marginTop: 16 }}>
+                            <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการตายตัวรายเดือน (Fixed Monthly Allowances)</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "10px", alignItems: "end" }}>
+                                <div style={{ flex: 1 }}>
+                                    <label className={styles.lbl}>ค่าที่พัก (Accommodation)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00" value={editDraft.fixed_accommodation_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, fixed_accommodation_allowance: e.target.value }))} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label className={styles.lbl}>ค่าอาหาร (Meal)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00" value={editDraft.fixed_meal_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, fixed_meal_allowance: e.target.value }))} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label className={styles.lbl}>ค่าเดินทาง (Travel)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00" value={editDraft.fixed_travel_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, fixed_travel_allowance: e.target.value }))} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label className={styles.lbl}>หักภาษีรายเดือน (คงที่)</label>
+                                    <input type="number" className={styles.input} placeholder="0.00" value={editDraft.fixed_tax_deduction} onChange={(e) => setEditDraft((d) => d && ({ ...d, fixed_tax_deduction: e.target.value }))} />
+                                </div>
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text-light)" }}>*หากระบุค่าเหล่านี้ จะใช้แทนการคำนวณอัตโนมัติตามวัน/อายุงาน</div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+                            <div>
+                                <label className={styles.lbl}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
+                                <input type="number" className={styles.input} placeholder="0.00" value={editDraft.position_allowance}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, position_allowance: e.target.value }))} />
+                            </div>
+                            <div>
+                                <label className={styles.lbl}>เงินเบี้ยเลี้ยงอื่นๆ (General Allowance) (THB)</label>
+                                <input type="number" className={styles.input} placeholder="0.00" value={editDraft.general_allowance}
+                                    onChange={(e) => setEditDraft((d) => d && ({ ...d, general_allowance: e.target.value }))} />
+                            </div>
+                        </div>
+
                         <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
                         <SearchableSelect
                             className={styles.input}
@@ -1187,6 +1330,23 @@ export default function AdminEmployeesPage() {
                                     onChange={(e) => setEditDraft((d) => d && ({ ...d, has_telephone_allowance: e.target.checked }))} />
                                 <span>ได้รับค่าโทรศัพท์ (Receives Telephone Allowance)</span>
                             </label>
+                            <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
+                                <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการช่วงทดลองงาน (Probation Allowances)</div>
+                                <label className={styles.row} style={{ marginBottom: 8 }}>
+                                    <input type="checkbox" checked={editDraft.probation_accommodation_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, probation_accommodation_allowance: e.target.checked }))} />
+                                    <span>รับค่าที่พัก (Accommodation Allowance)</span>
+                                </label>
+                                <label className={styles.row} style={{ marginBottom: 8 }}>
+                                    <input type="checkbox" checked={editDraft.probation_meal_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, probation_meal_allowance: e.target.checked }))} />
+                                    <span>รับค่าอาหาร (Meal Allowance)</span>
+                                </label>
+                                <label className={styles.row}>
+                                    <input type="checkbox" checked={editDraft.probation_travel_allowance} onChange={(e) => setEditDraft((d) => d && ({ ...d, probation_travel_allowance: e.target.checked }))} />
+                                    <span>รับค่าเดินทาง (Travel Allowance)</span>
+                                </label>
+                            </div>
+                            <label className={styles.row} style={{ display: "none" }}>
+                            </label>
 
                             <label className={styles.row} style={{ marginBottom: 10 }}>
                                 <input type="checkbox"
@@ -1195,9 +1355,7 @@ export default function AdminEmployeesPage() {
                                 <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
                             </label>
 
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
-                            <input type="number" className={styles.input} placeholder="0.00" value={editDraft.position_allowance}
-                                onChange={(e) => setEditDraft((d) => d && ({ ...d, position_allowance: e.target.value }))} />
+
 
                             <label className={styles.lbl} style={{ marginTop: 16 }}>LINE User ID (สำหรับการแจ้งเตือน)</label>
                             <input className={styles.input} placeholder="U123456789..." value={editDraft.line_user_id}

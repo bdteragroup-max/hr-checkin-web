@@ -94,6 +94,17 @@ export async function GET(request: Request) {
             where: { cycle_month: month, cycle_year: year }
         });
 
+        // 2.11.1 Fetch Previous Month Adjustments (for carrying over Tax)
+        let prevMonth = month - 1;
+        let prevYear = year;
+        if (prevMonth < 1) {
+            prevMonth = 12;
+            prevYear--;
+        }
+        const prevAdjustments = await prisma.monthly_payroll_data.findMany({
+            where: { cycle_month: prevMonth, cycle_year: prevYear }
+        });
+
         // 2.10 Fetch Approved Travel & Off-Site Claims in this cycle
         const travelClaims = await prisma.travel_claims.findMany({
             where: {
@@ -113,6 +124,7 @@ export async function GET(request: Request) {
         // 3. Process each employee
         const results = employees.map(emp => {
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
+            const prevAdj = prevAdjustments.find(a => a.emp_id === emp.emp_id);
             const isOverridden = adj?.override_salary !== null && adj?.override_salary !== undefined;
             const baseSalaryInput = isOverridden ? Number(adj.override_salary) : (Number(emp.base_salary) || 0);
             const isDaily = (emp as any).salary_type === "daily";
@@ -251,6 +263,7 @@ export async function GET(request: Request) {
             let travel_site_allowance = 0;
             let travel_accommodation = 0;
             let position_allowance = 0;
+            let general_allowance = 0;
             let diligence_failed_reason = "";
             let missingScanInCycle = false;
             const hasWarnings = empWarnings.length > 0;
@@ -258,7 +271,9 @@ export async function GET(request: Request) {
             // 4.1 ACCOMMODATION (Auto-calc only if not overridden)
             if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) {
                 accommodation_allowance = Number(adj.accommodation_allowance_override);
-            } else if (!isDaily && empWarnings.length === 0 && !isOnTrial && emp.hire_date) {
+            } else if (Number((emp as any).fixed_accommodation_allowance) > 0) {
+                accommodation_allowance = Number((emp as any).fixed_accommodation_allowance);
+            } else if (!isDaily && empWarnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && emp.hire_date) {
                 const hDate = new Date(emp.hire_date);
                 let yrs = endDate.getFullYear() - hDate.getFullYear();
                 const mDiff = endDate.getMonth() - hDate.getMonth();
@@ -305,14 +320,14 @@ export async function GET(request: Request) {
                 // Meal and Travel should be paid for ANY day worked, even holidays
                 if (!isOnLeave) {
                     if (scansComplete) {
-                        if (!isOnTrial && !hasWarnings) {
-                            mealWorkdays++;
-                            travelWorkdays++;
+                        if (!hasWarnings) {
+                            if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
+                            if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
                         }
                     } else if (isExempt) {
-                        if (!isOnTrial && !hasWarnings) {
-                            mealWorkdays++;
-                            travelWorkdays++;
+                        if (!hasWarnings) {
+                            if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
+                            if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
                         }
                     } else if (!isHoliday && !scansComplete) {
                         missingScanInCycle = true;
@@ -340,12 +355,16 @@ export async function GET(request: Request) {
 
             if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                 meal_allowance = Number(adj.meal_allowance_override);
+            } else if (Number((emp as any).fixed_meal_allowance) > 0) {
+                meal_allowance = Number((emp as any).fixed_meal_allowance);
             } else if (!isDaily) {
                 meal_allowance = mealWorkdays * 100;
             }
 
             if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                 travel_allowance = Number(adj.travel_allowance_override);
+            } else if (Number((emp as any).fixed_travel_allowance) > 0) {
+                travel_allowance = Number((emp as any).fixed_travel_allowance);
             } else if (!isDaily) {
                 travel_allowance = travelWorkdays * 60;
             }
@@ -353,6 +372,10 @@ export async function GET(request: Request) {
             position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined
                 ? Number(adj.position_allowance_override)
                 : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
+
+            general_allowance = adj?.general_allowance_override !== null && adj?.general_allowance_override !== undefined
+                ? Number(adj.general_allowance_override)
+                : (isDaily ? 0 : (Number((emp as any).general_allowance) || 0));
 
             // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (New Rules) ---
             let calculatedPhoneAllowance = 0;
@@ -447,7 +470,7 @@ export async function GET(request: Request) {
             const totalOtAmount = normalOtPay + holiday1xPay + holiday3xPay;
 
             const totalHolidayAllowance = 0;
-            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + welfare_amount;
+            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + general_allowance + welfare_amount;
 
             const student_loan = Number(adj?.student_loan || 0);
 
@@ -495,7 +518,10 @@ export async function GET(request: Request) {
 
             const insurance = Number(adj?.insurance || 0);
 
-            const tax = Number(adj?.tax || 0);
+            // Use manual override if entered (> 0), otherwise use fixed profile deduction, otherwise fallback to prev month
+            const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0) 
+                ? Number(adj.tax) 
+                : (Number((emp as any).fixed_tax_deduction) > 0 ? Number((emp as any).fixed_tax_deduction) : Number(prevAdj?.tax || 0));
             const commissions = Number(adj?.commissions || 0);
             const bonus = Number(adj?.bonus || 0);
             const other_deductions = Number(adj?.other_deductions || 0);
@@ -538,6 +564,7 @@ export async function GET(request: Request) {
                 travel_site_allowance,
                 travel_accommodation,
                 position_allowance,
+                general_allowance,
 
                 total_ot_hours: normal_1_5x_hours + holiday_1x_hours + holiday_3x_hours,
                 ot_amount: totalOtAmount,

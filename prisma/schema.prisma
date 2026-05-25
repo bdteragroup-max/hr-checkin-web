@@ -107,6 +107,14 @@ model employees {
   probation_end_date      DateTime?              @db.Date
   has_telephone_allowance Boolean                @default(false)
   position_allowance      Decimal?               @default(0) @db.Decimal(12, 2)
+  general_allowance       Decimal?               @default(0) @db.Decimal(12, 2)
+  probation_accommodation_allowance Boolean                @default(false)
+  probation_meal_allowance          Boolean                @default(false)
+  probation_travel_allowance        Boolean                @default(false)
+  fixed_accommodation_allowance     Decimal?               @default(0) @db.Decimal(12, 2)
+  fixed_meal_allowance              Decimal?               @default(0) @db.Decimal(12, 2)
+  fixed_travel_allowance            Decimal?               @default(0) @db.Decimal(12, 2)
+  fixed_tax_deduction               Decimal?               @db.Decimal(10, 2)
   address                 String?
   national_id_card        String?                @db.VarChar(20)
   salary_type             String?                @default("monthly") @db.VarChar(20)
@@ -352,6 +360,7 @@ model monthly_payroll_data {
   normal_1_5x_hours_override       Decimal?  @db.Decimal(10, 2)
   phone_allowance_override         Decimal?  @db.Decimal(10, 2)
   position_allowance_override      Decimal?  @db.Decimal(10, 2)
+  general_allowance_override       Decimal?  @db.Decimal(10, 2)
   travel_accommodation_override    Decimal?  @db.Decimal(10, 2)
   travel_allowance_override        Decimal?  @db.Decimal(10, 2)
   travel_site_allowance_override   Decimal?  @db.Decimal(10, 2)

@@ -14,7 +14,7 @@ export async function POST(req: Request) {
             social_security, student_loan, insurance, insurance_income, unpaid_absenteeism, tax, commissions, bonus, other_deductions, other_benefits, override_salary,
             normal_1_5x_hours_override, holiday_1_x_hours_override, holiday_3_x_hours_override,
             diligence_allowance_override, meal_allowance_override, travel_allowance_override,
-            accommodation_allowance_override, phone_allowance_override, position_allowance_override,
+            accommodation_allowance_override, phone_allowance_override, position_allowance_override, general_allowance_override,
             travel_site_allowance_override, travel_accommodation_override
         } = body;
 
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
             accommodation_allowance_override: clean(accommodation_allowance_override),
             phone_allowance_override: clean(phone_allowance_override),
             position_allowance_override: clean(position_allowance_override),
+            general_allowance_override: clean(general_allowance_override),
             travel_site_allowance_override: clean(travel_site_allowance_override),
             travel_accommodation_override: clean(travel_accommodation_override),
         };

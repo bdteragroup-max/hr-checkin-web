@@ -64,11 +64,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ ok: false, error: "Accommodation amount cannot exceed 600 THB unless shared with supervisor or pre-approved" }, { status: 400 });
         }
 
-        // Get employee's current supervisor
+        // Get employee's current supervisor and salary_type
         const emp = await prisma.employees.findUnique({
             where: { emp_id: user.emp_id },
-            select: { supervisor_id: true }
+            select: { supervisor_id: true, salary_type: true }
         });
+
+        // Rule: Interns (salary_type: daily) cannot claim upcountry allowance
+        if (claim_type === "upcountry" && emp?.salary_type === "daily") {
+            return NextResponse.json({ ok: false, error: "Interns are prohibited from claiming allowances for working outside the province. Please check your status daily at http://localhost:3000/admin/employees." }, { status: 403 });
+        }
 
         const claim = await prisma.travel_claims.create({
             data: {
