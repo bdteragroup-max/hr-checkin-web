@@ -74,7 +74,7 @@ export async function PATCH(request: Request) {
             const emp = await prisma.employees.findUnique({ where: { emp_id: user.emp_id }, select: { name: true } });
             adminName = emp?.name || user.emp_id;
         }
-        const { id, action, remark, selling_price } = body;
+        const { id, action, remark, per_person_commission } = body;
 
         const claim = await prisma.commission_claims.findUnique({
             where: { id },
@@ -100,13 +100,11 @@ export async function PATCH(request: Request) {
             supervisor_approved_at: nextStatus === "pending_admin" ? new Date() : claim.supervisor_approved_at
         };
 
-        if (selling_price !== undefined) {
-            const price = Number(selling_price) || 0;
-            const totalCommission = price * 0.01;
-            const perPerson = totalCommission / (claim.companion_ids.length + 1);
-            dataToUpdate.selling_price = price;
-            dataToUpdate.total_commission = totalCommission;
+        if (per_person_commission !== undefined) {
+            const perPerson = Number(per_person_commission) || 0;
+            const totalCommission = perPerson * (claim.companion_ids.length + 1);
             dataToUpdate.per_person_commission = perPerson;
+            dataToUpdate.total_commission = totalCommission;
         }
 
         const updated = await prisma.commission_claims.update({

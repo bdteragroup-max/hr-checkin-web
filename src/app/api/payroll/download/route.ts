@@ -116,6 +116,15 @@ export async function GET(request: Request) {
         const warnings = await prisma.employee_warnings.findMany({ where: { emp_id: p.emp_id, date: { gte: startDate, lte: endDate } } });
         const travelClaims = await prisma.travel_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", date: { gte: startDate, lte: endDate } } });
         const welfareClaims = await prisma.general_welfare_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", approved_at: { gte: startDate, lte: endDate } } });
+        const commissionClaims = await prisma.commission_claims.findMany({
+            where: {
+                status: "completed",
+                OR: [
+                    { approved_at: { gte: startDate, lte: endDate } },
+                    { date: { gte: startDate, lte: endDate } }
+                ]
+            }
+        });
 
         const adj = publishedData;
         const isOverridden = adj.override_salary !== null && adj.override_salary !== undefined;
@@ -288,15 +297,20 @@ export async function GET(request: Request) {
             travel_site_allowance = Number(adj.travel_site_allowance_override);
         } else if (!isDaily) {
             const posName = (emp.job_positions?.title || "").toLowerCase();
+            const deptName = (emp.departments?.name || "").toLowerCase();
+            const divName = (emp.departments?.divisions?.name || "").toLowerCase();
             travelClaims.forEach((tc: any) => {
                 let rate = 150; // Default Staff rate
                 if (posName.includes("ผู้จัดการ") || posName.includes("manager")) rate = 350;
-                else if (posName.includes("วิศวกร") || posName.includes("engineer")) rate = 250;
+                else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว") || deptName.includes("business development") || divName.includes("business development")) rate = 250;
                 else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) rate = 200;
                 else if (posName.includes("ขับรถ") || posName.includes("driver")) rate = 200;
 
+                // Exclude sales roles and departments
+                if (posName.includes("sales") || posName.includes("ขาย") || deptName.includes("sales") || deptName.includes("ขาย") || divName.includes("sales") || divName.includes("ขาย")) rate = 0;
+
                 const start = new Date(tc.date); const end = tc.end_date ? new Date(tc.end_date) : start;
-                const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                 travel_site_allowance += rate * days;
             });
         }
@@ -340,7 +354,29 @@ export async function GET(request: Request) {
         const tax = (adj.tax !== null && adj.tax !== undefined && Number(adj.tax) > 0)
             ? Number(adj.tax)
             : (Number((emp as any).fixed_tax_deduction) > 0 ? Number((emp as any).fixed_tax_deduction) : 0);
-        const commissions = Number(adj.commissions || 0);
+            
+        // Calculate dynamic commissions
+        const empCommissionClaimsAsMain = commissionClaims.filter(c => c.emp_id === emp.emp_id);
+        const empCommissionClaimsAsCompanion = commissionClaims.filter(c => c.companion_ids && c.companion_ids.includes(emp.emp_id));
+        const uniqueClaimsMap = new Map<string, number>();
+        const addClaim = (c: any) => {
+            try {
+                const dateStr = new Date(c.date).toISOString().split('T')[0];
+                const customerName = (c.customer_name || "").toLowerCase().trim();
+                const key = `${customerName}-${dateStr}`;
+                const amount = Number(c.per_person_commission || 0);
+                if (!uniqueClaimsMap.has(key) || uniqueClaimsMap.get(key)! < amount) {
+                    uniqueClaimsMap.set(key, amount);
+                }
+            } catch (e) {
+                uniqueClaimsMap.set(c.id, Number(c.per_person_commission || 0));
+            }
+        };
+        empCommissionClaimsAsMain.forEach(addClaim);
+        empCommissionClaimsAsCompanion.forEach(addClaim);
+        const calculatedCommissions = Array.from(uniqueClaimsMap.values()).reduce((a, b) => a + b, 0);
+        const adjCommissions = adj.commissions ? Number(adj.commissions) : 0;
+        const commissions = adjCommissions !== 0 ? adjCommissions : calculatedCommissions;
         const bonus = Number(adj.bonus || 0);
         const other_deductions = Number(adj.other_deductions || 0);
         const other_benefits = Number(adj.other_benefits || 0);
@@ -463,7 +499,7 @@ export async function GET(request: Request) {
         drawCell("Salary", "เงินเดือน", 0, Y[0]);
         drawCell("OT 1.5", "ล่วงเวลา", 1, Y[0]);
         drawCell("ทำงาน/OT 3.0", "วันหยุด", 2, Y[0]);
-        drawCell(" ", "เบี้ยเลี้ยง", 3, Y[0]);
+        drawCell("Travel Allowance", "เบี้ยเลี้ยง", 3, Y[0]);
         drawCell("Commission", "คอมมิชชั่น", 4, Y[0]);
         drawCell("Insurance", "ประกันทำงาน", 5, Y[0]);
         drawCell("Bonus", "โบนัส", 6, Y[0]);

@@ -250,7 +250,7 @@ export default function PayrollPage() {
     async function loadData(silent = false) {
         if (!silent) setLoading(true);
         try {
-            const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}`);
+            const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}&t=${Date.now()}`);
             if (res.status === 401) {
                 window.location.href = "/admin/login";
                 return;

@@ -121,6 +121,17 @@ export async function GET(request: Request) {
             }
         });
 
+        // 2.13 Fetch Approved Commission Claims in this cycle
+        const commissionClaims = await prisma.commission_claims.findMany({
+            where: {
+                status: "completed",
+                OR: [
+                    { approved_at: { gte: startDate, lte: endDate } },
+                    { date: { gte: startDate, lte: endDate } }
+                ]
+            }
+        });
+
         // 3. Process each employee
         const results = employees.map(emp => {
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
@@ -430,16 +441,21 @@ export async function GET(request: Request) {
             } else if (!isDaily) {
                 const posName = (emp.job_positions?.title || "").toLowerCase();
                 const empTravelClaims = travelClaims.filter((tc: any) => tc.emp_id === emp.emp_id);
+                const deptName = (emp.departments?.name || "").toLowerCase();
+                const divName = (emp.departments?.divisions?.name || "").toLowerCase();
                 empTravelClaims.forEach((tc: any) => {
                     let rate = 150; // Default Staff rate
                     if (posName.includes("ผู้จัดการ") || posName.includes("manager")) rate = 350;
-                    else if (posName.includes("วิศวกร") || posName.includes("engineer")) rate = 250;
+                    else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว") || deptName.includes("business development") || divName.includes("business development")) rate = 250;
                     else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) rate = 200;
                     else if (posName.includes("ขับรถ") || posName.includes("driver")) rate = 200;
 
+                    // Exclude sales roles and departments
+                    if (posName.includes("sales") || posName.includes("ขาย") || deptName.includes("sales") || deptName.includes("ขาย") || divName.includes("sales") || divName.includes("ขาย")) rate = 0;
+
                     const start = new Date(tc.date);
                     const end = tc.end_date ? new Date(tc.end_date) : start;
-                    const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                     travel_site_allowance += rate * days;
                 });
             }
@@ -468,6 +484,30 @@ export async function GET(request: Request) {
             const holiday1xPay = holiday_1x_hours * hourlyWage * 1;
             const holiday3xPay = holiday_3x_hours * hourlyWage * 3;
             const totalOtAmount = normalOtPay + holiday1xPay + holiday3xPay;
+
+            // 4.6 Commission Claims
+            const empCommissionClaimsAsMain = commissionClaims.filter(c => c.emp_id === emp.emp_id);
+            const empCommissionClaimsAsCompanion = commissionClaims.filter(c => c.companion_ids && c.companion_ids.includes(emp.emp_id));
+            // Deduplicate claims by customer_name and date
+            const uniqueClaimsMap = new Map<string, number>();
+            const addClaim = (c: any) => {
+                try {
+                    const dateStr = new Date(c.date).toISOString().split('T')[0];
+                    const customerName = (c.customer_name || "").toLowerCase().trim();
+                    const key = `${customerName}-${dateStr}`;
+                    const amount = Number(c.per_person_commission || 0);
+                    if (!uniqueClaimsMap.has(key) || uniqueClaimsMap.get(key)! < amount) {
+                        uniqueClaimsMap.set(key, amount);
+                    }
+                } catch (e) {
+                    uniqueClaimsMap.set(c.id, Number(c.per_person_commission || 0));
+                }
+            };
+            
+            empCommissionClaimsAsMain.forEach(addClaim);
+            empCommissionClaimsAsCompanion.forEach(addClaim);
+            
+            const calculatedCommissions = Array.from(uniqueClaimsMap.values()).reduce((a, b) => a + b, 0);
 
             const totalHolidayAllowance = 0;
             const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + general_allowance + welfare_amount;
@@ -522,7 +562,13 @@ export async function GET(request: Request) {
             const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0) 
                 ? Number(adj.tax) 
                 : (Number((emp as any).fixed_tax_deduction) > 0 ? Number((emp as any).fixed_tax_deduction) : Number(prevAdj?.tax || 0));
-            const commissions = Number(adj?.commissions || 0);
+            const adjCommissions = adj?.commissions ? Number(adj.commissions) : 0;
+            const commissions = adjCommissions !== 0 ? adjCommissions : calculatedCommissions;
+            
+            if (emp.emp_id === "TP02211") {
+                console.log("DEBUG TP02211 commissions:", commissions, "calculated:", calculatedCommissions, "adj:", adj?.commissions);
+            }
+
             const bonus = Number(adj?.bonus || 0);
             const other_deductions = Number(adj?.other_deductions || 0);
             const other_benefits = Number(adj?.other_benefits || 0);

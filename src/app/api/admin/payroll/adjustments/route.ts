@@ -31,7 +31,7 @@ export async function POST(req: Request) {
             insurance_income: clean(insurance_income) || 0,
             unpaid_absenteeism: clean(unpaid_absenteeism) || 0,
             tax: clean(tax) || 0,
-            commissions: clean(commissions) || 0,
+            commissions: clean(commissions),
             bonus: clean(bonus) || 0,
             other_deductions: clean(other_deductions) || 0,
             other_benefits: clean(other_benefits) || 0,

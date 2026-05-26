@@ -43,7 +43,7 @@ export default function AdminCommissionClaimsPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
-    const [pendingAction, setPendingAction] = useState<{ id: string, action: "approve" | "reject", sellingPrice?: number } | null>(null);
+    const [pendingAction, setPendingAction] = useState<{ id: string, action: "approve" | "reject", perPersonCommission?: number } | null>(null);
 
     const closeAlert = () => {
         setAlert(p => ({ ...p, visible: false }));
@@ -72,8 +72,8 @@ export default function AdminCommissionClaimsPage() {
         window.location.href = url;
     };
 
-    const handleActionClick = (id: string, action: "approve" | "reject", sellingPrice?: number) => {
-        setPendingAction({ id, action, sellingPrice });
+    const handleActionClick = (id: string, action: "approve" | "reject", perPersonCommission?: number) => {
+        setPendingAction({ id, action, perPersonCommission });
         setAlert({
             visible: true,
             message: `ยืนยันการ${action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ'} รายการนี้?`,
@@ -83,14 +83,14 @@ export default function AdminCommissionClaimsPage() {
 
     const executeAction = async () => {
         if (!pendingAction) return;
-        const { id, action, sellingPrice } = pendingAction;
+        const { id, action, perPersonCommission } = pendingAction;
 
         setLoading(true);
         try {
             const res = await fetch("/api/admin/commission-claims", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, action, selling_price: sellingPrice })
+                body: JSON.stringify({ id, action, per_person_commission: perPersonCommission })
             });
             const data = await res.json();
             if (data.ok) {
@@ -249,7 +249,6 @@ export default function AdminCommissionClaimsPage() {
                                     <th>พนักงาน</th>
                                     <th>วันที่</th>
                                     <th>ลูกค้า</th>
-                                    <th>ราคาขาย (ก่อน VAT)</th>
                                     <th>คอมมิชชั่น/คน</th>
                                     <th>สถานะ</th>
                                     <th style={{ textAlign: "right" }}>จัดการ</th>
@@ -276,19 +275,18 @@ export default function AdminCommissionClaimsPage() {
                                                     <input 
                                                         type="number" 
                                                         className={styles.inlineInput}
-                                                        placeholder="ใส่ราคาขาย..."
-                                                        defaultValue={claim.selling_price ? Number(claim.selling_price) : ""}
+                                                        placeholder="ใส่ยอดคอมมิชชั่น..."
+                                                        defaultValue={claim.per_person_commission ? Number(claim.per_person_commission) : ""}
                                                         onBlur={(e) => {
                                                             const val = parseFloat(e.target.value);
-                                                            if (!isNaN(val)) claim.selling_price = val;
+                                                            if (!isNaN(val)) claim.per_person_commission = val;
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span style={{ fontWeight: 700 }}>฿{claim.total_commission?.toLocaleString() || "—"}</span>
+                                                    <span style={{ color: "var(--red)", fontWeight: 700 }}>
+                                                        {claim.per_person_commission ? `฿${claim.per_person_commission.toLocaleString()}` : "—"}
+                                                    </span>
                                                 )}
-                                            </td>
-                                            <td style={{ color: "var(--red)", fontWeight: 700 }}>
-                                                {claim.per_person_commission ? `฿${claim.per_person_commission.toLocaleString()}` : "—"}
                                             </td>
                                             <td>
                                                 <span className={`${styles.statusBadge} ${styles["status_" + claim.status]}`}>
@@ -305,7 +303,7 @@ export default function AdminCommissionClaimsPage() {
                                                         <>
                                                             <button 
                                                                 className={styles.btnApprove} 
-                                                                onClick={() => handleActionClick(claim.id, "approve", Number(claim.selling_price))}
+                                                                onClick={() => handleActionClick(claim.id, "approve", Number(claim.per_person_commission))}
                                                                 title="อนุมัติ"
                                                             >
                                                                 <CheckIcon width={16} />
