@@ -168,15 +168,6 @@ export async function GET(req: Request) {
                 },
             });
 
-            const leaveDaysMap = new Map<string, string>();
-            leaves.forEach(l => {
-                let cur = new Date(l.start_date);
-                const endD = new Date(l.end_date);
-                while (cur <= endD) {
-                    leaveDaysMap.set(cur.toISOString().split("T")[0], l.leave_type);
-                    cur.setDate(cur.getDate() + 1);
-                }
-            });
 
             const travelDaysMap = new Set<string>();
             travels.forEach((t: any) => {
