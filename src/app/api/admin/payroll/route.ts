@@ -105,11 +105,15 @@ export async function GET(request: Request) {
             where: { cycle_month: prevMonth, cycle_year: prevYear }
         });
 
-        // 2.10 Fetch Approved Travel & Off-Site Claims in this cycle
+        // 2.10 Fetch Approved Travel & Off-Site Claims in this cycle (or overlapping)
         const travelClaims = await prisma.travel_claims.findMany({
             where: {
                 status: "approved",
-                date: { gte: startDate, lte: endDate }
+                date: { lte: endDate },
+                OR: [
+                    { end_date: { gte: startDate } },
+                    { end_date: null, date: { gte: startDate } }
+                ]
             }
         });
 
@@ -302,26 +306,34 @@ export async function GET(request: Request) {
             let totalPaidDays = 0;
             let mealWorkdays = 0;
             let travelWorkdays = 0;
+            let maxWorkdays = 0;
+
+            const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
+            if (hireDate) hireDate.setHours(0,0,0,0);
 
             let curr = new Date(startDate);
             while (curr <= endDate) {
                 const dateStr = fmt(curr);
                 const isHoliday = curr.getDay() === 0 || holidayDates.has(dateStr);
-                const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
-                
-                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type));
-                const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
-                const scansComplete = hasIn && hasOut;
-
-                const isExempt = (emp as any).is_checkin_exempt || false;
                 const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
                 const isResigned = empResignationDate && curr > empResignationDate;
+                const isNotHiredYet = hireDate && curr < hireDate;
 
                 if (isResigned) {
                     curr.setDate(curr.getDate() + 1);
                     continue;
                 }
 
+                if (!isNotHiredYet && !isHoliday) {
+                    maxWorkdays++;
+                }
+
+                const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
+                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type));
+                const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
+                const scansComplete = hasIn && hasOut;
+
+                const isExempt = (emp as any).is_checkin_exempt || false;
                 const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
                 
                 if (scansComplete || (isExempt && !isHoliday)) {
@@ -364,20 +376,37 @@ export async function GET(request: Request) {
                 else if (empWarnings.length > 0) diligence_failed_reason = "มีใบเตือนในรอบเดือนนี้";
             }
 
+            let max_meal_allowance = 0;
+            let meal_deduction = 0;
             if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                 meal_allowance = Number(adj.meal_allowance_override);
+                max_meal_allowance = meal_allowance;
             } else if (Number((emp as any).fixed_meal_allowance) > 0) {
                 meal_allowance = Number((emp as any).fixed_meal_allowance);
+                max_meal_allowance = meal_allowance;
             } else if (!isDaily) {
                 meal_allowance = mealWorkdays * 100;
+                // Determine eligibility
+                if (!isOnTrial || (emp as any).probation_meal_allowance) {
+                    max_meal_allowance = maxWorkdays * 100;
+                    meal_deduction = Math.max(0, max_meal_allowance - meal_allowance);
+                }
             }
 
+            let max_travel_allowance = 0;
+            let travel_deduction = 0;
             if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                 travel_allowance = Number(adj.travel_allowance_override);
+                max_travel_allowance = travel_allowance;
             } else if (Number((emp as any).fixed_travel_allowance) > 0) {
                 travel_allowance = Number((emp as any).fixed_travel_allowance);
+                max_travel_allowance = travel_allowance;
             } else if (!isDaily) {
                 travel_allowance = travelWorkdays * 60;
+                if (!isOnTrial || (emp as any).probation_travel_allowance) {
+                    max_travel_allowance = maxWorkdays * 60;
+                    travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
+                }
             }
             // 4.3 Position & Phone & Travel Claims
             position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined
@@ -455,7 +484,9 @@ export async function GET(request: Request) {
 
                     const start = new Date(tc.date);
                     const end = tc.end_date ? new Date(tc.end_date) : start;
-                    const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                    const startBoundary = Math.max(start.getTime(), startDate.getTime());
+                    const endBoundary = Math.min(end.getTime(), endDate.getTime() + 1000);
+                    const days = Math.ceil(Math.max(0, endBoundary - startBoundary) / (1000 * 60 * 60 * 24));
                     travel_site_allowance += rate * days;
                 });
             }
@@ -464,7 +495,16 @@ export async function GET(request: Request) {
                 travel_accommodation = Number(adj.travel_accommodation_override);
             } else if (!isDaily) {
                 const empTravelClaims = travelClaims.filter((tc: any) => tc.emp_id === emp.emp_id);
-                empTravelClaims.forEach((tc: any) => { travel_accommodation += Number(tc.accommodation_amount) || 0; });
+                empTravelClaims.forEach((tc: any) => {
+                    const start = new Date(tc.date);
+                    const end = tc.end_date ? new Date(tc.end_date) : start;
+                    const startBoundary = Math.max(start.getTime(), startDate.getTime());
+                    const endBoundary = Math.min(end.getTime(), endDate.getTime() + 1000);
+                    const cycleDays = Math.ceil(Math.max(0, endBoundary - startBoundary) / (1000 * 60 * 60 * 24));
+                    const totalDays = Math.ceil(Math.max(0, end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                    const ratio = totalDays > 0 ? (cycleDays / totalDays) : 1;
+                    travel_accommodation += (Number(tc.accommodation_amount) || 0) * ratio;
+                });
             }
 
             // 4.4 Long-service (December)
@@ -630,6 +670,11 @@ export async function GET(request: Request) {
                 bank_account_no: (emp as any).bank_account_no || "-",
                 is_published: adj?.is_published || false,
                 raw_adjustments: adj || null,
+                max_workdays: maxWorkdays,
+                max_meal_allowance,
+                meal_deduction,
+                max_travel_allowance,
+                travel_deduction,
             };
         });
 

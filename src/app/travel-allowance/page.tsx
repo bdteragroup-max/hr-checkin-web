@@ -31,8 +31,8 @@ export default function TravelAllowancePage() {
     const [siteName, setSiteName] = useState("");
     const [isOvernight, setIsOvernight] = useState(false);
     const [accommodationAmount, setAccommodationAmount] = useState("");
-    const [reportFile, setReportFile] = useState<File | null>(null);
-    const [receiptFile, setReceiptFile] = useState<File | null>(null);
+    const [reportFiles, setReportFiles] = useState<File[]>([]);
+    const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
     const [hasPreApproval, setHasPreApproval] = useState(false);
     const [isSupervisorShared, setIsSupervisorShared] = useState(false);
 
@@ -67,9 +67,9 @@ export default function TravelAllowancePage() {
         setMsg({ text: "", type: "" });
 
         if (!siteName) return setMsg({ text: "กรุณาระบุชื่อลูกค้า/สถานที่", type: "bad" });
-        if (!reportFile) return setMsg({ text: "กรุณาแนบรายงานผลการปฏิบัติงาน", type: "bad" });
+        if (reportFiles.length === 0) return setMsg({ text: "กรุณาแนบรายงานผลการปฏิบัติงาน", type: "bad" });
 
-        if (isOvernight && !receiptFile && Number(accommodationAmount) > 0) {
+        if (isOvernight && receiptFiles.length === 0 && Number(accommodationAmount) > 0) {
             return setMsg({ text: "กรุณาแนบใบเสร็จค่าที่พักสำหรับการค้างคืน", type: "bad" });
         }
 
@@ -79,10 +79,16 @@ export default function TravelAllowancePage() {
 
         setIsSubmitting(true);
         try {
-            const reportUrl = await uploadFile(reportFile, "report");
-            let receiptUrl = null;
-            if (receiptFile) {
-                receiptUrl = await uploadFile(receiptFile, "receipt");
+            let reportUrls: string[] = [];
+            for (const file of reportFiles) {
+                const url = await uploadFile(file, "report");
+                reportUrls.push(url);
+            }
+            
+            let receiptUrls: string[] = [];
+            for (const file of receiptFiles) {
+                const url = await uploadFile(file, "receipt");
+                receiptUrls.push(url);
             }
 
             const body = {
@@ -92,8 +98,8 @@ export default function TravelAllowancePage() {
                 site_name: siteName,
                 is_overnight: isOvernight,
                 accommodation_amount: accommodationAmount,
-                accommodation_receipt_url: receiptUrl,
-                report_url: reportUrl,
+                accommodation_receipt_url: receiptUrls.length > 0 ? receiptUrls.join(",") : null,
+                report_url: reportUrls.length > 0 ? reportUrls.join(",") : null,
                 has_pre_approval: hasPreApproval,
                 is_supervisor_shared: isSupervisorShared
             };
@@ -109,8 +115,8 @@ export default function TravelAllowancePage() {
                 setMsg({ text: "ส่งคำขอเรียบร้อยแล้ว", type: "ok" });
                 setSiteName("");
                 setAccommodationAmount("");
-                setReportFile(null);
-                setReceiptFile(null);
+                setReportFiles([]);
+                setReceiptFiles([]);
                 setIsOvernight(false);
                 fetchHistory();
             } else {
@@ -207,11 +213,19 @@ export default function TravelAllowancePage() {
                                             type="file"
                                             className={styles.fileInput}
                                             accept="image/*,.pdf"
-                                            onChange={e => setReceiptFile(e.target.files?.[0] || null)}
+                                            multiple
+                                            onChange={e => setReceiptFiles(Array.from(e.target.files || []))}
                                         />
                                         <div className={styles.uploadIcon}><DocumentTextIcon width={24} /></div>
-                                        <div className={`${styles.fileHint} ${receiptFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            {receiptFile ? <><CheckCircleIcon width={18} /> {receiptFile.name}</> : "คลิกหรือวางใบเสร็จที่นี่"}
+                                        <div className={`${styles.fileHint} ${receiptFiles.length > 0 ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            {receiptFiles.length > 0 ? (
+                                                <>
+                                                    <CheckCircleIcon width={18} style={{ flexShrink: 0 }} /> 
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {receiptFiles.length === 1 ? receiptFiles[0].name : `${receiptFiles.length} ไฟล์: ${receiptFiles.map(f => f.name).join(", ")}`}
+                                                    </span>
+                                                </>
+                                            ) : "คลิกหรือวางใบเสร็จที่นี่ (แนบได้หลายไฟล์)"}
                                         </div>
                                     </div>
                                 </div>
@@ -232,11 +246,19 @@ export default function TravelAllowancePage() {
                                     type="file"
                                     className={styles.fileInput}
                                     accept="image/*,.pdf"
-                                    onChange={e => setReportFile(e.target.files?.[0] || null)}
+                                    multiple
+                                    onChange={e => setReportFiles(Array.from(e.target.files || []))}
                                 />
                                 <div className={styles.uploadIcon}><ClipboardDocumentCheckIcon width={24} /></div>
-                                <div className={`${styles.fileHint} ${reportFile ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    {reportFile ? <><CheckCircleIcon width={18} /> {reportFile.name}</> : "คลิกหรือวางรายงานที่นี่"}
+                                <div className={`${styles.formGroup} ${reportFiles.length > 0 ? styles.fileHintSuccess : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {reportFiles.length > 0 ? (
+                                        <>
+                                            <CheckCircleIcon width={18} style={{ flexShrink: 0 }} /> 
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {reportFiles.length === 1 ? reportFiles[0].name : `${reportFiles.length} ไฟล์: ${reportFiles.map(f => f.name).join(", ")}`}
+                                            </span>
+                                        </>
+                                    ) : "คลิกหรือวางรายงานที่นี่ (แนบได้หลายไฟล์)"}
                                 </div>
                             </div>
                         </div>

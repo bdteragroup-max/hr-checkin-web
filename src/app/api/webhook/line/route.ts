@@ -493,7 +493,7 @@ export async function POST(req: Request) {
                         const approverName = approver?.name || (isHr ? "HR Team" : (supervisor?.name || "Staff"));
 
                         if (action === "approve_travel") {
-                            const nextStatus = isHr ? "completed" : "pending_admin";
+                            const nextStatus = isHr ? "approved" : "pending_admin";
                             const updated = await prisma.travel_claims.update({
                                 where: { id: targetId! },
                                 data: {
@@ -527,7 +527,7 @@ export async function POST(req: Request) {
                                     siteName: claim.site_name,
                                     dateRange: `${claim.date.toLocaleDateString("th-TH")}`,
                                     amount: `${claim.accommodation_amount} THB`,
-                                    status: isHr ? "completed" : "approved",
+                                    status: "approved",
                                     reportUrl: claim.report_url,
                                     hideButtons: true
                                 }, [claim.employee.line_user_id]);
@@ -547,8 +547,8 @@ export async function POST(req: Request) {
                                 }, hrLineIds); // Use the array of HR IDs
                             }
 
-                            // If HR approved (Completed) -> Notify Management
-                            if (isHr && nextStatus === "completed") {
+                            // If HR approved -> Notify Management
+                            if (isHr && nextStatus === "approved") {
                                 await sendManagementTravelSummary({
                                     empName: travelEmpName,
                                     claimType: claim.claim_type,

@@ -12,7 +12,8 @@ import {
     GlobeAmericasIcon, 
     DocumentTextIcon, 
     HomeIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    ReceiptRefundIcon
 } from "@heroicons/react/24/outline";
 
 export default function TeamTravelClaimsPage() {
@@ -168,13 +169,17 @@ export default function TeamTravelClaimsPage() {
                                     </div>
 
                                     <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-                                        <a href={c.report_url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <DocumentTextIcon width={16} /> รายงานปฏิบัติงาน
-                                        </a>
-                                        {c.accommodation_receipt_url && (
-                                            <a href={c.accommodation_receipt_url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <HomeIcon width={16} /> ใบเสร็จที่พัก
+                                        {c.report_url && c.report_url.split(",").map((url: string, index: number) => (
+                                            <a key={index} href={url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <DocumentTextIcon width={16} /> รายงานปฏิบัติงาน {c.report_url.includes(",") ? `(${index + 1})` : ""}
                                             </a>
+                                        ))}
+                                        {c.accommodation_receipt_url && (
+                                            c.accommodation_receipt_url.split(",").map((url: string, index: number) => (
+                                                <a key={index} href={url} target="_blank" className={styles.link} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <ReceiptRefundIcon width={14} /> ใบเสร็จที่พัก {c.accommodation_receipt_url.includes(",") ? `(${index + 1})` : ""}
+                                                </a>
+                                            ))
                                         )}
                                     </div>
 

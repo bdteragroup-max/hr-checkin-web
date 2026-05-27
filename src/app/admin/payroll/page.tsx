@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import styles from "./page.module.css";
-import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
 type PayrollResult = {
     emp_id: string;
@@ -314,6 +314,31 @@ export default function PayrollPage() {
         setPublishing(false);
     };
 
+    const handleExportExcel = async (companyTitle: string, items: PayrollResult[]) => {
+        try {
+            const res = await fetch("/api/admin/payroll/export-excel", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ companyTitle, month, year, data: items })
+            });
+            if (!res.ok) throw new Error("Export failed");
+            
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            const safeTitle = companyTitle.replace(/[^a-zA-Z0-9ก-๙\s]/g, "").trim().replace(/\s+/g, "_");
+            a.download = `Payroll_${safeTitle}_${month}_${year}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (e) {
+            console.error(e);
+            alert("เกิดข้อผิดพลาดในการดาวน์โหลดไฟล์ Excel");
+        }
+    };
+
     const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num));
 
     const filteredData = useMemo(() => {
@@ -354,7 +379,7 @@ export default function PayrollPage() {
                 items: items.sort((a, b) => a.emp_id.localeCompare(b.emp_id))
             })).sort((a, b) => a.name.localeCompare(b.name));
 
-            return { title: comp.title, divisions, totalCount: filtered.length };
+            return { key: comp.key, title: comp.title, divisions, totalCount: filtered.length };
         }).filter(g => g.totalCount > 0);
     }, [filteredData]);
 
@@ -486,6 +511,12 @@ export default function PayrollPage() {
                             <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{group.title}</h2>
                             <span style={{ color: "var(--text3)", fontSize: 14, fontWeight: 500 }}>({group.totalCount} คน)</span>
                             <div style={{ flex: 1 }}></div>
+                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "white", borderColor: "#10b981" }} onClick={() => {
+                                const allItems = group.divisions.flatMap(d => d.items);
+                                handleExportExcel(group.title, allItems);
+                            }}>
+                                ดาวน์โหลด Excel
+                            </button>
                             <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => {
                                 const allItems = group.divisions.flatMap(d => d.items);
                                 handlePublishBatch(group.title, allItems, false);
