@@ -143,6 +143,31 @@ export async function GET(request: Request) {
             const isOverridden = adj?.override_salary !== null && adj?.override_salary !== undefined;
             const baseSalaryInput = isOverridden ? Number(adj.override_salary) : (Number(emp.base_salary) || 0);
             const isDaily = (emp as any).salary_type === "daily";
+
+            // --- Proration Logic ---
+            const hireDateForProration = emp.hire_date ? new Date(emp.hire_date) : null;
+            if (hireDateForProration) hireDateForProration.setHours(0,0,0,0);
+            const empResignationDateForProration = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
+            if (empResignationDateForProration) empResignationDateForProration.setHours(0,0,0,0);
+
+            let activeDaysInCycle = 0;
+            let tempDate = new Date(startDate);
+            while (tempDate <= endDate) {
+                const isResigned = empResignationDateForProration && tempDate > empResignationDateForProration;
+                const isNotHiredYet = hireDateForProration && tempDate < hireDateForProration;
+                if (!isResigned && !isNotHiredYet) {
+                    activeDaysInCycle++;
+                }
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+
+            const isEmployedFullCycle = (!hireDateForProration || hireDateForProration <= startDate) && (!empResignationDateForProration || empResignationDateForProration >= endDate);
+            
+            let unworkedDaysDueToResignationOrHire = 0;
+            if (!isEmployedFullCycle && !isDaily) {
+                unworkedDaysDueToResignationOrHire = Math.max(0, 30 - activeDaysInCycle);
+            }
+
             let baseSalary = baseSalaryInput;
             let hourlyWage = isDaily ? (baseSalaryInput / 8) : ((baseSalaryInput / 30) / 8);
 
@@ -573,7 +598,7 @@ export async function GET(request: Request) {
                         currL.setDate(currL.getDate() + 1);
                     }
                 });
-                auto_unpaid_deduction = Math.round(unpaidDaysCount * (Number(emp.base_salary || 0) / 30));
+                auto_unpaid_deduction = Math.round((unpaidDaysCount + unworkedDaysDueToResignationOrHire) * (Number(emp.base_salary || 0) / 30));
             }
 
             const unpaid_absenteeism = adj?.unpaid_absenteeism !== null && adj?.unpaid_absenteeism !== undefined

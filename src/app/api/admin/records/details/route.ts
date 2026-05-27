@@ -159,13 +159,15 @@ export async function GET(req: Request) {
 
             // Calculate Status
             let status = "ขาด"; // Default Absent
-            if (isSunday) {
+            const empResignStr = emp.resignation_date ? emp.resignation_date.toISOString().split("T")[0] : null;
+
+            if (empResignStr && dateStr > empResignStr) {
+                status = "ลาออก";
+            } else if (isSunday) {
                 status = "วันหยุด";
-            }
-            if (holName) {
+            } else if (holName) {
                 status = `หยุดพิเศษ (${holName})`;
-            }
-            if (leaveType) {
+            } else if (leaveType) {
                 status = leaveType;
             } else if (isTravelDay) {
                 status = "ออกต่างจังหวัด";

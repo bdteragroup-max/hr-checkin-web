@@ -81,12 +81,17 @@ export async function GET(req: Request) {
 
         } else {
             // ================== EVERYONE EXPORT ==================
+            const employeeWhere: any = {
+                is_checkin_exempt: false,
+                ...subordinateFilter,
+                OR: [
+                    { is_active: true },
+                    { resignation_date: { gte: start, lte: end } }
+                ]
+            };
+
             const emps = await prisma.employees.findMany({
-                where: { 
-                    is_active: true, 
-                    is_checkin_exempt: false,
-                    ...subordinateFilter
-                } as any,
+                where: employeeWhere,
                 select: { emp_id: true, name: true, branch_id: true },
                 orderBy: { emp_id: "asc" },
             });

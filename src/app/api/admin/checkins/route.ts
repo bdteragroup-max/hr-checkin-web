@@ -16,6 +16,7 @@ function lateLabel(late_status: string | null, late_min: number | null) {
     if (late_status === "ot") return "OT";
     if (late_status === "absent") return "ขาดงาน";
     if (late_status === "leave") return "ลา";
+    if (late_status === "resigned") return "ลาออก";
     return late_status;
 }
 
@@ -43,10 +44,23 @@ export async function GET(req: Request) {
         const branchParam = url.searchParams.get("branch") || ""; // id หรือชื่อสาขา
         const statusParam = url.searchParams.get("status") || "";
 
-        // ✅ active employees only
+        let employeeWhere: any = { is_checkin_exempt: false };
+        if (date) {
+            const viewDateObj = new Date(`${date}T00:00:00+07:00`);
+            const startOfMonth = new Date(viewDateObj.getFullYear(), viewDateObj.getMonth(), 1);
+            const endOfMonth = new Date(viewDateObj.getFullYear(), viewDateObj.getMonth() + 1, 0);
+
+            employeeWhere.OR = [
+                { is_active: true },
+                { resignation_date: { gte: startOfMonth, lte: endOfMonth } }
+            ];
+        } else {
+            employeeWhere.is_active = true;
+        }
+
         const activeEmployeesData = await prisma.employees.findMany({
-            where: { is_active: true, is_checkin_exempt: false },
-            select: { emp_id: true, nickname: true },
+            where: employeeWhere,
+            select: { emp_id: true, nickname: true, name: true, branch_id: true, branches: { select: { name: true } }, resignation_date: true },
         });
         const activeEmpIds = activeEmployeesData.map((e) => e.emp_id);
         const nicknameMap = new Map(activeEmployeesData.map(e => [e.emp_id, e.nickname]));
@@ -130,19 +144,9 @@ export async function GET(req: Request) {
             const checkedInSet = new Set(checkinsToday.map(c => c.emp_id));
 
             // Get all active employees
-            const activeEmployees = await prisma.employees.findMany({
-                where: {
-                    is_active: true,
-                    is_checkin_exempt: false,
-                    ...(branchParam ? { branch_id: branchParam as any } : {})
-                },
-                select: {
-                    emp_id: true,
-                    name: true,
-                    branches: { select: { name: true } },
-                },
-                orderBy: { emp_id: "asc" }
-            });
+            const activeEmployees = activeEmployeesData
+                .filter(e => !branchParam || e.branch_id === branchParam)
+                .sort((a, b) => a.emp_id.localeCompare(b.emp_id));
 
             const missing = activeEmployees
                 .filter(emp => !checkedInSet.has(emp.emp_id))
@@ -152,22 +156,26 @@ export async function GET(req: Request) {
                     // Use the date string directly to avoid UTC day-shift in front-end display
                     const virtualTimestamp = date ? `${date}T00:00:00.000Z` : dayStart.toISOString();
 
+                    const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
+                    const viewDate = new Date(`${date}T00:00:00+07:00`);
+                    const isResigned = empResignationDate && viewDate > empResignationDate;
+
                     return {
                         id: `abs-${emp.emp_id}-${date}`,
                         emp_id: emp.emp_id,
                         name: emp.name,
-                        type: travel ? "ออกต่างจังหวัด" : (leave ? "ลา" : "ขาดงาน"),
+                        type: isResigned ? "ลาออก" : (travel ? "ออกต่างจังหวัด" : (leave ? "ลา" : "ขาดงาน")),
                         timestamp: virtualTimestamp,
                         branch_name: emp.branches?.name || "ไม่ระบุสาขา",
                         distance: null,
                         photo_url: null,
                         project_name: null,
-                        remark: travel 
+                        remark: isResigned ? "พนักงานลาออก" : (travel 
                             ? "เบี้ยเลี้ยงออกต่างจังหวัด" 
                             : (leave 
                                 ? `ลา: ${leave.leave_type}${leave.status === 'pending' ? ' (รออนุมัติ)' : ''} ${leave.reason ? ' - ' + leave.reason : ''}`
-                                : "ไม่มีบันทึกเข้างาน"),
-                        late_status: travel ? "travel" : (leave ? "leave" : "absent"),
+                                : "ไม่มีบันทึกเข้างาน")),
+                        late_status: isResigned ? "resigned" : (travel ? "travel" : (leave ? "leave" : "absent")),
                         late_min: null,
                         lat: null,
                         lon: null,
@@ -302,6 +310,32 @@ export async function GET(req: Request) {
                         lat: null as any,
                         lon: null as any,
                     } as any);
+                }
+            });
+
+            activeEmployeesData.forEach(emp => {
+                const empResignationDate = emp.resignation_date ? new Date(emp.resignation_date) : null;
+                const viewDate = new Date(`${date}T00:00:00+07:00`);
+                if (empResignationDate && viewDate > empResignationDate) {
+                    if (!checkedInSet.has(emp.emp_id)) {
+                        mergedRows.push({
+                            id: `resigned-${emp.emp_id}-${date}` as any,
+                            emp_id: emp.emp_id,
+                            name: emp.name || "",
+                            type: "ลาออก",
+                            timestamp: virtualTimestamp as any,
+                            branch_name: (emp as any).branches?.name || "ไม่ระบุสาขา",
+                            distance: null as any,
+                            photo_url: null,
+                            project_name: null,
+                            remark: "พนักงานลาออก",
+                            late_status: "resigned",
+                            late_min: null as any,
+                            lat: null as any,
+                            lon: null as any,
+                        } as any);
+                        checkedInSet.add(emp.emp_id);
+                    }
                 }
             });
         }

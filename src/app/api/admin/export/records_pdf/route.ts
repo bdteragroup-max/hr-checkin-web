@@ -265,12 +265,16 @@ export async function GET(req: Request) {
             };
 
             drawPortrait(`Historical Records: ${periodLabel}`, 18, true);
-            
+            const employeeWhere: any = {
+                ...subordinateFilter,
+                OR: [
+                    { is_active: true },
+                    { resignation_date: { gte: start, lte: end } }
+                ]
+            };
+
             const emps = await prisma.employees.findMany({
-                where: { 
-                    is_active: true,
-                    ...subordinateFilter
-                } as any,
+                where: employeeWhere,
                 select: { emp_id: true, name: true, branch_id: true },
                 orderBy: { emp_id: "asc" },
             });
