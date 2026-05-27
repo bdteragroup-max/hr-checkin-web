@@ -94,7 +94,21 @@ export async function GET(req: Request) {
             select: { emp_id: true },
         });
 
+        // Approved travels overlapping today
+        const todayTravels = await prisma.travel_claims.findMany({
+            where: {
+                status: "approved",
+                date: { lte: todayStart },
+                OR: [
+                    { end_date: { gte: todayStart } },
+                    { end_date: null, date: { gte: todayStart } }
+                ]
+            },
+            select: { emp_id: true },
+        });
+
         const onLeaveIds = new Set(todayLeaves.map(l => l.emp_id));
+        const onTravelIds = new Set(todayTravels.map(t => t.emp_id));
 
         // Who checked in today
         const checkedInIds = new Set(todayCheckins.map(c => c.emp_id));
@@ -106,12 +120,13 @@ export async function GET(req: Request) {
 
         const totalActive = activeEmployees.length;
         const onLeaveCount = onLeaveIds.size;
+        const onTravelCount = onTravelIds.size;
         const checkedInCount = checkedInIds.size;
         const lateCount = lateIds.size;
 
-        // Absent = active employees who didn't check in AND are not on leave
+        // Absent = active employees who didn't check in AND are not on leave AND are not on travel
         const absentCount = activeEmployees.filter(
-            e => !checkedInIds.has(e.emp_id) && !onLeaveIds.has(e.emp_id)
+            e => !checkedInIds.has(e.emp_id) && !onLeaveIds.has(e.emp_id) && !onTravelIds.has(e.emp_id)
         ).length;
 
         // ── Build Flex Message ──
@@ -163,6 +178,7 @@ export async function GET(req: Request) {
                             makeRow("⏰ สาย", lateCount, lateCount > 0 ? "#dc2626" : "#6b7280", "คน"),
                             makeRow("❌ ไม่มาลงเวลา", absentCount, absentCount > 0 ? "#dc2626" : "#6b7280", "คน"),
                             makeRow("📝 ลา", onLeaveCount, "#3b82f6", "คน"),
+                            makeRow("🚗 ต่างจังหวัด", onTravelCount, "#0ea5e9", "คน"),
                             makeRow("👥 พนักงานทั้งหมด", totalActive, "#6b7280", "คน"),
                         ],
                     },

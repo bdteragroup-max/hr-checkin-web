@@ -45,6 +45,7 @@ interface DashboardData {
     absent: number;
     late: number;
     onLeave: number;
+    onTravel?: number;
     recent: CheckItem[];
 }
 
@@ -765,6 +766,7 @@ function AdminPageInner() {
                     {([
                         { color: "green", icon: <CheckCircleIcon width={24} />, val: dash?.present, label: "มาทำงานวันนี้" },
                         { color: "red", icon: <XCircleIcon width={24} />, val: dash?.absent, label: "ขาดงาน" },
+                        { color: "blue", icon: <MapPinIcon width={24} />, val: dash?.onTravel ?? 0, label: "ออกต่างจังหวัด" },
                         { color: "orange", icon: <ClockIcon width={24} />, val: dash?.late, label: "มาสาย" },
                         { color: "red", icon: <SunIcon width={24} />, val: dash?.onLeave, label: "ลาวันนี้" },
                     ] as { color: string; icon: React.ReactNode; val: number | undefined; label: string }[]).map(s => (

@@ -115,7 +115,21 @@ export async function GET(req: Request) {
         });
         const onLeave = new Set(onLeaveRows.map((r) => r.emp_id)).size;
 
-        const absent = activeEmpIds.length - present - onLeave;
+        const travelRows = await prisma.travel_claims.findMany({
+            where: {
+                emp_id: { in: activeEmpIds },
+                status: "approved",
+                date: { lte: dateObj },
+                OR: [
+                    { end_date: { gte: dateObj } },
+                    { end_date: null, date: { gte: dateObj } }
+                ]
+            },
+            select: { emp_id: true },
+        });
+        const onTravel = new Set(travelRows.map((r) => r.emp_id)).size;
+
+        const absent = activeEmpIds.length - present - onLeave - onTravel;
 
         // 3) Notifications/Birthdays logic (optional here or separate)
         // ...
@@ -127,6 +141,7 @@ export async function GET(req: Request) {
                 absent: Math.max(0, absent),
                 late,
                 onLeave,
+                onTravel,
                 recent: recentRows.map((r) => {
                     const nickname = nicknameMap.get(r.emp_id);
                     let finalName = r.name || "";

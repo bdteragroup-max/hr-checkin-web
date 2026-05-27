@@ -76,6 +76,18 @@ export async function GET(req: Request) {
             },
         });
 
+        const travels = await prisma.travel_claims.findMany({
+            where: {
+                emp_id,
+                status: "approved",
+                date: { lte: endDate },
+                OR: [
+                    { end_date: { gte: startDate } },
+                    { end_date: null, date: { gte: startDate } }
+                ]
+            },
+        });
+
         const holidays = await prisma.holidays.findMany({
             where: { date: { gte: startDate, lte: endDate } }
         });
@@ -104,6 +116,18 @@ export async function GET(req: Request) {
             }
         });
 
+        // Build a map of dates that fall under approved travel claims
+        const travelDaysMap = new Set<string>();
+        travels.forEach((t: any) => {
+            let cur = new Date(t.date);
+            const endD = t.end_date ? new Date(t.end_date) : new Date(t.date);
+            while (cur <= endD) {
+                const ds = cur.toISOString().split("T")[0];
+                travelDaysMap.add(ds);
+                cur.setDate(cur.getDate() + 1);
+            }
+        });
+
         // Guard: Today's date in Bangkok for future date handling
         const nowBKK = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
         const todayDate = new Date(Date.UTC(nowBKK.getFullYear(), nowBKK.getMonth(), nowBKK.getDate()));
@@ -115,6 +139,7 @@ export async function GET(req: Request) {
             const isSunday = dt.getUTCDay() === 0;
             const holName = holidayMap.get(dateStr);
             const leaveType = leaveDaysMap.get(dateStr);
+            const isTravelDay = travelDaysMap.has(dateStr);
 
             // Match by date_key string comparison
             const dayCheckins = checkins.filter(c => {
@@ -124,8 +149,8 @@ export async function GET(req: Request) {
 
             const workPlan = workPlans.find(wp => wp.date.toISOString().split("T")[0] === dateStr);
 
-            const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
-            const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
+            const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
+            const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
 
             const hasActivity = inRecords.length > 0 || outRecords.length > 0;
 
@@ -142,6 +167,8 @@ export async function GET(req: Request) {
             }
             if (leaveType) {
                 status = leaveType;
+            } else if (isTravelDay) {
+                status = "ออกต่างจังหวัด";
             }
 
             const inRecord = inRecords.length > 0 ? inRecords[0] : null; 

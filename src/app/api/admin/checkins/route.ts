@@ -73,8 +73,10 @@ export async function GET(req: Request) {
             where.branch_name = branchName;
         }
 
-        // 0) Fetch Leaves for this day (to use in both modes)
+        // 0) Fetch Leaves and Travel Claims for this day (to use in both modes)
         let leaveMap = new Map<string, any>();
+        let travelMap = new Map<string, any>();
+        
         if (date) {
             const dateObj = new Date(`${date}T00:00:00.000Z`);
             const leaves = await prisma.leave_requests.findMany({
@@ -92,6 +94,22 @@ export async function GET(req: Request) {
                 }
             });
             leaves.forEach(l => leaveMap.set(l.emp_id, l));
+            
+            const travels = await prisma.travel_claims.findMany({
+                where: {
+                    emp_id: { in: activeEmpIds },
+                    status: "approved",
+                    date: { lte: dateObj },
+                    OR: [
+                        { end_date: { gte: dateObj } },
+                        { end_date: null, date: { gte: dateObj } }
+                    ]
+                },
+                select: {
+                    emp_id: true,
+                }
+            });
+            travels.forEach(t => travelMap.set(t.emp_id, t));
         }
 
         // 🔴 ABSENT or LEAVE MODE
@@ -130,6 +148,7 @@ export async function GET(req: Request) {
                 .filter(emp => !checkedInSet.has(emp.emp_id))
                 .map(emp => {
                     const leave = leaveMap.get(emp.emp_id);
+                    const travel = travelMap.get(emp.emp_id);
                     // Use the date string directly to avoid UTC day-shift in front-end display
                     const virtualTimestamp = date ? `${date}T00:00:00.000Z` : dayStart.toISOString();
 
@@ -137,16 +156,18 @@ export async function GET(req: Request) {
                         id: `abs-${emp.emp_id}-${date}`,
                         emp_id: emp.emp_id,
                         name: emp.name,
-                        type: leave ? "ลา" : "ขาดงาน",
+                        type: travel ? "ออกต่างจังหวัด" : (leave ? "ลา" : "ขาดงาน"),
                         timestamp: virtualTimestamp,
                         branch_name: emp.branches?.name || "ไม่ระบุสาขา",
                         distance: null,
                         photo_url: null,
                         project_name: null,
-                        remark: leave 
-                            ? `ลา: ${leave.leave_type}${leave.status === 'pending' ? ' (รออนุมัติ)' : ''} ${leave.reason ? ' - ' + leave.reason : ''}`
-                            : "ไม่มีบันทึกเข้างาน",
-                        late_status: leave ? "leave" : "absent",
+                        remark: travel 
+                            ? "เบี้ยเลี้ยงออกต่างจังหวัด" 
+                            : (leave 
+                                ? `ลา: ${leave.leave_type}${leave.status === 'pending' ? ' (รออนุมัติ)' : ''} ${leave.reason ? ' - ' + leave.reason : ''}`
+                                : "ไม่มีบันทึกเข้างาน"),
+                        late_status: travel ? "travel" : (leave ? "leave" : "absent"),
                         late_min: null,
                         lat: null,
                         lon: null,
@@ -221,9 +242,47 @@ export async function GET(req: Request) {
             }
         }) : [];
 
+        const travelsWithNames = date ? await prisma.travel_claims.findMany({
+            where: {
+                emp_id: { in: activeEmpIds },
+                status: "approved",
+                date: { lte: new Date(`${date}T00:00:00.000Z`) },
+                OR: [
+                    { end_date: { gte: new Date(`${date}T00:00:00.000Z`) } },
+                    { end_date: null, date: { gte: new Date(`${date}T00:00:00.000Z`) } }
+                ]
+            },
+            select: {
+                emp_id: true,
+                employee: { select: { name: true, branches: { select: { name: true } } } }
+            }
+        }) : [];
+
         if (date && !statusParam) {
             const checkedInSet = new Set(rows.map(r => r.emp_id));
             const virtualTimestamp = `${date}T00:00:00.000Z`;
+
+            travelsWithNames.forEach(t => {
+                if (!checkedInSet.has(t.emp_id)) {
+                    mergedRows.push({
+                        id: `alt-t-${t.emp_id}-${date}` as any,
+                        emp_id: t.emp_id,
+                        name: t.employee?.name || "",
+                        type: "ออกต่างจังหวัด",
+                        timestamp: virtualTimestamp as any,
+                        branch_name: t.employee?.branches?.name || "ไม่ระบุสาขา",
+                        distance: null as any,
+                        photo_url: null,
+                        project_name: null,
+                        remark: "เบี้ยเลี้ยงออกต่างจังหวัด",
+                        late_status: "travel",
+                        late_min: null as any,
+                        lat: null as any,
+                        lon: null as any,
+                    } as any);
+                    checkedInSet.add(t.emp_id); // Prevent them from also showing up as leave if they somehow have both
+                }
+            });
 
             leavesWithNames.forEach(l => {
                 if (!checkedInSet.has(l.emp_id)) {

@@ -329,20 +329,22 @@ export async function GET(request: Request) {
                 }
 
                 const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
-                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In"].includes(c.type));
+                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In", "Trip-Update"].includes(c.type));
                 const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
                 const scansComplete = hasIn && hasOut;
 
                 const isExempt = (emp as any).is_checkin_exempt || false;
                 const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
+                const empTravels = travelClaims.filter((t: any) => t.emp_id === emp.emp_id);
+                const isOnTravel = empTravels.some((t: any) => dateStr >= fmt(t.date) && dateStr <= fmt(t.end_date || t.date));
                 
-                if (scansComplete || (isExempt && !isHoliday)) {
+                if (scansComplete || (isExempt && !isHoliday) || isOnTravel) {
                     totalPaidDays++;
                 }
 
                 // Meal and Travel should be paid for ANY day worked, even holidays
                 if (!isOnLeave) {
-                    if (scansComplete) {
+                    if (scansComplete || isOnTravel) {
                         if (!hasWarnings) {
                             if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
                             if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
@@ -352,7 +354,7 @@ export async function GET(request: Request) {
                             if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
                             if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
                         }
-                    } else if (!isHoliday && !scansComplete) {
+                    } else if (!isHoliday && !scansComplete && !isOnTravel) {
                         missingScanInCycle = true;
                     }
                 }

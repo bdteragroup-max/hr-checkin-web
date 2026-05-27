@@ -446,6 +446,7 @@ export default function RecordsPage() {
                                     <th>พนักงาน / สาขา</th>
                                     <th style={{ textAlign: "center" }}>มาทำงาน</th>
                                     <th style={{ textAlign: "center" }}>ขาดงาน</th>
+                                    <th style={{ textAlign: "center" }}>ออกต่างจังหวัด</th>
                                     <th style={{ textAlign: "center" }}>วันลา</th>
                                     <th style={{ textAlign: "center" }}>มาสาย</th>
                                 </tr>
@@ -463,6 +464,9 @@ export default function RecordsPage() {
                                             {row.absent_days > 0 ? (
                                                 <span className={`${styles.badge} ${styles.absent}`} style={{ minWidth: 40 }}>{row.absent_days}</span>
                                             ) : <span style={{ color: "var(--text5)" }}>-</span>}
+                                        </td>
+                                        <td style={{ textAlign: "center", fontWeight: 700, color: "var(--red)" }}>
+                                            {(row as any).travel_days > 0 ? (row as any).travel_days + " วัน" : <span style={{ color: "var(--text5)" }}>-</span>}
                                         </td>
                                         <td style={{ textAlign: "center" }}>
                                             {row.leave_days > 0 ? (

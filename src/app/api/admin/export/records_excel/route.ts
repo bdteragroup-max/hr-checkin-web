@@ -212,6 +212,18 @@ async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name:
         where: { emp_id, status: "approved", start_date: { lte: end }, end_date: { gte: start } },
     });
 
+    const travels = await prisma.travel_claims.findMany({
+        where: { 
+            emp_id, 
+            status: "approved", 
+            date: { lte: end }, 
+            OR: [
+                { end_date: { gte: start } },
+                { end_date: null, date: { gte: start } }
+            ]
+        },
+    });
+
     const leaveDaysMap = new Map<string, string>();
     leaves.forEach(l => {
         let cur = new Date(l.start_date);
@@ -222,15 +234,26 @@ async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name:
         }
     });
 
+    const travelDaysMap = new Set<string>();
+    travels.forEach((t: any) => {
+        let cur = new Date(t.date);
+        const endD = t.end_date ? new Date(t.end_date) : new Date(t.date);
+        while (cur <= endD) {
+            travelDaysMap.add(cur.toISOString().split("T")[0]);
+            cur.setDate(cur.getDate() + 1);
+        }
+    });
+
     for (let dt = new Date(start); dt <= end; dt.setUTCDate(dt.getUTCDate() + 1)) {
         const dateStr = dt.toISOString().split("T")[0];
         const isSunday = dt.getUTCDay() === 0;
         const holName = holidayMap.get(dateStr);
         const leaveType = leaveDaysMap.get(dateStr);
+        const isTravel = travelDaysMap.has(dateStr);
 
         const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
-        const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in"));
-        const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out"));
+        const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
+        const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
 
         if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
 
@@ -238,6 +261,7 @@ async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name:
         if (isSunday) status = "วันหยุด";
         if (holName) status = `หยุดพิเศษ (${holName})`;
         if (leaveType) status = leaveType;
+        else if (isTravel) status = "ออกต่างจังหวัด";
         
         const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
         const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;

@@ -77,6 +77,18 @@ export async function GET(req: Request) {
             select: { emp_id: true, days: true, status: true },
         });
 
+        const travels = await prisma.travel_claims.findMany({
+            where: {
+                emp_id: { in: empIds },
+                status: "approved",
+                date: { lte: endDate },
+                OR: [
+                    { end_date: { gte: startDate } },
+                    { end_date: null, date: { gte: startDate } }
+                ]
+            },
+        });
+
         const holidaysFetch = await prisma.holidays.findMany({
             where: { date: { gte: startDate, lte: endDate } }
         });
@@ -104,10 +116,11 @@ export async function GET(req: Request) {
             late_count: number;
             late_mins: number;
             present_dates: Set<string>;
+            travel_dates: Set<string>;
         }> = {};
 
         for (const id of empIds) {
-            stats[id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set() };
+            stats[id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set(), travel_dates: new Set() };
         }
 
         // Process leaves
@@ -120,13 +133,29 @@ export async function GET(req: Request) {
             }
         }
 
+        // Process travel claims
+        for (const t of travels) {
+            if (!stats[t.emp_id]) continue;
+            let cur = new Date(t.date);
+            const endD = t.end_date ? new Date(t.end_date) : new Date(t.date);
+            while (cur <= endD) {
+                const dStr = cur.toISOString().split("T")[0];
+                if (cur >= startDate && cur <= effectiveEnd) {
+                    if (cur.getUTCDay() !== 0 && !holidayDates.has(dStr)) { // Only count work days
+                        stats[t.emp_id].travel_dates.add(dStr);
+                    }
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+
         // Process checkins
         for (const r of rows) {
             if (!stats[r.emp_id]) continue;
             // Match by date_key string comparison
             const d = r.date_key.toISOString().split("T")[0];
 
-            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
+            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In" || r.type === "Trip-Update") {
                 stats[r.emp_id].present_dates.add(d);
 
                 // Consistency: Skip counting late on Sundays and Holidays
@@ -143,9 +172,13 @@ export async function GET(req: Request) {
         // Build summary output
         const summary = emps.map(e => {
             const s = stats[e.emp_id];
-            // Absences = Total Work Days - Present Days - Approved Leave Days (very rough estimation, just like the old report tab)
-            // A more precise absence calculation skips analyzing overlapping dates, but for now this is the standard metric.
-            let absences = totalWorkDays - s.present_dates.size - s.leave_days;
+            
+            // To avoid double-counting, if a travel date also has a checkin, we remove it from present_dates
+            // or we just calculate unique present + travel days
+            const attendedDates = new Set([...Array.from(s.present_dates), ...Array.from(s.travel_dates)]);
+            const travelDays = s.travel_dates.size;
+
+            let absences = totalWorkDays - attendedDates.size - s.leave_days;
             if (absences < 0) absences = 0;
 
             let finalName = e.name;
@@ -164,6 +197,7 @@ export async function GET(req: Request) {
                 late_mins: s.late_mins,
                 absent_days: absences,
                 present_days: s.present_dates.size,
+                travel_days: travelDays,
                 total_work_days_period: totalWorkDays,
             };
         });
