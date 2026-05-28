@@ -121,7 +121,10 @@ export async function GET(request: Request) {
         const welfareClaims = await prisma.general_welfare_claims.findMany({
             where: {
                 status: "approved",
-                approved_at: { gte: startDate, lte: endDate }
+                OR: [
+                    { approved_at: { gte: startDate, lte: endDate } },
+                    { created_at: { gte: startDate, lte: endDate } }
+                ]
             }
         });
 
@@ -306,6 +309,8 @@ export async function GET(request: Request) {
             let general_allowance = 0;
             let diligence_failed_reason = "";
             let missingScanInCycle = false;
+            let hasLate = empCheckins.some(c => c.late_status === 'late' || (c as any).score_late > 0);
+            let hasLeave = empLeaves.length > 0;
             const hasWarnings = empWarnings.length > 0;
 
             // 4.1 ACCOMMODATION (Auto-calc only if not overridden)
@@ -395,8 +400,11 @@ export async function GET(request: Request) {
             if (!isOnTrial && empWarnings.length === 0) {
                 if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) {
                     diligence_allowance = Number(adj.diligence_allowance_override);
-                } else if (!isDaily && mealWorkdays >= 20 && !missingScanInCycle) {
-                    diligence_allowance = Number((emp as any).diligence_allowance || 0) || 0;
+                } else if (!isDaily) {
+                    if (hasLate) diligence_failed_reason = "มีประวัติมาสาย";
+                    else if (hasLeave) diligence_failed_reason = "มีการลา";
+                    else if (missingScanInCycle) diligence_failed_reason = "ลืมสแกนนิ้วบางวัน";
+                    else diligence_allowance = 500;
                 }
             } else {
                 if (isOnTrial) diligence_failed_reason = "อยู่ระหว่างทดลองงาน";

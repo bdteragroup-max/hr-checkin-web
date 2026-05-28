@@ -111,7 +111,11 @@ export async function GET(req: Request) {
             const endD = new Date(l.end_date);
             while (cur <= endD) {
                 const ds = cur.toISOString().split("T")[0];
-                leaveDaysMap.set(ds, l.leave_type);
+                let leaveLabel = l.leave_type;
+                if (l.days < 1 && l.start_at && l.end_at) {
+                    leaveLabel += ` (${formatTime(new Date(l.start_at))} - ${formatTime(new Date(l.end_at))})`;
+                }
+                leaveDaysMap.set(ds, leaveLabel);
                 cur.setDate(cur.getDate() + 1);
             }
         });
@@ -180,6 +184,11 @@ export async function GET(req: Request) {
                 status = "มาทำงาน";
                 if (inRecord.late_status === "late") {
                     status = `มาสาย`;
+                }
+                if (leaveType) {
+                    status += ` + ${leaveType}`;
+                } else if (isTravelDay) {
+                    status += ` (ตจว.)`;
                 }
             }
 

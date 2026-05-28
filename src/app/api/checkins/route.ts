@@ -258,10 +258,15 @@ export async function POST(req: Request) {
 
         // Look in today's checkins first, then yesterday's (for midnight shifts)
         const allCheckins = [...todaysCheckins, ...yesterdaysCheckins];
-        const hasIn = allCheckins.find(c =>
+        let hasIn = allCheckins.find(c =>
             c.type === inType &&
             (type === "Project-Out" ? (customer_id ? c.customer_id === customer_id : c.project_name === project_name) : true)
         );
+
+        // Exception for trips: if they are on a trip, their first action of the day might be a Trip-Update instead of a formal Check-in.
+        if (!hasIn && is_trip) {
+            hasIn = allCheckins.find(c => c.type === "Trip-Update" || c.type === "Check-in");
+        }
 
         if (!hasIn)
             return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
@@ -270,7 +275,9 @@ export async function POST(req: Request) {
     // For midnight shifts (00:00–06:00), the checkout record should be stored
     // under the same date_key as the check-in (yesterday), so the shift stays together.
     const effective_date_key = 
-        isPostMidnight && (type === "Check-out") && todaysCheckins.every(c => c.type !== "Check-in") && yesterdaysCheckins.some(c => c.type === "Check-in")
+        isPostMidnight && (type === "Check-out") && 
+        todaysCheckins.every(c => c.type !== "Check-in" && c.type !== "Trip-Update") && 
+        yesterdaysCheckins.some(c => c.type === "Check-in" || c.type === "Trip-Update")
             ? yesterday_date_key
             : date_key;
 
@@ -449,17 +456,21 @@ export async function POST(req: Request) {
                         });
                         
                         if (!existingOt) {
-                            const startTime = new Date(now);
-                            startTime.setHours(workEndH, workEndM, 0, 0);
+                            const y = effective_date_key.getFullYear();
+                            const m = String(effective_date_key.getMonth() + 1).padStart(2, '0');
+                            const d = String(effective_date_key.getDate()).padStart(2, '0');
+                            const bkkDateStr = `${y}-${m}-${d}`;
+                            const startTime = new Date(`${bkkDateStr}T${String(workEndH).padStart(2, '0')}:${String(workEndM).padStart(2, '0')}:00+07:00`);
+                            const actualEndTime = new Date(); // Current UTC time
                             
-                            const totalHours = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                            const totalHours = (actualEndTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
                             
                             await prisma.ot_requests.create({
                                 data: {
                                     emp_id: auth.emp.emp_id,
                                     date_for: effective_date_key,
                                     start_time: startTime,
-                                    end_time: now,
+                                    end_time: actualEndTime,
                                     total_hours: Number(totalHours.toFixed(2)),
                                     reason: "Trip Log Check-out / อัตโนมัติ",
                                     status: "pending",

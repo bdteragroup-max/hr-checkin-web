@@ -167,7 +167,7 @@ export default function TripLogPage() {
         setIsCameraReady(false);
         try {
             const s = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+                video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
                 audio: false
             });
             streamRef.current = s;
@@ -333,35 +333,36 @@ export default function TripLogPage() {
                 {/* ── LOG FORM ── */}
                 {step === 'log' && (
                     <div className={styles.card}>
-                        {/* GPS Status */}
-                        <div className={styles.sectionLabel}>
-                            <div className={styles.dot} style={{
-                                background: gps
-                                    ? (gps.acc < 50 ? 'var(--ok)' : '#f59e0b')
-                                    : 'var(--red)'
-                            }} />
-                            <span>
-                                {gps
-                                    ? `GPS พร้อม · ±${Math.round(gps.acc)} ม.`
-                                    : 'กำลังค้นหาสัญญาณ GPS...'}
-                            </span>
-                        </div>
+                        {/* Group GPS Status & Location Input */}
+                        <div className={styles.statusGroup}>
+                            <div className={styles.sectionLabel} style={{ marginBottom: 12 }}>
+                                <div className={styles.dot} style={{
+                                    background: gps
+                                        ? (gps.acc < 50 ? 'var(--ok)' : '#f59e0b')
+                                        : 'var(--red)'
+                                }} />
+                                <span>
+                                    {gps
+                                        ? `GPS พร้อม · ±${Math.round(gps.acc)} ม.`
+                                        : 'กำลังค้นหาสัญญาณ GPS...'}
+                                </span>
+                            </div>
 
-                        {/* Location Input — required, single field */}
-                        <div style={{ marginBottom: 14 }}>
-                            <label className={styles.label}>
-                                สถานที่ / ชื่อลูกค้า <span style={{ color: 'var(--red)' }}>*</span>
-                            </label>
-                            <input
-                                ref={locationInputRef}
-                                type="text"
-                                className={styles.input}
-                                placeholder="เช่น บ้านคุณสมศักดิ์ อ.วังน้อย, ไซต์งาน A อยุธยา..."
-                                value={locationName}
-                                onChange={(e) => setLocationName(e.target.value)}
-                            />
-                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 5 }}>
-                                ข้อมูลนี้จะแสดงบน watermark รูปถ่ายและ timeline
+                            <div>
+                                <label className={styles.label}>
+                                    สถานที่ / ชื่อลูกค้า <span style={{ color: 'var(--red)' }}>*</span>
+                                </label>
+                                <input
+                                    ref={locationInputRef}
+                                    type="text"
+                                    className={styles.input}
+                                    placeholder="เช่น บ้านคุณสมศักดิ์ อ.วังน้อย..."
+                                    value={locationName}
+                                    onChange={(e) => setLocationName(e.target.value)}
+                                />
+                                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>
+                                    ข้อมูลนี้จะแสดงบนรูปถ่ายและ timeline
+                                </div>
                             </div>
                         </div>
 
@@ -382,36 +383,38 @@ export default function TripLogPage() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className={styles.mainBtnContainer}>
+                        <div className={styles.actionSection}>
                             <button
-                                className={styles.updateBtn}
+                                className={styles.primaryBtn}
                                 onClick={() => gps && openCamera('update')}
                                 disabled={!gps}
-                                title="บันทึกพิกัด"
+                                title="บันทึกพิกัดปัจจุบัน"
                             >
-                                <Navigation size={32} />
-                                <span className={styles.updateBtnText}>Update</span>
+                                <Navigation size={24} />
+                                <span className={styles.primaryBtnText}>บันทึกพิกัดปัจจุบัน</span>
                             </button>
 
-                            <button
-                                className={`${styles.updateBtn} ${styles.accommodationBtn}`}
-                                onClick={() => gps && openCamera('accommodation')}
-                                disabled={!gps}
-                                title="เช็คอินที่พัก"
-                            >
-                                <MapIcon size={32} />
-                                <span className={styles.updateBtnText}>ที่พัก</span>
-                            </button>
+                            <div className={styles.secondaryActions}>
+                                <button
+                                    className={`${styles.secondaryBtn} ${styles.accommodationBtn}`}
+                                    onClick={() => gps && openCamera('accommodation')}
+                                    disabled={!gps}
+                                    title="เช็คอินที่พัก"
+                                >
+                                    <MapIcon size={24} />
+                                    <span className={styles.secondaryBtnText}>เช็คอินที่พัก</span>
+                                </button>
 
-                            <button
-                                className={`${styles.updateBtn} ${styles.checkoutBtn}`}
-                                onClick={() => gps && openCamera('checkout')}
-                                disabled={!gps}
-                                title="สิ้นสุดการเดินทาง"
-                            >
-                                <CheckCircle size={32} />
-                                <span className={styles.updateBtnText}>Check-out</span>
-                            </button>
+                                <button
+                                    className={`${styles.secondaryBtn} ${styles.checkoutBtn}`}
+                                    onClick={() => gps && openCamera('checkout')}
+                                    disabled={!gps}
+                                    title="สิ้นสุดการเดินทาง"
+                                >
+                                    <CheckCircle size={24} />
+                                    <span className={styles.secondaryBtnText}>Check-out</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

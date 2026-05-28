@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import styles from "../page.module.css";
 import localStyles from "./page.module.css";
-import { formatTime24h, formatDateThai } from "@/utils/time";
+import { formatTime24h, formatDateThai, formatDecimalHoursToHHMM } from "@/utils/time";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import { CheckCircleIcon, XCircleIcon, PencilSquareIcon, ClockIcon, ChartBarIcon, ClipboardDocumentListIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
@@ -410,11 +410,11 @@ export default function AdminOtPage() {
                                                     <span style={{ fontWeight: 600 }}>{formatTime24h(req.end_time)}</span>
                                                 </td>
                                                 <td style={{ textAlign: "center" }}>
-                                                    <span className={`${styles.badge} ${styles.ot}`}>{req.total_hours} ชม.</span>
+                                                    <span className={`${styles.badge} ${styles.ot}`}>{formatDecimalHoursToHHMM(req.total_hours)}</span>
                                                 </td>
                                                 <td>
                                                     {req.approved_hours ? (
-                                                        <div className={styles.empName}>{Number(req.approved_hours)} ชม.</div>
+                                                        <div className={styles.empName}>{formatDecimalHoursToHHMM(req.approved_hours)}</div>
                                                     ) : (
                                                         <div style={{ color: "var(--text4)" }}>-</div>
                                                     )}
@@ -567,10 +567,10 @@ export default function AdminOtPage() {
                                                     {d.name}
                                                 </td>
                                                 <td style={{ textAlign: "center", fontWeight: 700 }}>{d.emp_count} คน</td>
-                                                <td style={{ textAlign: "right", color: 'var(--text3)', fontWeight: 700 }}>{d.total_hours.toFixed(2)} ชม.</td>
+                                                <td style={{ textAlign: "right", color: 'var(--text3)', fontWeight: 700 }}>{formatDecimalHoursToHHMM(d.total_hours)}</td>
                                                 <td style={{ textAlign: "right" }}>
                                                     <span className={`${styles.badge} ${styles.approved}`} style={{ fontSize: 13, minWidth: 80, textAlign: 'center', fontWeight: 700 }}>
-                                                        {d.approved_hours.toFixed(2)} ชม.
+                                                        {formatDecimalHoursToHHMM(d.approved_hours)}
                                                     </span>
                                                 </td>
                                             </tr>,
@@ -582,10 +582,10 @@ export default function AdminOtPage() {
                                                         {emp.name}
                                                     </td>
                                                     <td style={{ textAlign: "center", fontSize: 12, color: 'var(--text3)' }}>{emp.emp_id}</td>
-                                                    <td style={{ textAlign: "right", color: 'var(--text3)', fontSize: 12 }}>{emp.total_hours.toFixed(2)} ชม.</td>
+                                                    <td style={{ textAlign: "right", color: 'var(--text3)', fontSize: 12 }}>{formatDecimalHoursToHHMM(emp.total_hours)}</td>
                                                     <td style={{ textAlign: "right" }}>
                                                         <span style={{ fontWeight: 600, color: 'var(--ok)', fontSize: 12 }}>
-                                                            {emp.approved_hours.toFixed(2)} ชม.
+                                                            {formatDecimalHoursToHHMM(emp.approved_hours)}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -626,7 +626,7 @@ export default function AdminOtPage() {
 
                             {modalData.status === "approved" && (
                                 <div className={localStyles.inputField}>
-                                    <label className={localStyles.inputLabel}>จำนวนชั่วโมงที่อนุมัติ (Requested: {selectedReq.total_hours})</label>
+                                    <label className={localStyles.inputLabel}>จำนวนชั่วโมงที่อนุมัติ (Requested: {formatDecimalHoursToHHMM(selectedReq.total_hours)})</label>
                                     <div style={{ position: 'relative' }}>
                                         <input 
                                             className={localStyles.inputElement} 

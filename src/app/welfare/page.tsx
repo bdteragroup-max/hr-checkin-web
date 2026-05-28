@@ -361,6 +361,9 @@ export default function WelfarePage() {
                                 <label className={styles.label}>
                                     แนบไฟล์หลักฐาน (เลือกได้หลายไฟล์)
                                         {selectedType === "CHILD_EDUCATION" && <span style={{ color: "var(--red)", marginLeft: 4 }}>* (ผลการเรียน/สูติบัตร/ทะเบียนสมรส)</span>}
+                                        {selectedType === "MARRIAGE" && <span style={{ color: "var(--red)", marginLeft: 4 }}>* (ทะเบียนสมรส/ภาพถ่ายงานแต่งงาน)</span>}
+                                        {selectedType === "CHILDBIRTH" && <span style={{ color: "var(--red)", marginLeft: 4 }}>* (ทะเบียนสมรส/สูติบัตร)</span>}
+                                        {selectedType === "ORDINATION" && <span style={{ color: "var(--red)", marginLeft: 4 }}>* (การ์ดเชิญ/ภาพถ่ายงานอุปสมบท)</span>}
                                     </label>
                                     <div className={styles.fileInputWrapper}>
                                         <input 

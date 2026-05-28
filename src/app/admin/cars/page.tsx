@@ -54,6 +54,7 @@ export default function AdminAssetsPage() {
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [returnData, setReturnData] = useState({
         actual_return_date: new Date().toISOString().split("T")[0],
+        actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
         is_damaged: false
     });
@@ -221,8 +222,10 @@ export default function AdminAssetsPage() {
 
         setProcessing(true);
         try {
+            const returnDatetime = `${returnData.actual_return_date}T${returnData.actual_return_time}:00`;
             const bodyPayload: any = {
-                ...returnData
+                ...returnData,
+                actual_return_date: returnDatetime
             };
 
             if (currentBorrow) {
@@ -493,7 +496,7 @@ export default function AdminAssetsPage() {
                                                 >
                                                     <PencilSquareIcon width={16} />
                                                 </button>
-                                                {asset.status !== "borrowed" && (
+                                                {effectiveStatus !== "borrowed" && (
                                                     <button 
                                                         className={styles.deleteBtn}
                                                         onClick={() => handleDelete(asset.id, asset.name)}
@@ -640,11 +643,20 @@ export default function AdminAssetsPage() {
                         <div className={styles.modalBody}>
                             <div className={styles.inputGroup}>
                                 <label>วันที่คืนจริง</label>
-                                <input 
-                                    type="date" 
-                                    value={returnData.actual_return_date}
-                                    onChange={e => setReturnData({...returnData, actual_return_date: e.target.value})}
-                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                        type="date" 
+                                        value={returnData.actual_return_date}
+                                        onChange={e => setReturnData({...returnData, actual_return_date: e.target.value})}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <input 
+                                        type="time" 
+                                        value={returnData.actual_return_time}
+                                        onChange={e => setReturnData({...returnData, actual_return_time: e.target.value})}
+                                        style={{ flex: 1 }}
+                                    />
+                                </div>
                             </div>
                             <div className={styles.inputGroup}>
                                 <label>สภาพอุปกรณ์เมื่อคืน</label>

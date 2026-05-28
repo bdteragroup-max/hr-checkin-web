@@ -13,7 +13,7 @@ import {
     XCircleIcon,
     InformationCircleIcon
 } from "@heroicons/react/24/outline";
-import { formatTime24h, HOUR_OPTIONS, MINUTE_OPTIONS, formatDateShortThai } from "@/utils/time";
+import { formatTime24h, formatDateThai, formatDecimalHoursToHHMM, HOUR_OPTIONS, MINUTE_OPTIONS, formatDateShortThai } from "@/utils/time";
 
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
@@ -117,8 +117,8 @@ export default function EmployeeOtPage() {
             return;
         }
 
-        const startDT = new Date(`${dateFor}T${startHour}:${startMin}:00`);
-        const endDT = new Date(`${dateFor}T${endHour}:${endMin}:00`);
+        const startDT = new Date(`${dateFor}T${startHour}:${startMin}:00+07:00`);
+        const endDT = new Date(`${dateFor}T${endHour}:${endMin}:00+07:00`);
 
         if (endDT <= startDT) {
             showAlert("เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น", "error");
@@ -277,7 +277,7 @@ export default function EmployeeOtPage() {
                                         <div className={styles.historyTime}>
                                             <ClockIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
                                             {formatTime24h(item.start_time)} - {formatTime24h(item.end_time)}
-                                            <span className={styles.historyHours}>{item.total_hours} ชม.</span>
+                                            <span className={styles.historyHours}>{formatDecimalHoursToHHMM(item.total_hours)}</span>
                                         </div>
                                         <div className={styles.historyReason}><InformationCircleIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />เหตุผล: {item.reason}</div>
                                     </div>

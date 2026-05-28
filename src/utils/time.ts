@@ -168,3 +168,23 @@ export function calcWorkingMinutes(startAt: Date, endAt: Date, holidayDates: str
 
     return totalWorkingMinutes;
 }
+
+/**
+ * Converts decimal hours (e.g. 1.91666) to human-readable Hours & Minutes format (e.g. "1 ชม. 55 นาที")
+ */
+export function formatDecimalHoursToHHMM(decimalHours: number | string | null | undefined): string {
+    if (decimalHours === null || decimalHours === undefined) return "0 ชม. 0 นาที";
+    const num = Number(decimalHours);
+    if (isNaN(num)) return "0 ชม. 0 นาที";
+    
+    const totalMinutes = Math.round(num * 60);
+    const hours = Math.floor(Math.abs(totalMinutes) / 60);
+    const minutes = Math.abs(totalMinutes) % 60;
+    
+    const sign = totalMinutes < 0 ? "-" : "";
+    
+    if (minutes === 0) return `${sign}${hours} ชม.`;
+    if (hours === 0) return `${sign}${minutes} นาที`;
+    
+    return `${sign}${hours} ชม. ${minutes} นาที`;
+}

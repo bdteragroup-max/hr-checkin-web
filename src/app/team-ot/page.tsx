@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
-import { formatTime24h, formatDateThai } from "@/utils/time";
+import { formatTime24h, formatDateThai, formatDecimalHoursToHHMM } from "@/utils/time";
 import { 
     CheckCircleIcon, 
     XCircleIcon, 
@@ -283,10 +283,10 @@ export default function TeamOtPage() {
                                             <span className={styles.detailVal}>{startL} - {endL}</span>
                                             <span className={styles.detailLabel}>ชม.:</span>
                                             <span className={styles.detailVal}>
-                                                ขอ {Number(req.total_hours)} ชม.
+                                                ขอ {formatDecimalHoursToHHMM(req.total_hours)}
                                                 {(req.status === "approved" || req.status === "pending_hr") && (
                                                     <span style={{ color: "#16a34a", fontWeight: 700, marginLeft: 8 }}>
-                                                        อนุมัติ {req.approved_hours ? Number(req.approved_hours) : Number(req.total_hours)} ชม.
+                                                        อนุมัติ {formatDecimalHoursToHHMM(req.approved_hours ? Number(req.approved_hours) : Number(req.total_hours))}
                                                     </span>
                                                 )}
                                             </span>

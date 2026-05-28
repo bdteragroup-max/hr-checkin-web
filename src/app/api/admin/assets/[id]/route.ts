@@ -51,10 +51,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         const { id: idStr } = await params;
         const id = Number(idStr);
 
-        // Safety check: Cannot delete if currently borrowed
+        // Safety check: Cannot delete if currently borrowed or reserved
         const asset = await prisma.assets.findUnique({
             where: { id },
-            include: { asset_borrowings: { where: { status: "borrowed" } } }
+            include: { asset_borrowings: { where: { status: { in: ["borrowed", "reserved"] } } } }
         });
 
         if (!asset) {
