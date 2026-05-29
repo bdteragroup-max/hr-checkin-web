@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/probation-weekly-summary?secret=hr-checkin-secret-123",
       "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/daily-leave-notify?secret=hr-checkin-secret-123",
+      "schedule": "0 1 * * 1-6"
     }
   ]
 }

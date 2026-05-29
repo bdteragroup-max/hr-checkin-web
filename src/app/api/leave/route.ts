@@ -245,23 +245,22 @@ export async function GET() {
         },
     });
 
-    // Fetch active colleagues in the same department
+    // Fetch all active colleagues (allow cross-department handovers)
     let colleagues: string[] = [];
-    if (emp.department_id) {
-        const matching = await prisma.employees.findMany({
-            where: {
-                department_id: emp.department_id,
-                is_active: true,
-                emp_id: { not: emp.emp_id }
-            },
-            select: { name: true, nickname: true },
-            orderBy: { name: 'asc' }
-        });
-        colleagues = matching.map(m => {
-            if (m.nickname) return `${m.name} (${m.nickname})`;
-            return m.name;
-        });
-    }
+    const matching = await prisma.employees.findMany({
+        where: {
+            is_active: true,
+            emp_id: { not: emp.emp_id }
+        },
+        select: { name: true, nickname: true },
+        orderBy: { name: 'asc' }
+    });
+    
+    // Ensure unique names to prevent React duplicate key errors
+    colleagues = Array.from(new Set(matching.map(m => {
+        if (m.nickname) return `${m.name} (${m.nickname})`;
+        return m.name;
+    })));
 
     return NextResponse.json({ ok: true, types, list, colleagues });
 }
