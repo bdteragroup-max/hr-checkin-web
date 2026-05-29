@@ -352,14 +352,6 @@ export default function AppPage() {
     const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
     const [isPlanLoading, setIsPlanLoading] = useState(true);
 
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt && !hasIn) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me, hasIn]);
-
-
-
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rawCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -370,6 +362,12 @@ export default function AppPage() {
     const hasIn = useMemo(() => today.some(x => x.type === "Check-in"), [today]);
     const hasOut = useMemo(() => today.some(x => x.type === "Check-out"), [today]);
     const selectedBranchObj = useMemo(() => branches.find(b => b.id === selectedBranch), [branches, selectedBranch]);
+
+    useEffect(() => {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt && !hasIn) {
+            setShowWorkPlan(true);
+        }
+    }, [isPlanLoading, planSubmittedToday, me, hasIn]);
 
     /* ── Alert ── */
     function showAlert(message: string, type: "error" | "ok" = "error") {
