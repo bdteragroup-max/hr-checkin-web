@@ -132,10 +132,7 @@ export async function GET(request: Request) {
         const commissionClaims = await prisma.commission_claims.findMany({
             where: {
                 status: "completed",
-                OR: [
-                    { approved_at: { gte: startDate, lte: endDate } },
-                    { date: { gte: startDate, lte: endDate } }
-                ]
+                approved_at: { gte: startDate, lte: endDate }
             }
         });
 
@@ -361,20 +358,20 @@ export async function GET(request: Request) {
                 const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
                 const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In", "Trip-Update"].includes(c.type));
                 const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
-                const scansComplete = hasIn && hasOut;
+                const hasValidAttendance = hasIn || hasOut;
 
                 const isExempt = (emp as any).is_checkin_exempt || false;
                 const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
                 const empTravels = travelClaims.filter((t: any) => t.emp_id === emp.emp_id);
                 const isOnTravel = empTravels.some((t: any) => dateStr >= fmt(t.date) && dateStr <= fmt(t.end_date || t.date));
                 
-                if (scansComplete || (isExempt && !isHoliday) || isOnTravel) {
+                if (hasValidAttendance || (isExempt && !isHoliday) || isOnTravel) {
                     totalPaidDays++;
                 }
 
                 // Meal and Travel should be paid for ANY day worked, even holidays
                 if (!isOnLeave) {
-                    if (scansComplete || isOnTravel) {
+                    if (hasValidAttendance || isOnTravel) {
                         if (!hasWarnings) {
                             if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
                             if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
@@ -384,7 +381,7 @@ export async function GET(request: Request) {
                             if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
                             if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
                         }
-                    } else if (!isHoliday && !scansComplete && !isOnTravel) {
+                    } else if (!isHoliday && !hasValidAttendance && !isOnTravel) {
                         missingScanInCycle = true;
                     }
                 }
@@ -475,13 +472,19 @@ export async function GET(request: Request) {
                 else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
                     calculatedPhoneAllowance = 800;
                 }
-                // 3. Engineering Dept or Engineer Position
-                else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
-                    calculatedPhoneAllowance = 500;
-                }
-                // 4. Foreman or Driver
+                // 3. Foreman or Driver
                 else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
                     calculatedPhoneAllowance = 300;
+                }
+                // 4. Technician / Tech (prevent falling into Engineering dept rule, uses general staff conditions)
+                else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) {
+                    if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                    else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                    else calculatedPhoneAllowance = 300;
+                }
+                // 5. Engineering Dept or Engineer Position
+                else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
+                    calculatedPhoneAllowance = 500;
                 }
                 else {
                     // General Staff - based on years of service
@@ -510,9 +513,10 @@ export async function GET(request: Request) {
                 empTravelClaims.forEach((tc: any) => {
                     let rate = 150; // Default Staff rate
                     if (posName.includes("ผู้จัดการ") || posName.includes("manager")) rate = 350;
-                    else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว") || deptName.includes("business development") || divName.includes("business development")) rate = 250;
                     else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) rate = 200;
                     else if (posName.includes("ขับรถ") || posName.includes("driver")) rate = 200;
+                    else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) rate = 150; // Force general staff rate
+                    else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว") || deptName.includes("business development") || divName.includes("business development")) rate = 250;
 
                     // Exclude sales roles and departments
                     if (posName.includes("sales") || posName.includes("ขาย") || deptName.includes("sales") || deptName.includes("ขาย") || divName.includes("sales") || divName.includes("ขาย")) rate = 0;
@@ -585,7 +589,8 @@ export async function GET(request: Request) {
             const calculatedCommissions = Array.from(uniqueClaimsMap.values()).reduce((a, b) => a + b, 0);
 
             const totalHolidayAllowance = 0;
-            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + general_allowance + welfare_amount;
+            // Exclude travel_accommodation from net pay as it is processed separately but kept for record-keeping/evidence
+            const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + position_allowance + general_allowance + welfare_amount;
 
             const student_loan = Number(adj?.student_loan || 0);
 

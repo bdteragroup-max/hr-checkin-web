@@ -32,7 +32,6 @@ export async function POST(req: Request) {
             { header: "ค่าเดินทาง", key: "travel_allowance", width: 15 },
             { header: "ค่าที่พัก", key: "accommodation_allowance", width: 15 },
             { header: "เบี้ยเลี้ยง Off-Site", key: "travel_site_allowance", width: 15 },
-            { header: "ค่าที่พัก (Claim)", key: "travel_accommodation", width: 15 },
             { header: "ค่าโทรศัพท์", key: "telephone_allowance", width: 15 },
             { header: "โบนัสอายุงาน", key: "long_service_allowance", width: 15 },
             { header: "คอมมิชชั่น", key: "commissions", width: 15 },
@@ -101,7 +100,7 @@ export async function POST(req: Request) {
             "base_salary", "position_allowance", "general_allowance", "normal_1_5x_hours", "normal_ot_pay",
             "holiday_1x_hours", "holiday_1x_pay", "holiday_3x_hours", "holiday_3x_pay",
             "diligence_allowance", "meal_allowance", "travel_allowance", "accommodation_allowance",
-            "travel_site_allowance", "travel_accommodation", "telephone_allowance", "long_service_allowance",
+            "travel_site_allowance", "telephone_allowance", "long_service_allowance",
             "commissions", "bonus", "other_benefits", "welfare_amount", "gross_pay", "social_security",
             "student_loan", "insurance", "unpaid_absenteeism", "tax", "other_deductions", "net_pay"
         ];
@@ -126,7 +125,6 @@ export async function POST(req: Request) {
             { key: "travel_allowance", name: "ค่าเดินทาง" },
             { key: "accommodation_allowance", name: "ค่าที่พัก" },
             { key: "travel_site_allowance", name: "เบี้ยเลี้ยง Off-Site" },
-            { key: "travel_accommodation", name: "ค่าที่พัก (Claim)" },
             { key: "telephone_allowance", name: "ค่าโทรศัพท์" },
             { key: "long_service_allowance", name: "โบนัสอายุงาน" },
             { key: "commissions", name: "คอมมิชชั่น" },

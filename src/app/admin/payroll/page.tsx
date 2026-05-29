@@ -555,7 +555,7 @@ export default function PayrollPage() {
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าเดินทาง</th>
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าที่พัก</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>เบี้ยเลี้ยง Off-Site</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>ค่าที่พัก (Claim)</th>
+
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าโทรศัพท์</th>
                                                 {month === 12 && (
                                                     <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัสอายุงาน</th>
@@ -739,18 +739,6 @@ export default function PayrollPage() {
                                                         ) : (
                                                             <span style={{ fontWeight: 600, color: p.travel_site_allowance > 0 ? "var(--blue)" : "inherit" }}>
                                                                 {p.travel_site_allowance > 0 ? formatB(p.travel_site_allowance) : "-"}
-                                                            </span>
-                                                        )}
-                                                    </td>
-
-                                                    {/* Travel Accomm (Claim) */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-travel_accommodation_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "travel_accommodation_override" }); setTempValue(p.travel_accommodation > 0 ? String(p.travel_accommodation) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "travel_accommodation_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "travel_accommodation_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "travel_accommodation_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.travel_accommodation > 0 ? "var(--blue)" : "inherit" }}>
-                                                                {p.travel_accommodation > 0 ? formatB(p.travel_accommodation) : "-"}
                                                             </span>
                                                         )}
                                                     </td>

@@ -18,7 +18,6 @@ export async function POST(req: Request) {
             { key: "travel_allowance", name: "ค่าเดินทาง" },
             { key: "accommodation_allowance", name: "ค่าที่พัก" },
             { key: "travel_site_allowance", name: "เบี้ยเลี้ยง Off-Site" },
-            { key: "travel_accommodation", name: "ค่าที่พัก (Claim)" },
             { key: "telephone_allowance", name: "ค่าโทรศัพท์" },
             { key: "long_service_allowance", name: "โบนัสอายุงาน" },
             { key: "commissions", name: "คอมมิชชั่น" },

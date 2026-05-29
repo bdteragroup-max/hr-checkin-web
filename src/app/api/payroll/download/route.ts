@@ -273,13 +273,19 @@ export async function GET(request: Request) {
             else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
                 calculatedPhoneAllowance = 800;
             }
-            // 3. Engineering Dept or Engineer Position
-            else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
-                calculatedPhoneAllowance = 500;
-            }
-            // 4. Foreman or Driver
+            // 3. Foreman or Driver
             else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
                 calculatedPhoneAllowance = 300;
+            }
+            // 4. Technician / Tech
+            else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) {
+                if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                else calculatedPhoneAllowance = 300;
+            }
+            // 5. Engineering Dept or Engineer Position
+            else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
+                calculatedPhoneAllowance = 500;
             }
             else {
                 // General Staff - based on years of service
@@ -305,6 +311,7 @@ export async function GET(request: Request) {
                 else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว") || deptName.includes("business development") || divName.includes("business development")) rate = 250;
                 else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman")) rate = 200;
                 else if (posName.includes("ขับรถ") || posName.includes("driver")) rate = 200;
+                else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) rate = 150;
 
                 // Exclude sales roles and departments
                 if (posName.includes("sales") || posName.includes("ขาย") || deptName.includes("sales") || deptName.includes("ขาย") || divName.includes("sales") || divName.includes("ขาย")) rate = 0;
@@ -383,7 +390,7 @@ export async function GET(request: Request) {
         const welfare_amount = welfareClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
         // Combined Income Other (as requested by user)
-        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + travel_accommodation + position_allowance + general_allowance + other_benefits + welfare_amount;
+        const totalOtherIncome = diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + position_allowance + general_allowance + other_benefits + welfare_amount;
 
         // Final Pay Calculation
         const totalIncome = baseSalary + totalOtAmount + commissions + bonus + totalOtherIncome + insurance_income;
@@ -509,7 +516,7 @@ export async function GET(request: Request) {
         // --- ROW 2: Income Values ---
         const ot23 = holiday1xPay + holiday3xPay;
         const allowanceAmount = travel_site_allowance;
-        const otherIncomeRemaining = telephone_allowance + position_allowance + general_allowance + other_benefits + welfare_amount + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + travel_accommodation;
+        const otherIncomeRemaining = telephone_allowance + position_allowance + general_allowance + other_benefits + welfare_amount + long_service_allowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance;
 
         drawVal(formatB(baseSalary), 0, Y[1]);
         drawVal(normalOtPay > 0 ? formatB(normalOtPay) : "-", 1, Y[1]);
