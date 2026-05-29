@@ -64,10 +64,11 @@ export async function POST(req: Request) {
         }
 
         const evaluation = await prisma.kpi_evaluations.findUnique({
-            where: { id: evaluation_id }
+            where: { id: evaluation_id },
+            include: { employee: true }
         });
 
-        if (!evaluation || evaluation.supervisor_id !== supervisorId) {
+        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId)) {
             return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
         }
 

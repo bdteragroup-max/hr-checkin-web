@@ -353,10 +353,10 @@ export default function AppPage() {
     const [isPlanLoading, setIsPlanLoading] = useState(true);
 
     useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
+        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt && !hasIn) {
             setShowWorkPlan(true);
         }
-    }, [isPlanLoading, planSubmittedToday, me]);
+    }, [isPlanLoading, planSubmittedToday, me, hasIn]);
 
 
 
