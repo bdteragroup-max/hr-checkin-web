@@ -9,7 +9,8 @@ import {
     ClockIcon, 
     ExclamationTriangleIcon,
     ChartBarIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    TableCellsIcon
 } from "@heroicons/react/24/outline";
 
 export default function VehicleReportPage() {
@@ -101,6 +102,71 @@ export default function VehicleReportPage() {
     // Calculate max for chart scaling
     const maxDayCount = Math.max(...borrowingsPerDay.map((d: any) => d.count), 1);
 
+    async function exportToExcel() {
+        if (!data) return;
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const workbook = new ExcelJS.Workbook();
+            
+            // Sheet 1: Recent Borrowings
+            const wsBorrowings = workbook.addWorksheet('ประวัติการยืม');
+            wsBorrowings.columns = [
+                { header: 'วันที่ยืม', key: 'date', width: 20 },
+                { header: 'พนักงาน', key: 'employee', width: 25 },
+                { header: 'ทะเบียนรถ', key: 'asset_id', width: 15 },
+                { header: 'ชื่อรถ', key: 'asset_name', width: 25 },
+                { header: 'ปลายทาง', key: 'location', width: 30 },
+                { header: 'สถานะ', key: 'status', width: 15 }
+            ];
+            wsBorrowings.getRow(1).font = { bold: true };
+            data.recentBorrowings.forEach((b: any) => {
+                wsBorrowings.addRow({
+                    date: new Date(b.borrow_date).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                    employee: b.employee?.name || "-",
+                    asset_id: b.assets?.asset_id || "-",
+                    asset_name: b.assets?.name || "-",
+                    location: b.location || "-",
+                    status: b.status === "borrowed" ? "กำลังยืม" : b.status === "returned" ? "คืนแล้ว" : "เกินกำหนด"
+                });
+            });
+
+            // Sheet 2: Top Vehicles
+            const wsVehicles = workbook.addWorksheet('รถที่ใช้บ่อย');
+            wsVehicles.columns = [
+                { header: 'ทะเบียน', key: 'id', width: 15 },
+                { header: 'ชื่อรถ', key: 'name', width: 25 },
+                { header: 'จำนวนการใช้ (ครั้ง)', key: 'count', width: 20 }
+            ];
+            wsVehicles.getRow(1).font = { bold: true };
+            data.topVehicles.forEach((v: any) => {
+                wsVehicles.addRow(v);
+            });
+
+            // Sheet 3: Top Employees
+            const wsEmployees = workbook.addWorksheet('พนักงานที่ใช้บ่อย');
+            wsEmployees.columns = [
+                { header: 'ชื่อพนักงาน', key: 'name', width: 25 },
+                { header: 'จำนวนการใช้ (ครั้ง)', key: 'count', width: 20 }
+            ];
+            wsEmployees.getRow(1).font = { bold: true };
+            data.topEmployees.forEach((e: any) => {
+                wsEmployees.addRow(e);
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `vehicles_report_${startDate}_to_${endDate}.xlsx`;
+            anchor.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Export error:", error);
+            alert("เกิดข้อผิดพลาดในการส่งออกไฟล์");
+        }
+    }
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -113,6 +179,9 @@ export default function VehicleReportPage() {
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button className={styles.actionBtn} onClick={handleTriggerSummary}>
                         <ArrowPathIcon width={18} /> ส่งสรุปรายวัน (LINE)
+                    </button>
+                    <button className={styles.excelBtn} onClick={exportToExcel}>
+                        <TableCellsIcon width={18} /> ส่งออก Excel
                     </button>
                     <button className={styles.exportBtn} onClick={() => window.print()}>
                         <ArrowDownTrayIcon width={18} /> พิมพ์รายงาน (PDF)

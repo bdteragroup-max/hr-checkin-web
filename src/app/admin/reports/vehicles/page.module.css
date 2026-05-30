@@ -284,6 +284,26 @@
     transform: translateY(-1px);
 }
 
+.excelBtn {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.excelBtn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
 .actionBtn.danger {
     background: #ef4444;
 }

@@ -14,7 +14,8 @@ import {
     ClipboardDocumentListIcon,
     XMarkIcon,
     ChartBarIcon,
-    MagnifyingGlassIcon
+    MagnifyingGlassIcon,
+    ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import AlertModal, { AlertState } from "@/components/AlertModal";
@@ -309,6 +310,71 @@ export default function AdminAssetsPage() {
         return matchesSearch && matchesStatus;
     });
 
+    async function exportToExcel() {
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Cars');
+            
+            worksheet.columns = [
+                { header: 'เจ้าของรถ (Company)', key: 'company', width: 25 },
+                { header: 'ประเภทรถ', key: 'type', width: 15 },
+                { header: 'ยี่ห้อ (Brand)', key: 'brand', width: 15 },
+                { header: 'รุ่น (Model)', key: 'model', width: 20 },
+                { header: 'ทะเบียนรถ', key: 'asset_id', width: 15 },
+                { header: 'ผู้ใช้งานหลัก', key: 'main_user', width: 20 },
+                { header: 'สถานะปัจจุบัน', key: 'status', width: 20 },
+                { header: 'ผู้ยืม (ถ้ามี)', key: 'borrower', width: 20 },
+                { header: 'กำหนดคืน (ถ้ามี)', key: 'return_date', width: 20 }
+            ];
+
+            worksheet.getRow(1).font = { bold: true };
+
+            filteredAssets.forEach(asset => {
+                const now = new Date();
+                const currentBorrow = asset.asset_borrowings.find(b => {
+                    const start = new Date(b.borrow_date);
+                    const end = new Date(b.expected_return_date);
+                    return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+                });
+                const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
+                
+                let statusText = "";
+                if (effectiveStatus === "available") statusText = "พร้อมใช้งาน";
+                else if (effectiveStatus === "borrowed") statusText = "ถูกยืม";
+                else if (effectiveStatus === "damaged") statusText = "ชำรุด";
+                else if (effectiveStatus === "unavailable") statusText = "ไม่พร้อมใช้งาน";
+                else statusText = "ซ่อมบำรุง";
+
+                worksheet.addRow({
+                    company: asset.company_owner || "-",
+                    type: asset.vehicle_type || "-",
+                    brand: asset.brand || "-",
+                    model: asset.vehicle_model || "-",
+                    asset_id: asset.asset_id,
+                    main_user: asset.main_user || "-",
+                    status: statusText,
+                    borrower: currentBorrow ? currentBorrow.employee.name : "-",
+                    return_date: currentBorrow ? new Date(currentBorrow.expected_return_date).toLocaleString("th-TH", {
+                        day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit"
+                    }) : "-"
+                });
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `cars_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+            anchor.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Export error:", error);
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการส่งออกไฟล์", type: "error" });
+        }
+    }
+
     return (
         <div className={styles.container}>
             <AlertModal 
@@ -341,6 +407,9 @@ export default function AdminAssetsPage() {
                     <Link href="/admin/reports/vehicles" className={styles.reportBtn}>
                         <ChartBarIcon width={20} /> ดูรายงานสรุป
                     </Link>
+                    <button className={styles.exportBtn} onClick={exportToExcel}>
+                        <ArrowDownTrayIcon width={20} /> ส่งออก Excel
+                    </button>
                     <button className={styles.addBtn} onClick={openAddModal}>
                         <PlusIcon width={20} /> เพิ่มรถยนต์
                     </button>
