@@ -11,7 +11,8 @@ import {
     CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
     ArrowRightOnRectangleIcon,
     CubeIcon,
-    DocumentCheckIcon
+    DocumentCheckIcon,
+    AcademicCapIcon
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 
@@ -331,6 +332,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                     className={`${styles.navItem} ${pathname.startsWith("/admin/meeting-rooms") ? styles.active : ""}`}
                                 >
                                     <span className={styles.navIcon}><BuildingOfficeIcon width={20} /></span>ระบบห้องประชุม
+                                </Link>
+                            )}
+
+                             {/* ✅ Training & Development */}
+                             {hasAccess("/admin/employees") && (
+                                <Link
+                                    href="/admin/trainings"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/trainings") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><AcademicCapIcon width={20} /></span>การฝึกอบรม
                                 </Link>
                             )}
 

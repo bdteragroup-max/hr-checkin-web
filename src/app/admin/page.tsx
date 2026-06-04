@@ -17,6 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { AlertTriangle } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateThai } from "@/utils/time";
+import HRDashboard from "@/components/HRDashboard";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -762,83 +763,7 @@ function AdminPageInner() {
                     </div>
                 )}
 
-                <div className={styles.statsGrid}>
-                    {([
-                        { color: "green", icon: <CheckCircleIcon width={24} />, val: dash?.present, label: "มาทำงานวันนี้" },
-                        { color: "red", icon: <XCircleIcon width={24} />, val: dash?.absent, label: "ขาดงาน" },
-                        { color: "blue", icon: <MapPinIcon width={24} />, val: dash?.onTravel ?? 0, label: "ออกต่างจังหวัด" },
-                        { color: "orange", icon: <ClockIcon width={24} />, val: dash?.late, label: "มาสาย" },
-                        { color: "red", icon: <SunIcon width={24} />, val: dash?.onLeave, label: "ลาวันนี้" },
-                    ] as { color: string; icon: React.ReactNode; val: number | undefined; label: string }[]).map(s => (
-                        <div key={s.label} className={`${styles.statCard} ${styles[s.color as keyof typeof styles]}`}>
-                            <div className={styles.statTop}>
-                                <div className={styles.statVal}>{s.val ?? "—"}</div>
-                                <div className={styles.statIconBox}>{s.icon}</div>
-                            </div>
-                            <div className={styles.statLabel}>{s.label}</div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className={styles.tableWrap}>
-                    <div className={styles.tableHeader}>
-                        <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><ClipboardDocumentListIcon width={20} /> กิจกรรมล่าสุดวันนี้</div>
-                        <span className={styles.rowCount}>{todayLabel}</span>
-                    </div>
-                    <div className={styles.tableScroll}>
-                        {!dash ? (
-                            <div className={styles.loader}><div className={styles.spinner} />กำลังโหลด...</div>
-                        ) : dash.recent.length === 0 ? (
-                            <div className={styles.emptyState}><span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีข้อมูลวันนี้</div>
-                        ) : (
-                            <table className={styles.table}>
-                                <thead><tr>
-                                    <th>รหัส</th><th>ชื่อ</th><th>ประเภท</th><th>เวลา</th>
-                                    <th>สถานที่ / โครงการ</th><th>สถานะ</th><th>รูป</th>
-                                </tr></thead>
-                                <tbody>{dash.recent.map(r => (
-                                    <tr key={r.id}>
-                                        <td><span className={styles.monoText}>{r.emp_id}</span></td>
-                                        <td>{r.name}</td>
-                                        <td>
-                                            <span className={`${styles.typeBadge} ${r.type?.toLowerCase().includes("-in") ? styles.checkin : styles.checkout}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                {r.type?.toLowerCase().includes("-in") ? <PlayIcon width={12} /> : <StopIcon width={12} />}
-                                                {r.type === "Project-In" ? "เข้า (โครงการ)" : r.type === "Project-Out" ? "ออก (โครงการ)" : r.type === "Offsite-In" ? "เข้า (นอกสถานที่)" : r.type === "Offsite-Out" ? "ออก (นอกสถานที่)" : r.type === "Check-in" ? "เข้า" : "ออก"}
-                                            </span>
-                                        </td>
-                                        <td><span className={styles.monoText}>{formatTime(r.timestamp)}</span></td>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{r.branch_name}</div>
-                                            {(r.project_name || r.remark || (r.lat && r.lon)) && (
-                                                <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                                    {r.project_name && <span><b>Prj:</b> {r.project_name} </span>}
-                                                    {r.remark && <span><b>Note:</b> {r.remark}</span>}
-                                                    {r.lat != null && r.lon != null && !isNaN(Number(r.lat)) && !isNaN(Number(r.lon)) && (
-                                                        <div
-                                                            className={styles.gpsBadge}
-                                                            onClick={() => setMapModal({ isOpen: true, lat: Number(r.lat), lon: Number(r.lon), title: `${r.name} - ${r.branch_name}` })}
-                                                            title="คลิกเพื่อดูแผนที่"
-                                                        >
-                                                            <MapPinIcon width={14} />
-                                                            <span>{Number(r.lat).toFixed(5)}, {Number(r.lon).toFixed(5)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>{r.late_status && (<span className={badgeClass(r.late_status)}>{r.late_label || r.late_status}</span>)}</td>
-                                        <td>{r.photo_url
-                                            ? <Image src={r.photo_url} alt="photo" width={60} height={45} unoptimized
-                                                className={styles.photoThumb}
-                                                onClick={() => setPhotoModal({ url: r.photo_url!, empId: r.emp_id, name: r.name, time: formatTime(r.timestamp), type: r.type, lateLabel: r.late_label || "" })} />
-                                            : "—"}
-                                        </td>
-                                    </tr>
-                                ))}</tbody>
-                            </table>
-                        )}
-                    </div>
-                </div>
+                <HRDashboard />
             </>
         );
     }
