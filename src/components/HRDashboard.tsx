@@ -53,7 +53,7 @@ export default function HRDashboard() {
   const [genderChartData, setGenderChartData] = React.useState<ChartData[]>([]);
   const [ageChartData, setAgeChartData] = React.useState<ChartData[]>([]);
   const [turnoverChartData, setTurnoverChartData] = React.useState<{month: string; rate: number; resigned: number}[]>([]);
-  const [leaveChartData, setLeaveChartData] = React.useState<{types: string[], data: any[]}>({types: [], data: []});
+  const [leaveChartData, setLeaveChartData] = React.useState<{types: string[], data: any[], summary?: any[], totalDays?: number, totalRequests?: number}>({types: [], data: []});
   const [selectedLeaveType, setSelectedLeaveType] = React.useState<string>('all');
   const [newResignedChartData, setNewResignedChartData] = React.useState<ChartData[]>([]);
   const [expiringContractsData, setExpiringContractsData] = React.useState<{name: string, role: string, dept: string, date: string}[]>([]);
