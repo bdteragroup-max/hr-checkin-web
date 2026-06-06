@@ -138,5 +138,11 @@
 
 .badgeA { background: #dcfce7; color: #16a34a; }
 .badgeB { background: #e0f2fe; color: #0284c7; }
-.badgeC { background: #fef9c3; color: #ca8a04; }
 .badgeD { background: #fee2e2; color: #dc2626; }
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.spin {
+    animation: spin 1s linear infinite;
+}

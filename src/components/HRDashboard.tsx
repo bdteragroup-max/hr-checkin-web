@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { 
   UsersIcon, UserGroupIcon, UserIcon, UserPlusIcon, ArrowRightStartOnRectangleIcon, 
-  ArrowUpIcon, ArrowDownIcon
+  ArrowUpIcon, ArrowDownIcon, ArrowDownTrayIcon, ArrowPathIcon
 } from "@heroicons/react/24/outline";
 import styles from "./HRDashboard.module.css";
 
@@ -59,6 +59,7 @@ export default function HRDashboard() {
   const [expiringContractsData, setExpiringContractsData] = React.useState<{name: string, role: string, dept: string, date: string}[]>([]);
   const [performancesData, setPerformancesData] = React.useState<{grade: string, count: number, pct: string, badge: string}[]>([]);
   const [trainingData, setTrainingData] = React.useState<{totalEmployees: number, trainedEmployees: number, percentage: number, recentTrainings: any[]}>({totalEmployees: 0, trainedEmployees: 0, percentage: 0, recentTrainings: []});
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
   
   // Date Filters
   const [startDate, setStartDate] = React.useState<string>('');
@@ -70,6 +71,7 @@ export default function HRDashboard() {
       url += `?start=${startDate}&end=${endDate}`;
     }
 
+    setIsLoading(true);
     fetch(url)
       .then(res => res.json())
       .then(res => {
@@ -86,11 +88,21 @@ export default function HRDashboard() {
           if (res.charts?.training) setTrainingData(res.charts.training);
         }
       })
-      .catch(err => console.error("Error loading HR Data", err));
+      .catch(err => console.error("Error loading HR Data", err))
+      .finally(() => setIsLoading(false));
   }, [startDate, endDate]);
 
   return (
-    <div className={styles.dashboardContainer}>
+    <div className={styles.dashboardContainer} style={{ position: 'relative', minHeight: 400 }}>
+
+      {isLoading && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+          <div style={{ padding: '12px 24px', background: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', color: '#3b82f6', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ArrowPathIcon className={styles.spin} width={20} />
+            กำลังโหลดข้อมูล...
+          </div>
+        </div>
+      )}
 
       {/* Date Filter */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20, gap: 10, alignItems: 'center' }}>
@@ -116,6 +128,18 @@ export default function HRDashboard() {
             ล้างตัวกรอง
           </button>
         )}
+        <button 
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (startDate) params.append('start', startDate);
+            if (endDate) params.append('end', endDate);
+            window.location.href = `/api/admin/export/dashboard_excel?${params.toString()}`;
+          }}
+          style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}
+        >
+          <ArrowDownTrayIcon width={16} />
+          Export Excel
+        </button>
       </div>
       
       {/* 1. KPI Cards */}

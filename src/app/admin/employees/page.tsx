@@ -114,6 +114,16 @@ export default function AdminEmployeesPage() {
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [visibleSalaries, setVisibleSalaries] = useState<Set<string>>(new Set());
+
+    const toggleSalaryVisibility = (empId: string) => {
+        setVisibleSalaries((prev) => {
+            const next = new Set(prev);
+            if (next.has(empId)) next.delete(empId);
+            else next.add(empId);
+            return next;
+        });
+    };
 
     const [newEmpId, setNewEmpId] = useState<string | null>(null);
 
@@ -723,16 +733,20 @@ export default function AdminEmployeesPage() {
                                                     )}
                                                 </td>
                                                 <td style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 13 }}>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                    <div 
+                                                        style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer" }} 
+                                                        onClick={(e) => { e.stopPropagation(); toggleSalaryVisibility(x.emp_id); }}
+                                                        title="คลิกเพื่อดู/ซ่อน เงินเดือน"
+                                                    >
                                                         <div style={{ fontWeight: 700, color: x.salary_type === "daily" ? "var(--purple)" : "inherit" }}>
-                                                            {x.base_salary ? `฿${Number(x.base_salary).toLocaleString()}` : "—"}
+                                                            {x.base_salary ? (visibleSalaries.has(x.emp_id) ? `฿${Number(x.base_salary).toLocaleString()}` : "******") : "—"}
                                                             {x.salary_type === "daily" && <span style={{ fontSize: 10, fontWeight: "normal", marginLeft: 4 }}>/ วัน</span>}
                                                         </div>
                                                         {x.position_allowance && Number(x.position_allowance) > 0 && (
-                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Pos. Allow.: ฿{Number(x.position_allowance).toLocaleString()}</div>
+                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Pos. Allow.: {visibleSalaries.has(x.emp_id) ? `฿${Number(x.position_allowance).toLocaleString()}` : "******"}</div>
                                                         )}
                                                         {x.general_allowance && Number(x.general_allowance) > 0 && (
-                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Allowance: ฿{Number(x.general_allowance).toLocaleString()}</div>
+                                                            <div style={{ fontSize: 11, color: "var(--ok)" }}>+ Allowance: {visibleSalaries.has(x.emp_id) ? `฿${Number(x.general_allowance).toLocaleString()}` : "******"}</div>
                                                         )}
                                                     </div>
                                                 </td>
