@@ -850,6 +850,7 @@ function AdminAssetsPageInner() {
                                                 <option value="Tool">Tool (เครื่องมือช่าง)</option>
                                                 <option value="Machine">Machine (เครื่องจักร)</option>
                                                 <option value="Safety">Safety Gear</option>
+                                                <option value="Other">Other (อุปกรณ์อื่นๆ)</option>
                                             </>
                                         ) : (
                                             <>

@@ -41,8 +41,9 @@ export default function AdminProbationPage() {
     const [pendingList, setPendingList] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [staffType, setStaffType] = useState<'all' | 'trial' | 'regular'>('all');
     const [sendingId, setSendingId] = useState<number | null>(null);
-    const [activeTab, setActiveTab] = useState<'trial' | 'regular'>('trial');
+    const [activeTab, setActiveTab] = useState<'to_action' | 'upcoming'>('to_action');
 
     // -- REVIEW UI STATE --
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -73,14 +74,18 @@ export default function AdminProbationPage() {
         const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
                               (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
         
-        if (activeTab === 'trial') return matchesSearch && item.employee?.is_on_trial;
-        return matchesSearch && !item.employee?.is_on_trial;
+        if (staffType === 'trial') return matchesSearch && item.employee?.is_on_trial;
+        if (staffType === 'regular') return matchesSearch && !item.employee?.is_on_trial;
+        return matchesSearch;
     });
 
-    const filteredPending = (pendingList || []).filter(item => 
-        (item.name || "").toLowerCase().includes(search.toLowerCase()) ||
-        (item.emp_id || "").toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredPending = (pendingList || []).filter(item => {
+        const matchesSearch = (item.name || "").toLowerCase().includes(search.toLowerCase()) ||
+                              (item.emp_id || "").toLowerCase().includes(search.toLowerCase());
+                              
+        if (staffType === 'regular') return false; // Backend currently only sends trial employees for upcoming
+        return matchesSearch;
+    });
 
     const getDaysInfo = (endDate: string) => {
         if (!endDate) return null;
@@ -232,16 +237,16 @@ export default function AdminProbationPage() {
 
             <div className={styles.tabs}>
                 <div 
-                    className={`${styles.tab} ${activeTab === 'trial' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('trial')}
+                    className={`${styles.tab} ${activeTab === 'to_action' ? styles.tabActive : ''}`}
+                    onClick={() => setActiveTab('to_action')}
                 >
-                    พนักงานทดลองงาน (Probation)
+                    To Action (รอตรวจสอบ)
                 </div>
                 <div 
-                    className={`${styles.tab} ${activeTab === 'regular' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('regular')}
+                    className={`${styles.tab} ${activeTab === 'upcoming' ? styles.tabActive : ''}`}
+                    onClick={() => setActiveTab('upcoming')}
                 >
-                    พนักงานประจำ (Regular Staff)
+                    Upcoming (รอดำเนินการประเมิน)
                 </div>
             </div>
 
@@ -251,10 +256,12 @@ export default function AdminProbationPage() {
                 
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle}>
-                        <DocumentCheckIcon width={20} /> {activeTab === 'trial' ? 'รายการส่งประเมินทดลองงาน' : 'รายการส่งประเมินประจำเดือน'}
+                        <DocumentCheckIcon width={20} /> {activeTab === 'to_action' ? 'รายการส่งประเมินที่รอตรวจสอบ' : 'พนักงานที่ใกล้ถึงกำหนดประเมิน'}
                     </div>
                     <div>
-                        <span className={styles.rowCount}>{(list || []).length} ทั้งหมด</span>
+                        <span className={styles.rowCount}>
+                            {activeTab === 'to_action' ? filtered.length : filteredPending.length} รายการ
+                        </span>
                     </div>
                 </div>
 
@@ -268,130 +275,160 @@ export default function AdminProbationPage() {
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
+                    <div className={styles.filterGroup}>
+                        <select 
+                            className={styles.filterSelect}
+                            value={staffType}
+                            onChange={e => setStaffType(e.target.value as any)}
+                        >
+                            <option value="all">พนักงานทั้งหมด (All Staff)</option>
+                            <option value="trial">พนักงานทดลองงาน (Probation)</option>
+                            <option value="regular">พนักงานประจำ (Permanent)</option>
+                        </select>
+                    </div>
                 </div>
 
-                {/* --- PENDING EVALUATIONS SECTION --- */}
-                {activeTab === 'trial' && filteredPending.length > 0 && (
+                {/* --- UPCOMING (PENDING) EVALUATIONS SECTION --- */}
+                {activeTab === 'upcoming' && (
                     <div className={styles.sectionPending}>
-                        <div className={styles.sectionTitlePending}>
-                            <UserIcon width={20} /> พนักงานที่ต้องเข้ารับการประเมิน ({filteredPending.length})
-                        </div>
-                        <div className={styles.pendingGrid}>
-                            {filteredPending.map(emp => {
-                                const info = getDaysInfo(emp.probation_end_date);
-                                return (
-                                    <div key={emp.emp_id} className={styles.pendingCard}>
-                                        <div className={styles.pendingEmp}>
-                                            <div className={styles.pendingName}>{emp.name}</div>
-                                            <div className={styles.pendingId}>{emp.emp_id} • {emp.job_title}</div>
-                                        </div>
-                                        <div className={styles.pendingRound}>
-                                            <span className={styles.roundLabel}>ครั้งที่</span>
-                                            <span className={styles.roundNum}>{emp.next_round}</span>
-                                        </div>
-                                        <div className={styles.pendingMeta}>
-                                            <div className={styles.metaRow}>
-                                                <span>วันสิ้นสุดทดลองงาน:</span>
-                                                <b>{emp.probation_end_date ? new Date(emp.probation_end_date).toLocaleDateString("th-TH") : "-"}</b>
+                        {filteredPending.length === 0 ? (
+                            <div className={styles.tdEmpty}>ไม่มีพนักงานที่รอรับการประเมิน</div>
+                        ) : (
+                            <div className={styles.pendingGrid}>
+                                {filteredPending.map(emp => {
+                                    const info = getDaysInfo(emp.probation_end_date);
+                                    return (
+                                        <div key={emp.emp_id} className={styles.pendingCardCompact}>
+                                            <div className={styles.pendingEmpCompact}>
+                                                <div className={styles.pendingAvatar}><UserIcon width={20} /></div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div className={styles.pendingName}>{emp.name}</div>
+                                                    <div className={styles.pendingId}>{emp.emp_id} • {emp.job_title}</div>
+                                                </div>
+                                                <div className={styles.pendingRoundCompact}>
+                                                    <span>ครั้งที่</span>
+                                                    <b>{emp.next_round}</b>
+                                                </div>
                                             </div>
-                                            {info && (
-                                                <div className={styles.countdownRow} style={{ color: info.color }}>
-                                                    <ExclamationTriangleIcon width={14} /> เหลืออีก {info.days} วัน
+                                            <div className={styles.pendingMetaCompact}>
+                                                <div className={styles.metaCol}>
+                                                    <span className={styles.metaLabel}>วันสิ้นสุดทดลองงาน</span>
+                                                    <span className={styles.metaVal}>{emp.probation_end_date ? new Date(emp.probation_end_date).toLocaleDateString("th-TH") : "-"}</span>
+                                                </div>
+                                                {info && (
+                                                    <div className={styles.metaCol} style={{ color: info.color }}>
+                                                        <span className={styles.metaLabel}>สถานะ</span>
+                                                        <span className={styles.metaVal}><ExclamationTriangleIcon width={12} style={{ display: 'inline', marginRight: 4 }} />เหลือ {info.days} วัน</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {emp.hire_date && (
+                                                <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px dashed #e2e8f0' }}>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>รอบการประเมิน (SESSION)</div>
+                                                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px' }}>
+                                                        {[1, 2, 3, 4].map((round, idx) => {
+                                                            const dueDays = round === 1 ? 30 : round === 2 ? 60 : round === 3 ? 90 : 119;
+                                                            const hire = new Date(emp.hire_date);
+                                                            const target = new Date(hire);
+                                                            target.setDate(hire.getDate() + dueDays);
+                                                            
+                                                            return (
+                                                                <div key={round} style={{ 
+                                                                    display: 'flex', gap: 12, alignItems: 'center', 
+                                                                    padding: '6px 0', 
+                                                                    borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none' 
+                                                                }}>
+                                                                    <div style={{ color: '#d93025', fontWeight: 800, fontSize: 13, minWidth: 50 }}>ครั้งที่ {round}</div>
+                                                                    <div style={{ color: '#475569', fontSize: 12 }}>ครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}</div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
-
-                                            <div className={styles.historyRounds}>
-                                                {getRoundHistory(emp.emp_id, emp.hire_date).map(h => {
-                                                    if (h.status === 'pending') return null;
-                                                    return (
-                                                        <div key={h.round} className={styles.historyItem}>
-                                                            <span className={styles.historyRoundLabel}>ครั้งที่ {h.round}</span>
-                                                            <span className={h.status === 'delayed' ? styles.statusDelayed : styles.statusNormal}>
-                                                                {h.status === 'delayed' ? `ล่าช้า ${h.delayDays} วัน` : 'ปกติ'}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
 
-                <div className={styles.tableWrap}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>พนักงาน</th>
-                                <th>ผู้ประเมิน</th>
-                                <th>ครั้งที่</th>
-                                <th>ช่วงวันที่ประเมิน</th>
-                                <th>คะแนน / เกรด</th>
-                                <th>ผลสรุป</th>
-                                <th>สถานะ HR</th>
-                                <th style={{ textAlign: "right" }}>จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan={8} className={styles.tdLoading}>กำลังโหลดข้อมูล...</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={8} className={styles.tdEmpty}>ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>
-                            ) : filtered.map(item => (
-                                <tr key={item.id}>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                                                <UserIcon width={18} />
-                                            </div>
-                                            <div className={styles.empInfo}>
-                                                <div className={styles.empName}>{item.employee?.name}</div>
-                                                <div className={styles.empId}>{item.employee?.emp_id}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{item.supervisor?.name}</td>
-                                    <td><span className={styles.evalNo}>{item.evaluation_no}</span></td>
-                                    <td>
-                                        <div className={styles.period}>
-                                            {new Date(item.period_start).toLocaleDateString("th-TH")} — {new Date(item.period_end).toLocaleDateString("th-TH")}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className={styles.scoreRow}>
-                                            <span className={styles.scoreVal}>{item.total_score}</span>
-                                            <span className={styles.gradeVal}>{item.grade}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={styles.badge} style={{ background: (decisionMap[item.decision]?.color || "#94a3b8") + "15", color: decisionMap[item.decision]?.color || "#94a3b8" }}>
-                                            {decisionMap[item.decision]?.label || item.decision}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {item.status === "reviewed" ? (
-                                            <span className={styles.sentStatus} style={{ background: '#e0f2fe', color: '#0369a1' }}>ตรวจสอบแล้ว</span>
-                                        ) : (
-                                            <span className={styles.pendingStatus}>รอการตรวจสอบ</span>
-                                        )}
-                                    </td>
-                                    <td style={{ textAlign: "right" }}>
-                                        <div className={styles.actions}>
-                                            <button className={styles.btnAction} style={{ color: '#0ea5e9' }} onClick={() => openReview(item.id)}><MagnifyingGlassIcon width={18} /></button>
-                                            <a href={`/api/admin/probation/evaluations/${item.id}/pdf`} className={styles.btnAction} style={{ color: '#0369a1' }} target="_blank"><DocumentArrowDownIcon width={18} /></a>
-                                            <button className={styles.btnAction} style={{ color: '#D93025' }} onClick={() => sendToManagement(item.id)} disabled={sendingId === item.id}>
-                                                {sendingId === item.id ? <div className={styles.spinner} style={{ width: 14, height: 14 }} /> : <PaperAirplaneIcon width={18} />}
-                                            </button>
-                                        </div>
-                                    </td>
+                {/* --- TO ACTION (SUBMITTED) TABLE --- */}
+                {activeTab === 'to_action' && (
+                    <div className={styles.tableWrap}>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th>พนักงาน</th>
+                                    <th>ผู้ประเมิน</th>
+                                    <th>ครั้งที่</th>
+                                    <th>ช่วงวันที่ประเมิน</th>
+                                    <th>คะแนน / เกรด</th>
+                                    <th>ผลสรุป</th>
+                                    <th>สถานะ HR</th>
+                                    <th style={{ textAlign: "right" }}>จัดการ</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan={8} className={styles.tdLoading}>กำลังโหลดข้อมูล...</td></tr>
+                                ) : filtered.length === 0 ? (
+                                    <tr><td colSpan={8} className={styles.tdEmpty}>ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>
+                                ) : filtered.map(item => (
+                                    <tr key={item.id}>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                                                    <UserIcon width={18} />
+                                                </div>
+                                                <div className={styles.empInfo}>
+                                                    <div className={styles.empName}>{item.employee?.name}</div>
+                                                    <div className={styles.empId}>{item.employee?.emp_id}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{item.supervisor?.name}</td>
+                                        <td><span className={styles.evalNo}>{item.evaluation_no}</span></td>
+                                        <td>
+                                            <div className={styles.period}>
+                                                {new Date(item.period_start).toLocaleDateString("th-TH")} — {new Date(item.period_end).toLocaleDateString("th-TH")}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className={styles.scoreRow}>
+                                                <span className={styles.scoreVal}>{item.total_score}</span>
+                                                <span className={styles.gradeVal}>{item.grade}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={styles.badge} style={{ background: (decisionMap[item.decision]?.color || "#94a3b8") + "15", color: decisionMap[item.decision]?.color || "#94a3b8" }}>
+                                                {decisionMap[item.decision]?.label || item.decision}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {item.status === "reviewed" ? (
+                                                <span className={styles.sentStatus} style={{ background: '#e0f2fe', color: '#0369a1' }}>ตรวจสอบแล้ว</span>
+                                            ) : (
+                                                <span className={styles.pendingStatus} style={{ background: '#fef3c7', color: '#d97706' }}>รอการตรวจสอบ</span>
+                                            )}
+                                        </td>
+                                        <td style={{ textAlign: "right" }}>
+                                            <div className={styles.actions}>
+                                                <button className={styles.btnAction} style={{ color: '#0ea5e9' }} onClick={() => openReview(item.id)}><MagnifyingGlassIcon width={18} /></button>
+                                                <a href={`/api/admin/probation/evaluations/${item.id}/pdf`} className={styles.btnAction} style={{ color: '#0369a1' }} target="_blank"><DocumentArrowDownIcon width={18} /></a>
+                                                <button className={styles.btnAction} style={{ color: '#D93025' }} onClick={() => sendToManagement(item.id)} disabled={sendingId === item.id}>
+                                                    {sendingId === item.id ? <div className={styles.spinner} style={{ width: 14, height: 14 }} /> : <PaperAirplaneIcon width={18} />}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {/* --- MODAL: REVIEW --- */}
@@ -455,37 +492,34 @@ export default function AdminProbationPage() {
                             <div className={styles.reviewSectionTitle}>
                                 <CheckCircleIcon width={18} /> คะแนนการปฏิบัติงาน (1 - 5)
                             </div>
-                            <div className={styles.scoreGrid}>
+                            <div className={styles.scoreList}>
                                 {CATEGORIES.map(cat => (
-                                    <div key={cat.key} className={styles.scoreCardWrapper}>
-                                        <div className={styles.scoreCard}>
-                                            <div className={styles.scoreInfo}>
-                                                <div className={styles.scoreCatLabel}>{cat.label}</div>
-                                                <div className={styles.scoreWeight}>น้ำหนัก: {cat.weight}</div>
+                                    <div key={cat.key} className={styles.scoreListItem}>
+                                        <div className={styles.scoreListInfo}>
+                                            <div className={styles.scoreCatLabel}>
+                                                {cat.label} <span className={styles.scoreWeight}>(น้ำหนัก {cat.weight})</span>
                                             </div>
-                                            <div className={styles.scoreInputWrap}>
-                                                <input 
-                                                    type="number" 
-                                                    min="1" 
-                                                    max="5" 
-                                                    className={styles.scoreInput} 
-                                                    value={editData.scores[cat.key]} 
-                                                    onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
-                                                />
-                                                <span className={styles.scoreMax}>/ 5</span>
-                                            </div>
-                                        </div>
-                                        <div className={styles.scoreCommentBox}>
                                             <input 
                                                 type="text" 
                                                 className={styles.scoreCommentInput}
-                                                placeholder="ความคิดเห็นเพิ่มเติม..."
+                                                placeholder="เพิ่มความคิดเห็น (ถ้ามี)..."
                                                 value={editData.score_comments[cat.key] || ""}
                                                 onChange={e => setEditData({
                                                     ...editData, 
                                                     score_comments: { ...editData.score_comments, [cat.key]: e.target.value }
                                                 })}
                                             />
+                                        </div>
+                                        <div className={styles.scoreInputWrap}>
+                                            <input 
+                                                type="number" 
+                                                min="1" 
+                                                max="5" 
+                                                className={styles.scoreInput} 
+                                                value={editData.scores[cat.key]} 
+                                                onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
+                                            />
+                                            <span className={styles.scoreMax}>/ 5</span>
                                         </div>
                                     </div>
                                 ))}

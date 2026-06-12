@@ -72,8 +72,8 @@ model ot_requests {
   updated_at        DateTime  @default(now()) @db.Timestamptz(6)
   approved_hours    Decimal?  @db.Decimal(5, 2)
   supervisor_remark String?
-  actual_start_at   DateTime? @db.Timestamptz(6)
   actual_end_at     DateTime? @db.Timestamptz(6)
+  actual_start_at   DateTime? @db.Timestamptz(6)
   has_discrepancy   Boolean   @default(false)
   employee          employees @relation("EmployeeToOtRequests", fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
@@ -82,73 +82,73 @@ model ot_requests {
 }
 
 model employees {
-  emp_id                  String                 @id @db.VarChar(20)
-  name                    String                 @db.VarChar(100)
-  nickname                String?                @db.VarChar(50)
-  branch_id               String?                @db.VarChar(10)
-  is_active               Boolean                @default(true)
-  created_at              DateTime               @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime               @default(now()) @db.Timestamptz(6)
-  pin_hash                String?
-  gender                  String?                @db.VarChar(1)
-  hire_date               DateTime?              @db.Date
-  birth_date              DateTime?              @db.Date
-  phone_number            String?                @db.VarChar(20)
-  base_salary             Decimal?               @db.Decimal(12, 2)
-  department_id           Int?
-  job_position_id         Int?
-  otp_code                String?                @db.VarChar(6)
-  otp_expires_at          DateTime?              @db.Timestamptz(6)
-  supervisor_id           String?                @db.VarChar(20)
-  secondary_supervisor_id String?                @db.VarChar(20)
-  bank_account_no         String?                @db.VarChar(50)
-  bank_name               String?                @db.VarChar(100)
-  is_on_trial             Boolean                @default(false)
-  probation_end_date      DateTime?              @db.Date
-  has_telephone_allowance Boolean                @default(false)
-  position_allowance      Decimal?               @default(0) @db.Decimal(12, 2)
-  general_allowance       Decimal?               @default(0) @db.Decimal(12, 2)
-  probation_accommodation_allowance Boolean                @default(false)
-  probation_meal_allowance          Boolean                @default(false)
-  probation_travel_allowance        Boolean                @default(false)
-  fixed_accommodation_allowance     Decimal?               @default(0) @db.Decimal(12, 2)
-  fixed_meal_allowance              Decimal?               @default(0) @db.Decimal(12, 2)
-  fixed_travel_allowance            Decimal?               @default(0) @db.Decimal(12, 2)
-  fixed_tax_deduction               Decimal?               @db.Decimal(10, 2)
-  address                 String?
-  national_id_card        String?                @db.VarChar(20)
-  salary_type             String?                @default("monthly") @db.VarChar(20)
-  line_user_id            String?                @unique @db.VarChar(50)
-  email                   String?                @db.VarChar(100)
-  is_checkin_exempt       Boolean                @default(false)
-  birthday_claims         birthday_claims[]
-  warnings                employee_warnings[]
-  departments             departments?           @relation(fields: [department_id], references: [id], onUpdate: NoAction)
-  job_positions           job_positions?         @relation(fields: [job_position_id], references: [id], onUpdate: NoAction)
-  supervisor              employees?             @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
-  subordinates            employees[]            @relation("EmployeeToSupervisor")
-  secondary_supervisor    employees?             @relation("EmployeeToSecondarySupervisor", fields: [secondary_supervisor_id], references: [emp_id], onUpdate: NoAction)
-  secondarySubordinates   employees[]            @relation("EmployeeToSecondarySupervisor")
-  branches                branches?              @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
-  monthly_payroll_data    monthly_payroll_data[]
-  ot_requests             ot_requests[]          @relation("EmployeeToOtRequests")
-  travel_claims           travel_claims[]
-  leave_requests          leave_requests[]
-  asset_borrowings        asset_borrowings[]
-  product_borrowings      product_borrowings[]
-  resignation_date        DateTime?              @db.Date
-  probation_evaluations   probation_evaluations[] @relation("EmployeeToProbation")
-  submitted_evaluations   probation_evaluations[] @relation("SupervisorToProbation")
-  kpiList                 kpi_evaluations[]       @relation("EmployeeToKPI")
-  kpi_submissions         kpi_evaluations[]       @relation("SupervisorToKPI")
-  room_bookings           room_bookings[]
-  booking_attendees       room_booking_attendees[]
-  trainings               employee_trainings[]    @relation("EmployeeToTraining")
-  assessed_trainings      employee_trainings[]    @relation("AssessorToTraining")
-  commission_claims       commission_claims[]
-  work_plans              daily_work_plans[]
-  general_welfare_claims  general_welfare_claims[]
-
+  emp_id                            String                   @id @db.VarChar(20)
+  name                              String                   @db.VarChar(100)
+  branch_id                         String?                  @db.VarChar(10)
+  is_active                         Boolean                  @default(true)
+  created_at                        DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at                        DateTime                 @default(now()) @db.Timestamptz(6)
+  pin_hash                          String?
+  gender                            String?                  @db.VarChar(1)
+  hire_date                         DateTime?                @db.Date
+  birth_date                        DateTime?                @db.Date
+  phone_number                      String?                  @db.VarChar(20)
+  base_salary                       Decimal?                 @db.Decimal(12, 2)
+  department_id                     Int?
+  job_position_id                   Int?
+  otp_code                          String?                  @db.VarChar(6)
+  otp_expires_at                    DateTime?                @db.Timestamptz(6)
+  supervisor_id                     String?                  @db.VarChar(20)
+  bank_account_no                   String?                  @db.VarChar(50)
+  bank_name                         String?                  @db.VarChar(100)
+  is_on_trial                       Boolean                  @default(false)
+  has_telephone_allowance           Boolean                  @default(false)
+  position_allowance                Decimal?                 @default(0) @db.Decimal(12, 2)
+  address                           String?
+  national_id_card                  String?                  @db.VarChar(20)
+  salary_type                       String?                  @default("monthly") @db.VarChar(20)
+  line_user_id                      String?                  @unique @db.VarChar(50)
+  is_checkin_exempt                 Boolean                  @default(false)
+  probation_end_date                DateTime?                @db.Date
+  resignation_date                  DateTime?                @db.Date
+  secondary_supervisor_id           String?                  @db.VarChar(20)
+  nickname                          String?                  @db.VarChar(50)
+  email                             String?                  @db.VarChar(100)
+  general_allowance                 Decimal?                 @default(0) @db.Decimal(12, 2)
+  probation_accommodation_allowance Boolean                  @default(false)
+  probation_meal_allowance          Boolean                  @default(false)
+  probation_travel_allowance        Boolean                  @default(false)
+  fixed_accommodation_allowance     Decimal?                 @default(0) @db.Decimal(12, 2)
+  fixed_meal_allowance              Decimal?                 @default(0) @db.Decimal(12, 2)
+  fixed_travel_allowance            Decimal?                 @default(0) @db.Decimal(12, 2)
+  fixed_tax_deduction               Decimal?                 @db.Decimal(10, 2)
+  asset_borrowings                  asset_borrowings[]
+  birthday_claims                   birthday_claims[]
+  commission_claims                 commission_claims[]
+  work_plans                        daily_work_plans[]
+  assessed_trainings                employee_trainings[]     @relation("AssessorToTraining")
+  trainings                         employee_trainings[]     @relation("EmployeeToTraining")
+  warnings                          employee_warnings[]
+  departments                       departments?             @relation(fields: [department_id], references: [id], onUpdate: NoAction)
+  job_positions                     job_positions?           @relation(fields: [job_position_id], references: [id], onUpdate: NoAction)
+  secondary_supervisor              employees?               @relation("EmployeeToSecondarySupervisor", fields: [secondary_supervisor_id], references: [emp_id], onUpdate: NoAction)
+  secondarySubordinates             employees[]              @relation("EmployeeToSecondarySupervisor")
+  supervisor                        employees?               @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
+  subordinates                      employees[]              @relation("EmployeeToSupervisor")
+  branches                          branches?                @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
+  general_welfare_claims            general_welfare_claims[]
+  kpiList                           kpi_evaluations[]        @relation("EmployeeToKPI")
+  kpi_submissions                   kpi_evaluations[]        @relation("SupervisorToKPI")
+  leave_requests                    leave_requests[]
+  monthly_payroll_data              monthly_payroll_data[]
+  ot_requests                       ot_requests[]            @relation("EmployeeToOtRequests")
+  probation_evaluations             probation_evaluations[]  @relation("EmployeeToProbation")
+  submitted_evaluations             probation_evaluations[]  @relation("SupervisorToProbation")
+  product_borrowings                product_borrowings[]
+  booking_attendees                 room_booking_attendees[]
+  room_bookings                     room_bookings[]
+  travel_claims                     travel_claims[]
+  clothing_requests                 clothing_requests[]
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -231,34 +231,34 @@ model leave_types {
 }
 
 model divisions {
-  id            Int             @id @default(autoincrement())
-  name          String          @db.VarChar(100)
-  created_at    DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
-  departments   departments[]
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime      @default(now()) @db.Timestamptz(6)
+  departments departments[]
 }
 
 model departments {
   id            Int             @id @default(autoincrement())
-  division_id   Int?
   name          String          @db.VarChar(100)
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  division_id   Int?
+  divisions     divisions?      @relation(fields: [division_id], references: [id], onUpdate: NoAction)
   employees     employees[]
   job_positions job_positions[]
-  divisions     divisions?      @relation(fields: [division_id], references: [id], onUpdate: NoAction)
 }
 
 model job_positions {
   id             Int             @id @default(autoincrement())
   department_id  Int?
-  parent_id      Int?
   title          String          @db.VarChar(100)
-  node_type      String?         @default("staff") @db.VarChar(20) // executive, division, department, staff
-  order_index    Int?            @default(0)
   is_ot_eligible Boolean         @default(true)
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime        @default(now()) @db.Timestamptz(6)
+  node_type      String?         @default("staff") @db.VarChar(20)
+  order_index    Int?            @default(0)
+  parent_id      Int?
   employees      employees[]
   departments    departments?    @relation(fields: [department_id], references: [id], onDelete: Cascade)
   parent         job_positions?  @relation("PositionHierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -346,14 +346,11 @@ model monthly_payroll_data {
   cycle_year                       Int
   social_security                  Decimal?  @db.Decimal(10, 2)
   student_loan                     Decimal?  @default(0) @db.Decimal(10, 2)
-  insurance                        Decimal?  @default(0) @db.Decimal(10, 2)
-  insurance_income                 Decimal?  @default(0) @db.Decimal(10, 2)
   other_deductions                 Decimal?  @default(0) @db.Decimal(10, 2)
   other_benefits                   Decimal?  @default(0) @db.Decimal(10, 2)
   override_salary                  Decimal?  @db.Decimal(10, 2)
   created_at                       DateTime  @default(now()) @db.Timestamptz(6)
   updated_at                       DateTime  @default(now()) @db.Timestamptz(6)
-  is_published                     Boolean   @default(false)
   accommodation_allowance_override Decimal?  @db.Decimal(10, 2)
   diligence_allowance_override     Decimal?  @db.Decimal(10, 2)
   holiday_1_x_hours_override       Decimal?  @db.Decimal(10, 2)
@@ -362,7 +359,6 @@ model monthly_payroll_data {
   normal_1_5x_hours_override       Decimal?  @db.Decimal(10, 2)
   phone_allowance_override         Decimal?  @db.Decimal(10, 2)
   position_allowance_override      Decimal?  @db.Decimal(10, 2)
-  general_allowance_override       Decimal?  @db.Decimal(10, 2)
   travel_accommodation_override    Decimal?  @db.Decimal(10, 2)
   travel_allowance_override        Decimal?  @db.Decimal(10, 2)
   travel_site_allowance_override   Decimal?  @db.Decimal(10, 2)
@@ -370,6 +366,10 @@ model monthly_payroll_data {
   unpaid_absenteeism               Decimal?  @db.Decimal(10, 2)
   bonus                            Decimal?  @default(0) @db.Decimal(10, 2)
   commissions                      Decimal?  @default(0) @db.Decimal(10, 2)
+  is_published                     Boolean   @default(false)
+  insurance                        Decimal?  @default(0) @db.Decimal(10, 2)
+  insurance_income                 Decimal?  @default(0) @db.Decimal(10, 2)
+  general_allowance_override       Decimal?  @db.Decimal(10, 2)
   employee                         employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@unique([emp_id, cycle_month, cycle_year], map: "idx_monthly_payroll_unique")
@@ -380,52 +380,47 @@ model assets {
   asset_id         String             @unique @db.VarChar(50)
   name             String             @db.VarChar(200)
   category         String?            @db.VarChar(100)
-  status           String             @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
+  status           String             @default("available") @db.VarChar(20)
   description      String?
-  stock            Int                @default(50)
-  image_url        String?
-
-  // --- Extended Vehicle Specific Fields ---
-  company_owner    String?            @db.VarChar(100)  // TERA GROUP, TERA POWER
-  vehicle_type     String?            @db.VarChar(100)  // กระบะ, เก๋ง, รถตู้
-  brand            String?            @db.VarChar(100)  // MITSUBISHI, ISUZU
-  vehicle_model    String?            @db.VarChar(200)  // Xpander
-  main_user        String?            @db.VarChar(200)  // เอกชัย (เอก)
-  usage_remark     String?            @db.Text          // ใช้เมื่อออกไปหน้างาน
-
   created_at       DateTime           @default(now()) @db.Timestamptz(6)
   updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  brand            String?            @db.VarChar(100)
+  company_owner    String?            @db.VarChar(100)
+  main_user        String?            @db.VarChar(200)
+  usage_remark     String?
+  vehicle_model    String?            @db.VarChar(200)
+  vehicle_type     String?            @db.VarChar(100)
+  image_url        String?
+  stock            Int                @default(50)
   asset_borrowings asset_borrowings[]
 }
 
 model asset_borrowings {
-  id                    Int       @id @default(autoincrement())
-  asset_id              Int
-  emp_id                String    @db.VarChar(20)
-  borrow_date           DateTime  @db.Timestamptz(6)
-  expected_return_date  DateTime  @db.Timestamptz(6)
-  actual_return_date    DateTime? @db.Timestamptz(6)
-  location              String?   @db.VarChar(255)
-  condition_at_borrow   String?
-  condition_at_return   String?
-  is_damaged            Boolean   @default(false)
-  photo_url_borrow      String?
-  photo_url_return      String?
-  status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
-  quantity              Int       @default(1)
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
-
-  // New Inspection Checklist Fields (Borrow)
-  borrow_vehicle_status  String?   @db.VarChar(50)
-  borrow_is_clean        Boolean?
-  borrow_is_lights_ok    Boolean?
-  borrow_is_tires_ok     Boolean?
-  borrow_is_body_ok      Boolean?
-  borrow_is_insurance_ok Boolean?
+  id                       Int       @id @default(autoincrement())
+  asset_id                 Int
+  emp_id                   String    @db.VarChar(20)
+  borrow_date              DateTime  @db.Timestamptz(6)
+  expected_return_date     DateTime  @db.Timestamptz(6)
+  actual_return_date       DateTime? @db.Timestamptz(6)
+  location                 String?   @db.VarChar(255)
+  condition_at_borrow      String?
+  condition_at_return      String?
+  is_damaged               Boolean   @default(false)
+  photo_url_borrow         String?
+  photo_url_return         String?
+  status                   String    @default("borrowed") @db.VarChar(20)
+  created_at               DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime  @default(now()) @db.Timestamptz(6)
   borrow_inspection_remark String?
-  assets                assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
-  employee              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  borrow_is_body_ok        Boolean?
+  borrow_is_clean          Boolean?
+  borrow_is_insurance_ok   Boolean?
+  borrow_is_lights_ok      Boolean?
+  borrow_is_tires_ok       Boolean?
+  borrow_vehicle_status    String?   @db.VarChar(50)
+  quantity                 Int       @default(1)
+  assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([asset_id])
   @@index([emp_id])
@@ -433,195 +428,169 @@ model asset_borrowings {
 }
 
 model probation_evaluations {
-  id                    Int      @id @default(autoincrement())
-  emp_id                String   @db.VarChar(20)
-  supervisor_id         String   @db.VarChar(20)
-  evaluation_no         Int      @default(1)
-  evaluation_date       DateTime @default(now()) @db.Date
-  period_start          DateTime @db.Date
-  period_end            DateTime @db.Date
-
-  // Scoring (1-5)
-  score_work_quality    Int      @default(0) // 1. คุณภาพงาน (4)
-  score_work_quantity   Int      @default(0) // 2. ปริมาณงาน (3)
-  score_dedication      Int      @default(0) // 3. ความตั้งใจ (8)
-  score_knowledge       Int      @default(0) // 4. ความรอบรู้ (5)
-  score_learning        Int      @default(0) // 5. การเรียนรู้ (5)
-  score_obedience       Int      @default(0) // 6. การเชื่อฟัง (4)
-  score_responsibility  Int      @default(0) // 7. ความรับผิดชอบ (8)
-  score_creativity      Int      @default(0) // 8. ความคิดสร้างสรรค์ (6)
-  score_teamwork        Int      @default(0) // 9. สัมพันธภาพ (3)
-  score_discipline      Int      @default(0) // 10. การรักษาวินัย (3)
-  score_tool_maintenance Int      @default(0) // 11. การใช้เครื่องมือ (3)
-  score_participation   Int      @default(0) // 12. เข้าร่วมกิจกรรม (5)
-  
-  // Attendance Scores (converted from counts)
-  score_late            Int      @default(0) // 13. มาสาย (1)
-  score_sick_leave      Int      @default(0) // 14. ลาป่วย (1)
-  score_personal_leave  Int      @default(0) // 15. ลากิจ (1)
-
-  // Real data counts for reference
-  count_late            Int      @default(0)
-  count_sick_leave      Int      @default(0)
-  count_personal_leave  Int      @default(0)
-  count_activity        Int      @default(0)
-
-  total_score           Int      @default(0)
-  grade                 String?  @db.VarChar(2) // A, B, C, D, E
-
-  comment_supervisor    String?  @db.Text
-  comment_improvement   String?  @db.Text
-  comment_praise        String?  @db.Text
-  score_comments        Json?
-
-  decision              String   @db.VarChar(50) // pass, fail, extend, salary_adjust
-  salary_adjust_from    Decimal? @db.Decimal(12, 2)
-  salary_adjust_to      Decimal? @db.Decimal(12, 2)
-
-  status                String   @default("submitted") @db.VarChar(20) // submitted, reviewed
-  hr_remark             String?  @db.Text
-  is_sent_to_management Boolean  @default(false)
-
-  created_at            DateTime @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime @default(now()) @db.Timestamptz(6)
-
-  employee              employees @relation("EmployeeToProbation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  supervisor            employees @relation("SupervisorToProbation", fields: [supervisor_id], references: [emp_id])
+  id                     Int       @id @default(autoincrement())
+  emp_id                 String    @db.VarChar(20)
+  supervisor_id          String    @db.VarChar(20)
+  evaluation_no          Int       @default(1)
+  evaluation_date        DateTime  @default(now()) @db.Date
+  period_start           DateTime  @db.Date
+  period_end             DateTime  @db.Date
+  score_work_quality     Int       @default(0)
+  score_work_quantity    Int       @default(0)
+  score_dedication       Int       @default(0)
+  score_knowledge        Int       @default(0)
+  score_learning         Int       @default(0)
+  score_obedience        Int       @default(0)
+  score_responsibility   Int       @default(0)
+  score_creativity       Int       @default(0)
+  score_teamwork         Int       @default(0)
+  score_discipline       Int       @default(0)
+  score_tool_maintenance Int       @default(0)
+  score_participation    Int       @default(0)
+  score_late             Int       @default(0)
+  score_sick_leave       Int       @default(0)
+  score_personal_leave   Int       @default(0)
+  count_late             Int       @default(0)
+  count_sick_leave       Int       @default(0)
+  count_personal_leave   Int       @default(0)
+  count_activity         Int       @default(0)
+  total_score            Int       @default(0)
+  grade                  String?   @db.VarChar(2)
+  comment_supervisor     String?
+  comment_improvement    String?
+  comment_praise         String?
+  decision               String    @db.VarChar(50)
+  salary_adjust_from     Decimal?  @db.Decimal(12, 2)
+  salary_adjust_to       Decimal?  @db.Decimal(12, 2)
+  status                 String    @default("submitted") @db.VarChar(20)
+  hr_remark              String?
+  is_sent_to_management  Boolean   @default(false)
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @default(now()) @db.Timestamptz(6)
+  score_comments         Json?
+  employee               employees @relation("EmployeeToProbation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor             employees @relation("SupervisorToProbation", fields: [supervisor_id], references: [emp_id])
 
   @@index([emp_id])
   @@index([supervisor_id])
 }
 
 model kpi_evaluations {
-  id                    Int      @id @default(autoincrement())
-  emp_id                String   @db.VarChar(20)
-  supervisor_id         String   @db.VarChar(20)
-
-  category              String   @default("PROBATION") @db.VarChar(20) // PROBATION, ANNUAL
-  year                  Int      @default(2026)
-  session_name          String?  @db.VarChar(50) // Mid-Year, End-of-Year
-
-  evaluation_no         Int      @default(1)
-  evaluation_date       DateTime @default(now()) @db.Date
-  period_start          DateTime? @db.Date
-  period_end            DateTime? @db.Date
-
-  status                String   @default("draft") @db.VarChar(50) // draft, pending_employee, pending_supervisor, completed
-  
-  employee_comment      String?  @db.Text
-  supervisor_comment    String?  @db.Text
-  
-  total_employee_score  Decimal? @db.Decimal(5, 2)
-  total_supervisor_score Decimal? @db.Decimal(5, 2)
-  grade                 String?  @db.VarChar(2)
-
-  recommend_salary      Boolean? @default(false)
-  is_passing            Boolean? @default(false)
-
-  created_at            DateTime @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime @default(now()) @db.Timestamptz(6)
-
-  items                 kpi_items[]
-  employee              employees @relation("EmployeeToKPI", fields: [emp_id], references: [emp_id])
-  supervisor            employees @relation("SupervisorToKPI", fields: [supervisor_id], references: [emp_id])
+  id                     Int         @id @default(autoincrement())
+  emp_id                 String      @db.VarChar(20)
+  supervisor_id          String      @db.VarChar(20)
+  evaluation_no          Int         @default(1)
+  evaluation_date        DateTime    @default(now()) @db.Date
+  period_start           DateTime?   @db.Date
+  period_end             DateTime?   @db.Date
+  status                 String      @default("draft") @db.VarChar(50)
+  employee_comment       String?
+  supervisor_comment     String?
+  total_employee_score   Decimal?    @db.Decimal(5, 2)
+  total_supervisor_score Decimal?    @db.Decimal(5, 2)
+  grade                  String?     @db.VarChar(2)
+  created_at             DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime    @default(now()) @db.Timestamptz(6)
+  category               String      @default("PROBATION") @db.VarChar(20)
+  session_name           String?     @db.VarChar(50)
+  year                   Int         @default(2026)
+  is_passing             Boolean?    @default(false)
+  recommend_salary       Boolean?    @default(false)
+  employee               employees   @relation("EmployeeToKPI", fields: [emp_id], references: [emp_id])
+  supervisor             employees   @relation("SupervisorToKPI", fields: [supervisor_id], references: [emp_id])
+  items                  kpi_items[]
 
   @@index([emp_id])
   @@index([supervisor_id])
 }
 
 model kpi_items {
-  id                Int      @id @default(autoincrement())
-  kpi_evaluation_id Int
-  objective         String   @db.Text
-  indicator         String   @db.Text
-  weight            Decimal  @db.Decimal(5, 2) // Percentage (e.g. 20.00)
-  section           String   @default("KPI") @db.VarChar(50) // KPI, CORE_VALUE, COMPETENCY
-  
-  // Scoring Metrics (Rubric)
-  target_1          String?  @db.Text
-  target_2          String?  @db.Text
-  target_3          String?  @db.Text
-  target_4          String?  @db.Text
-  target_5          String?  @db.Text
-
-  result_description String? @db.Text
-  employee_score    Int?     // 1-5
-  supervisor_score  Int?     // 1-5
-
-  evaluation        kpi_evaluations @relation(fields: [kpi_evaluation_id], references: [id], onDelete: Cascade)
+  id                 Int             @id @default(autoincrement())
+  kpi_evaluation_id  Int
+  objective          String
+  indicator          String
+  weight             Decimal         @db.Decimal(5, 2)
+  result_description String?
+  employee_score     Int?
+  supervisor_score   Int?
+  target_1           String?
+  target_2           String?
+  target_3           String?
+  target_4           String?
+  target_5           String?
+  section            String          @default("KPI") @db.VarChar(50)
+  evaluation         kpi_evaluations @relation(fields: [kpi_evaluation_id], references: [id], onDelete: Cascade)
 }
 
 model meeting_rooms {
-  id          Int             @id @default(autoincrement())
-  name        String          @db.VarChar(100)
-  floor       Int
-  capacity    Int?
-  is_active   Boolean         @default(true)
-  created_at  DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime        @default(now()) @db.Timestamptz(6)
-  bookings    room_bookings[]
+  id         Int             @id @default(autoincrement())
+  name       String          @db.VarChar(100)
+  floor      Int
+  capacity   Int?
+  is_active  Boolean         @default(true)
+  created_at DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at DateTime        @default(now()) @db.Timestamptz(6)
+  bookings   room_bookings[]
 }
 
 model room_bookings {
-  id          Int           @id @default(autoincrement())
-  room_id     Int
-  emp_id      String        @db.VarChar(20)
-  start_time  DateTime      @db.Timestamptz(6)
-  end_time    DateTime      @db.Timestamptz(6)
-  purpose     String?       @db.Text
-  status      String        @default("approved") @db.VarChar(20) // approved, cancelled
-  minutes     String?       @db.Text
-  meeting_link String?      @db.Text
-  created_at  DateTime      @default(now()) @db.Timestamptz(6)
-  
-  room        meeting_rooms @relation(fields: [room_id], references: [id])
-  employee    employees     @relation(fields: [emp_id], references: [emp_id])
-  attendees   room_booking_attendees[]
+  id           Int                      @id @default(autoincrement())
+  room_id      Int
+  emp_id       String                   @db.VarChar(20)
+  start_time   DateTime                 @db.Timestamptz(6)
+  end_time     DateTime                 @db.Timestamptz(6)
+  purpose      String?
+  status       String                   @default("approved") @db.VarChar(20)
+  created_at   DateTime                 @default(now()) @db.Timestamptz(6)
+  minutes      String?
+  meeting_link String?
+  attendees    room_booking_attendees[]
+  employee     employees                @relation(fields: [emp_id], references: [emp_id])
+  room         meeting_rooms            @relation(fields: [room_id], references: [id])
 }
 
 model room_booking_attendees {
-  id          Int           @id @default(autoincrement())
-  booking_id  Int
-  emp_id      String        @db.VarChar(20)
-  
-  booking     room_bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  employee    employees     @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  
+  id         Int           @id @default(autoincrement())
+  booking_id Int
+  emp_id     String        @db.VarChar(20)
+  booking    room_bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  employee   employees     @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+
   @@unique([booking_id, emp_id])
 }
 
 model commission_claims {
-  id                    String    @id @default(uuid())
-  emp_id                String    @db.VarChar(20)
-  date                  DateTime  @db.Date
-  customer_name         String    @db.VarChar(200)
-  companion_ids         String[]  @db.VarChar(20) // Array of emp_ids
-  selling_price         Decimal?  @db.Decimal(12, 2)
-  commission_rate       Decimal?  @default(0.01) @db.Decimal(5, 4) // 1%
-  total_commission      Decimal?  @db.Decimal(12, 2)
-  per_person_commission Decimal?  @db.Decimal(12, 2)
-  status                String    @default("pending_supervisor") @db.VarChar(50) // pending_supervisor, pending_admin, completed, rejected
-  supervisor_id         String?   @db.VarChar(20)
+  id                     String    @id @default(uuid())
+  emp_id                 String    @db.VarChar(20)
+  date                   DateTime  @db.Date
+  customer_name          String    @db.VarChar(200)
+  companion_ids          String[]  @db.VarChar(20)
+  selling_price          Decimal?  @db.Decimal(12, 2)
+  commission_rate        Decimal?  @default(0.01) @db.Decimal(5, 4)
+  total_commission       Decimal?  @db.Decimal(12, 2)
+  per_person_commission  Decimal?  @db.Decimal(12, 2)
+  status                 String    @default("pending_supervisor") @db.VarChar(50)
+  supervisor_id          String?   @db.VarChar(20)
   supervisor_approved_at DateTime? @db.Timestamptz(6)
-  approved_by           String?   @db.VarChar(100) // HR / Admin
-  approved_at           DateTime? @db.Timestamptz(6)
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  employee              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  approved_by            String?   @db.VarChar(100)
+  approved_at            DateTime? @db.Timestamptz(6)
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  employee               employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 }
 
 model daily_work_plans {
-  id                 Int      @id @default(autoincrement())
-  emp_id             String   @db.VarChar(20)
-  date               DateTime @db.Date
-  morning_plan       String   @db.Text
-  morning_location   String   @db.VarChar(200)
-  afternoon_plan     String   @db.Text
-  afternoon_location String   @db.VarChar(200)
-  ot_plan            String?  @db.Text
-  ot_location        String?  @db.VarChar(200)
-  ot_attendant       String?  @db.VarChar(100)
+  id                 Int       @id @default(autoincrement())
+  emp_id             String    @db.VarChar(20)
+  date               DateTime  @db.Date
+  morning_plan       String
+  morning_location   String    @db.VarChar(200)
+  afternoon_plan     String
+  afternoon_location String    @db.VarChar(200)
+  ot_plan            String?
+  ot_location        String?   @db.VarChar(200)
+  ot_attendant       String?   @db.VarChar(100)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
   notified_at        DateTime? @db.Timestamptz(6)
-  created_at         DateTime @default(now()) @db.Timestamptz(6)
   employees          employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@unique([emp_id, date])
@@ -629,68 +598,62 @@ model daily_work_plans {
 }
 
 model general_welfare_claims {
-  id             String    @id @default(cuid()) @db.VarChar(30)
-  emp_id         String    @db.VarChar(20)
-  welfare_type   String    @db.VarChar(50) // CHILD_EDUCATION, MARRIAGE, CHILDBIRTH, ORDINATION, FUNERAL
-  amount         Decimal   @db.Decimal(12, 2)
-  attachment_url String? // For evidence like certificates
-  remark         String?   @db.Text
-  status         String    @default("pending") @db.VarChar(20) // pending, approved, rejected
-  supervisor_status String @default("pending") @db.VarChar(20) // pending, approved, rejected
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  approved_by    String?   @db.VarChar(100)
-  approved_at    DateTime? @db.Timestamptz(6)
-  supervisor_approved_by String? @db.VarChar(100)
+  id                     String    @id @default(cuid()) @db.VarChar(30)
+  emp_id                 String    @db.VarChar(20)
+  welfare_type           String    @db.VarChar(50)
+  amount                 Decimal   @db.Decimal(12, 2)
+  attachment_url         String?
+  remark                 String?
+  status                 String    @default("pending") @db.VarChar(20)
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  approved_by            String?   @db.VarChar(100)
+  approved_at            DateTime? @db.Timestamptz(6)
+  admin_comment          String?
+  metadata               Json?
   supervisor_approved_at DateTime? @db.Timestamptz(6)
-  admin_comment  String?   @db.Text
-
-  // Metadata JSON to store arbitrary extra fields specific to each welfare type 
-  // e.g. { "child_name": "John", "school_level": "Primary" }
-  metadata Json?
-
-  employees employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor_approved_by String?   @db.VarChar(100)
+  supervisor_status      String    @default("pending") @db.VarChar(20)
+  employees              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([emp_id])
   @@index([welfare_type])
   @@index([status])
 }
 
-
 model products {
-  id               Int                @id @default(autoincrement())
-  product_code     String             @unique @db.VarChar(50) // 3. Product Code
-  product_name     String             @db.VarChar(200)       // 4. Product Name
-  category         String?            @db.VarChar(100)       // 2. Category
-  company_name     String?            @db.VarChar(100)       // 1. Company Name
-  description      String?
-  status           String             @default("available") @db.VarChar(20) // available, borrowed, maintenance, damaged
-  stock            Int                @default(50)
-  image_url        String?
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  id                 Int                  @id @default(autoincrement())
+  product_code       String               @unique @db.VarChar(50)
+  product_name       String               @db.VarChar(200)
+  category           String?              @db.VarChar(100)
+  company_name       String?              @db.VarChar(100)
+  description        String?
+  status             String               @default("available") @db.VarChar(20)
+  image_url          String?
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  stock              Int                  @default(50)
   product_borrowings product_borrowings[]
 }
 
 model product_borrowings {
-  id                    Int       @id @default(autoincrement())
-  product_id            Int
-  emp_id                String    @db.VarChar(20)
-  borrow_date           DateTime  @db.Timestamptz(6)
-  expected_return_date  DateTime  @db.Timestamptz(6)
-  actual_return_date    DateTime? @db.Timestamptz(6)
-  location              String?   @db.VarChar(255)
-  condition_at_borrow   String?
-  condition_at_return   String?
-  is_damaged            Boolean   @default(false)
-  photo_url_borrow      String?
-  photo_url_return      String?
-  status                String    @default("borrowed") @db.VarChar(20) // borrowed, returned, overdue
-  quantity              Int       @default(1)
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
-
-  product               products  @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  employee              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  id                   Int       @id @default(autoincrement())
+  product_id           Int
+  emp_id               String    @db.VarChar(20)
+  borrow_date          DateTime  @db.Timestamptz(6)
+  expected_return_date DateTime  @db.Timestamptz(6)
+  actual_return_date   DateTime? @db.Timestamptz(6)
+  location             String?   @db.VarChar(255)
+  condition_at_borrow  String?
+  condition_at_return  String?
+  is_damaged           Boolean   @default(false)
+  photo_url_borrow     String?
+  photo_url_return     String?
+  status               String    @default("borrowed") @db.VarChar(20)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+  quantity             Int       @default(1)
+  employee             employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  product              products  @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@index([product_id])
   @@index([emp_id])
@@ -698,20 +661,731 @@ model product_borrowings {
 }
 
 model employee_trainings {
-  id                    Int       @id @default(autoincrement())
-  emp_id                String    @db.VarChar(20)
-  course_name           String    @db.VarChar(255)
-  institution_name      String?   @db.VarChar(255)
-  training_date_start   DateTime? @db.Date
-  training_date_end     DateTime? @db.Date
-  completion_percentage Decimal?  @db.Decimal(5, 2)
-  effectiveness_result  String?   @db.Text
-  certificate_file_url  String?   @db.Text
-  assessor_id           String?   @db.VarChar(20)
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
-
-  employee              employees @relation("EmployeeToTraining", fields: [emp_id], references: [emp_id])
+  id                    Int        @id @default(autoincrement())
+  emp_id                String     @db.VarChar(20)
+  course_name           String     @db.VarChar(255)
+  institution_name      String?    @db.VarChar(255)
+  training_date_start   DateTime?  @db.Date
+  training_date_end     DateTime?  @db.Date
+  completion_percentage Decimal?   @db.Decimal(5, 2)
+  effectiveness_result  String?
+  certificate_file_url  String?
+  assessor_id           String?    @db.VarChar(20)
+  created_at            DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime   @default(now()) @db.Timestamptz(6)
   assessor              employees? @relation("AssessorToTraining", fields: [assessor_id], references: [emp_id])
+  employee              employees  @relation("EmployeeToTraining", fields: [emp_id], references: [emp_id], onDelete: Cascade)
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BusinessType {
+  id        String   @id
+  name      String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Company {
+  id                    String      @id
+  companyName           String
+  taxId                 String?
+  address               String?
+  createdAt             DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime    @db.Timestamptz(6)
+  area                  String?
+  branchOrHeadOffice    String?
+  businessType          String?
+  customerAccessChannel String?
+  customerStatus        String?
+  customerType          String?
+  district              String?
+  postalCode            String?
+  province              String?
+  subDistrict           String?
+  assignedUserId        String?
+  billingAddress        String?
+  billingSubDistrict    String?
+  billingDistrict       String?
+  billingProvince       String?
+  billingPostalCode     String?
+  shippingAddress       String?
+  shippingSubDistrict   String?
+  shippingDistrict      String?
+  shippingProvince      String?
+  shippingPostalCode    String?
+  paymentMethod         String?
+  User                  User?       @relation(fields: [assignedUserId], references: [id])
+  Contact               Contact[]
+  Order                 Order[]
+  Quotation             Quotation[]
+  Schedule              Schedule[]
+  Telesale              Telesale[]
+
+  @@index([assignedUserId])
+  @@index([companyName])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Competitor {
+  id        String   @id
+  name      String   @unique
+  price     Float?
+  promotion String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @db.Timestamptz(6)
+
+  @@index([name])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Contact {
+  id             String      @id
+  companyId      String
+  contactName    String
+  position       String?
+  mobilePhone    String?
+  email          String?
+  isETaxReceiver Boolean     @default(false)
+  createdAt      DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime    @db.Timestamptz(6)
+  Company        Company     @relation(fields: [companyId], references: [id])
+  Quotation      Quotation[]
+
+  @@index([companyId])
+  @@index([contactName])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CustomerRequirement {
+  id                String    @id
+  userId            String?
+  companyName       String
+  contactName       String
+  salesperson       String
+  date              DateTime  @db.Timestamptz(6)
+  formData          Json
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  requirementNumber String?   @unique
+  estimatedAt       DateTime? @db.Timestamptz(6)
+  estimatedBy       String?
+  estimatedPrice    Float?
+  estimationNote    String?
+  estimationStatus  String?
+  isSentToService   Boolean   @default(false)
+  assignedTo        String?
+  assignedToUserId  String?
+  estimationDueDate DateTime? @db.Timestamptz(6)
+  boqNumber         String?   @unique
+  User              User?     @relation(fields: [userId], references: [id])
+
+  @@index([companyName])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model InstallationOrder {
+  id               String    @id
+  installationNo   String    @unique
+  jobId            String?
+  installationDate DateTime? @db.Timestamptz(6)
+  company          String?
+  jobName          String?
+  customer         String?
+  customerPosition String?
+  address          String?
+  siteAddress      String?
+  quotationNo      String?
+  sender           String?
+  senderPhone      String?
+  technician       String?
+  technicianPhone  String?
+  items            Json?
+  checklist        Json?
+  checklistImages  Json?
+  note             String?
+  sigSenderUrl     String?
+  nameSender       String?
+  sigReceiverUrl   String?
+  nameReceiver     String?
+  status           String    @default("Draft")
+  pdfUrl           String?
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @db.Timestamptz(6)
+  planUpdatedAt    DateTime? @db.Timestamptz(6)
+  planUpdatedBy    String?
+  plannedEndDate   DateTime? @db.Timestamptz(6)
+  plannedStartDate DateTime? @db.Timestamptz(6)
+  technicianNote   String?
+  workLocation     String?
+  workPlan         String?
+  jobs             jobs?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MonthlyTarget {
+  id        String   @id
+  userId    String?
+  month     Int
+  year      Int
+  amount    Float    @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @db.Timestamptz(6)
+  User      User?    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year])
+  @@index([month, year])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Order {
+  id                 String           @id
+  orderNumber        String           @unique
+  companyId          String
+  quotationId        String?
+  salespersonId      String?
+  status             String           @default("เธฃเธญเธขเธทเธเธขเธฑเธ")
+  value              Float            @default(0)
+  priority           String           @default("Normal")
+  targetDeliveryDate DateTime?        @db.Timestamptz(6)
+  createdAt          DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime         @db.Timestamptz(6)
+  Company            Company          @relation(fields: [companyId], references: [id])
+  Quotation          Quotation?       @relation(fields: [quotationId], references: [id])
+  User               User?            @relation(fields: [salespersonId], references: [id])
+  OrderStatusLog     OrderStatusLog[]
+
+  @@index([companyId])
+  @@index([quotationId])
+  @@index([salespersonId])
+  @@index([status])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model OrderStatusLog {
+  id         String   @id
+  orderId    String
+  userId     String?
+  fromStatus String
+  toStatus   String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  Order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model OutsourceRepair {
+  id                 String    @id
+  outsourceNumber    String?   @unique
+  jobId              String?
+  vendorName         String?
+  vendorPhone        String?
+  vendorAddress      String?
+  customerName       String?
+  customerPhone      String?
+  customerAddress    String?
+  sentDate           DateTime? @db.Timestamptz(6)
+  expectedReturnDate DateTime? @db.Timestamptz(6)
+  items              Json
+  symptoms           String?
+  settings           String?
+  remark             String?
+  sender             String?
+  status             String    @default("SENT")
+  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime  @db.Timestamptz(6)
+  jobs               jobs?     @relation(fields: [jobId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model PostalData {
+  id          String   @id
+  postalCode  String
+  subDistrict String
+  district    String
+  province    String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @db.Timestamptz(6)
+
+  @@index([postalCode])
+  @@index([province, district, subDistrict])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Project {
+  id                  String            @id
+  projectNumber       String            @unique
+  jobId               String?           @unique
+  name                String
+  description         String?
+  clientName          String?
+  siteAddress         String?
+  managerId           String?
+  startDate           DateTime?         @db.Timestamptz(6)
+  endDate             DateTime?         @db.Timestamptz(6)
+  budget              Float?
+  status              String            @default("Planning")
+  createdAt           DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime          @db.Timestamptz(6)
+  externalTechnicians String?
+  jobs                jobs?             @relation(fields: [jobId], references: [id])
+  User                User?             @relation(fields: [managerId], references: [id])
+  ProjectDailyLog     ProjectDailyLog[]
+  ProjectMember       ProjectMember[]
+  ProjectTask         ProjectTask[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProjectDailyLog {
+  id               String   @id
+  projectId        String
+  reportedBy       String
+  date             DateTime @db.Date
+  weather          String?
+  temperature      Int?
+  workerCount      Int?
+  workerNote       String?
+  workSummary      String?
+  issues           String?
+  solutions        String?
+  nextPlan         String?
+  safetyNote       String?
+  incidents        Int      @default(0)
+  taskUpdates      Json?
+  imageUrls        Json?
+  reporterSigUrl   String?
+  supervisorSigUrl String?
+  supervisorName   String?
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @db.Timestamptz(6)
+  Project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User             User     @relation(fields: [reportedBy], references: [id])
+
+  @@unique([projectId, date, reportedBy])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProjectMember {
+  id        String  @id
+  projectId String
+  userId    String
+  role      String
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProjectTask {
+  id                String        @id
+  projectId         String
+  title             String
+  description       String?
+  category          String?
+  assigneeId        String?
+  planStart         DateTime?     @db.Timestamptz(6)
+  planEnd           DateTime?     @db.Timestamptz(6)
+  actualStart       DateTime?     @db.Timestamptz(6)
+  actualEnd         DateTime?     @db.Timestamptz(6)
+  planPct           Float         @default(0)
+  actualPct         Float         @default(0)
+  weight            Float         @default(1)
+  status            String        @default("Pending")
+  priority          String        @default("Normal")
+  order             Int           @default(0)
+  parentTaskId      String?
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime      @db.Timestamptz(6)
+  User              User?         @relation(fields: [assigneeId], references: [id])
+  ProjectTask       ProjectTask?  @relation("ProjectTaskToProjectTask", fields: [parentTaskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_ProjectTask ProjectTask[] @relation("ProjectTaskToProjectTask")
+  Project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Quotation {
+  id                   String    @id
+  companyId            String
+  status               String    @default("Pending")
+  salesBeforeVat       Float?
+  transportationFee    Float?
+  installationFee      Float?
+  totalAmountBeforeVat Float?
+  actualClosingAmount  Float?
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @db.Timestamptz(6)
+  billingDate          DateTime? @db.Timestamptz(6)
+  appointmentDate      DateTime? @db.Timestamptz(6)
+  appointmentNote      String?
+  contactId            String?
+  followUp1            DateTime? @db.Timestamptz(6)
+  followUp2            DateTime? @db.Timestamptz(6)
+  followUp3            DateTime? @db.Timestamptz(6)
+  followUp4            DateTime? @db.Timestamptz(6)
+  invoiceNumber        String?
+  poDate               DateTime? @db.Timestamptz(6)
+  poNumber             String?
+  productType          String?
+  quotationDate        DateTime? @db.Timestamptz(6)
+  quotationNumber      String?
+  rejectReason         String?
+  remarks              String?
+  requirementDate      DateTime? @db.Timestamptz(6)
+  requirementNumber    String?
+  salesBranch          String?
+  salesTeamLeader      String?
+  salespersonId        String?
+  subject              String?
+  winLossReason        String?
+  Order                Order[]
+  Company              Company   @relation(fields: [companyId], references: [id])
+  Contact              Contact?  @relation(fields: [contactId], references: [id])
+  User                 User?     @relation(fields: [salespersonId], references: [id])
+  jobs                 jobs[]
+
+  @@index([companyId, createdAt])
+  @@index([companyId])
+  @@index([createdAt])
+  @@index([salespersonId])
+  @@index([status])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RepairDelivery {
+  id                  String    @id
+  deliveryNumber      String    @unique
+  note                String?
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @db.Timestamptz(6)
+  address             String?
+  company             String?
+  customer            String?
+  customerPosition    String?
+  deliveryDate        DateTime? @db.Timestamptz(6)
+  jobId               String?
+  jobName             String?
+  nameReceiver        String?
+  nameSender          String?
+  pdfUrl              String?
+  quotationNo         String?
+  sender              String?
+  senderPhone         String?
+  sigReceiverUrl      String?
+  sigSenderUrl        String?
+  siteAddress         String?
+  technician          String?
+  technicianPhone     String?
+  workInspect         Boolean   @default(false)
+  workInstall         Boolean   @default(false)
+  workOther           String?
+  workRepair          Boolean   @default(false)
+  workTraining        Boolean   @default(false)
+  status              String    @default("Draft")
+  workInspectDetails  String?
+  workInstallDetails  String?
+  workRepairDetails   String?
+  workTrainingDetails String?
+  jobs                jobs?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RepairOrder {
+  id              String    @id
+  jobId           String    @unique
+  invoiceNo       String?
+  deliveryMethod  String?
+  deliveryNoteNo  String?
+  receiverName    String?
+  senderName      String?
+  handoverRef     String?
+  phoneNumber     String?
+  workType        String?
+  forwardedBy     String?
+  items           Json
+  symptoms        String?
+  settings        String?
+  checklist       Json
+  receivedDate    DateTime? @db.Timestamptz(6)
+  sentDate        DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @db.Timestamptz(6)
+  checklistImages Json?
+  company         String?
+  customerAddress String?
+  customerCompany String?
+  salesPerson     String?
+  jobs            jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Schedule {
+  id                 String    @id
+  userId             String
+  title              String
+  description        String?
+  date               DateTime  @db.Timestamptz(6)
+  status             String    @default("Planned")
+  presentationStatus String?
+  quotationNumber    String?
+  poNumber           String?
+  invoiceNumber      String?
+  notes              String?
+  visitReport        String?
+  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime  @db.Timestamptz(6)
+  companyId          String?
+  telesaleId         String?   @unique
+  Company            Company?  @relation(fields: [companyId], references: [id])
+  Telesale           Telesale? @relation(fields: [telesaleId], references: [id])
+  User               User      @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([date])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Telesale {
+  id                  String    @id
+  companyId           String
+  userId              String?
+  conversationSummary String?
+  needsOrProblems     String?
+  meetingObjective    String?
+  competitorName      String?
+  competitorPrice     Float?
+  competitorPromotion String?
+  lastMeetingDate     DateTime? @db.Timestamptz(6)
+  result              String?
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @db.Timestamptz(6)
+  callDate            DateTime? @db.Timestamptz(6)
+  callOutcome         String?
+  callStatus          String?
+  forwardTo           String?
+  callbackAt          DateTime? @db.Timestamptz(6)
+  visitDate           DateTime? @db.Timestamptz(6)
+  Schedule            Schedule?
+  Company             Company   @relation(fields: [companyId], references: [id])
+  User                User?     @relation(fields: [userId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([companyId])
+  @@index([createdAt])
+  @@index([lastMeetingDate])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TelesalesKPI {
+  id                String   @id
+  userId            String?
+  month             Int
+  year              Int
+  weeklyCallGoal    Int      @default(300)
+  monthlyCallGoal   Int      @default(1200)
+  appointmentGoal   Int      @default(20)
+  connectionRateMin Float    @default(0.6)
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime @db.Timestamptz(6)
+  User              User?    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model User {
+  id                  String                @id
+  employeeId          String                @unique
+  email               String?               @unique
+  fullName            String
+  phoneNumber         String?
+  role                String                @default("Sales Representative")
+  position            String?
+  password            String
+  createdAt           DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime              @default(now()) @db.Timestamptz(6)
+  otpCode             String?
+  otpExpiresAt        DateTime?             @db.Timestamptz(6)
+  isActive            Boolean               @default(true)
+  Company             Company[]
+  CustomerRequirement CustomerRequirement[]
+  MonthlyTarget       MonthlyTarget[]
+  Order               Order[]
+  Project             Project[]
+  ProjectDailyLog     ProjectDailyLog[]
+  ProjectMember       ProjectMember[]
+  ProjectTask         ProjectTask[]
+  Quotation           Quotation[]
+  Schedule            Schedule[]
+  Telesale            Telesale[]
+  TelesalesKPI        TelesalesKPI[]
+  employee_sales      employee_sales?
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model employee_sales {
+  id         String    @id
+  userId     String?   @unique
+  employeeId String?   @unique
+  fullName   String
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  nickname   String?
+  branch     String?
+  teamLeader String?
+  position   String?
+  department String?
+  startDate  DateTime? @db.Timestamptz(6)
+  User       User?     @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_running_numbers {
+  id         String @id
+  yearBe     Int
+  month      Int
+  lastNumber Int    @default(0)
+
+  @@unique([yearBe, month])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_step_logs {
+  id           String   @id
+  job_id       String
+  step         String
+  completed_by String
+  department   String
+  note         String?
+  completed_at DateTime @default(now()) @db.Timestamptz(6)
+  jobs         jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model jobs {
+  id                 String              @id
+  jobNumber          String              @unique
+  companyCode        String
+  jobType            String              @default("")
+  month              Int
+  yearBe             Int
+  dateClosed         DateTime            @db.Timestamptz(6)
+  customerName       String
+  item               String?
+  quotationNumber    String?
+  poNumber           String?
+  sellerName         String?
+  quotationId        String?
+  current_step       String              @default("sales")
+  flow_variant       String?
+  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime            @db.Timestamptz(6)
+  courierCompany     String?
+  deliveryDate       DateTime?           @db.Timestamptz(6)
+  deliveryMethod     String?
+  trackingNumber     String?
+  trackingPhotoUrl   String?
+  paymentMethod      String?
+  paymentStatus      String?             @default("pending")
+  billingRegulations String?
+  creditDocsUrl      String?
+  creditTerms        String?
+  percentageTerms    String?
+  salesOrderDate     DateTime?           @db.Timestamptz(6)
+  paymentDate        DateTime?           @db.Timestamptz(6)
+  billingDocsUrl     String?
+  InstallationOrder  InstallationOrder[]
+  OutsourceRepair    OutsourceRepair[]
+  Project            Project?
+  RepairDelivery     RepairDelivery[]
+  RepairOrder        RepairOrder?
+  job_step_logs      job_step_logs[]
+  Quotation          Quotation?          @relation(fields: [quotationId], references: [id])
+  payment_tasks      payment_tasks[]
+  purchase_orders    purchase_orders[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payment_tasks {
+  id                String    @id
+  jobId             String
+  status            String    @default("รอดำเนินการ")
+  assignedTo        String?
+  dueDate           DateTime? @db.Timestamptz(6)
+  paidAmount        Float?
+  paidDate          DateTime? @db.Timestamptz(6)
+  note              String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @db.Timestamptz(6)
+  installmentAmount Float?
+  installmentNo     Int?
+  installmentTotal  Int?
+  jobs              jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_orders {
+  id            String    @id
+  poNumber      String?
+  jobId         String
+  supplierName  String?
+  supplierPhone String?
+  items         Json?
+  totalAmount   Float?
+  expectedDate  DateTime? @db.Timestamptz(6)
+  status        String    @default("รอสินค้า")
+  createdBy     String?
+  note          String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @db.Timestamptz(6)
+  jobs          jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model clothing_items {
+  id             Int       @id @default(autoincrement())
+  name           String    @db.VarChar(200)
+  description    String?   @db.Text
+  image_url      String?   @db.Text
+  is_active      Boolean   @default(true)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  variants       clothing_variants[]
+}
+
+model clothing_variants {
+  id             Int       @id @default(autoincrement())
+  item_id        Int
+  size           String    @db.VarChar(50)
+  stock_quantity Int       @default(0)
+
+  item           clothing_items @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  requests       clothing_requests[]
+
+  @@unique([item_id, size])
+}
+
+model clothing_requests {
+  id               Int       @id @default(autoincrement())
+  emp_id           String    @db.VarChar(20)
+  variant_id       Int
+  quantity         Int       @default(1)
+  reason           String?   @db.Text
+  status           String    @default("pending") @db.VarChar(50) // pending, approved, rejected, fulfilled
+  requested_at     DateTime  @default(now()) @db.Timestamptz(6)
+  
+  approved_by      String?   @db.VarChar(100) 
+  approved_at      DateTime? @db.Timestamptz(6)
+  fulfilled_at     DateTime? @db.Timestamptz(6)
+  admin_note       String?   @db.Text
+
+  employee         employees          @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  variant          clothing_variants  @relation(fields: [variant_id], references: [id], onDelete: Cascade)
+
+  @@index([emp_id])
+  @@index([variant_id])
+  @@index([status])
+}

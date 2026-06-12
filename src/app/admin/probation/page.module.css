@@ -146,11 +146,16 @@
     padding: 16px 24px;
     border-bottom: 1px solid #f1f5f9;
     background: #fcfcfc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
 }
 
 .searchWrap {
     position: relative;
     max-width: 400px;
+    flex: 1;
 }
 
 .searchIcon {
@@ -176,6 +181,28 @@
 .searchInput:focus {
     border-color: #D93025;
     box-shadow: 0 0 0 4px rgba(217, 48, 37, 0.1);
+}
+
+.filterGroup {
+    display: flex;
+    align-items: center;
+}
+
+.filterSelect {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    outline: none;
+    font-size: 14px;
+    color: #475569;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.filterSelect:focus {
+    border-color: #D93025;
 }
 
 .tableWrap {
@@ -315,147 +342,106 @@
 .sectionPending {
     padding: 32px;
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.sectionTitlePending {
-    font-size: 14px;
-    font-weight: 800;
-    color: #1e293b;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 24px;
 }
 
 .pendingGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
 }
 
-.pendingCard {
+.pendingCardCompact {
     background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 24px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: all 0.2s;
-    position: relative;
-}
-
-.pendingCard:hover {
-    transform: translateY(-3px);
-    border-color: #D93025;
-    box-shadow: 0 12px 20px -5px rgba(217, 48, 37, 0.1);
-}
-
-.pendingEmp {
+    border-radius: 12px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: all 0.2s;
+}
+
+.pendingCardCompact:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.pendingEmpCompact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pendingAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pendingName {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 800;
-    color: #0f172a;
+    color: #1e293b;
 }
 
 .pendingId {
     font-size: 12px;
     color: #64748b;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
-.pendingRound {
+.pendingRoundCompact {
     background: #fdf2f2;
-    border: 1px solid #fee2e2;
-    border-radius: 12px;
-    padding: 10px 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 70px;
-}
-
-.roundLabel {
-    font-size: 10px;
-    font-weight: 800;
     color: #991b1b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.roundNum {
-    font-size: 24px;
-    font-weight: 900;
-    color: #7f1d1d;
-}
-
-.pendingMeta {
-    grid-column: 1 / -1;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.metaRow {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.metaRow b {
-    color: #1e293b;
-    margin-left: 4px;
-}
-
-.countdownRow {
-    font-size: 12px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.historyRounds {
-    margin-top: 12px;
+    border: 1px solid #fee2e2;
+    border-radius: 8px;
+    padding: 4px 10px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    background: #f1f5f9;
-    padding: 10px;
-    border-radius: 10px;
+    align-items: center;
 }
 
-.historyItem {
+.pendingRoundCompact span {
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.pendingRoundCompact b {
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.pendingMetaCompact {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 12px;
+}
+
+.metaCol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.metaLabel {
     font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
 }
 
-.historyRoundLabel {
+.metaVal {
+    font-size: 12px;
     font-weight: 700;
-    color: #475569;
-}
-
-.statusNormal {
-    color: #16a34a;
-    font-weight: 800;
-}
-
-.statusDelayed {
-    color: #dc2626;
-    font-weight: 800;
-    background: #fee2e2;
-    padding: 2px 6px;
-    border-radius: 4px;
+    color: #334155;
 }
 
 /* --- MODAL --- */
@@ -667,19 +653,13 @@
     outline: none;
 }
 
-.scoreGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.scoreCardWrapper {
+.scoreList {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
-.scoreCard {
+.scoreListItem {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
@@ -690,26 +670,34 @@
     transition: all 0.2s;
 }
 
-.scoreCommentBox {
-    background: #f1f5f9;
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+.scoreListItem:hover {
+    border-color: #cbd5e1;
+    background: #fcfcfc;
+}
+
+.scoreListInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    margin-right: 24px;
 }
 
 .scoreCommentInput {
     width: 100%;
-    background: transparent;
-    border: none;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
     outline: none;
     font-size: 12px;
     color: #475569;
-    font-style: italic;
+    transition: all 0.2s;
 }
 
-.scoreCard:hover {
+.scoreCommentInput:focus {
     border-color: #cbd5e1;
-    background: #fcfcfc;
+    background: #ffffff;
 }
 
 .scoreCatLabel {

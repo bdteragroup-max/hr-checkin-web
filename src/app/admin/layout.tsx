@@ -12,7 +12,8 @@ import {
     ArrowRightOnRectangleIcon,
     CubeIcon,
     DocumentCheckIcon,
-    AcademicCapIcon
+    AcademicCapIcon,
+    ArchiveBoxIcon
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 
@@ -76,7 +77,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             const allowedPaths = [
                 "/admin/assets",
                 "/admin/cars",
-                "/admin/reports/vehicles"
+                "/admin/reports/vehicles",
+                "/admin/clothing"
             ];
             
             // Allow exact match for /admin (Dashboard)
@@ -303,6 +305,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                      className={`${styles.navItem} ${pathname === "/admin/assets" && searchParams.get("type") === "item" ? styles.active : ""}`}
                                  >
                                      <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>ยืมสินค้า (Borrow Item)
+                                 </Link>
+                             )}
+
+                             {/* ✅ Clothing/Uniform Management */}
+                             {hasAccess("/admin/clothing") && (
+                                 <Link
+                                     href="/admin/clothing"
+                                     className={`${styles.navItem} ${pathname.startsWith("/admin/clothing") ? styles.active : ""}`}
+                                 >
+                                     <span className={styles.navIcon}><ArchiveBoxIcon width={20} /></span>ชุดยูนิฟอร์ม (Clothing)
                                  </Link>
                              )}
 

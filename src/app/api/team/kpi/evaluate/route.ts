@@ -213,7 +213,7 @@ export async function POST(req: Request) {
                 grade: finalEval.grade || "E"
             });
 
-            if (employee.line_user_id) {
+            if (employee.line_user_id && finalEval.category !== "ANNUAL" && finalEval.category !== "MID_YEAR") {
                 await sendKpiEvaluateEmployeeNotification(employee.line_user_id, {
                     evaluationNo: finalEval.evaluation_no,
                     totalScore: Number(finalEval.total_supervisor_score),

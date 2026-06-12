@@ -44,6 +44,7 @@ const NAV_MAIN_BASE = [
     { id: "kpi", href: "/kpi", icon: PresentationChartLineIcon, label: "KPI ของฉัน", sub: "My KPIs" },
     { id: "commission", href: "/commission-claims", icon: BanknotesIcon, label: "เบิกค่าคอม", sub: "Commission" },
     { id: "welfare", href: "/welfare", icon: BanknotesIcon, label: "สวัสดิการและเงินช่วยเหลือ", sub: "Welfare" },
+    { id: "clothing", href: "/clothing", icon: CubeIcon, label: "เบิกชุดยูนิฟอร์ม", sub: "Request Uniform" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
