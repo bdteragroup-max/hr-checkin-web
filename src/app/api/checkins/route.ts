@@ -286,10 +286,13 @@ export async function POST(req: Request) {
     try {
         row = await prisma.$transaction(async (tx) => {
             if (type === "Check-in" || type === "Check-out") {
-                const count = await tx.checkins.count({
-                    where: { emp_id: auth.emp.emp_id, date_key: effective_date_key, type }
+                const lastAction = await tx.checkins.findFirst({
+                    where: { emp_id: auth.emp.emp_id, date_key: effective_date_key },
+                    orderBy: { timestamp: "desc" }
                 });
-                if (count > 0) throw new Error("DUPLICATE_TODAY");
+                if (lastAction && lastAction.type === type) {
+                    throw new Error("DUPLICATE_TODAY");
+                }
             }
 
             return await (tx.checkins.create as any)({

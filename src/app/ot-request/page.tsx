@@ -121,8 +121,7 @@ export default function EmployeeOtPage() {
         const endDT = new Date(`${dateFor}T${endHour}:${endMin}:00+07:00`);
 
         if (endDT <= startDT) {
-            showAlert("เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น", "error");
-            return;
+            endDT.setDate(endDT.getDate() + 1);
         }
 
         setLoading(true);

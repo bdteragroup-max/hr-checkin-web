@@ -32,24 +32,29 @@ export async function POST(request: Request) {
         let diffHrs = diffMs / (1000 * 60 * 60);
 
         if (diffHrs <= 0) {
-            return NextResponse.json({ error: "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น" }, { status: 400 });
+            end.setDate(end.getDate() + 1);
+            diffMs = end.getTime() - start.getTime();
+            diffHrs = diffMs / (1000 * 60 * 60);
         }
 
         // --- NEW: VALIDATION AGAINST ACTUAL CHECK-IN/OUT ---
-        const dayCheckins = await prisma.checkins.findMany({
+        const shiftCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id: decoded.emp_id,
-                date_key: new Date(date_for)
+                timestamp: {
+                    gte: new Date(start.getTime() - 24 * 60 * 60 * 1000),
+                    lte: new Date(end.getTime() + 24 * 60 * 60 * 1000)
+                }
             },
             orderBy: { timestamp: "asc" }
         });
 
-        if (dayCheckins.length === 0) {
-            return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในวันที่เลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT" }, { status: 400 });
+        if (shiftCheckins.length === 0) {
+            return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในกะที่คุณเลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT" }, { status: 400 });
         }
 
-        const earliestIn = dayCheckins[0].timestamp;
-        const latestOut = dayCheckins[dayCheckins.length - 1].timestamp;
+        const earliestIn = shiftCheckins[0].timestamp;
+        const latestOut = shiftCheckins[shiftCheckins.length - 1].timestamp;
 
         // Check window (Strict Rejection)
         if (start < earliestIn || end > latestOut) {
