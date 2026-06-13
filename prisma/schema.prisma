@@ -1116,6 +1116,7 @@ model RepairOrder {
   customerAddress String?
   customerCompany String?
   salesPerson     String?
+  technicianName  String?
   jobs            jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
@@ -1342,6 +1343,23 @@ model purchase_orders {
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @db.Timestamptz(6)
   jobs          jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BranchExpense {
+  id            String   @id
+  branch        String   @db.VarChar(100)
+  salespersonId String?
+  expenseType   String   @db.VarChar(100)
+  amount        Float    @default(0)
+  date          DateTime @db.Date
+  notes         String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([branch])
+  @@index([date])
+  @@index([salespersonId])
 }
 
 model clothing_items {
