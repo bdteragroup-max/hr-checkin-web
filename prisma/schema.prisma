@@ -914,53 +914,93 @@ model PostalData {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Project {
-  id                  String            @id
-  projectNumber       String            @unique
-  jobId               String?           @unique
-  name                String
-  description         String?
-  clientName          String?
-  siteAddress         String?
-  managerId           String?
-  startDate           DateTime?         @db.Timestamptz(6)
-  endDate             DateTime?         @db.Timestamptz(6)
-  budget              Float?
-  status              String            @default("Planning")
-  createdAt           DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt           DateTime          @db.Timestamptz(6)
-  externalTechnicians String?
-  jobs                jobs?             @relation(fields: [jobId], references: [id])
-  User                User?             @relation(fields: [managerId], references: [id])
-  ProjectDailyLog     ProjectDailyLog[]
-  ProjectMember       ProjectMember[]
-  ProjectTask         ProjectTask[]
+  id                        String             @id
+  projectNumber             String             @unique
+  jobId                     String?            @unique
+  name                      String
+  description               String?
+  clientName                String?
+  siteAddress               String?
+  managerId                 String?
+  startDate                 DateTime?          @db.Timestamptz(6)
+  endDate                   DateTime?          @db.Timestamptz(6)
+  budget                    Float?
+  status                    String             @default("Planning")
+  createdAt                 DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime           @db.Timestamptz(6)
+  externalTechnicians       String?
+  projectCategory           String?
+  department                String?
+  province                  String?
+  district                  String?
+  projectValue              Decimal?           @db.Decimal(15, 2)
+  securityDeposit           Decimal?           @db.Decimal(15, 2)
+  penaltyPerDay             Decimal?           @db.Decimal(15, 2)
+  amountIncludingVat        Decimal?           @db.Decimal(15, 2)
+  installment1              Decimal?           @db.Decimal(15, 2)
+  installment2              Decimal?           @db.Decimal(15, 2)
+  installment3              Decimal?           @db.Decimal(15, 2)
+  installment4              Decimal?           @db.Decimal(15, 2)
+  firstPayment              Decimal?           @db.Decimal(15, 2)
+  secondPayment             Decimal?           @db.Decimal(15, 2)
+  contractNumber            String?
+  documentNumber            String?
+  deliveryDocNumber         String?
+  jbNumber                  String?
+  certCompletionRequestNo   String?
+  certRequestStatus         String?
+  depositRefundRequestNo    String?
+  contractSignatory         String?
+  contractReturnStatus      String?
+  remarks                   String?
+  pathFolder                String?
+  statusPictureUrl          String?
+  updateCompanyProfile      Boolean            @default(false)
+  projectDuration           Int?
+  projectDurationUnit       String?
+  contractSigningDate       DateTime?          @db.Timestamptz(6)
+  deliveryDate              DateTime?          @db.Timestamptz(6)
+  paymentDate               DateTime?          @db.Timestamptz(6)
+  depositCollectionSchedule DateTime?          @db.Timestamptz(6)
+  jobs                      jobs?              @relation(fields: [jobId], references: [id])
+  User                      User?              @relation(fields: [managerId], references: [id])
+  ProjectDailyLog           ProjectDailyLog[]
+  ProjectEquipment          ProjectEquipment[]
+  ProjectMember             ProjectMember[]
+  ProjectTask               ProjectTask[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ProjectDailyLog {
-  id               String   @id
-  projectId        String
-  reportedBy       String
-  date             DateTime @db.Date
-  weather          String?
-  temperature      Int?
-  workerCount      Int?
-  workerNote       String?
-  workSummary      String?
-  issues           String?
-  solutions        String?
-  nextPlan         String?
-  safetyNote       String?
-  incidents        Int      @default(0)
-  taskUpdates      Json?
-  imageUrls        Json?
-  reporterSigUrl   String?
-  supervisorSigUrl String?
-  supervisorName   String?
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @db.Timestamptz(6)
-  Project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  User             User     @relation(fields: [reportedBy], references: [id])
+  id                String           @id
+  projectId         String
+  reportedBy        String
+  date              DateTime         @db.Date
+  weather           String?
+  temperature       Int?
+  workerCount       Int?
+  workerNote        String?
+  workSummary       String?
+  issues            String?
+  solutions         String?
+  nextPlan          String?
+  safetyNote        String?
+  incidents         Int              @default(0)
+  taskUpdates       Json?
+  imageUrls         Json?
+  reporterSigUrl    String?
+  supervisorSigUrl  String?
+  supervisorName    String?
+  createdAt         DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime         @db.Timestamptz(6)
+  delayCause        String?
+  delayExpectedDate DateTime?        @db.Date
+  delayResponsible  String?
+  delaySeverity     String?
+  tasksPerformed    Json?
+  DailyLogWorker    DailyLogWorker[]
+  Project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User              User             @relation(fields: [reportedBy], references: [id])
 
   @@unique([projectId, date, reportedBy])
 }
@@ -1087,6 +1127,7 @@ model RepairDelivery {
   workInstallDetails  String?
   workRepairDetails   String?
   workTrainingDetails String?
+  internalCompany     String?
   jobs                jobs?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
@@ -1360,6 +1401,31 @@ model BranchExpense {
   @@index([branch])
   @@index([date])
   @@index([salespersonId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model DailyLogWorker {
+  id              String          @id
+  dailyLogId      String
+  name            String
+  position        String
+  hours           Float?
+  status          String
+  notes           String?
+  ProjectDailyLog ProjectDailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProjectEquipment {
+  id                 String   @id
+  projectId          String
+  name               String
+  registrationNumber String?
+  quantity           Int      @default(1)
+  status             String   @default("ใช้งาน")
+  details            String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  Project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model clothing_items {

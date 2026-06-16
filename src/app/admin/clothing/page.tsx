@@ -60,11 +60,14 @@ function AdminClothingPageInner() {
                 fetch("/api/admin/clothing/items").then(r => r.json()),
                 fetch("/api/admin/clothing/reports").then(r => r.json())
             ]);
-            setRequests(reqRes || []);
-            setItems(itemRes || []);
-            setReports(repRes || null);
+            setRequests(Array.isArray(reqRes) ? reqRes : []);
+            setItems(Array.isArray(itemRes) ? itemRes : []);
+            setReports(repRes && !repRes.error ? repRes : null);
         } catch (e) {
             console.error(e);
+            setRequests([]);
+            setItems([]);
+            setReports(null);
         } finally {
             setLoading(false);
         }
