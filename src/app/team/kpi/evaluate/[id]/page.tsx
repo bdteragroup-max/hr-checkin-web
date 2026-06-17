@@ -203,9 +203,15 @@ export default function KPISupervisorEvaluatePage() {
     };
 
     const handleSubmit = async () => {
+        const hasValidText = (val: string) => val && /[a-zA-Z0-9ก-๙]/.test(val);
         const incomplete = items.find(it => it.section !== "DEVELOPMENT" && it.supervisor_score === 0);
         if (incomplete) {
             alert("กรุณาให้คะแนนประเมินให้ครบทุกหัวข้อ");
+            return;
+        }
+
+        if (comment && !hasValidText(comment)) {
+            alert("ช่องความคิดเห็นต้องมีตัวอักษรหรือตัวเลข (ห้ามระบุเฉพาะอักขระพิเศษ)");
             return;
         }
 

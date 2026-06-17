@@ -17,7 +17,19 @@ export async function GET() {
             where: {
                 OR: [
                     { supervisor_id: supervisorId },
-                    { secondary_supervisor_id: supervisorId }
+                    { secondary_supervisor_id: supervisorId },
+                    {
+                        is_on_trial: true,
+                        emp_id: { not: supervisorId },
+                        job_positions: {
+                            OR: [
+                                { node_type: 'executive' },
+                                { title: { contains: 'mgr', mode: 'insensitive' } },
+                                { title: { contains: 'manager', mode: 'insensitive' } },
+                                { title: { contains: 'หัวหน้า', mode: 'insensitive' } }
+                            ]
+                        }
+                    }
                 ],
                 is_active: true
             },
@@ -27,11 +39,13 @@ export async function GET() {
                 nickname: true,
                 hire_date: true,
                 is_on_trial: true,
+                supervisor_id: true,
+                secondary_supervisor_id: true,
                 job_positions: { select: { title: true } },
                 departments: { select: { name: true } },
                 salary_type: true,
                 probation_evaluations: {
-                    select: { evaluation_no: true, evaluation_date: true, total_score: true, grade: true },
+                    select: { evaluation_no: true, evaluation_date: true, total_score: true, grade: true, supervisor_id: true },
                     orderBy: { evaluation_no: "asc" }
                 }
             }
@@ -39,7 +53,11 @@ export async function GET() {
 
         const now = new Date();
         const results = employees.map(emp => {
-            const lastEval = emp.probation_evaluations[emp.probation_evaluations.length - 1];
+            const isDirectSubordinate = emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId;
+            const isOtherManager = !isDirectSubordinate;
+            
+            const myEvals = emp.probation_evaluations.filter((e: any) => e.supervisor_id === supervisorId);
+            const lastEval = myEvals[myEvals.length - 1];
             const nextRound = (lastEval?.evaluation_no || 0) + 1;
             
             let dueDate = null;
@@ -90,7 +108,8 @@ export async function GET() {
                 due_date: dueDate ? dueDate.toISOString() : null,
                 unlock_date: unlockDate ? unlockDate.toISOString() : null,
                 is_unlocked: isUnlocked,
-                evaluation_history: emp.probation_evaluations
+                evaluation_history: emp.probation_evaluations,
+                is_other_manager: isOtherManager
             };
         });
 

@@ -50,13 +50,33 @@ export async function POST(req: Request) {
             finalCommentSupervisor += auditLog;
         }
 
-        // 1. Verify Supervisor Relationship (Allow Primary or Secondary)
+        // 1. Verify Supervisor Relationship or Cross-Manager Evaluation
         const emp = await prisma.employees.findUnique({
             where: { emp_id },
-            select: { supervisor_id: true, secondary_supervisor_id: true, name: true, nickname: true }
+            select: { supervisor_id: true, secondary_supervisor_id: true, name: true, nickname: true, is_on_trial: true, emp_id: true, job_positions: { select: { node_type: true, title: true } } }
         });
+
+        const loggedInUser = await prisma.employees.findUnique({
+            where: { emp_id: supervisorId },
+            select: { job_positions: { select: { node_type: true, title: true } } }
+        });
+
+        const isManager = loggedInUser?.job_positions?.node_type === 'executive' || 
+            loggedInUser?.job_positions?.title?.toLowerCase().includes('mgr') || 
+            loggedInUser?.job_positions?.title?.toLowerCase().includes('manager') || 
+            loggedInUser?.job_positions?.title?.includes('หัวหน้า');
+
+        const isOtherProbationaryManager = emp?.is_on_trial && (
+            emp?.job_positions?.node_type === 'executive' || 
+            emp?.job_positions?.title?.toLowerCase().includes('mgr') || 
+            emp?.job_positions?.title?.toLowerCase().includes('manager') || 
+            emp?.job_positions?.title?.includes('หัวหน้า')
+        );
+
+        const isDirectSubordinate = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
+        const isCrossEvaluating = isManager && isOtherProbationaryManager && emp.emp_id !== supervisorId;
         
-        const isAuthorized = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
+        const isAuthorized = isDirectSubordinate || isCrossEvaluating;
         if (!isAuthorized) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }

@@ -29,18 +29,36 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
 
     if (status === "approved" && existingRequest.status !== "approved") {
       updateData.approved_at = new Date();
-    } else if (status === "fulfilled" && existingRequest.status !== "fulfilled") {
-      updateData.fulfilled_at = new Date();
-      if (!existingRequest.approved_at) {
-         updateData.approved_at = new Date(); // Implicitly approve if fulfilled directly
-      }
-
-      // Deduct stock!
+      // Deduct stock immediately!
       await prisma.clothing_variants.update({
         where: { id: existingRequest.variant_id },
         data: {
           stock_quantity: {
             decrement: existingRequest.quantity
+          }
+        }
+      });
+    } else if (status === "fulfilled" && existingRequest.status !== "fulfilled") {
+      updateData.fulfilled_at = new Date();
+      if (!existingRequest.approved_at) {
+         updateData.approved_at = new Date(); // Implicitly approve if fulfilled directly
+         // Deduct stock!
+         await prisma.clothing_variants.update({
+           where: { id: existingRequest.variant_id },
+           data: {
+             stock_quantity: {
+               decrement: existingRequest.quantity
+             }
+           }
+         });
+      }
+    } else if (status === "rejected" && (existingRequest.status === "approved" || existingRequest.status === "fulfilled")) {
+      // Restore stock!
+      await prisma.clothing_variants.update({
+        where: { id: existingRequest.variant_id },
+        data: {
+          stock_quantity: {
+            increment: existingRequest.quantity
           }
         }
       });

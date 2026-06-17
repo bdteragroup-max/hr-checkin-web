@@ -333,14 +333,33 @@ export default function AdminProbationPage() {
                                                             const target = new Date(hire);
                                                             target.setDate(hire.getDate() + dueDays);
                                                             
+                                                            const isCompleted = round < emp.next_round;
+                                                            const isPending = round === emp.next_round;
+                                                            
+                                                            const now = new Date();
+                                                            now.setHours(0,0,0,0);
+                                                            const diff = now.getTime() - target.getTime();
+                                                            const delayDays = isPending && diff > 0 ? Math.floor(diff / (1000 * 60 * 60 * 24)) : 0;
+
                                                             return (
                                                                 <div key={round} style={{ 
                                                                     display: 'flex', gap: 12, alignItems: 'center', 
                                                                     padding: '6px 0', 
-                                                                    borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none' 
+                                                                    borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none',
+                                                                    opacity: isCompleted ? 0.5 : 1
                                                                 }}>
-                                                                    <div style={{ color: '#d93025', fontWeight: 800, fontSize: 13, minWidth: 50 }}>ครั้งที่ {round}</div>
-                                                                    <div style={{ color: '#475569', fontSize: 12 }}>ครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}</div>
+                                                                    <div style={{ color: isCompleted ? '#94a3b8' : '#d93025', fontWeight: 800, fontSize: 13, minWidth: 50 }}>ครั้งที่ {round}</div>
+                                                                    <div style={{ color: '#475569', fontSize: 12, flex: 1 }}>
+                                                                        ครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}
+                                                                    </div>
+                                                                    {isCompleted && (
+                                                                        <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>ประเมินแล้ว</div>
+                                                                    )}
+                                                                    {delayDays > 0 && (
+                                                                        <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 600, background: '#fee2e2', padding: '2px 8px', borderRadius: 12 }}>
+                                                                            เลยกำหนด {delayDays} วัน
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         })}

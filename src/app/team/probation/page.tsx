@@ -31,7 +31,7 @@ interface Subordinate {
 export default function SupervisorProbationPage() {
     const [list, setList] = useState<Subordinate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'trial' | 'regular'>('trial');
+    const [activeTab, setActiveTab] = useState<'trial' | 'regular' | 'other_managers'>('trial');
 
     useEffect(() => {
         fetch("/api/team/probation/employees")
@@ -65,6 +65,12 @@ export default function SupervisorProbationPage() {
                     >
                         <span>พนักงานประจำ</span>
                     </div>
+                    <div
+                        className={`${styles.tab} ${activeTab === 'other_managers' ? styles.tabActive : ''}`}
+                        onClick={() => setActiveTab('other_managers')}
+                    >
+                        <span>ผู้จัดการทดลองงานท่านอื่น</span>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -74,8 +80,10 @@ export default function SupervisorProbationPage() {
                     </div>
                 ) : (() => {
                     const filtered = list.filter(e => {
-                        if (activeTab === 'trial') return e.is_on_trial;
-                        if (activeTab === 'regular') return !e.is_on_trial && e.salary_type === 'monthly';
+                        const isOther = (e as any).is_other_manager;
+                        if (activeTab === 'trial') return e.is_on_trial && !isOther;
+                        if (activeTab === 'regular') return !e.is_on_trial && e.salary_type === 'monthly' && !isOther;
+                        if (activeTab === 'other_managers') return isOther;
                         return false;
                     });
 
@@ -85,13 +93,13 @@ export default function SupervisorProbationPage() {
                                 <UserCircleIcon width={48} className="mx-auto mb-4 text-slate-300" />
                                 <h3 style={{ fontWeight: 700, color: "#475569" }}>ไม่พบประเมิน</h3>
                                 <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-                                    ขณะนี้ไม่มีพนักงาน{activeTab === 'trial' ? 'ที่อยู่ระหว่างทดลองงาน' : 'ประจำ'}ที่ต้องประเมิน
+                                    ขณะนี้ไม่มีพนักงาน{activeTab === 'trial' ? 'ที่อยู่ระหว่างทดลองงาน' : activeTab === 'other_managers' ? 'ระดับผู้จัดการท่านอื่น' : 'ประจำ'}ที่ต้องประเมิน
                                 </p>
                             </div>
                         );
                     }
 
-                    const sectionLabel = activeTab === 'trial' ? 'Probation Period' : 'Monthly Performance';
+                    const sectionLabel = activeTab === 'trial' ? 'Probation Period' : activeTab === 'other_managers' ? 'Other Managers' : 'Monthly Performance';
 
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -137,14 +145,51 @@ export default function SupervisorProbationPage() {
                                                     const target = new Date(hire);
                                                     target.setDate(hire.getDate() + dueDays);
                                                     
+                                                    const isEvaluated = round < emp.next_round;
+                                                    const isCurrentRound = round === emp.next_round;
+                                                    
+                                                    let statusText = null;
+                                                    let statusColor = "";
+                                                    
+                                                    if (isEvaluated) {
+                                                        statusText = "ประเมินแล้ว";
+                                                        statusColor = "#16a34a"; // green
+                                                    } else if (isCurrentRound) {
+                                                        const now = new Date();
+                                                        now.setHours(0, 0, 0, 0);
+                                                        const tgt = new Date(target);
+                                                        tgt.setHours(0, 0, 0, 0);
+                                                        
+                                                        const unlockDate = new Date(tgt);
+                                                        unlockDate.setDate(unlockDate.getDate() - 7);
+                                                        
+                                                        const diffMs = now.getTime() - tgt.getTime();
+                                                        if (diffMs > 0) {
+                                                            const delayDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                                                            statusText = `ล่าช้า ${delayDays} วัน`;
+                                                            statusColor = "#ef4444"; // red
+                                                        } else if (now >= unlockDate) {
+                                                            statusText = "ถึงกำหนด";
+                                                            statusColor = "#eab308"; // yellow
+                                                        }
+                                                    }
+                                                    
                                                     return (
                                                         <div key={round} style={{ 
-                                                            display: 'flex', gap: 12, alignItems: 'center', 
+                                                            display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between',
                                                             padding: '8px 0', 
-                                                            borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none' 
+                                                            borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none',
+                                                            opacity: isEvaluated ? 0.6 : 1
                                                         }}>
-                                                            <div style={{ color: '#d93025', fontWeight: 800, fontSize: 14, minWidth: 60 }}>ครั้งที่ {round}</div>
-                                                            <div style={{ color: '#475569', fontSize: 13 }}>กำหนดครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}</div>
+                                                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                                                <div style={{ color: isEvaluated ? '#94a3b8' : '#d93025', fontWeight: 800, fontSize: 14, minWidth: 60 }}>ครั้งที่ {round}</div>
+                                                                <div style={{ color: isEvaluated ? '#94a3b8' : '#475569', fontSize: 13 }}>กำหนดครบ {dueDays} วัน: {target.toLocaleDateString("th-TH")}</div>
+                                                            </div>
+                                                            {statusText && (
+                                                                <div style={{ color: statusColor, fontSize: 13, fontWeight: 700 }}>
+                                                                    {statusText}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}

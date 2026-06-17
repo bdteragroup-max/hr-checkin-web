@@ -124,6 +124,7 @@ model employees {
   fixed_tax_deduction               Decimal?                 @db.Decimal(10, 2)
   asset_borrowings                  asset_borrowings[]
   birthday_claims                   birthday_claims[]
+  clothing_requests                 clothing_requests[]
   commission_claims                 commission_claims[]
   work_plans                        daily_work_plans[]
   assessed_trainings                employee_trainings[]     @relation("AssessorToTraining")
@@ -148,7 +149,6 @@ model employees {
   booking_attendees                 room_booking_attendees[]
   room_bookings                     room_bookings[]
   travel_claims                     travel_claims[]
-  clothing_requests                 clothing_requests[]
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -1429,45 +1429,41 @@ model ProjectEquipment {
 }
 
 model clothing_items {
-  id             Int       @id @default(autoincrement())
-  name           String    @db.VarChar(200)
-  description    String?   @db.Text
-  image_url      String?   @db.Text
-  is_active      Boolean   @default(true)
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
-
-  variants       clothing_variants[]
+  id          Int                 @id @default(autoincrement())
+  name        String              @db.VarChar(200)
+  description String?
+  image_url   String?
+  is_active   Boolean             @default(true)
+  created_at  DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime            @default(now()) @db.Timestamptz(6)
+  variants    clothing_variants[]
 }
 
 model clothing_variants {
-  id             Int       @id @default(autoincrement())
+  id             Int                 @id @default(autoincrement())
   item_id        Int
-  size           String    @db.VarChar(50)
-  stock_quantity Int       @default(0)
-
-  item           clothing_items @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  size           String              @db.VarChar(50)
+  stock_quantity Int                 @default(0)
   requests       clothing_requests[]
+  item           clothing_items      @relation(fields: [item_id], references: [id], onDelete: Cascade)
 
   @@unique([item_id, size])
 }
 
 model clothing_requests {
-  id               Int       @id @default(autoincrement())
-  emp_id           String    @db.VarChar(20)
-  variant_id       Int
-  quantity         Int       @default(1)
-  reason           String?   @db.Text
-  status           String    @default("pending") @db.VarChar(50) // pending, approved, rejected, fulfilled
-  requested_at     DateTime  @default(now()) @db.Timestamptz(6)
-  
-  approved_by      String?   @db.VarChar(100) 
-  approved_at      DateTime? @db.Timestamptz(6)
-  fulfilled_at     DateTime? @db.Timestamptz(6)
-  admin_note       String?   @db.Text
-
-  employee         employees          @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  variant          clothing_variants  @relation(fields: [variant_id], references: [id], onDelete: Cascade)
+  id           Int               @id @default(autoincrement())
+  emp_id       String            @db.VarChar(20)
+  variant_id   Int
+  quantity     Int               @default(1)
+  reason       String?
+  status       String            @default("pending") @db.VarChar(50)
+  requested_at DateTime          @default(now()) @db.Timestamptz(6)
+  approved_by  String?           @db.VarChar(100)
+  approved_at  DateTime?         @db.Timestamptz(6)
+  fulfilled_at DateTime?         @db.Timestamptz(6)
+  admin_note   String?
+  employee     employees         @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  variant      clothing_variants @relation(fields: [variant_id], references: [id], onDelete: Cascade)
 
   @@index([emp_id])
   @@index([variant_id])

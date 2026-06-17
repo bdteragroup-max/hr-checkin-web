@@ -488,9 +488,9 @@ function AdminClothingPageInner() {
                             <div>จำนวน: {actionRequest?.quantity} ตัว</div>
                         </div>
                         
-                        {actionType === "fulfilled" && (
+                        {actionType === "approved" && (
                             <div style={{ padding: "12px", background: "#fef3c7", color: "#b45309", borderRadius: "var(--radius-sm)", marginBottom: 16, fontSize: 13, display: "flex", gap: 6 }}>
-                                <CheckIcon width={16} /> <b>การส่งมอบของ จะทำการตัดสต๊อกสินค้าทันที!</b>
+                                <CheckIcon width={16} /> <b>การอนุมัติ จะทำการตัดสต๊อกสินค้าทันที!</b>
                             </div>
                         )}
 

@@ -55,7 +55,10 @@ export async function GET() {
         const pendingEmployees = await prisma.employees.findMany({
             where: { is_on_trial: true, is_active: true },
             include: {
-                _count: { select: { probation_evaluations: true } },
+                probation_evaluations: { 
+                    select: { evaluation_no: true, supervisor_id: true },
+                    orderBy: { evaluation_no: 'desc' }
+                },
                 job_positions: { select: { title: true } },
                 departments: { select: { name: true } }
             }
@@ -66,6 +69,8 @@ export async function GET() {
             if (emp.nickname && !finalPendingName.includes(`(${emp.nickname})`)) {
                 finalPendingName = `${finalPendingName} (${emp.nickname})`;
             }
+            const directEvals = emp.probation_evaluations.filter((e: any) => e.supervisor_id === emp.supervisor_id || e.supervisor_id === emp.secondary_supervisor_id);
+            const latestEvalNo = directEvals.length > 0 ? directEvals[0].evaluation_no : 0;
             return {
                 emp_id: emp.emp_id,
                 name: finalPendingName,
@@ -73,7 +78,7 @@ export async function GET() {
                 probation_end_date: emp.probation_end_date,
                 job_title: emp.job_positions?.title || "-",
                 department: emp.departments?.name || "-",
-                next_round: (emp._count.probation_evaluations || 0) + 1
+                next_round: latestEvalNo + 1
             };
         });
 

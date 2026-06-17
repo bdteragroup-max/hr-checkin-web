@@ -110,17 +110,23 @@ export default function KPISelfRatePage() {
     };
 
     const handleSubmit = async () => {
+        const hasValidText = (val: string) => val && /[a-zA-Z0-9ก-๙]/.test(val);
         // Validation: Competency is only required if employee is a supervisor
         const isLeader = evaluation.employee?._count?.subordinates > 0;
         const incomplete = items.find(it => {
             if (it.section === "COMPETENCY" && !isLeader) return false;
             // Skip validation for locked attendance items
             if (it.objective.includes("มาสาย") || it.objective.includes("ลาป่วย") || it.objective.includes("ลากิจ")) return false;
-            return (!it.result_description || it.employee_score === 0);
+            return (!hasValidText(it.result_description) || it.employee_score === 0);
         });
 
         if (incomplete) {
-            alert("กรุณาระบุผลงานและคะแนนประเมินตนเองให้ครบทุกหัวข้อ" + (!isLeader ? " (ยกเว้นส่วนที่หัวหน้าประเมิน)" : ""));
+            alert("กรุณาระบุผลงานและคะแนนประเมินตนเองให้ครบทุกหัวข้อ และต้องมีตัวอักษรหรือตัวเลข (ห้ามระบุเฉพาะอักขระพิเศษ)" + (!isLeader ? " (ยกเว้นส่วนที่หัวหน้าประเมิน)" : ""));
+            return;
+        }
+
+        if (comment && !hasValidText(comment)) {
+            alert("ช่องความคิดเห็นต้องมีตัวอักษรหรือตัวเลข (ห้ามระบุเฉพาะอักขระพิเศษ)");
             return;
         }
 

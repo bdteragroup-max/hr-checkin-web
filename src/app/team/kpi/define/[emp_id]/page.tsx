@@ -277,6 +277,13 @@ export default function KPIDefinePage() {
     };
 
     const handleSubmit = async () => {
+        const hasValidText = (val: string) => val && /[a-zA-Z0-9ก-๙]/.test(val);
+        const incomplete = items.find(it => !hasValidText(it.objective) || !hasValidText(it.indicator) || it.weight <= 0);
+        if (incomplete) {
+            alert("กรุณากรอกเป้าหมายและตัวชี้วัดให้ครบทุกช่อง และต้องมีตัวอักษรหรือตัวเลข (ห้ามระบุเฉพาะอักขระพิเศษ)");
+            return;
+        }
+
         if (Math.abs(p1Weight - 100) > 0.05) {
             alert("น้ำหนักรวมในส่วนที่ 1 (KPI) ต้องเท่ากับ 100% (ปัจจุบัน: " + p1Weight.toFixed(2) + "%)");
             return;

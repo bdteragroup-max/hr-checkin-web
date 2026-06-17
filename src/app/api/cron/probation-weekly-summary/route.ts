@@ -88,7 +88,8 @@ export async function GET(req: Request) {
             }
 
             if (evalDate) {
-                const evaluationNo = (emp.probation_evaluations?.length || 0) + 1;
+                const maxEvalNo = emp.probation_evaluations?.reduce((max, ev) => Math.max(max, ev.evaluation_no), 0) || 0;
+                const evaluationNo = maxEvalNo + 1;
                 upcomingEvaluations.push({
                     name: emp.name,
                     dept: emp.departments?.name || "-",
