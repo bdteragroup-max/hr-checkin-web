@@ -54,20 +54,19 @@ export async function GET(req: Request) {
 
             if (leaves.length > 0) continue; // Failed condition
 
-            // 2. Count on-time checkins
+            // 2. Count checkins (to ensure no absences)
             const checkins = await prisma.checkins.findMany({
                 where: {
                     emp_id: emp.emp_id,
                     date_key: { gte: startDateUTC, lt: endDateUTC },
                     type: { in: ["Check-in", "Project-In", "Offsite-In"] },
-                    late_status: { in: ["ontime", "early"] }
                 },
                 select: { date_key: true }
             });
 
             const uniqueDays = new Set(checkins.map(c => c.date_key.toISOString()));
 
-            if (uniqueDays.size === totalWorkingDays) {
+            if (uniqueDays.size >= totalWorkingDays) {
                 const sourceKey = `monthly_reward:${emp.emp_id}:${y}-${padM}`;
                 
                 await prisma.$transaction(async (tx) => {
@@ -79,26 +78,26 @@ export async function GET(req: Request) {
                         await tx.coin_ledgers.create({
                             data: {
                                 emp_id: emp.emp_id,
-                                coin_type_id: "BRONZE",
-                                amount: 5,
+                                coin_type_id: "SILVER",
+                                amount: 1,
                                 transaction_type: "EARN",
                                 source_key: sourceKey,
-                                description: `Perfect Attendance Reward (${padM}/${y})`,
+                                description: `Perfect Attendance Reward (No leaves/absences) (${padM}/${y})`,
                             },
                         });
 
                         const currentCoin = await tx.employee_coins.findUnique({
-                            where: { emp_id_coin_type_id: { emp_id: emp.emp_id, coin_type_id: "BRONZE" } }
+                            where: { emp_id_coin_type_id: { emp_id: emp.emp_id, coin_type_id: "SILVER" } }
                         });
 
                         if (currentCoin) {
                             await tx.employee_coins.update({
                                 where: { id: currentCoin.id },
-                                data: { balance: { increment: 5 } },
+                                data: { balance: { increment: 1 } },
                             });
                         } else {
                             await tx.employee_coins.create({
-                                data: { emp_id: emp.emp_id, coin_type_id: "BRONZE", balance: 5 }
+                                data: { emp_id: emp.emp_id, coin_type_id: "SILVER", balance: 1 }
                             });
                         }
                         awardedCount++;

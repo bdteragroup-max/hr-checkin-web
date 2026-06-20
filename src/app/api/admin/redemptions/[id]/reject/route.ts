@@ -70,21 +70,25 @@ export async function PUT(
             });
 
             // 4. Return coins to employee
-            if (redemption.coin_type_id && redemption.points_spent > 0) {
+            const rAny = redemption as any;
+            const costs = rAny.costs && Array.isArray(rAny.costs) && rAny.costs.length > 0 
+                ? rAny.costs 
+                : (rAny.coin_type_id ? [{ coin_type: rAny.coin_type_id, amount: rAny.points_spent }] : []);
+
+            for (const cost of costs) {
                 await tx.employee_coins.updateMany({
-                    where: { emp_id: redemption.emp_id, coin_type_id: redemption.coin_type_id },
-                    data: { balance: { increment: redemption.points_spent } }
+                    where: { emp_id: redemption.emp_id, coin_type_id: cost.coin_type },
+                    data: { balance: { increment: cost.amount } }
                 });
 
                 // 5. Create ledger entry for the refund
                 await tx.coin_ledgers.create({
                     data: {
                         emp_id: redemption.emp_id,
-                        coin_type_id: redemption.coin_type_id,
-                        amount: redemption.points_spent,
+                        coin_type_id: cost.coin_type,
+                        amount: cost.amount,
                         transaction_type: "REFUND",
-                        source_key: `refund:redemption:${redemption.id}`, // unique constraint prevents duplicate refunds
-                        ref_id: String(redemption.id),
+                        source_key: `refund:redemption:${redemption.id}:${cost.coin_type}`, // unique constraint
                         description: `Refund for rejected redemption #${redemption.id}`
                     }
                 });

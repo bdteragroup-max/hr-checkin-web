@@ -222,7 +222,7 @@ export default function CoinsPage() {
 
                     {/* SILVER */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "รับจากการนำเหรียญ Bronze มาแลกเปลี่ยนเท่านั้น\n(20 Bronze = 1 Silver)", type: "info" })}>
+                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "รับจากสถิติไม่ขาด ไม่ลา ตลอดทั้งเดือน\nหรือรับจากการนำเหรียญ Bronze มาแลกเปลี่ยน\n(20 Bronze = 1 Silver)", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
