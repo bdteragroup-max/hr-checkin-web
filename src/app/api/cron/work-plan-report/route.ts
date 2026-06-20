@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendWorkPlanNotification } from "@/utils/lineMessaging";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,12 +46,17 @@ export async function GET(req: Request) {
             return NextResponse.json({ ok: true, message: "No new plans to notify" });
         }
 
+        // Send notifications using batch method
         let sentCount = 0;
         const now = new Date();
+        const { sendWorkPlanNotificationBatch } = await import("@/utils/lineMessaging");
 
-        // Send notifications individually for each employee
-        for (const plan of pendingPlans) {
-            const success = await sendWorkPlanNotification(TARGET_ID, {
+        // Send max 10 at a time to be consistent
+        const maxBatchSize = 10;
+        for (let i = 0; i < pendingPlans.length; i += maxBatchSize) {
+            const batch = pendingPlans.slice(i, i + maxBatchSize);
+            
+            const formattedPlans = batch.map(plan => ({
                 empName: plan.employees?.name || "Unknown",
                 deptName: plan.employees?.departments?.name,
                 morningPlan: plan.morning_plan,
@@ -62,14 +66,16 @@ export async function GET(req: Request) {
                 otPlan: plan.ot_plan || undefined,
                 otLoc: plan.ot_location || undefined,
                 otAttendant: plan.ot_attendant || undefined
-            });
+            }));
+
+            const success = await sendWorkPlanNotificationBatch(TARGET_ID, formattedPlans);
 
             if (success) {
-                await prisma.daily_work_plans.update({
-                    where: { id: plan.id },
+                await prisma.daily_work_plans.updateMany({
+                    where: { id: { in: batch.map(p => p.id) } },
                     data: { notified_at: now }
                 });
-                sentCount++;
+                sentCount += batch.length;
             }
         }
 

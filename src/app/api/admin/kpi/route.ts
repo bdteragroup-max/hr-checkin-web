@@ -70,7 +70,87 @@ export async function PATCH(req: Request) {
 
         if (!id) return NextResponse.json({ error: "ID_REQUIRED" }, { status: 400 });
 
-        // 1. Update the main evaluation
+        // 1. Fetch current evaluation
+        const currentEval = await (prisma as any).kpi_evaluations.findUnique({
+            where: { id: Number(id) }
+        });
+
+        if (!currentEval) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+        
+        // Guard against editing APPROVED evaluations
+        if (currentEval.status === "APPROVED") {
+            return NextResponse.json({ error: "ALREADY_APPROVED" }, { status: 400 });
+        }
+
+        // If status is transitioning to APPROVED, perform atomic transaction
+        if (status === "APPROVED") {
+            let resultEval: any;
+            await prisma.$transaction(async (tx: any) => {
+                // Determine final grade before lock
+                const finalGrade = grade || currentEval.grade;
+                const emp_id = currentEval.emp_id;
+                
+                // 1. Atomic updateMany lock
+                const updated = await tx.kpi_evaluations.updateMany({
+                    where: { id: Number(id), status: "PENDING_APPROVAL" },
+                    data: {
+                        status: "APPROVED",
+                        supervisor_comment: supervisor_comment || undefined,
+                        employee_comment: employee_comment || undefined,
+                        total_supervisor_score: total_supervisor_score != null ? Number(total_supervisor_score) : undefined,
+                        grade: finalGrade,
+                        updated_at: new Date()
+                    }
+                });
+
+                if (updated.count === 0) {
+                    throw new Error("ALREADY_APPROVED_OR_NOT_FOUND");
+                }
+
+                // 2. Award KPI Coins based on grade
+                let coinAmount = 0;
+                if (finalGrade === "A") coinAmount = 2;
+                else if (finalGrade === "B" || finalGrade === "B+") coinAmount = 1;
+
+                if (coinAmount > 0) {
+                    const kpiCoinTypeId = "KPI";
+                    
+                    // Upsert employee coin balance
+                    const existingCoin = await tx.employee_coins.findUnique({
+                        where: { emp_id_coin_type_id: { emp_id, coin_type_id: kpiCoinTypeId } }
+                    });
+
+                    if (existingCoin) {
+                        await tx.employee_coins.update({
+                            where: { id: existingCoin.id },
+                            data: { balance: { increment: coinAmount } }
+                        });
+                    } else {
+                        await tx.employee_coins.create({
+                            data: { emp_id, coin_type_id: kpiCoinTypeId, balance: coinAmount }
+                        });
+                    }
+
+                    // Insert Ledger
+                    await tx.coin_ledgers.create({
+                        data: {
+                            emp_id,
+                            coin_type_id: kpiCoinTypeId,
+                            amount: coinAmount,
+                            transaction_type: "EARN",
+                            source_key: `kpi_reward:${emp_id}:${id}`,
+                            description: `KPI evaluation approved — Grade ${finalGrade}`
+                        }
+                    });
+                }
+                
+                resultEval = await tx.kpi_evaluations.findUnique({ where: { id: Number(id) } });
+            });
+
+            return NextResponse.json({ ok: true, evaluation: resultEval });
+        }
+
+        // Standard pre-approval update
         const updatedEval = await (prisma as any).kpi_evaluations.update({
             where: { id: Number(id) },
             data: {
@@ -83,7 +163,7 @@ export async function PATCH(req: Request) {
             }
         });
 
-        // 2. Update individual items if provided
+        // Update individual items if provided
         if (items && Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {

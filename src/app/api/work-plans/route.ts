@@ -126,32 +126,48 @@ export async function POST(req: Request) {
                 afternoon_location,
                 ot_plan,
                 ot_location,
-                ot_attendant,
-                notified_at: now
+                ot_attendant
+                // Do not set notified_at so it remains null, allowing batching
             }
         });
 
-        // Send LINE notification only if it's a new plan
-        if (!existingPlan) {
-            const employee = await prisma.employees.findUnique({
-                where: { emp_id: payload.emp_id },
-                select: { name: true, departments: { select: { name: true } } }
+        // Trigger batch notification if we reached 10 pending plans
+        const groupId = process.env.LINE_WORKPLAN_GROUP_ID;
+        if (groupId) {
+            const unnotifiedPlans = await prisma.daily_work_plans.findMany({
+                where: { notified_at: null, date: targetDate },
+                include: {
+                    employees: {
+                        select: { name: true, departments: { select: { name: true } } }
+                    }
+                },
+                orderBy: { created_at: 'asc' }
             });
 
-            if (employee) {
-                const groupId = process.env.LINE_WORKPLAN_GROUP_ID;
-                if (groupId) {
-                    const { sendWorkPlanNotification } = await import("@/utils/lineMessaging");
-                    await sendWorkPlanNotification(groupId, {
-                        empName: employee.name,
-                        deptName: employee.departments?.name,
-                        morningPlan: morning_plan,
-                        morningLoc: morning_location,
-                        afternoonPlan: afternoon_plan,
-                        afternoonLoc: afternoon_location,
-                        otPlan: ot_plan,
-                        otLoc: ot_location,
-                        otAttendant: ot_attendant
+            if (unnotifiedPlans.length >= 10) {
+                // Batch size of 10
+                const plansToNotify = unnotifiedPlans.slice(0, 10);
+                
+                const { sendWorkPlanNotificationBatch } = await import("@/utils/lineMessaging");
+                
+                const formattedPlans = plansToNotify.map(p => ({
+                    empName: p.employees?.name || "Unknown",
+                    deptName: p.employees?.departments?.name,
+                    morningPlan: p.morning_plan,
+                    morningLoc: p.morning_location,
+                    afternoonPlan: p.afternoon_plan,
+                    afternoonLoc: p.afternoon_location,
+                    otPlan: p.ot_plan || undefined,
+                    otLoc: p.ot_location || undefined,
+                    otAttendant: p.ot_attendant || undefined
+                }));
+
+                const success = await sendWorkPlanNotificationBatch(groupId, formattedPlans);
+
+                if (success) {
+                    await prisma.daily_work_plans.updateMany({
+                        where: { id: { in: plansToNotify.map(p => p.id) } },
+                        data: { notified_at: new Date() }
                     });
                 }
             }

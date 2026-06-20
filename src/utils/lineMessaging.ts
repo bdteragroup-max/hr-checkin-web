@@ -2679,6 +2679,115 @@ export async function sendWorkPlanNotification(
   return sendLineMessage(targetId, [{ type: "flex", altText: `แผนงาน: ${empName}`, contents }]);
 }
 
+export async function sendWorkPlanNotificationBatch(
+  targetId: string,
+  plansData: Array<{
+    empName: string;
+    deptName?: string;
+    morningPlan: string;
+    morningLoc: string;
+    afternoonPlan: string;
+    afternoonLoc: string;
+    otPlan?: string;
+    otLoc?: string;
+    otAttendant?: string;
+  }>
+) {
+  if (plansData.length === 0) return true;
+
+  // We chunk them into groups of 10 people per message card
+  const maxPeoplePerCard = 10;
+  let successAll = true;
+
+  for (let i = 0; i < plansData.length; i += maxPeoplePerCard) {
+    const chunk = plansData.slice(i, i + maxPeoplePerCard);
+    
+    const bodyContents: any[] = [];
+    
+    for (let j = 0; j < chunk.length; j++) {
+      const data = chunk[j];
+      const empName = await formatNameDb(data.empName);
+      
+      const personBox: any = {
+        type: "box",
+        layout: "vertical",
+        margin: j === 0 ? "none" : "lg",
+        spacing: "sm",
+        contents: [
+          { 
+            type: "text", 
+            text: `👤 ${empName} (${data.deptName || "-"})`, 
+            weight: "bold", 
+            size: "sm", 
+            color: "#1e293b",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: `📍 เช้า: ${data.morningLoc} | ${data.morningPlan?.trim() || "-"}`,
+            size: "xs",
+            color: "#475569",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: `📍 บ่าย: ${data.afternoonLoc} | ${data.afternoonPlan?.trim() || "-"}`,
+            size: "xs",
+            color: "#475569",
+            wrap: true
+          }
+        ]
+      };
+
+      if (data.otPlan) {
+        personBox.contents.push({
+          type: "text",
+          text: `🌙 OT: ${data.otLoc || "-"} | ${data.otPlan?.trim() || "-"}`,
+          size: "xs",
+          color: "#7c3aed",
+          wrap: true
+        });
+      }
+
+      bodyContents.push(personBox);
+      
+      if (j < chunk.length - 1) {
+        bodyContents.push({ type: "separator", margin: "lg" });
+      }
+    }
+
+    const bubble: any = {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: `📋 สรุปแผนงาน (${chunk.length} ท่าน)`, weight: "bold", size: "lg", color: "#b91c1c" }
+        ],
+        backgroundColor: "#fef2f2",
+        paddingAll: "16px"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: bodyContents
+      }
+    };
+
+    const flexMessage = {
+      type: "flex",
+      altText: `สรุปแผนงานประจำวัน (${chunk.length} ท่าน)`,
+      contents: bubble
+    };
+
+    const res = await sendLineMessage(targetId, [flexMessage]);
+    if (!res) successAll = false;
+  }
+
+  return successAll;
+}
+
 export async function sendWelfareApprovalFlexMessage(
   lineUserId: string,
   data: {

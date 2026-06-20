@@ -24,7 +24,9 @@ import {
     DocumentTextIcon,
     BuildingOffice2Icon,
     PresentationChartLineIcon,
-    BanknotesIcon
+    BanknotesIcon,
+    SparklesIcon,
+    GiftIcon
 } from "@heroicons/react/24/outline";
 
 const NAV_MAIN_BASE = [
@@ -45,6 +47,8 @@ const NAV_MAIN_BASE = [
     { id: "commission", href: "/commission-claims", icon: BanknotesIcon, label: "เบิกค่าคอม", sub: "Commission" },
     { id: "welfare", href: "/welfare", icon: BanknotesIcon, label: "สวัสดิการและเงินช่วยเหลือ", sub: "Welfare" },
     { id: "clothing", href: "/clothing", icon: CubeIcon, label: "เบิกชุดยูนิฟอร์ม", sub: "Request Uniform" },
+    { id: "coins", href: "/coins", icon: SparklesIcon, label: "คลังเหรียญ", sub: "My Coins" },
+    { id: "rewards", href: "/rewards", icon: GiftIcon, label: "แลกของรางวัล", sub: "Redeem Rewards" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
 ];
 
@@ -86,7 +90,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     });
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }, [pathname]);
 
     const navMain = NAV_MAIN_BASE.filter(item => {

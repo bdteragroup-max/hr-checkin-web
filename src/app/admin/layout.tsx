@@ -388,6 +388,27 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
+                            {/* ✅ HR Coin System */}
+                            {hasAccess("/admin/rewards") && <div className={styles.navSection}>ระบบเหรียญรางวัล</div>}
+                            
+                            {hasAccess("/admin/rewards") && (
+                                <Link
+                                    href="/admin/rewards"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/rewards") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><GiftIcon width={20} /></span>จัดการของรางวัล
+                                </Link>
+                            )}
+
+                            {hasAccess("/admin/redemptions") && (
+                                <Link
+                                    href="/admin/redemptions"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/redemptions") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>อนุมัติการแลกของ
+                                </Link>
+                            )}
+
 
 
 

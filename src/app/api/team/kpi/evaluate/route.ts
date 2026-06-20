@@ -168,7 +168,7 @@ export async function POST(req: Request) {
             await tx.kpi_evaluations.update({
                 where: { id: evaluation_id },
                 data: {
-                    status: "completed",
+                    status: "PENDING_APPROVAL",
                     supervisor_comment: supervisor_comment,
                     total_supervisor_score: totalScore,
                     grade: grade,

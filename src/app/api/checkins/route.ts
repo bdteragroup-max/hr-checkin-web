@@ -295,7 +295,7 @@ export async function POST(req: Request) {
                 }
             }
 
-            return await (tx.checkins.create as any)({
+            const createdCheckin = await (tx.checkins.create as any)({
                 data: {
                     timestamp: getNowBangkok(),
                     date_key: effective_date_key,
@@ -319,6 +319,123 @@ export async function POST(req: Request) {
                 },
                 select: { id: true },
             });
+
+            let coin_awarded = false;
+
+            // 🏅 COIN AWARD SYSTEM & STREAK LOGIC
+            if (type === "Check-in" || type === "Project-In" || type === "Offsite-In") {
+                const y = effective_date_key.getFullYear();
+                const m = String(effective_date_key.getMonth() + 1).padStart(2, '0');
+                const d = String(effective_date_key.getDate()).padStart(2, '0');
+                const sourceKey = `checkin:${auth.emp.emp_id}:${y}-${m}-${d}`;
+                
+                const existingLedger = await tx.coin_ledgers.findUnique({
+                    where: { source_key: sourceKey }
+                });
+
+                if (!existingLedger) { // Process only once per day
+                    const employee = await tx.employees.findUnique({
+                        where: { emp_id: auth.emp.emp_id }
+                    });
+
+                    let newStreak = 0;
+
+                    if (lateInfo.status === "ontime" || lateInfo.status === "early") {
+                        // Calculate previous working day (skip Sunday)
+                        const prevWorkingDay = new Date(effective_date_key);
+                        prevWorkingDay.setUTCDate(prevWorkingDay.getUTCDate() - 1);
+                        if (prevWorkingDay.getUTCDay() === 0) { // Sunday
+                            prevWorkingDay.setUTCDate(prevWorkingDay.getUTCDate() - 1); // Back to Saturday
+                        }
+
+                        // Check if they were on time on prevWorkingDay
+                        const prevCheckin = await tx.checkins.findFirst({
+                            where: { 
+                                emp_id: auth.emp.emp_id, 
+                                date_key: prevWorkingDay,
+                                type: { in: ["Check-in", "Project-In", "Offsite-In"] }
+                            },
+                            orderBy: { timestamp: "asc" }
+                        });
+
+                        const wasPrevOnTime = prevCheckin && (prevCheckin.late_status === "ontime" || prevCheckin.late_status === "early");
+
+                        newStreak = wasPrevOnTime ? ((employee as any)?.current_streak || 0) + 1 : 1;
+                    } else {
+                        // Late: streak resets to 0
+                        newStreak = 0;
+                    }
+
+                    // Atomic update of current_streak
+                    await (tx.employees.update as any)({
+                        where: { emp_id: auth.emp.emp_id },
+                        data: { current_streak: newStreak }
+                    });
+
+                    // Only award coins if on time
+                    if (lateInfo.status === "ontime" || lateInfo.status === "early") {
+                        // 1. Award +1 Bronze for Daily Check-in
+                        await tx.coin_ledgers.create({
+                            data: {
+                                emp_id: auth.emp.emp_id,
+                                coin_type_id: "BRONZE",
+                                amount: 1,
+                                transaction_type: "EARN",
+                                source_key: sourceKey,
+                                description: "Daily Check-in Reward",
+                            },
+                        });
+
+                        // 2. Check Milestones (exactly 7 or 30)
+                        let milestoneBonus = 0;
+                        let milestoneSourceKey = "";
+                        let milestoneDesc = "";
+                        
+                        if (newStreak === 7) {
+                            milestoneBonus = 3;
+                            milestoneSourceKey = `streak_milestone:${auth.emp.emp_id}:7:${y}-${m}-${d}`;
+                            milestoneDesc = "7-Day Streak Reward";
+                        } else if (newStreak === 30) {
+                            milestoneBonus = 3;
+                            milestoneSourceKey = `streak_milestone:${auth.emp.emp_id}:30:${y}-${m}-${d}`;
+                            milestoneDesc = "30-Day Streak Reward";
+                        }
+
+                        if (milestoneBonus > 0) {
+                            await tx.coin_ledgers.create({
+                                data: {
+                                    emp_id: auth.emp.emp_id,
+                                    coin_type_id: "BRONZE",
+                                    amount: milestoneBonus,
+                                    transaction_type: "EARN",
+                                    source_key: milestoneSourceKey,
+                                    description: milestoneDesc,
+                                },
+                            });
+                        }
+
+                        // 3. Update employee coin balance (total)
+                        const totalBonus = 1 + milestoneBonus;
+                        const currentCoin = await tx.employee_coins.findUnique({
+                            where: { emp_id_coin_type_id: { emp_id: auth.emp.emp_id, coin_type_id: "BRONZE" } }
+                        });
+
+                        if (currentCoin) {
+                            await tx.employee_coins.update({
+                                where: { id: currentCoin.id },
+                                data: { balance: { increment: totalBonus } },
+                            });
+                        } else {
+                            await tx.employee_coins.create({
+                                data: { emp_id: auth.emp.emp_id, coin_type_id: "BRONZE", balance: totalBonus }
+                            });
+                        }
+                        coin_awarded = true;
+                    }
+                }
+            }
+
+            return { createdCheckin, coin_awarded };
         });
     } catch (e: any) {
         if (e.message === "DUPLICATE_TODAY") {
@@ -493,10 +610,13 @@ export async function POST(req: Request) {
         handleNotification();
     }
 
+    // Removed non-blocking coin award logic because it's now transactional.
+
     return NextResponse.json({
         ok: true,
-        id: row.id.toString(), // 🔥 FIX BigInt
+        id: row?.createdCheckin ? row.createdCheckin.id.toString() : row.id.toString(), // 🔥 FIX BigInt
         distance: Math.round(distance),
+        coin_awarded: row?.coin_awarded || false,
         auto_ot: type === "Check-out" && is_trip && empWithPosition?.job_positions?.is_ot_eligible
     });
 }

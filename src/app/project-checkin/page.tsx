@@ -641,10 +641,15 @@ export default function ProjectCheckinPage() {
                 }
             }
 
+            let successMsg = "บันทึกสำเร็จ";
+            if (dbData.coin_awarded) {
+                successMsg += " 🎉 คุณได้รับ 1 เหรียญทองแดง (Bronze Coin)";
+            }
+
             setAlert({
                 visible: true,
                 type: "ok",
-                message: "บันทึกสำเร็จ",
+                message: successMsg,
                 id: dbData.id,
                 hasShared: false,
                 isMandatory: targetType === "Project-Out",

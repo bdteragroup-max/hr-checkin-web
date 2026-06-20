@@ -777,7 +777,11 @@ export default function AppPage() {
             return;
         }
 
-        showAlert(`${targetType === "Check-in" ? "เช็คอิน" : "เช็คเอาท์"} สำเร็จ!`, "ok");
+        let successMsg = `${targetType === "Check-in" ? "เช็คอิน" : "เช็คเอาท์"} สำเร็จ!`;
+        if (data.coin_awarded) {
+            successMsg += " 🎉 คุณได้รับ 1 เหรียญทองแดง (Bronze Coin)";
+        }
+        showAlert(successMsg, "ok");
         setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />บันทึกสำเร็จ</span>, "ok");
         await refreshToday();
         setPreview(null);
