@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
-
 export async function POST(request: Request) {
   try {
     const { emp_id, reward_id, quantity } = await request.json();
@@ -110,7 +107,5 @@ export async function POST(request: Request) {
       { success: false, error: error.message || 'Failed to redeem reward' },
       { status: status }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -21,24 +21,22 @@ export async function GET() {
     if ("error" in auth) return auth.error;
 
     try {
-        // Fetch coin balances
-        const balances = await prisma.employee_coins.findMany({
-            where: { emp_id: auth.emp.emp_id },
-            include: { coin_type: true },
-        });
-
-        // Fetch transaction history (last 50)
-        const history = await prisma.coin_ledgers.findMany({
-            where: { emp_id: auth.emp.emp_id },
-            orderBy: { created_at: "desc" },
-            take: 50,
-            include: { coin_type: true },
-        });
-
-        // Fetch transfer budget
-        const budget = await prisma.transfer_budgets.findUnique({
-            where: { emp_id: auth.emp.emp_id }
-        });
+        // Fetch everything in parallel
+        const [balances, history, budget] = await Promise.all([
+            prisma.employee_coins.findMany({
+                where: { emp_id: auth.emp.emp_id },
+                include: { coin_type: true },
+            }),
+            prisma.coin_ledgers.findMany({
+                where: { emp_id: auth.emp.emp_id },
+                orderBy: { created_at: "desc" },
+                take: 50,
+                include: { coin_type: true },
+            }),
+            prisma.transfer_budgets.findUnique({
+                where: { emp_id: auth.emp.emp_id }
+            })
+        ]);
 
         return NextResponse.json({
             ok: true,

@@ -1,0 +1,282 @@
+/* Use global CSS variables defined in leave/page.module.css */
+.budgetCard {
+  background: linear-gradient(135deg, var(--red) 0%, var(--orange) 100%);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-red);
+}
+
+.budgetLabel {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.budgetValue {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.btnPrimary {
+  background: var(--red);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: var(--font-th);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.btnPrimary:hover {
+  background: var(--red-dark);
+  box-shadow: var(--shadow-red);
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.taskCard {
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--white);
+  transition: all 0.2s;
+}
+
+.taskCard:hover {
+  border-color: var(--red-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.taskTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 4px 0;
+}
+
+.taskDesc {
+  font-size: 14px;
+  color: var(--text2);
+  margin: 0;
+}
+
+.taskMeta {
+  font-size: 12px;
+  color: var(--text3);
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.assignmentList {
+  margin-top: 16px;
+  border-top: 1px solid var(--gray-100);
+  padding-top: 16px;
+}
+
+.assignmentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assigneeInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--gray-200);
+}
+
+.assigneeName {
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.statusPending {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.statusCompleted {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.statusOverdue {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.completeBtn {
+  background: var(--white);
+  color: var(--ok);
+  border: 1px solid var(--ok-bdr);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.completeBtn:hover:not(:disabled) {
+  background: var(--ok-bg);
+}
+
+.completeBtn:disabled {
+  background: var(--gray-50);
+  color: var(--gray-400);
+  border-color: var(--gray-200);
+  cursor: not-allowed;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal, 1000);
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: var(--white);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: var(--shadow-xl);
+  font-family: var(--font-th);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  color: var(--text);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.checkboxList {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1.5px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  background: var(--gray-50);
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.checkboxItem:hover {
+  background: var(--white);
+}
+
+.checkboxItem input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--red);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btnCancel {
+  background: var(--gray-50);
+  color: var(--text2);
+  border: 1px solid var(--gray-300);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: var(--font-th);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnCancel:hover {
+  background: var(--gray-100);
+}
+
+.errorMsg {
+  color: var(--bad);
+  background: var(--bad-bg);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 16px;
+  border: 1px solid var(--bad-bdr);
+}

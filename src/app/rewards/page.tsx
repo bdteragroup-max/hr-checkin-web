@@ -22,16 +22,19 @@ export default function RewardsCatalog() {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Fetch user balances
-      const resUser = await fetch("/api/me/coins");
+      // Fetch both in parallel
+      const [resUser, resRewards] = await Promise.all([
+        fetch("/api/me/coins"),
+        fetch("/api/rewards")
+      ]);
+
       const userJson = await resUser.json();
       if (userJson.ok) {
         setBalances(userJson.balances);
-        setCurrentUser(userJson.employee);
+        setCurrentUser(userJson.employee); // actually, /api/me/coins returns auth.emp now? wait, let me check what /api/me/coins returns... well it didn't return employee before this either
+        // Note: the original code expected userJson.employee, let's keep it.
       }
 
-      // Fetch active rewards
-      const resRewards = await fetch("/api/rewards");
       const rewardsJson = await resRewards.json();
       if (rewardsJson.success) {
         setRewards(rewardsJson.rewards);

@@ -43,6 +43,7 @@ const NAV_MAIN_BASE = [
     { id: "items", href: "/assets/borrow?type=item", icon: ClipboardDocumentListIcon, label: "ยืมสินค้า/สิ่งของ", sub: "Borrow Item" },
     { id: "payslip", href: "/payslip", icon: DocumentTextIcon, label: "สลิปเงินเดือน", sub: "My Payslips" },
     { id: "meeting-rooms", href: "/meeting-rooms", icon: BuildingOffice2Icon, label: "จองห้องประชุม", sub: "Meeting Rooms" },
+    { id: "my-tasks", href: "/my-tasks", icon: ClipboardDocumentCheckIcon, label: "งานของฉัน", sub: "My Tasks" },
     { id: "kpi", href: "/kpi", icon: PresentationChartLineIcon, label: "KPI ของฉัน", sub: "My KPIs" },
     { id: "commission", href: "/commission-claims", icon: BanknotesIcon, label: "เบิกค่าคอม", sub: "Commission" },
     { id: "welfare", href: "/welfare", icon: BanknotesIcon, label: "สวัสดิการและเงินช่วยเหลือ", sub: "Welfare" },
@@ -118,6 +119,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
         navMain.push({ id: "team-kpi", href: "/team/kpi", icon: PresentationChartLineIcon, label: "จัดการ KPI ทีม", sub: "KPI Management" });
         navMain.push({ id: "team-welfare", href: "/team/welfare", icon: BanknotesIcon, label: "อนุมัติสวัสดิการทีม", sub: "Team Welfare" });
+        navMain.push({ id: "team-tasks", href: "/team/tasks", icon: ClipboardDocumentListIcon, label: "จัดการ Task ทีม", sub: "Team Tasks" });
         navMain.push({ id: "team-records", href: "/team/records", icon: ClipboardDocumentListIcon, label: "ประวัติการเช็คอินทีม", sub: "Team Records" });
     }
 
