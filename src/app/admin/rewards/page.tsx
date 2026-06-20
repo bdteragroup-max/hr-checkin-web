@@ -37,7 +37,7 @@ export default function AdminRewardsPage() {
     const [stockQuantity, setStockQuantity] = useState(10);
     const [isActive, setIsActive] = useState(true);
 
-    const COIN_TYPES = ["BRONZE", "SILVER", "GOLD", "KPI", "MILESTONE", "EVENT"];
+    const COIN_TYPES = ["BRONZE", "SILVER", "GOLD", "KPI", "TASK", "EVENT"];
 
     useEffect(() => {
         fetchRewards();

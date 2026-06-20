@@ -119,7 +119,7 @@ export default function RewardsCatalog() {
         </div>
 
         <div className={styles.balancesStrip}>
-          {['BRONZE', 'SILVER', 'GOLD', 'KPI', 'MILESTONE', 'EVENT'].map((type) => {
+          {['BRONZE', 'SILVER', 'GOLD', 'KPI', 'TASK', 'EVENT'].map((type) => {
             const bal = getBalance(type);
             if (bal === 0) return null;
             return (

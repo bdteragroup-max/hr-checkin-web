@@ -284,23 +284,23 @@ export default function CoinsPage() {
                         <div className={styles.balance}>{getBalance("KPI")}</div>
                     </div>
 
-                    {/* MILESTONE */}
+                    {/* TASK */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "ได้รับในวันเกิดหรือครบรอบอายุงาน", type: "info" })}>
+                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "ได้รับจากหัวหน้าแผนกเมื่อปฏิบัติงานที่ได้รับมอบหมายสำเร็จ", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
                             <div className={styles.coinInner}>
                                 <div className={styles.coinFront}>
-                                    <img src="/images/coins/milestone.png" alt="Milestone" className={styles.coinImage} />
+                                    <img src="/images/coins/task.png" alt="Task" className={styles.coinImage} />
                                 </div>
                                 <div className={styles.coinBack}>
-                                    <img src="/images/coins/milestone_back.png" alt="Milestone Back" className={styles.coinImage} />
+                                    <img src="/images/coins/task_back.png" alt="Task Back" className={styles.coinImage} />
                                 </div>
                             </div>
                         </div>
-                        <div className={styles.coinName}>Milestone Coin</div>
-                        <div className={styles.balance}>{getBalance("MILESTONE")}</div>
+                        <div className={styles.coinName}>Task Coin</div>
+                        <div className={styles.balance}>{getBalance("TASK")}</div>
                     </div>
 
                     {/* EVENT */}

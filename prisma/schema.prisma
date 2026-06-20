@@ -109,7 +109,6 @@ model employees {
   salary_type                       String?                  @default("monthly") @db.VarChar(20)
   line_user_id                      String?                  @unique @db.VarChar(50)
   is_checkin_exempt                 Boolean                  @default(false)
-  current_streak                    Int                      @default(0)
   probation_end_date                DateTime?                @db.Date
   resignation_date                  DateTime?                @db.Date
   secondary_supervisor_id           String?                  @db.VarChar(20)
@@ -123,11 +122,17 @@ model employees {
   fixed_meal_allowance              Decimal?                 @default(0) @db.Decimal(12, 2)
   fixed_travel_allowance            Decimal?                 @default(0) @db.Decimal(12, 2)
   fixed_tax_deduction               Decimal?                 @db.Decimal(10, 2)
+  current_streak                    Int                      @default(0)
   asset_borrowings                  asset_borrowings[]
   birthday_claims                   birthday_claims[]
   clothing_requests                 clothing_requests[]
+  coin_exchanges                    coin_exchanges[]
+  coin_ledgers                      coin_ledgers[]
+  transfers_received                coin_transfers[]         @relation("TransfersReceived")
+  transfers_sent                    coin_transfers[]         @relation("TransfersSent")
   commission_claims                 commission_claims[]
   work_plans                        daily_work_plans[]
+  employee_coins                    employee_coins[]
   assessed_trainings                employee_trainings[]     @relation("AssessorToTraining")
   trainings                         employee_trainings[]     @relation("EmployeeToTraining")
   warnings                          employee_warnings[]
@@ -147,19 +152,15 @@ model employees {
   probation_evaluations             probation_evaluations[]  @relation("EmployeeToProbation")
   submitted_evaluations             probation_evaluations[]  @relation("SupervisorToProbation")
   product_borrowings                product_borrowings[]
+  reward_redemptions                reward_redemptions[]     @relation("EmployeeToRedemptions")
+  processed_redemptions             reward_redemptions[]     @relation("ProcessedBy")
   booking_attendees                 room_booking_attendees[]
   room_bookings                     room_bookings[]
-  travel_claims                     travel_claims[]
-
-  // HR COIN SYSTEM RELATIONS
-  employee_coins                    employee_coins[]
-  coin_ledgers                      coin_ledgers[]
+  task_assignments                  task_assignments[]
+  task_coin_budget                  task_coin_budgets?
+  tasks_created                     tasks[]
   transfer_budgets                  transfer_budgets?
-  coin_exchanges                    coin_exchanges[]
-  transfers_sent                    coin_transfers[] @relation("TransfersSent")
-  transfers_received                coin_transfers[] @relation("TransfersReceived")
-  reward_redemptions                reward_redemptions[] @relation("EmployeeToRedemptions")
-  processed_redemptions             reward_redemptions[] @relation("ProcessedBy")
+  travel_claims                     travel_claims[]
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -1481,142 +1482,160 @@ model clothing_requests {
   @@index([status])
 }
 
-// ==========================================
-// HR COIN SYSTEM
-// ==========================================
-
 model coin_types {
-  id          String   @id @db.VarChar(20)
-  name        String   @db.VarChar(50)
-  description String?  @db.Text
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-
-  employee_coins employee_coins[]
-  coin_ledgers   coin_ledgers[]
+  id             String                @id @db.VarChar(20)
+  name           String                @db.VarChar(50)
+  description    String?
+  is_active      Boolean               @default(true)
+  created_at     DateTime              @default(now()) @db.Timestamptz(6)
   exchange_from  coin_exchange_rates[] @relation("ExchangeFrom")
   exchange_to    coin_exchange_rates[] @relation("ExchangeTo")
+  coin_ledgers   coin_ledgers[]
+  employee_coins employee_coins[]
 }
 
 model employee_coins {
-  id           Int      @id @default(autoincrement())
-  emp_id       String   @db.VarChar(20)
-  coin_type_id String   @db.VarChar(20)
-  balance      Int      @default(0)
-  updated_at   DateTime @default(now()) @db.Timestamptz(6)
-
-  employee  employees  @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  coin_type coin_types @relation(fields: [coin_type_id], references: [id], onDelete: Cascade)
+  id           Int        @id @default(autoincrement())
+  emp_id       String     @db.VarChar(20)
+  coin_type_id String     @db.VarChar(20)
+  balance      Int        @default(0)
+  updated_at   DateTime   @default(now()) @db.Timestamptz(6)
+  coin_type    coin_types @relation(fields: [coin_type_id], references: [id], onDelete: Cascade)
+  employee     employees  @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@unique([emp_id, coin_type_id])
   @@index([emp_id])
 }
 
 model coin_ledgers {
-  id               Int      @id @default(autoincrement())
-  emp_id           String   @db.VarChar(20)
-  coin_type_id     String   @db.VarChar(20)
+  id               Int        @id @default(autoincrement())
+  emp_id           String     @db.VarChar(20)
+  coin_type_id     String     @db.VarChar(20)
   amount           Int
-  transaction_type String   @db.VarChar(50) // EARN, REDEEM, EXCHANGE, TRANSFER, ADMIN
-  source_key       String?  @unique @db.VarChar(100)
-  description      String?  @db.Text
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-
-  employee  employees  @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  coin_type coin_types @relation(fields: [coin_type_id], references: [id], onDelete: Cascade)
+  transaction_type String     @db.VarChar(50)
+  source_key       String?    @unique @db.VarChar(100)
+  description      String?
+  created_at       DateTime   @default(now()) @db.Timestamptz(6)
+  coin_type        coin_types @relation(fields: [coin_type_id], references: [id], onDelete: Cascade)
+  employee         employees  @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([emp_id])
   @@index([transaction_type])
 }
 
 model coin_exchange_rates {
-  id               Int      @id @default(autoincrement())
-  from_coin_type   String   @db.VarChar(20)
-  to_coin_type     String   @db.VarChar(20)
-  exchange_rate    Int      // e.g., 20 Bronze = 1 Silver (rate=20)
-  is_active        Boolean  @default(true)
-
-  from_type coin_types @relation("ExchangeFrom", fields: [from_coin_type], references: [id], onDelete: Cascade)
-  to_type   coin_types @relation("ExchangeTo", fields: [to_coin_type], references: [id], onDelete: Cascade)
+  id             Int        @id @default(autoincrement())
+  from_coin_type String     @db.VarChar(20)
+  to_coin_type   String     @db.VarChar(20)
+  exchange_rate  Int
+  is_active      Boolean    @default(true)
+  from_type      coin_types @relation("ExchangeFrom", fields: [from_coin_type], references: [id], onDelete: Cascade)
+  to_type        coin_types @relation("ExchangeTo", fields: [to_coin_type], references: [id], onDelete: Cascade)
 
   @@unique([from_coin_type, to_coin_type])
 }
 
 model coin_exchanges {
-  id             Int      @id @default(autoincrement())
-  emp_id         String   @db.VarChar(20)
-  from_coin_type String   @db.VarChar(20)
-  to_coin_type   String   @db.VarChar(20)
+  id             Int       @id @default(autoincrement())
+  emp_id         String    @db.VarChar(20)
+  from_coin_type String    @db.VarChar(20)
+  to_coin_type   String    @db.VarChar(20)
   amount_from    Int
   amount_to      Int
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-
-  employee employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  employee       employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 }
 
 model transfer_budgets {
-  id            Int      @id @default(autoincrement())
-  emp_id        String   @unique @db.VarChar(20)
-  balance       Int      @default(20)
-  monthly_topup Int      @default(20)
+  id            Int       @id @default(autoincrement())
+  emp_id        String    @unique @db.VarChar(20)
+  balance       Int       @default(20)
+  monthly_topup Int       @default(20)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
   last_topup_at DateTime? @db.Timestamptz(6)
-  updated_at    DateTime @default(now()) @db.Timestamptz(6)
-
-  employee employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  employee      employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 }
 
 model coin_transfers {
-  id              Int      @id @default(autoincrement())
-  sender_emp_id   String   @db.VarChar(20)
-  receiver_emp_id String   @db.VarChar(20)
+  id              Int       @id @default(autoincrement())
+  sender_emp_id   String    @db.VarChar(20)
+  receiver_emp_id String    @db.VarChar(20)
   amount          Int
-  message         String?  @db.Text
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  sender   employees @relation("TransfersSent", fields: [sender_emp_id], references: [emp_id], onDelete: Cascade)
-  receiver employees @relation("TransfersReceived", fields: [receiver_emp_id], references: [emp_id], onDelete: Cascade)
+  message         String?
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  receiver        employees @relation("TransfersReceived", fields: [receiver_emp_id], references: [emp_id], onDelete: Cascade)
+  sender          employees @relation("TransfersSent", fields: [sender_emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([sender_emp_id])
   @@index([receiver_emp_id])
 }
 
 model rewards {
-  id                 Int      @id @default(autoincrement())
-  name               String   @db.VarChar(200)
-  description        String?  @db.Text
-  image_url          String?  @db.Text
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(200)
+  description        String?
+  image_url          String?
   required_coins     Int
-  required_coin_type String   @db.VarChar(20)
-  costs              Json?    // Array of { coin_type: string, amount: number }
-  stock_quantity     Int      @default(0)
-  is_active          Boolean  @default(true)
-  created_at         DateTime @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime @default(now()) @db.Timestamptz(6)
-
-  redemptions reward_redemptions[]
+  required_coin_type String               @db.VarChar(20)
+  stock_quantity     Int                  @default(0)
+  is_active          Boolean              @default(true)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  costs              Json?
+  redemptions        reward_redemptions[]
 }
 
 model reward_redemptions {
-  id               Int      @id @default(autoincrement())
-  emp_id           String   @db.VarChar(20)
+  id               Int        @id @default(autoincrement())
+  emp_id           String     @db.VarChar(20)
   reward_id        Int
-  quantity         Int      @default(1)
-  status           String   @default("pending") @db.VarChar(50) // pending, approved, rejected, fulfilled
-  redeemed_at      DateTime @default(now()) @db.Timestamptz(6)
-  fulfilled_at     DateTime? @db.Timestamptz(6)
+  quantity         Int        @default(1)
+  status           String     @default("pending") @db.VarChar(50)
+  redeemed_at      DateTime   @default(now()) @db.Timestamptz(6)
+  fulfilled_at     DateTime?  @db.Timestamptz(6)
   cancelled_reason String?
-  processed_by     String?  @db.VarChar(20)
-  points_spent     Int      @default(0)
-  coin_type_id     String?  @db.VarChar(20)
-  costs            Json?    // Snapshot of what was paid [{ coin_type: string, amount: number }]
-
-  employee  employees  @relation("EmployeeToRedemptions", fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  processor employees? @relation("ProcessedBy", fields: [processed_by], references: [emp_id], onDelete: SetNull)
-  reward    rewards    @relation(fields: [reward_id], references: [id], onDelete: Cascade)
+  coin_type_id     String?    @db.VarChar(20)
+  points_spent     Int        @default(0)
+  processed_by     String?    @db.VarChar(20)
+  costs            Json?
+  employee         employees  @relation("EmployeeToRedemptions", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  processor        employees? @relation("ProcessedBy", fields: [processed_by], references: [emp_id])
+  reward           rewards    @relation(fields: [reward_id], references: [id], onDelete: Cascade)
 
   @@index([emp_id])
   @@index([reward_id])
   @@index([status])
 }
-  
-// --- HR COIN SYSTEM ---  
+
+model tasks {
+  id          Int                @id @default(autoincrement())
+  title       String             @db.VarChar(200)
+  description String?
+  created_by  String             @db.VarChar(20)
+  deadline    DateTime           @db.Timestamptz(6)
+  created_at  DateTime           @default(now()) @db.Timestamptz(6)
+  assignments task_assignments[]
+  creator     employees          @relation(fields: [created_by], references: [emp_id], onDelete: Cascade)
+}
+
+model task_assignments {
+  id           Int       @id @default(autoincrement())
+  task_id      Int
+  emp_id       String    @db.VarChar(20)
+  status       String    @default("PENDING") @db.VarChar(20)
+  completed_at DateTime? @db.Timestamptz(6)
+  completed_by String?   @db.VarChar(20)
+  employee     employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  task         tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@unique([task_id, emp_id])
+  @@index([emp_id, status])
+}
+
+model task_coin_budgets {
+  emp_id          String    @id @db.VarChar(20)
+  used_this_month Int       @default(0)
+  monthly_limit   Int       @default(20)
+  reset_at        DateTime  @db.Timestamptz(6)
+  employee        employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+}
