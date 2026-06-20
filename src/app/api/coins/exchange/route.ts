@@ -122,8 +122,8 @@ export async function POST(request: Request) {
                     emp_id: auth.emp.emp_id,
                     from_coin_type,
                     to_coin_type,
-                    from_amount: amount_to_exchange,
-                    to_amount,
+                    amount_from: amount_to_exchange,
+                    amount_to: to_amount,
                 },
             });
 
