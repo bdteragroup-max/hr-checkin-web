@@ -194,7 +194,7 @@ export default function CoinsPage() {
                 <div className={styles.grid}>
                     {/* BRONZE */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "รับจากการเช็คอินตรงเวลา (1 เหรียญ/วัน)\nโอนให้เพื่อนได้", type: "info" })}>
+                        <div className={styles.tooltip} title="รับจากการเช็คอินตรงเวลา (1 เหรียญ/วัน) โอนให้เพื่อนได้" onClick={() => setAlertState({ visible: true, message: "รับจากการเช็คอินตรงเวลา (1 เหรียญ/วัน)\nโอนให้เพื่อนได้", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
@@ -222,7 +222,7 @@ export default function CoinsPage() {
 
                     {/* SILVER */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "รับจากสถิติไม่ขาด ไม่ลา ตลอดทั้งเดือน\nหรือรับจากการนำเหรียญ Bronze มาแลกเปลี่ยน\n(20 Bronze = 1 Silver)", type: "info" })}>
+                        <div className={styles.tooltip} title="รับจากสถิติไม่ขาด ไม่ลา ตลอดทั้งเดือน หรือรับจากการนำเหรียญ Bronze มาแลกเปลี่ยน (20 Bronze = 1 Silver)" onClick={() => setAlertState({ visible: true, message: "รับจากสถิติไม่ขาด ไม่ลา ตลอดทั้งเดือน\nหรือรับจากการนำเหรียญ Bronze มาแลกเปลี่ยน\n(20 Bronze = 1 Silver)", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
@@ -247,7 +247,7 @@ export default function CoinsPage() {
 
                     {/* GOLD */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "เหรียญระดับสูงสุด แลกจาก Silver\n(10 Silver = 1 Gold)\nหรือทำผลงานระดับสูง", type: "info" })}>
+                        <div className={styles.tooltip} title="เหรียญระดับสูงสุด แลกจาก Silver (10 Silver = 1 Gold) หรือทำผลงานระดับสูง" onClick={() => setAlertState({ visible: true, message: "เหรียญระดับสูงสุด แลกจาก Silver\n(10 Silver = 1 Gold)\nหรือทำผลงานระดับสูง", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
@@ -267,7 +267,7 @@ export default function CoinsPage() {
 
                     {/* KPI */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "ได้รับจากการประเมิน KPI ประจำไตรมาส\n(เฉพาะเกรด A และ B)", type: "info" })}>
+                        <div className={styles.tooltip} title="ได้รับจากการประเมิน KPI ประจำไตรมาส (เฉพาะเกรด A และ B)" onClick={() => setAlertState({ visible: true, message: "ได้รับจากการประเมิน KPI ประจำไตรมาส\n(เฉพาะเกรด A และ B)", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
@@ -286,7 +286,7 @@ export default function CoinsPage() {
 
                     {/* TASK */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "ได้รับจากหัวหน้าแผนกเมื่อปฏิบัติงานที่ได้รับมอบหมายสำเร็จ", type: "info" })}>
+                        <div className={styles.tooltip} title="ได้รับจากหัวหน้าแผนกเมื่อปฏิบัติงานที่ได้รับมอบหมายสำเร็จ" onClick={() => setAlertState({ visible: true, message: "ได้รับจากหัวหน้าแผนกเมื่อปฏิบัติงานที่ได้รับมอบหมายสำเร็จ", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>
@@ -305,7 +305,7 @@ export default function CoinsPage() {
 
                     {/* EVENT */}
                     <div className={styles.card}>
-                        <div className={styles.tooltip} onClick={() => setAlertState({ visible: true, message: "ได้รับจากการเข้าร่วมกิจกรรมพิเศษของบริษัท", type: "info" })}>
+                        <div className={styles.tooltip} title="ได้รับจากการเข้าร่วมกิจกรรมพิเศษของบริษัท" onClick={() => setAlertState({ visible: true, message: "ได้รับจากการเข้าร่วมกิจกรรมพิเศษของบริษัท", type: "info" })}>
                             <InformationCircleIcon width={18} />
                         </div>
                         <div className={styles.iconWrap}>

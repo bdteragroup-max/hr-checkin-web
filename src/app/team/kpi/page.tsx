@@ -45,13 +45,19 @@ export default function SupervisorKPIPage() {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
 
-    useEffect(() => {
-        fetch("/api/team/kpi/employees")
+    const refresh = () => {
+        setLoading(true);
+        fetch("/api/team/kpi/employees", { cache: "no-store" })
             .then(r => r.json())
             .then(data => {
                 if (data.ok) setList(data.list);
             })
+            .catch(err => console.error("Fetch KPI Error:", err))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        refresh();
     }, []);
 
     const getStatusInfo = (status: string) => {
@@ -68,9 +74,18 @@ export default function SupervisorKPIPage() {
         <div className={styles.wrapper}>
             <div className={styles.wrap}>
                 {/* ── HERO TITLE ── */}
-                <div className={styles.hero}>
-                    <h1 className={styles.heroH1}>จัดการ KPI รายบุคคล</h1>
-                    <div className={styles.heroSubtitle}>นิยามเป้าหมายและประเมินผลสำหรับพนักงานในทีมของคุณ</div>
+                <div className={styles.hero} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h1 className={styles.heroH1}>จัดการ KPI รายบุคคล</h1>
+                        <div className={styles.heroSubtitle}>นิยามเป้าหมายและประเมินผลสำหรับพนักงานในทีมของคุณ</div>
+                    </div>
+                    <button 
+                        onClick={refresh} 
+                        disabled={loading}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: '#475569', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                    >
+                        <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
+                    </button>
                 </div>
 
                 {/* ── TABS ── */}

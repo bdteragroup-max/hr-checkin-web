@@ -41,6 +41,31 @@ export default function AdminKPIPage() {
             .finally(() => setLoading(false));
     };
 
+    const handleRetroAward = async () => {
+        const cat = prompt("กรุณาระบุหมวดหมู่การประเมิน (เช่น MID_YEAR, ANNUAL, PROBATION):", "MID_YEAR");
+        if (!cat) return;
+        const yearStr = prompt("กรุณาระบุปี (เช่น 2026):", "2026");
+        if (!yearStr) return;
+
+        if (!confirm(`ยืนยันการแจกเหรียญ KPI ย้อนหลังสำหรับ ${cat} ปี ${yearStr} หรือไม่?`)) return;
+
+        try {
+            const res = await fetch("/api/admin/kpi/retro-award", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ category: cat, year: parseInt(yearStr) })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`สำเร็จ! แจกเหรียญให้พนักงาน ${data.awarded} คน (ข้าม ${data.skipped} คน) จากทั้งหมด ${data.total_found} รายการ`);
+            } else {
+                alert("ผิดพลาด: " + data.error);
+            }
+        } catch (e) {
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+        }
+    };
+
     useEffect(() => {
         refresh();
     }, []);
@@ -149,6 +174,9 @@ export default function AdminKPIPage() {
                     <div className={styles.subtitle}>ภาพรวมการประเมินผลการปฏิบัติงานรายบุคคลสำหรับพนักงานทั้งหมด</div>
                 </div>
                 <div className={styles.headerActions}>
+                    <button className={styles.btnRefresh} onClick={handleRetroAward} style={{ background: '#f59e0b', color: 'white', borderColor: '#d97706' }}>
+                        แจกเหรียญย้อนหลัง
+                    </button>
                     <button className={styles.btnRefresh} onClick={refresh} disabled={loading}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
                     </button>

@@ -435,6 +435,50 @@ export async function POST(req: Request) {
                 }
             }
 
+            // 🏅 LATE CHECK-OUT MEDAL REWARD (After 6 PM)
+            if (type === "Check-out" || type === "Project-Out" || type === "Offsite-Out") {
+                const checkOutHour = time_key.getHours();
+                if (checkOutHour >= 18) {
+                    const y = effective_date_key.getFullYear();
+                    const m = String(effective_date_key.getMonth() + 1).padStart(2, '0');
+                    const d = String(effective_date_key.getDate()).padStart(2, '0');
+                    const sourceKey = `checkout_late:${auth.emp.emp_id}:${y}-${m}-${d}`;
+
+                    const existingLedger = await tx.coin_ledgers.findUnique({
+                        where: { source_key: sourceKey }
+                    });
+
+                    if (!existingLedger) {
+                        await tx.coin_ledgers.create({
+                            data: {
+                                emp_id: auth.emp.emp_id,
+                                coin_type_id: "BRONZE",
+                                amount: 1,
+                                transaction_type: "EARN",
+                                source_key: sourceKey,
+                                description: "Late Check-out Reward (After 18:00)",
+                            },
+                        });
+
+                        const currentCoin = await tx.employee_coins.findUnique({
+                            where: { emp_id_coin_type_id: { emp_id: auth.emp.emp_id, coin_type_id: "BRONZE" } }
+                        });
+
+                        if (currentCoin) {
+                            await tx.employee_coins.update({
+                                where: { id: currentCoin.id },
+                                data: { balance: { increment: 1 } },
+                            });
+                        } else {
+                            await tx.employee_coins.create({
+                                data: { emp_id: auth.emp.emp_id, coin_type_id: "BRONZE", balance: 1 }
+                            });
+                        }
+                        coin_awarded = true;
+                    }
+                }
+            }
+
             return { createdCheckin, coin_awarded };
         });
     } catch (e: any) {
