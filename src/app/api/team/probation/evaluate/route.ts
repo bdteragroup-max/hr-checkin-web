@@ -77,7 +77,7 @@ export async function POST(req: Request) {
             emp?.job_positions?.title?.includes('หัวหน้า');
 
         const isDirectSubordinate = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
-        const isCrossEvaluating = isManager && isOtherManager && emp?.emp_id !== supervisorId;
+        const isCrossEvaluating = isManager && isOtherManager && emp?.emp_id !== supervisorId && emp?.is_on_trial === true;
         
         const isAuthorized = isDirectSubordinate || isCrossEvaluating;
         if (!isAuthorized) {

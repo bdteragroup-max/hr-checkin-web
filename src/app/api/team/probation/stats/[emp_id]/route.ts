@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
         // Verify that this user is either the primary or secondary supervisor
         const targetEmp = await prisma.employees.findUnique({
             where: { emp_id },
-            select: { supervisor_id: true, secondary_supervisor_id: true, emp_id: true, job_positions: { select: { node_type: true, title: true } } }
+            select: { supervisor_id: true, secondary_supervisor_id: true, emp_id: true, is_on_trial: true, job_positions: { select: { node_type: true, title: true } } }
         });
 
         const loggedInUser = await prisma.employees.findUnique({
@@ -47,7 +47,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
             targetEmp.supervisor_id === supervisorId || 
             targetEmp.secondary_supervisor_id === supervisorId
         );
-        const isCrossEvaluating = isManager && isOtherManager && targetEmp?.emp_id !== supervisorId;
+        const isCrossEvaluating = isManager && isOtherManager && targetEmp?.emp_id !== supervisorId && targetEmp?.is_on_trial === true;
 
         const isAuthorized = isDirectSubordinate || isCrossEvaluating;
 

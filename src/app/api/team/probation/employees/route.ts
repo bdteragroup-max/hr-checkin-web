@@ -20,6 +20,7 @@ export async function GET() {
                     { secondary_supervisor_id: supervisorId },
                     {
                         emp_id: { not: supervisorId },
+                        is_on_trial: true,
                         job_positions: {
                             OR: [
                                 { node_type: 'executive' },
