@@ -56,6 +56,10 @@ export async function POST(req: Request) {
             select: { supervisor_id: true, secondary_supervisor_id: true, name: true, nickname: true, is_on_trial: true, emp_id: true, job_positions: { select: { node_type: true, title: true } } }
         });
 
+        if (!emp) {
+            return NextResponse.json({ error: "EMPLOYEE_NOT_FOUND" }, { status: 404 });
+        }
+
         const loggedInUser = await prisma.employees.findUnique({
             where: { emp_id: supervisorId },
             select: { job_positions: { select: { node_type: true, title: true } } }
@@ -66,15 +70,14 @@ export async function POST(req: Request) {
             loggedInUser?.job_positions?.title?.toLowerCase().includes('manager') || 
             loggedInUser?.job_positions?.title?.includes('หัวหน้า');
 
-        const isOtherProbationaryManager = emp?.is_on_trial && (
+        const isOtherManager = 
             emp?.job_positions?.node_type === 'executive' || 
             emp?.job_positions?.title?.toLowerCase().includes('mgr') || 
             emp?.job_positions?.title?.toLowerCase().includes('manager') || 
-            emp?.job_positions?.title?.includes('หัวหน้า')
-        );
+            emp?.job_positions?.title?.includes('หัวหน้า');
 
         const isDirectSubordinate = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
-        const isCrossEvaluating = isManager && isOtherProbationaryManager && emp.emp_id !== supervisorId;
+        const isCrossEvaluating = isManager && isOtherManager && emp?.emp_id !== supervisorId;
         
         const isAuthorized = isDirectSubordinate || isCrossEvaluating;
         if (!isAuthorized) {

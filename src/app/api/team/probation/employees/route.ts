@@ -19,7 +19,6 @@ export async function GET() {
                     { supervisor_id: supervisorId },
                     { secondary_supervisor_id: supervisorId },
                     {
-                        is_on_trial: true,
                         emp_id: { not: supervisorId },
                         job_positions: {
                             OR: [

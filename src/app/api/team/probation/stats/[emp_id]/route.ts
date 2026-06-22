@@ -25,13 +25,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
         // Verify that this user is either the primary or secondary supervisor
         const targetEmp = await prisma.employees.findUnique({
             where: { emp_id },
-            select: { supervisor_id: true, secondary_supervisor_id: true }
+            select: { supervisor_id: true, secondary_supervisor_id: true, emp_id: true, job_positions: { select: { node_type: true, title: true } } }
         });
 
-        const isAuthorized = targetEmp && (
+        const loggedInUser = await prisma.employees.findUnique({
+            where: { emp_id: supervisorId },
+            select: { job_positions: { select: { node_type: true, title: true } } }
+        });
+
+        const isManager = loggedInUser?.job_positions?.node_type === 'executive' || 
+            loggedInUser?.job_positions?.title?.toLowerCase().includes('mgr') || 
+            loggedInUser?.job_positions?.title?.toLowerCase().includes('manager') || 
+            loggedInUser?.job_positions?.title?.includes('หัวหน้า');
+
+        const isOtherManager = targetEmp?.job_positions?.node_type === 'executive' || 
+            targetEmp?.job_positions?.title?.toLowerCase().includes('mgr') || 
+            targetEmp?.job_positions?.title?.toLowerCase().includes('manager') || 
+            targetEmp?.job_positions?.title?.includes('หัวหน้า');
+
+        const isDirectSubordinate = targetEmp && (
             targetEmp.supervisor_id === supervisorId || 
             targetEmp.secondary_supervisor_id === supervisorId
         );
+        const isCrossEvaluating = isManager && isOtherManager && targetEmp?.emp_id !== supervisorId;
+
+        const isAuthorized = isDirectSubordinate || isCrossEvaluating;
 
         if (!isAuthorized) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });

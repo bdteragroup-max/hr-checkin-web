@@ -1058,43 +1058,44 @@ model ProjectTask {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Quotation {
-  id                   String    @id
+  id                   String         @id
   companyId            String
-  status               String    @default("Pending")
+  status               String         @default("Pending")
   salesBeforeVat       Float?
   transportationFee    Float?
   installationFee      Float?
   totalAmountBeforeVat Float?
   actualClosingAmount  Float?
-  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime  @db.Timestamptz(6)
-  billingDate          DateTime? @db.Timestamptz(6)
-  appointmentDate      DateTime? @db.Timestamptz(6)
+  createdAt            DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime       @db.Timestamptz(6)
+  billingDate          DateTime?      @db.Timestamptz(6)
+  appointmentDate      DateTime?      @db.Timestamptz(6)
   appointmentNote      String?
   contactId            String?
-  followUp1            DateTime? @db.Timestamptz(6)
-  followUp2            DateTime? @db.Timestamptz(6)
-  followUp3            DateTime? @db.Timestamptz(6)
-  followUp4            DateTime? @db.Timestamptz(6)
+  followUp1            DateTime?      @db.Timestamptz(6)
+  followUp2            DateTime?      @db.Timestamptz(6)
+  followUp3            DateTime?      @db.Timestamptz(6)
+  followUp4            DateTime?      @db.Timestamptz(6)
   invoiceNumber        String?
-  poDate               DateTime? @db.Timestamptz(6)
+  poDate               DateTime?      @db.Timestamptz(6)
   poNumber             String?
   productType          String?
-  quotationDate        DateTime? @db.Timestamptz(6)
+  quotationDate        DateTime?      @db.Timestamptz(6)
   quotationNumber      String?
   rejectReason         String?
   remarks              String?
-  requirementDate      DateTime? @db.Timestamptz(6)
+  requirementDate      DateTime?      @db.Timestamptz(6)
   requirementNumber    String?
   salesBranch          String?
   salesTeamLeader      String?
   salespersonId        String?
   subject              String?
   winLossReason        String?
+  MarketingLead        MarketingLead?
   Order                Order[]
-  Company              Company   @relation(fields: [companyId], references: [id])
-  Contact              Contact?  @relation(fields: [contactId], references: [id])
-  User                 User?     @relation(fields: [salespersonId], references: [id])
+  Company              Company        @relation(fields: [companyId], references: [id])
+  Contact              Contact?       @relation(fields: [contactId], references: [id])
+  User                 User?          @relation(fields: [salespersonId], references: [id])
   jobs                 jobs[]
 
   @@index([companyId, createdAt])
@@ -1251,32 +1252,35 @@ model TelesalesKPI {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model User {
-  id                  String                @id
-  employeeId          String                @unique
-  email               String?               @unique
-  fullName            String
-  phoneNumber         String?
-  role                String                @default("Sales Representative")
-  position            String?
-  password            String
-  createdAt           DateTime              @default(now()) @db.Timestamptz(6)
-  updatedAt           DateTime              @default(now()) @db.Timestamptz(6)
-  otpCode             String?
-  otpExpiresAt        DateTime?             @db.Timestamptz(6)
-  isActive            Boolean               @default(true)
-  Company             Company[]
-  CustomerRequirement CustomerRequirement[]
-  MonthlyTarget       MonthlyTarget[]
-  Order               Order[]
-  Project             Project[]
-  ProjectDailyLog     ProjectDailyLog[]
-  ProjectMember       ProjectMember[]
-  ProjectTask         ProjectTask[]
-  Quotation           Quotation[]
-  Schedule            Schedule[]
-  Telesale            Telesale[]
-  TelesalesKPI        TelesalesKPI[]
-  employee_sales      employee_sales?
+  id                                                String                @id
+  employeeId                                        String                @unique
+  email                                             String?               @unique
+  fullName                                          String
+  phoneNumber                                       String?
+  role                                              String                @default("Sales Representative")
+  position                                          String?
+  password                                          String
+  createdAt                                         DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt                                         DateTime              @default(now()) @db.Timestamptz(6)
+  otpCode                                           String?
+  otpExpiresAt                                      DateTime?             @db.Timestamptz(6)
+  isActive                                          Boolean               @default(true)
+  Company                                           Company[]
+  CustomerRequirement                               CustomerRequirement[]
+  MarketingLead_MarketingLead_assignedToIdToUser    MarketingLead[]       @relation("MarketingLead_assignedToIdToUser")
+  MarketingLead_MarketingLead_createdByUserIdToUser MarketingLead[]       @relation("MarketingLead_createdByUserIdToUser")
+  MonthlyTarget                                     MonthlyTarget[]
+  Notification                                      Notification[]
+  Order                                             Order[]
+  Project                                           Project[]
+  ProjectDailyLog                                   ProjectDailyLog[]
+  ProjectMember                                     ProjectMember[]
+  ProjectTask                                       ProjectTask[]
+  Quotation                                         Quotation[]
+  Schedule                                          Schedule[]
+  Telesale                                          Telesale[]
+  TelesalesKPI                                      TelesalesKPI[]
+  employee_sales                                    employee_sales?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1638,4 +1642,42 @@ model task_coin_budgets {
   monthly_limit   Int       @default(20)
   reset_at        DateTime  @db.Timestamptz(6)
   employee        employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MarketingLead {
+  id                                       String     @id
+  customerName                             String
+  phoneNumber                              String?
+  productOfInterest                        String?
+  productType                              String?
+  conversationContent                      String?
+  createdByUserId                          String
+  isForwarded                              Boolean    @default(false)
+  forwardedAt                              DateTime?
+  quotationId                              String?    @unique
+  createdAt                                DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt                                DateTime   @default(now()) @db.Timestamptz(6)
+  assignedToId                             String?
+  isContacted                              Boolean    @default(false)
+  User_MarketingLead_assignedToIdToUser    User?      @relation("MarketingLead_assignedToIdToUser", fields: [assignedToId], references: [id])
+  User_MarketingLead_createdByUserIdToUser User       @relation("MarketingLead_createdByUserIdToUser", fields: [createdByUserId], references: [id])
+  Quotation                                Quotation? @relation(fields: [quotationId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Notification {
+  id        String   @id
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+  type      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([isRead])
+  @@index([userId])
 }
