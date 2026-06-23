@@ -13,27 +13,51 @@ export async function GET() {
         const decoded = verifyToken(token);
         const supervisorId = decoded.emp_id;
 
+        const loggedInUser = await prisma.employees.findUnique({
+            where: { emp_id: supervisorId },
+            select: { job_positions: { select: { node_type: true, title: true } } }
+        });
+
+        const checkIsManager = (emp: any) => {
+            const title = emp?.job_positions?.title?.toLowerCase() || '';
+            const nodeType = emp?.job_positions?.node_type;
+            return nodeType === 'executive' || 
+                title.includes('mgr') || 
+                title.includes('manager') || 
+                title.includes('หัวหน้า') ||
+                title.includes('sup.') ||
+                title.includes('supervisor') ||
+                title.includes('director');
+        };
+
+        const isManager = checkIsManager(loggedInUser);
+
+        const baseOrConditions: any[] = [
+            { supervisor_id: supervisorId },
+            { secondary_supervisor_id: supervisorId }
+        ];
+
+        if (isManager) {
+            baseOrConditions.push({
+                emp_id: { not: supervisorId },
+                is_on_trial: true,
+                job_positions: {
+                    OR: [
+                        { node_type: 'executive' },
+                        { title: { contains: 'mgr', mode: 'insensitive' } },
+                        { title: { contains: 'manager', mode: 'insensitive' } },
+                        { title: { contains: 'หัวหน้า', mode: 'insensitive' } },
+                        { title: { contains: 'sup.', mode: 'insensitive' } },
+                        { title: { contains: 'supervisor', mode: 'insensitive' } },
+                        { title: { contains: 'director', mode: 'insensitive' } }
+                    ]
+                }
+            });
+        }
+
         const employees = await prisma.employees.findMany({
             where: {
-                OR: [
-                    { supervisor_id: supervisorId },
-                    { secondary_supervisor_id: supervisorId },
-                    {
-                        emp_id: { not: supervisorId },
-                        is_on_trial: true,
-                        job_positions: {
-                            OR: [
-                                { node_type: 'executive' },
-                                { title: { contains: 'mgr', mode: 'insensitive' } },
-                                { title: { contains: 'manager', mode: 'insensitive' } },
-                                { title: { contains: 'หัวหน้า', mode: 'insensitive' } },
-                                { title: { contains: 'sup.', mode: 'insensitive' } },
-                                { title: { contains: 'supervisor', mode: 'insensitive' } },
-                                { title: { contains: 'director', mode: 'insensitive' } }
-                            ]
-                        }
-                    }
-                ],
+                OR: baseOrConditions,
                 is_active: true
             },
             select: {

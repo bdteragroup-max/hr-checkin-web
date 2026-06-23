@@ -33,15 +33,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
             select: { job_positions: { select: { node_type: true, title: true } } }
         });
 
-        const isManager = loggedInUser?.job_positions?.node_type === 'executive' || 
-            loggedInUser?.job_positions?.title?.toLowerCase().includes('mgr') || 
-            loggedInUser?.job_positions?.title?.toLowerCase().includes('manager') || 
-            loggedInUser?.job_positions?.title?.includes('หัวหน้า');
+        const checkIsManager = (emp: any) => {
+            const title = emp?.job_positions?.title?.toLowerCase() || '';
+            const nodeType = emp?.job_positions?.node_type;
+            return nodeType === 'executive' || 
+                title.includes('mgr') || 
+                title.includes('manager') || 
+                title.includes('หัวหน้า') ||
+                title.includes('sup.') ||
+                title.includes('supervisor') ||
+                title.includes('director');
+        };
 
-        const isOtherManager = targetEmp?.job_positions?.node_type === 'executive' || 
-            targetEmp?.job_positions?.title?.toLowerCase().includes('mgr') || 
-            targetEmp?.job_positions?.title?.toLowerCase().includes('manager') || 
-            targetEmp?.job_positions?.title?.includes('หัวหน้า');
+        const isManager = checkIsManager(loggedInUser);
+        const isOtherManager = checkIsManager(targetEmp);
 
         const isDirectSubordinate = targetEmp && (
             targetEmp.supervisor_id === supervisorId || 

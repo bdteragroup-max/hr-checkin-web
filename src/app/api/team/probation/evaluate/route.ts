@@ -65,16 +65,20 @@ export async function POST(req: Request) {
             select: { job_positions: { select: { node_type: true, title: true } } }
         });
 
-        const isManager = loggedInUser?.job_positions?.node_type === 'executive' || 
-            loggedInUser?.job_positions?.title?.toLowerCase().includes('mgr') || 
-            loggedInUser?.job_positions?.title?.toLowerCase().includes('manager') || 
-            loggedInUser?.job_positions?.title?.includes('หัวหน้า');
+        const checkIsManager = (employeeInfo: any) => {
+            const title = employeeInfo?.job_positions?.title?.toLowerCase() || '';
+            const nodeType = employeeInfo?.job_positions?.node_type;
+            return nodeType === 'executive' || 
+                title.includes('mgr') || 
+                title.includes('manager') || 
+                title.includes('หัวหน้า') ||
+                title.includes('sup.') ||
+                title.includes('supervisor') ||
+                title.includes('director');
+        };
 
-        const isOtherManager = 
-            emp?.job_positions?.node_type === 'executive' || 
-            emp?.job_positions?.title?.toLowerCase().includes('mgr') || 
-            emp?.job_positions?.title?.toLowerCase().includes('manager') || 
-            emp?.job_positions?.title?.includes('หัวหน้า');
+        const isManager = checkIsManager(loggedInUser);
+        const isOtherManager = checkIsManager(emp);
 
         const isDirectSubordinate = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
         const isCrossEvaluating = isManager && isOtherManager && emp?.emp_id !== supervisorId && emp?.is_on_trial === true;
