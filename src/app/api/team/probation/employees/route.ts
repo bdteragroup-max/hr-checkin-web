@@ -26,7 +26,10 @@ export async function GET() {
                                 { node_type: 'executive' },
                                 { title: { contains: 'mgr', mode: 'insensitive' } },
                                 { title: { contains: 'manager', mode: 'insensitive' } },
-                                { title: { contains: 'หัวหน้า', mode: 'insensitive' } }
+                                { title: { contains: 'หัวหน้า', mode: 'insensitive' } },
+                                { title: { contains: 'sup.', mode: 'insensitive' } },
+                                { title: { contains: 'supervisor', mode: 'insensitive' } },
+                                { title: { contains: 'director', mode: 'insensitive' } }
                             ]
                         }
                     }

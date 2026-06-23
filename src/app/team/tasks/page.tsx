@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import globalStyles from "../../leave/page.module.css";
 import localStyles from "./tasks.module.css";
-import { PlusIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CheckCircleIcon, ClockIcon, XCircleIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 export default function TeamTasksPage() {
   const [budget, setBudget] = useState<any>(null);
@@ -13,8 +13,10 @@ export default function TeamTasksPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, assignmentId: number | null}>({isOpen: false, assignmentId: null});
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{isOpen: boolean, taskId: number | null}>({isOpen: false, taskId: null});
   const [alertModal, setAlertModal] = useState<{isOpen: boolean, message: string, type: "success" | "error"}>({isOpen: false, message: "", type: "success"});
   const [newTask, setNewTask] = useState({ title: "", description: "", deadline: "" });
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
@@ -58,8 +60,11 @@ export default function TeamTasksPage() {
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
+      const url = editingTaskId ? `/api/tasks/${editingTaskId}` : "/api/tasks";
+      const method = editingTaskId ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTask.title,
@@ -75,14 +80,30 @@ export default function TeamTasksPage() {
         setNewTask({ title: "", description: "", deadline: "" });
         setSelectedAssignees([]);
         setAssigneeSearchQuery("");
+        setEditingTaskId(null);
         loadData();
       } else {
-        setErrorMsg(json.error || "Failed to create task");
+        setErrorMsg(json.message || json.error || "Failed to save task");
       }
     } catch (e) {
       setErrorMsg("Network error");
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (json.ok) {
+        setAlertModal({ isOpen: true, message: "ลบ Task สำเร็จ!", type: "success" });
+        loadData();
+      } else {
+        setAlertModal({ isOpen: true, message: "เกิดข้อผิดพลาด: " + (json.message || json.error || "Unknown"), type: "error" });
+      }
+    } catch (e) {
+      setAlertModal({ isOpen: true, message: "Network error", type: "error" });
     }
   };
 
@@ -133,7 +154,12 @@ export default function TeamTasksPage() {
             {budget && (
               <button 
                 className={localStyles.btnPrimary} 
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setEditingTaskId(null);
+                  setNewTask({ title: "", description: "", deadline: "" });
+                  setSelectedAssignees([]);
+                  setIsModalOpen(true);
+                }}
                 style={{ padding: "8px 16px", fontSize: "14px" }}
               >
                 <PlusIcon width={18} />
@@ -148,9 +174,11 @@ export default function TeamTasksPage() {
                 ยังไม่มีงานที่มอบหมาย
               </div>
             ) : (
-              tasks.map(task => (
+              tasks.map(task => {
+                const hasCompleted = task.assignments.some((a: any) => a.status === 'COMPLETED');
+                return (
                 <div key={task.id} className={localStyles.taskCard}>
-                  <div className={localStyles.taskHeader} style={{ flexWrap: "wrap", gap: "8px" }}>
+                  <div className={localStyles.taskHeader} style={{ flexWrap: "wrap", gap: "8px", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
                       <h3 className={localStyles.taskTitle}>{task.title}</h3>
                       {task.description && <p className={localStyles.taskDesc}>{task.description}</p>}
@@ -158,6 +186,33 @@ export default function TeamTasksPage() {
                         <span><ClockIcon width={14} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />กำหนดส่ง: {new Date(task.deadline).toLocaleDateString("th-TH")}</span>
                         <span>สร้างเมื่อ: {new Date(task.created_at).toLocaleDateString("th-TH")}</span>
                       </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <button 
+                          onClick={() => {
+                            setNewTask({
+                                title: task.title,
+                                description: task.description || "",
+                                deadline: task.deadline.split('T')[0]
+                            });
+                            setSelectedAssignees(task.assignments.map((a: any) => a.emp_id));
+                            setEditingTaskId(task.id);
+                            setIsModalOpen(true);
+                          }}
+                          className={localStyles.btnCancel}
+                          style={{ padding: "6px 10px", fontSize: "13px" }}
+                        >
+                            <PencilIcon width={14} style={{ display: 'inline', marginRight: 4 }} /> แก้ไข
+                        </button>
+                        <button 
+                          onClick={() => setDeleteConfirmModal({ isOpen: true, taskId: task.id })}
+                          disabled={hasCompleted}
+                          title={hasCompleted ? "ไม่สามารถลบได้เนื่องจากมีพนักงานทำสำเร็จแล้ว" : "ลบ Task"}
+                          className={localStyles.btnCancel}
+                          style={{ padding: "6px 10px", fontSize: "13px", color: hasCompleted ? "var(--text4)" : "var(--bad)", borderColor: hasCompleted ? "var(--gray-200)" : "var(--bad)" }}
+                        >
+                            <TrashIcon width={14} style={{ display: 'inline', marginRight: 4 }} /> ลบ
+                        </button>
                     </div>
                   </div>
 
@@ -197,7 +252,7 @@ export default function TeamTasksPage() {
                     ))}
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         </div>
@@ -205,7 +260,7 @@ export default function TeamTasksPage() {
         {isModalOpen && (
           <div className={localStyles.modalOverlay}>
             <div className={localStyles.modalContent}>
-              <h2 className={localStyles.modalTitle}>มอบหมาย Task ใหม่</h2>
+              <h2 className={localStyles.modalTitle}>{editingTaskId ? "แก้ไข Task" : "มอบหมาย Task ใหม่"}</h2>
               
               <div className={globalStyles.form}>
                 <div>
@@ -256,6 +311,7 @@ export default function TeamTasksPage() {
                         <input 
                           type="checkbox"
                           checked={selectedAssignees.includes(sub.emp_id)}
+                          disabled={editingTaskId ? tasks.find(t => t.id === editingTaskId)?.assignments.some((a: any) => a.emp_id === sub.emp_id && a.status === 'COMPLETED') : false}
                           onChange={(e) => {
                             if (e.target.checked) setSelectedAssignees([...selectedAssignees, sub.emp_id]);
                             else setSelectedAssignees(selectedAssignees.filter(id => id !== sub.emp_id));
@@ -285,7 +341,7 @@ export default function TeamTasksPage() {
                   onClick={handleCreateTask}
                   disabled={createLoading}
                 >
-                  {createLoading ? "กำลังสร้าง..." : "สร้าง Task"}
+                  {createLoading ? "กำลังบันทึก..." : (editingTaskId ? "บันทึกการแก้ไข" : "สร้าง Task")}
                 </button>
               </div>
             </div>
@@ -320,6 +376,41 @@ export default function TeamTasksPage() {
                 >
                   <CheckCircleIcon width={18} />
                   ยืนยัน
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {deleteConfirmModal.isOpen && (
+          <div className={localStyles.modalOverlay}>
+            <div className={localStyles.modalContent} style={{ maxWidth: "400px", padding: "24px" }}>
+              <h2 className={localStyles.modalTitle} style={{ borderBottom: "none", paddingBottom: 0, fontSize: "18px" }}>
+                ยืนยันการลบ Task
+              </h2>
+              <p style={{ color: "var(--text2)", fontSize: "15px", marginBottom: "24px", lineHeight: "1.5" }}>
+                คุณต้องการลบ Task นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้
+              </p>
+              
+              <div className={localStyles.modalActions} style={{ marginTop: 0 }}>
+                <button 
+                  className={localStyles.btnCancel} 
+                  onClick={() => setDeleteConfirmModal({ isOpen: false, taskId: null })}
+                >
+                  ยกเลิก
+                </button>
+                <button 
+                  className={localStyles.btnPrimary} 
+                  style={{ background: "var(--bad)", borderColor: "var(--bad)" }}
+                  onClick={() => {
+                    if (deleteConfirmModal.taskId) {
+                      handleDeleteTask(deleteConfirmModal.taskId);
+                    }
+                    setDeleteConfirmModal({ isOpen: false, taskId: null });
+                  }}
+                >
+                  <TrashIcon width={18} style={{ display: 'inline', marginRight: 4 }} />
+                  ยืนยันการลบ
                 </button>
               </div>
             </div>
