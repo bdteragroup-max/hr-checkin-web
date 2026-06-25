@@ -301,7 +301,9 @@ export default function LeavePage() {
     async function uploadFile(file: File) {
         setUploading(true);
         try {
-            const fd = new FormData(); fd.append("file", file, file.name);
+            const fd = new FormData(); 
+            const safeName = `upload-${Date.now()}.${file.name.split('.').pop() || 'tmp'}`;
+            fd.append("file", file, safeName);
             const r = await fetch("/api/upload", { method: "POST", body: fd });
             const data = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(data?.error || "UPLOAD_FAILED");

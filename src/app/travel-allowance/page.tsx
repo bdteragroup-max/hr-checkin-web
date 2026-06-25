@@ -54,7 +54,8 @@ export default function TravelAllowancePage() {
 
     async function uploadFile(file: File, prefix: string) {
         const formData = new FormData();
-        formData.append("file", file);
+        const safeName = `upload-${Date.now()}.${file.name.split('.').pop() || 'tmp'}`;
+        formData.append("file", file, safeName);
         formData.append("prefix", prefix);
         const r = await fetch("/api/upload", { method: "POST", body: formData });
         const data = await r.json();
