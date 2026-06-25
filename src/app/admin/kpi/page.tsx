@@ -30,6 +30,15 @@ export default function AdminKPIPage() {
     const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<any>(null);
 
+    // Export Modal State
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportYear, setExportYear] = useState(new Date().getFullYear().toString());
+
+    const handleConfirmExport = () => {
+        window.open(`/api/admin/kpi/export-excel${exportYear ? `?year=${exportYear}` : ''}`, "_blank");
+        setShowExportModal(false);
+    };
+
     const refresh = () => {
         setLoading(true);
         fetch("/api/admin/kpi")
@@ -174,6 +183,9 @@ export default function AdminKPIPage() {
                     <div className={styles.subtitle}>ภาพรวมการประเมินผลการปฏิบัติงานรายบุคคลสำหรับพนักงานทั้งหมด</div>
                 </div>
                 <div className={styles.headerActions}>
+                    <button className={styles.btnRefresh} onClick={() => setShowExportModal(true)} style={{ background: '#10b981', color: 'white', borderColor: '#059669' }}>
+                        <ArrowDownTrayIcon width={16} /> Export Excel
+                    </button>
                     <button className={styles.btnRefresh} onClick={handleRetroAward} style={{ background: '#f59e0b', color: 'white', borderColor: '#d97706' }}>
                         แจกเหรียญย้อนหลัง
                     </button>
@@ -464,6 +476,35 @@ export default function AdminKPIPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showExportModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowExportModal(false)}>
+                    <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                        <div className={styles.modalHeader}>
+                            <h2>ระบุปีที่ต้องการ Export</h2>
+                            <button className={styles.btnAction} onClick={() => setShowExportModal(false)}>
+                                <XMarkIcon width={24} />
+                            </button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            <p style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+                                โปรดระบุปีที่ต้องการดึงข้อมูล (ปล่อยว่างถ้าต้องการดึงข้อมูลทั้งหมด)
+                            </p>
+                            <input 
+                                type="text" 
+                                value={exportYear} 
+                                onChange={e => setExportYear(e.target.value)} 
+                                placeholder="เช่น 2026"
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none' }}
+                            />
+                        </div>
+                        <div className={styles.modalFooter}>
+                            <button className={styles.btnCancel} onClick={() => setShowExportModal(false)}>ยกเลิก</button>
+                            <button className={styles.btnSave} onClick={handleConfirmExport}>ยืนยัน</button>
                         </div>
                     </div>
                 </div>

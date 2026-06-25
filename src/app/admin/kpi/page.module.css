@@ -419,11 +419,33 @@
 .btnCancel {
     background: white;
     color: #64748b;
-    padding: 12px 24px;
-    border-radius: 12px;
+    padding: 10px 20px;
+    border-radius: 8px;
     border: 1px solid #e2e8f0;
-    font-weight: 700;
+    font-weight: 600;
+    font-size: 14px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnCancel:hover {
+    background: #f1f5f9;
+}
+
+.btnSave {
+    background: #10b981;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnSave:hover {
+    background: #059669;
 }
 
 .section {

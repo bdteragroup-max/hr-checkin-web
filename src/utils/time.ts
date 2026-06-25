@@ -188,3 +188,44 @@ export function formatDecimalHoursToHHMM(decimalHours: number | string | null | 
     
     return `${sign}${hours} ชม. ${minutes} นาที`;
 }
+
+/**
+ * Calculates length of service in Years, Months, and Days
+ */
+export function calculateServiceLengthString(start: Date | string | null, end: Date | string | null = new Date()): string {
+    if (!start) return "-";
+    const startDate = new Date(start);
+    const endDate = new Date(end || new Date());
+    
+    if (startDate > endDate) return "-";
+
+    let years = endDate.getFullYear() - startDate.getFullYear();
+    let months = endDate.getMonth() - startDate.getMonth();
+    let days = endDate.getDate() - startDate.getDate();
+
+    if (days < 0) {
+        months--;
+        // Get the number of days in the previous month
+        const prevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0);
+        days += prevMonth.getDate();
+    }
+
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    return `${years} ปี ${months} เดือน ${days} วัน`;
+}
+
+/**
+ * Calculates length of service in total days
+ */
+export function calculateServiceLengthDays(start: Date | string | null, end: Date | string | null = new Date()): number {
+    if (!start) return 0;
+    const startDate = new Date(start);
+    const endDate = new Date(end || new Date());
+    
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
