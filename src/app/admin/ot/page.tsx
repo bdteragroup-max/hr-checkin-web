@@ -261,7 +261,7 @@ export default function AdminOtPage() {
 
     function exportListToCSV() {
         const BOM = "\uFEFF";
-        let csvContent = "Employee Name,Employee ID,Department,Date,Start,End,Requested Hours,Approved Hours,Reason,Status\n";
+        let csvContent = "Employee Name,Employee ID,Department,Date,Start,End,Requested Hours,Reason,Status\n";
         
         filteredRequests.forEach(req => {
             const rowStatus = getStatusText(req.status);
@@ -270,7 +270,7 @@ export default function AdminOtPage() {
             const startTime = formatTime24h(req.start_time);
             const endTime = formatTime24h(req.end_time);
             
-            csvContent += `"${req.employee.name}","${req.emp_id}","${dept}","${dateStr}","${startTime}","${endTime}",${req.total_hours},${req.approved_hours || 0},"${req.reason || ""}","${rowStatus}"\n`;
+            csvContent += `"${req.employee.name}","${req.emp_id}","${dept}","${dateStr}","${startTime}","${endTime}",${req.total_hours},"${req.reason || ""}","${rowStatus}"\n`;
         });
 
         const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
