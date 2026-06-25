@@ -3,30 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
 
-async function requireAdmin() {
-    const token = (await cookies()).get("token")?.value;
-    if (!token) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
-    try {
-        const payload = verifyToken(token) as { emp_id: string };
-        const emp = await prisma.employees.findUnique({
-            where: { emp_id: payload.emp_id },
-            include: { departments: true }
-        });
-        
-        // Basic admin check - assuming HR department or specific admin role
-        // For this implementation, we will trust the employee is active
-        // In a real scenario, you'd check emp.department.name === 'HR' or emp.role === 'admin'
-        if (!emp || !emp.is_active) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
-        
-        return { emp };
-    } catch {
-        return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
-    }
-}
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function GET() {
-    const auth = await requireAdmin();
-    if ("error" in auth) return auth.error;
+    try {
+        await requireAdmin();
+    } catch {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
 
     try {
         const rewards = await prisma.rewards.findMany({
@@ -43,8 +27,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const auth = await requireAdmin();
-    if ("error" in auth) return auth.error;
+    try {
+        await requireAdmin();
+    } catch {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
 
     try {
         const body = await request.json();
@@ -96,8 +83,11 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-    const auth = await requireAdmin();
-    if ("error" in auth) return auth.error;
+    try {
+        await requireAdmin();
+    } catch {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
 
     try {
         const body = await request.json();
