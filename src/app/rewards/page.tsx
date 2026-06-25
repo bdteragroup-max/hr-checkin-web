@@ -159,6 +159,11 @@ export default function RewardsCatalog() {
                 <div key={r.id} className={styles.card}>
                   <div className={styles.cardImageWrapper}>
                     {r.image_url && <img src={r.image_url} alt={r.name} className={styles.cardImage} />}
+                    {rewardCosts.some((c: any) => c.original_amount && c.original_amount > c.amount) && (
+                      <div style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 'bold', zIndex: 10 }}>
+                        ลดราคา
+                      </div>
+                    )}
                     <div className={`${styles.stockBadge} ${!hasStock ? styles.stockOut : ""}`}>
                     {hasStock ? `เหลือ ${r.stock_quantity} ชิ้น` : 'สินค้าหมด'}
                   </div>
@@ -170,6 +175,11 @@ export default function RewardsCatalog() {
                       <div className={styles.price} style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                         {rewardCosts.map((c: any, i: number) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {c.original_amount && c.original_amount > c.amount && (
+                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85em', marginRight: 4 }}>
+                                {c.original_amount}
+                              </span>
+                            )}
                             <img src={getCoinImage(c.coin_type)} className={styles.priceIcon} alt="Coin" />
                             <span style={{ color: getBalance(c.coin_type) >= c.amount ? '#111827' : '#ef4444' }}>{c.amount}</span>
                           </div>
@@ -225,6 +235,11 @@ export default function RewardsCatalog() {
                     <div className={styles.modalCostValue} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {(selectedReward.costs && selectedReward.costs.length > 0 ? selectedReward.costs : [{coin_type: selectedReward.required_coin_type, amount: selectedReward.required_coins}]).map((c: any, i: number) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {c.original_amount && c.original_amount > c.amount && (
+                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85em', marginRight: 4 }}>
+                                {c.original_amount}
+                              </span>
+                            )}
                             <img src={getCoinImage(c.coin_type)} className={styles.priceIcon} alt="Coin" />
                             {c.amount} {c.coin_type}
                           </div>

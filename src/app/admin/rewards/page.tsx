@@ -11,7 +11,7 @@ interface Reward {
     image_url: string | null;
     required_coins: number;
     required_coin_type: string;
-    costs?: { coin_type: string, amount: number }[];
+    costs?: { coin_type: string, amount: number, original_amount?: number }[];
     stock_quantity: number;
     is_active: boolean;
 }
@@ -33,7 +33,7 @@ export default function AdminRewardsPage() {
     const [imageUrl, setImageUrl] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string>("");
-    const [costs, setCosts] = useState<{coin_type: string, amount: number}[]>([{coin_type: "BRONZE", amount: 1}]);
+    const [costs, setCosts] = useState<{coin_type: string, amount: number, original_amount?: number}[]>([{coin_type: "BRONZE", amount: 1}]);
     const [stockQuantity, setStockQuantity] = useState(10);
     const [isActive, setIsActive] = useState(true);
 
@@ -285,13 +285,23 @@ export default function AdminRewardsPage() {
                                         {costs.map((cost, idx) => (
                                             <div key={idx} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                                                 <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: 12, color: 'var(--text4)', marginBottom: 4, display: 'block' }}>ราคาลดแล้ว (จำนวนเหรียญ)</label>
                                                     <input type="number" value={cost.amount} onChange={e => {
                                                         const newCosts = [...costs];
                                                         newCosts[idx].amount = Number(e.target.value);
                                                         setCosts(newCosts);
-                                                    }} min={1} required placeholder="จำนวนเหรียญ" />
+                                                    }} min={1} required placeholder="ราคาพิเศษ" />
                                                 </div>
                                                 <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: 12, color: 'var(--text4)', marginBottom: 4, display: 'block' }}>ราคาปกติ (ก่อนลด - ไม่บังคับ)</label>
+                                                    <input type="number" value={cost.original_amount || ""} onChange={e => {
+                                                        const newCosts = [...costs];
+                                                        newCosts[idx].original_amount = e.target.value ? Number(e.target.value) : undefined;
+                                                        setCosts(newCosts);
+                                                    }} min={1} placeholder="ราคาเต็ม" />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: 12, color: 'var(--text4)', marginBottom: 4, display: 'block' }}>ประเภทเหรียญ</label>
                                                     <select 
                                                         value={cost.coin_type} 
                                                         onChange={e => {
