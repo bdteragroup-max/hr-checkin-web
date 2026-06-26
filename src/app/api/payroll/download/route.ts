@@ -115,14 +115,11 @@ export async function GET(request: Request) {
         });
         const warnings = await prisma.employee_warnings.findMany({ where: { emp_id: p.emp_id, date: { gte: startDate, lte: endDate } } });
         const travelClaims = await prisma.travel_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", date: { gte: startDate, lte: endDate } } });
-        const welfareClaims = await prisma.general_welfare_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", approved_at: { gte: startDate, lte: endDate } } });
+        const welfareClaims = await prisma.general_welfare_claims.findMany({ where: { emp_id: p.emp_id, status: "approved", created_at: { gte: startDate, lte: endDate } } });
         const commissionClaims = await prisma.commission_claims.findMany({
             where: {
                 status: "completed",
-                OR: [
-                    { approved_at: { gte: startDate, lte: endDate } },
-                    { date: { gte: startDate, lte: endDate } }
-                ]
+                approved_at: { gte: startDate, lte: endDate }
             }
         });
 

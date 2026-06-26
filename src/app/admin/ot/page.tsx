@@ -157,7 +157,17 @@ export default function AdminOtPage() {
         const months = new Set<string>();
         requests.forEach(r => {
             const date = new Date(r.date_for);
-            months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+            let cycleMonth = date.getMonth() + 1;
+            let cycleYear = date.getFullYear();
+            
+            if (date.getDate() > 25) {
+                cycleMonth += 1;
+                if (cycleMonth > 12) {
+                    cycleMonth = 1;
+                    cycleYear += 1;
+                }
+            }
+            months.add(`${cycleYear}-${String(cycleMonth).padStart(2, '0')}`);
         });
         return Array.from(months).sort((a, b) => b.localeCompare(a));
     }, [requests]);
@@ -172,7 +182,17 @@ export default function AdminOtPage() {
         
         requests.forEach(req => {
             const date = new Date(req.date_for);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            let cycleMonth = date.getMonth() + 1;
+            let cycleYear = date.getFullYear();
+            
+            if (date.getDate() > 25) {
+                cycleMonth += 1;
+                if (cycleMonth > 12) {
+                    cycleMonth = 1;
+                    cycleYear += 1;
+                }
+            }
+            const monthKey = `${cycleYear}-${String(cycleMonth).padStart(2, '0')}`;
             if (selectedMonth && monthKey !== selectedMonth) return;
             
             const reqDate = date.toISOString().split('T')[0];

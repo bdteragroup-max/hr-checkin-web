@@ -121,10 +121,7 @@ export async function GET(request: Request) {
         const welfareClaims = await prisma.general_welfare_claims.findMany({
             where: {
                 status: "approved",
-                OR: [
-                    { approved_at: { gte: startDate, lte: endDate } },
-                    { created_at: { gte: startDate, lte: endDate } }
-                ]
+                created_at: { gte: startDate, lte: endDate }
             }
         });
 
