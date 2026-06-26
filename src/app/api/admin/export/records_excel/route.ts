@@ -5,6 +5,7 @@ import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function formatTime(d: Date) {
     return d.toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
@@ -69,7 +70,26 @@ export async function GET(req: Request) {
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
             const sheet = workbook.addWorksheet("Attendance Details");
-            await fillEmployeeSheet(sheet, emp_id, emp.name, start, end, holidayMap);
+            const checkins = await prisma.checkins.findMany({
+                where: { emp_id, timestamp: { gte: start, lte: end } },
+                orderBy: { timestamp: "asc" },
+            });
+            const leaves = await prisma.leave_requests.findMany({
+                where: { emp_id, start_date: { lte: end }, end_date: { gte: start } },
+            });
+            const travels = await prisma.travel_claims.findMany({
+                where: { 
+                    emp_id, 
+                    status: "approved", 
+                    date: { lte: end }, 
+                    OR: [
+                        { end_date: { gte: start } },
+                        { end_date: null, date: { gte: start } }
+                    ]
+                },
+            });
+
+            processEmployeeSheet(sheet, emp_id, start, end, holidayMap, checkins, leaves, travels);
 
             const buffer = await workbook.xlsx.writeBuffer();
             return new Response(buffer, {
@@ -116,12 +136,23 @@ export async function GET(req: Request) {
 
             const checkinsAll = await prisma.checkins.findMany({
                 where: { emp_id: { in: empIds }, timestamp: { gte: start, lte: end } },
-                select: { emp_id: true, timestamp: true, type: true, late_status: true, late_min: true },
+                orderBy: { timestamp: "asc" },
             });
 
             const leavesAll = await prisma.leave_requests.findMany({
                 where: { emp_id: { in: empIds }, start_date: { lte: end }, end_date: { gte: start } },
-                select: { emp_id: true, days: true, status: true },
+            });
+
+            const travelsAll = await prisma.travel_claims.findMany({
+                where: { 
+                    emp_id: { in: empIds }, 
+                    status: "approved", 
+                    date: { lte: end }, 
+                    OR: [
+                        { end_date: { gte: start } },
+                        { end_date: null, date: { gte: start } }
+                    ]
+                },
             });
 
             const holidayDates = new Set(Array.from(holidayMap.keys()));
@@ -174,10 +205,33 @@ export async function GET(req: Request) {
             }
 
             // 2. Individual Sheets
+            const checkinsByEmp = checkinsAll.reduce((acc, curr) => {
+                acc[curr.emp_id] = acc[curr.emp_id] || [];
+                acc[curr.emp_id].push(curr);
+                return acc;
+            }, {} as Record<string, any[]>);
+
+            const leavesByEmp = leavesAll.reduce((acc, curr) => {
+                acc[curr.emp_id] = acc[curr.emp_id] || [];
+                acc[curr.emp_id].push(curr);
+                return acc;
+            }, {} as Record<string, any[]>);
+
+            const travelsByEmp = travelsAll.reduce((acc, curr) => {
+                acc[curr.emp_id] = acc[curr.emp_id] || [];
+                acc[curr.emp_id].push(curr);
+                return acc;
+            }, {} as Record<string, any[]>);
+
             for (const e of emps) {
                 let sheetName = `${e.emp_id} - ${e.name}`.slice(0, 31);
                 const sheet = workbook.addWorksheet(sheetName);
-                await fillEmployeeSheet(sheet, e.emp_id, e.name, start, end, holidayMap);
+                
+                const empCheckins = checkinsByEmp[e.emp_id] || [];
+                const empLeaves = leavesByEmp[e.emp_id] || [];
+                const empTravels = travelsByEmp[e.emp_id] || [];
+                
+                processEmployeeSheet(sheet, e.emp_id, start, end, holidayMap, empCheckins, empLeaves, empTravels);
             }
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -195,7 +249,16 @@ export async function GET(req: Request) {
     }
 }
 
-async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name: string, start: Date, end: Date, holidayMap: Map<string, string>) {
+function processEmployeeSheet(
+    sheet: ExcelJS.Worksheet, 
+    emp_id: string, 
+    start: Date, 
+    end: Date, 
+    holidayMap: Map<string, string>,
+    checkins: any[],
+    leaves: any[],
+    travels: any[]
+) {
     sheet.columns = [
         { header: "DATE", key: "date", width: 15 },
         { header: "IN_TIME", key: "in_time", width: 12 },
@@ -208,29 +271,9 @@ async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name:
     ];
     sheet.getRow(1).font = { bold: true };
 
-    const checkins = await prisma.checkins.findMany({
-        where: { emp_id, timestamp: { gte: start, lte: end } },
-        orderBy: { timestamp: "asc" },
-    });
-
-    const leaves = await prisma.leave_requests.findMany({
-        where: { emp_id, status: "approved", start_date: { lte: end }, end_date: { gte: start } },
-    });
-
-    const travels = await prisma.travel_claims.findMany({
-        where: { 
-            emp_id, 
-            status: "approved", 
-            date: { lte: end }, 
-            OR: [
-                { end_date: { gte: start } },
-                { end_date: null, date: { gte: start } }
-            ]
-        },
-    });
-
     const leaveDaysMap = new Map<string, string>();
-    leaves.forEach(l => {
+    leaves.forEach((l: any) => {
+        if (l.status !== "approved") return;
         let cur = new Date(l.start_date);
         const endD = new Date(l.end_date);
         while (cur <= endD) {
@@ -241,6 +284,7 @@ async function fillEmployeeSheet(sheet: ExcelJS.Worksheet, emp_id: string, name:
 
     const travelDaysMap = new Set<string>();
     travels.forEach((t: any) => {
+        if (t.status !== "approved") return;
         let cur = new Date(t.date);
         const endD = t.end_date ? new Date(t.end_date) : new Date(t.date);
         while (cur <= endD) {
