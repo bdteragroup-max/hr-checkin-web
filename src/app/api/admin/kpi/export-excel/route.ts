@@ -12,11 +12,21 @@ export async function GET(req: Request) {
 
         const url = new URL(req.url);
         const yearParam = url.searchParams.get('year');
+        const sessionParam = url.searchParams.get('session');
         const filterYear = yearParam ? parseInt(yearParam) : null;
         
         const whereClause: any = { category: "ANNUAL" };
         if (filterYear) {
             whereClause.year = filterYear;
+        }
+        if (sessionParam) {
+            if (sessionParam === 'Mid-Year') {
+                whereClause.session_name = { contains: 'Mid-Year', mode: 'insensitive' };
+            } else if (sessionParam === 'Year-End') {
+                whereClause.session_name = { contains: 'Year-End', mode: 'insensitive' };
+            } else {
+                whereClause.session_name = sessionParam;
+            }
         }
 
         const evaluations = await (prisma as any).kpi_evaluations.findMany({
@@ -56,7 +66,7 @@ export async function GET(req: Request) {
             "ฐานเงินเดือน", // M: 13
             "ใบเตือน (กี่ใบ) / เรื่องอะไร", // N: 14
             "ผลประเมิน", // O: 15
-            "ไฟล์แนบ", // P: 16
+            "รอบการประเมิน", // P: 16
             "มาสาย", // Q: 17 (Times/Minutes Late group)
             "", // R: 18
             "จำนวนวันที่มาสาย", // S: 19
@@ -155,8 +165,13 @@ export async function GET(req: Request) {
             if (!emp) continue;
 
             const evalYear = ev.year || now.getFullYear();
-            const periodStart = ev.period_start || new Date(evalYear, 0, 1);
-            const periodEnd = ev.period_end || new Date(evalYear, 11, 31, 23, 59, 59);
+            let periodStart = ev.period_start || new Date(evalYear, 0, 1);
+            let periodEnd = ev.period_end || new Date(evalYear, 11, 31, 23, 59, 59);
+
+            if (ev.session_name && ev.session_name.toLowerCase().includes('year-end')) {
+                periodStart = new Date(evalYear, 6, 1); // July 1st
+                periodEnd = new Date(evalYear, 11, 31, 23, 59, 59); // December 31st
+            }
 
             // Calculate Working Days (excluding Sundays and Holidays)
             let effectiveStart = periodStart;
@@ -310,7 +325,7 @@ export async function GET(req: Request) {
                 emp.base_salary ? Number(emp.base_salary) : 0,
                 warningText,
                 ev.grade ? `Score: ${ev.total_supervisor_score} (${ev.grade})` : "-",
-                "-", // KPI File not supported
+                ev.session_name || "-", // รอบการประเมิน (Replaced unused 'ไฟล์แนบ' column)
                 lateTimes,
                 lateMinutes,
                 lateDays,

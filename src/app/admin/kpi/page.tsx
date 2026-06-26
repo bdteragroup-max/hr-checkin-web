@@ -499,12 +499,36 @@ export default function AdminKPIPage() {
                                 value={exportYear} 
                                 onChange={e => setExportYear(e.target.value)} 
                                 placeholder="เช่น 2026"
-                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none' }}
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none', marginBottom: '15px' }}
                             />
+                            
+                            <p style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+                                รอบการประเมิน (Session)
+                            </p>
+                            <select 
+                                onChange={e => {
+                                    // Save the selected session. We will just use a global or state variable.
+                                    // Wait, we don't have a state for exportSession yet. Let's just use window.exportSession.
+                                    (window as any).exportSession = e.target.value;
+                                }}
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none' }}
+                                defaultValue=""
+                            >
+                                <option value="">ทั้งหมด (All)</option>
+                                <option value="Mid-Year">Mid-Year Assessment</option>
+                                <option value="Year-End">Year-End Assessment</option>
+                            </select>
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => setShowExportModal(false)}>ยกเลิก</button>
-                            <button className={styles.btnSave} onClick={handleConfirmExport}>ยืนยัน</button>
+                            <button className={styles.btnSave} onClick={() => {
+                                const session = (window as any).exportSession || '';
+                                let url = `/api/admin/kpi/export-excel?`;
+                                if (exportYear) url += `year=${exportYear}&`;
+                                if (session) url += `session=${session}`;
+                                window.open(url, "_blank");
+                                setShowExportModal(false);
+                            }}>ยืนยัน</button>
                         </div>
                     </div>
                 </div>
