@@ -13,7 +13,8 @@ import {
     CubeIcon,
     DocumentCheckIcon,
     AcademicCapIcon,
-    ArchiveBoxIcon
+    ArchiveBoxIcon,
+    MegaphoneIcon
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 
@@ -153,6 +154,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                     }`}
                             >
                                 <span className={styles.navIcon}><ChartBarIcon width={20} /></span>Dashboard
+                            </Link>
+
+                            <Link
+                                href="/admin/announcements"
+                                className={`${styles.navItem} ${pathname.startsWith("/admin/announcements") ? styles.active : ""}`}
+                            >
+                                <span className={styles.navIcon}><MegaphoneIcon width={20} /></span>ประกาศ (Announcements)
                             </Link>
 
                             {hasAccess("/admin/attendance") && (

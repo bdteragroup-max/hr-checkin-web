@@ -9,13 +9,14 @@ datasource db {
 }
 
 model admins {
-  id            Int        @id @default(autoincrement())
-  username      String     @unique @db.VarChar(50)
+  id            Int             @id @default(autoincrement())
+  username      String          @unique @db.VarChar(50)
   password_hash String
-  full_name     String?    @db.VarChar(100)
-  last_login    DateTime?  @db.Timestamptz(6)
-  created_at    DateTime   @default(now()) @db.Timestamptz(6)
-  role          String     @default("SUPER_ADMIN") @db.VarChar(20)
+  full_name     String?         @db.VarChar(100)
+  last_login    DateTime?       @db.Timestamptz(6)
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  role          String          @default("SUPER_ADMIN") @db.VarChar(20)
+  announcements announcements[]
   sessions      sessions[]
 }
 
@@ -699,12 +700,12 @@ model BusinessType {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Company {
-  id                    String      @id
+  id                    String       @id
   companyName           String
   taxId                 String?
   address               String?
-  createdAt             DateTime    @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime    @db.Timestamptz(6)
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime     @db.Timestamptz(6)
   area                  String?
   branchOrHeadOffice    String?
   businessType          String?
@@ -727,11 +728,12 @@ model Company {
   shippingProvince      String?
   shippingPostalCode    String?
   paymentMethod         String?
-  User                  User?       @relation(fields: [assignedUserId], references: [id])
+  User                  User?        @relation(fields: [assignedUserId], references: [id])
   Contact               Contact[]
   Order                 Order[]
   Quotation             Quotation[]
   Schedule              Schedule[]
+  SiteSurvey            SiteSurvey[]
   Telesale              Telesale[]
 
   @@index([assignedUserId])
@@ -1095,11 +1097,13 @@ model Quotation {
   salespersonId        String?
   subject              String?
   winLossReason        String?
+  siteSurveyId         String?
   MarketingLead        MarketingLead?
   Order                Order[]
   Company              Company        @relation(fields: [companyId], references: [id])
   Contact              Contact?       @relation(fields: [contactId], references: [id])
   User                 User?          @relation(fields: [salespersonId], references: [id])
+  SiteSurvey           SiteSurvey?    @relation(fields: [siteSurveyId], references: [id])
   jobs                 jobs[]
 
   @@index([companyId, createdAt])
@@ -1284,6 +1288,7 @@ model User {
   ProjectTask                                                     ProjectTask[]
   Quotation                                                       Quotation[]
   Schedule                                                        Schedule[]
+  SiteSurvey                                                      SiteSurvey[]
   Telesale                                                        Telesale[]
   TelesalesKPI                                                    TelesalesKPI[]
   employee_sales                                                  employee_sales?
@@ -1689,4 +1694,196 @@ model Notification {
   @@index([createdAt])
   @@index([isRead])
   @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SiteSurvey {
+  id                      String                   @id
+  surveyNumber            String                   @unique
+  surveyDate              DateTime                 @db.Date
+  companyId               String?
+  customerName            String?
+  projectName             String?
+  projectLocation         String?
+  coordinatorName         String?
+  coordinatorPhone        String?
+  salespersonId           String
+  surveyorName            String?
+  status                  String                   @default("Draft")
+  version                 Int                      @default(1)
+  latitude                Float?
+  longitude               Float?
+  hasSingleLineDiagram    Boolean                  @default(false)
+  requiredInfoChecklist   String[]                 @default([])
+  additionalRemark        String?
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                 @db.Timestamptz(6)
+  Quotation               Quotation[]
+  Company                 Company?                 @relation(fields: [companyId], references: [id])
+  User                    User                     @relation(fields: [salespersonId], references: [id])
+  SurveyBill              SurveyBill?
+  SurveyDocument          SurveyDocument[]
+  SurveyElectricalProfile SurveyElectricalProfile?
+  SurveyPhoto             SurveyPhoto[]
+  SurveyQA                SurveyQA?
+  SurveyStructure         SurveyStructure?
+  SurveyTariffSelection   SurveyTariffSelection?
+  SurveyUsageBehavior     SurveyUsageBehavior?
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyBill {
+  id         String     @id
+  surveyId   String     @unique
+  billCount  Int?
+  fileUrl    String
+  note       String?
+  SiteSurvey SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyDocument {
+  id               String     @id
+  surveyId         String
+  documentType     String
+  customerProvided Boolean    @default(false)
+  fileUrl          String
+  note             String?
+  SiteSurvey       SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyElectricalProfile {
+  id                    String     @id
+  surveyId              String     @unique
+  gridProvider          String?
+  userType              String?
+  voltageLevel          String[]   @default([])
+  meterSize             String[]   @default([])
+  rateThbPerKwh         Float?
+  kwhQty                Float?
+  peakKwWeekday         Float?
+  peakKwWeekend         Float?
+  transformerCount      Int?
+  transformerBrand      String?
+  transformerModel      String?
+  transformerKva        Float?
+  breakerAmp            Float?
+  mainPanelCableLengthM Float?
+  amrUsernameEncrypted  String?
+  amrPasswordEncrypted  String?
+  SiteSurvey            SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyPhoto {
+  id         String     @id
+  surveyId   String
+  photoType  String
+  fileUrl    String
+  photoDesc  String?
+  SiteSurvey SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyQA {
+  id                           String     @id
+  surveyId                     String     @unique
+  dayNightUsage                String?
+  dayNightUsageDetail          String?
+  dayLoad                      String?
+  nightLoad                    String?
+  backupLoad                   String?
+  backupLoadDetail             String?
+  batteryChargeMode            String?
+  batteryChargeDetail          String?
+  gridChargeAtNight            String?
+  gridChargeAtNightDetail      String?
+  inverterBackupOnOutage       String?
+  inverterBackupOnOutageDetail String?
+  powerQualityIssue            String?
+  powerQualityIssueDetail      String?
+  solarReasons                 String[]   @default([])
+  solarReasonsDetail           String?
+  SiteSurvey                   SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyRoofAge {
+  id              String          @id
+  structureId     String
+  roofType        String
+  ageYear         Int
+  SurveyStructure SurveyStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyStructure {
+  id                   String          @id
+  surveyId             String          @unique
+  roofType             String[]        @default([])
+  roofAgeYear          Int?
+  roofDimWxlM          String?
+  buildingHeightM      Float?
+  roofPattern          String?
+  metalSheetType       String?
+  roofSlopeDeg         Float?
+  azimuthDeg           Float?
+  tiltDeg              Float?
+  purlinToPurlinM      Float?
+  rafterToRafterM      Float?
+  columnToColumnM      Float?
+  skylightToSkylightM  Float?
+  jackRoofDimM         String?
+  ventilationDimM      String?
+  lightningProtectionM Float?
+  serviceLadderM       Float?
+  otherNotes           String?
+  SurveyRoofAge        SurveyRoofAge[]
+  SiteSurvey           SiteSurvey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyTariffSelection {
+  id               String             @id
+  surveyId         String             @unique
+  tariffCategory   String?
+  SiteSurvey       SiteSurvey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  SurveyTariffTier SurveyTariffTier[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyTariffTier {
+  id                    String                @id
+  selectionId           String
+  tierName              String?
+  ratePerKwh            Float?
+  qtyKwhPerMonth        Float?
+  SurveyTariffSelection SurveyTariffSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SurveyUsageBehavior {
+  id                    String     @id
+  surveyId              String     @unique
+  workingHours          String?
+  workingDaysPerWeek    Int?
+  workingDaysPerYear    Int?
+  nonWorkingDaysPerWeek Int?
+  nonWorkingDaysPerYear Int?
+  dayNightRatio         String?
+  avgBillThbPerMonth    Float?
+  mainEquipment         String?
+  SiteSurvey            SiteSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}
+
+model announcements {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(200)
+  content    String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  created_by Int?
+  admins     admins?  @relation(fields: [created_by], references: [id])
 }

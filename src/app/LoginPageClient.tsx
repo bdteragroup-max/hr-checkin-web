@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import styles from "./page.module.css";
-import { User, Lock } from "lucide-react";
+import { User, Lock, Megaphone, X } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -20,6 +20,20 @@ function LoginContent() {
     const [pin, setPin] = useState("");
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [showAnnouncements, setShowAnnouncements] = useState(false);
+
+    useEffect(() => {
+        fetch("/api/announcements")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.announcements.length > 0) {
+                    setAnnouncements(data.announcements);
+                    setShowAnnouncements(true);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     async function login() {
         if (!emp_id.trim() || !pin.trim()) return setMsg("กรุณากรอก ID และ PIN");
@@ -116,6 +130,33 @@ function LoginContent() {
                     </a>
                 </div>
             </div>
+
+            {/* ── Announcements Modal ── */}
+            {showAnnouncements && announcements.length > 0 && (
+                <div className={styles.modalOverlay} onClick={() => setShowAnnouncements(false)}>
+                    <div className={styles.modal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.modalHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem", margin: 0, color: "var(--primary)", fontSize: "1.1rem" }}>
+                                <Megaphone size={20} /> ประกาศข่าวสาร
+                            </h3>
+                            <button className={styles.closeBtn} onClick={() => setShowAnnouncements(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className={styles.modalBody} style={{ maxHeight: "60vh", overflowY: "auto" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                                {announcements.map(a => (
+                                    <div key={a.id} style={{ paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+                                        <div style={{ fontWeight: 600, fontSize: "1rem", marginBottom: "0.4rem", color: "var(--text)" }}>{a.title}</div>
+                                        {a.content && <div style={{ fontSize: "0.9rem", color: "var(--text2)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{a.content}</div>}
+                                        <div style={{ fontSize: "0.75rem", color: "var(--text4)", marginTop: "0.5rem" }}>{new Date(a.created_at).toLocaleDateString("th-TH")}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Footer ── */}
             <p className={styles.footer}>© {new Date().getFullYear()} TERA GROUP</p>
