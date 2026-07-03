@@ -182,6 +182,7 @@ export async function GET(req: Request) {
                     };
                 })
                 .filter(row => {
+                    if (row.late_status === "resigned") return false;
                     if (statusParam === "leave") return row.late_status === "leave";
                     return true; // if absent, show both as per previous agreement "show leave as absent"
                 });
@@ -310,32 +311,6 @@ export async function GET(req: Request) {
                         lat: null as any,
                         lon: null as any,
                     } as any);
-                }
-            });
-
-            activeEmployeesData.forEach(emp => {
-                const empResignationDate = emp.resignation_date ? new Date(emp.resignation_date) : null;
-                const viewDate = new Date(`${date}T00:00:00+07:00`);
-                if (empResignationDate && viewDate > empResignationDate) {
-                    if (!checkedInSet.has(emp.emp_id)) {
-                        mergedRows.push({
-                            id: `resigned-${emp.emp_id}-${date}` as any,
-                            emp_id: emp.emp_id,
-                            name: emp.name || "",
-                            type: "ลาออก",
-                            timestamp: virtualTimestamp as any,
-                            branch_name: (emp as any).branches?.name || "ไม่ระบุสาขา",
-                            distance: null as any,
-                            photo_url: null,
-                            project_name: null,
-                            remark: "พนักงานลาออก",
-                            late_status: "resigned",
-                            late_min: null as any,
-                            lat: null as any,
-                            lon: null as any,
-                        } as any);
-                        checkedInSet.add(emp.emp_id);
-                    }
                 }
             });
         }

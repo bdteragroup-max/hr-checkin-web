@@ -144,6 +144,7 @@ model employees {
   supervisor                        employees?               @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
   subordinates                      employees[]              @relation("EmployeeToSupervisor")
   branches                          branches?                @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
+
   general_welfare_claims            general_welfare_claims[]
   kpiList                           kpi_evaluations[]        @relation("EmployeeToKPI")
   kpi_submissions                   kpi_evaluations[]        @relation("SupervisorToKPI")
@@ -193,6 +194,7 @@ model leave_requests {
   supervisor_approved_at DateTime? @db.Timestamptz(6)
   supervisor_id          String?   @db.VarChar(20)
   handover_person        String?   @db.VarChar(100)
+  substitute_date        DateTime? @db.Date
   employees              employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([start_date, end_date], map: "idx_leave_dates")
@@ -1288,6 +1290,7 @@ model User {
   ProjectTask                                                     ProjectTask[]
   Quotation                                                       Quotation[]
   Schedule                                                        Schedule[]
+  SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]          @relation("SiteSurvey_estimatedByUserIdToUser")
   SiteSurvey                                                      SiteSurvey[]
   Telesale                                                        Telesale[]
   TelesalesKPI                                                    TelesalesKPI[]
@@ -1377,7 +1380,6 @@ model jobs {
   job_step_logs      job_step_logs[]
   Quotation          Quotation?          @relation(fields: [quotationId], references: [id])
   payment_tasks      payment_tasks[]
-  purchase_orders    purchase_orders[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1400,20 +1402,30 @@ model payment_tasks {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model purchase_orders {
-  id            String    @id
-  poNumber      String?
-  jobId         String
-  supplierName  String?
-  supplierPhone String?
-  items         Json?
-  totalAmount   Float?
-  expectedDate  DateTime? @db.Timestamptz(6)
-  status        String    @default("รอสินค้า")
-  createdBy     String?
-  note          String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @db.Timestamptz(6)
-  jobs          jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id                Int                @id @default(autoincrement())
+  no                Int?
+  recordedAt        DateTime?          @db.Timestamptz(6)
+  prNumber          String?
+  poNumber          String             @unique
+  vendorName        String?
+  accountNumber     String?
+  totalAmount       Decimal?           @db.Decimal(12, 2)
+  depositAmount     Decimal?           @db.Decimal(12, 2)
+  remainingAmount   Decimal?           @db.Decimal(12, 2)
+  payment1          Decimal?           @db.Decimal(12, 2)
+  creditTerm        String?
+  jobName           String?
+  itemList          String?
+  deliveryDate      DateTime?          @db.Timestamptz(6)
+  note              String?
+  reportedBy        String?
+  receiveStatus     String?
+  receivedBy        String?
+  receivedAt        DateTime?          @db.Timestamptz(6)
+  createdAt         DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime           @db.Timestamptz(6)
+  goods_receipts    goods_receipts[]
+  purchase_requests purchase_requests? @relation(fields: [prNumber], references: [prNumber])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1698,37 +1710,49 @@ model Notification {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model SiteSurvey {
-  id                      String                   @id
-  surveyNumber            String                   @unique
-  surveyDate              DateTime                 @db.Date
-  companyId               String?
-  customerName            String?
-  projectName             String?
-  projectLocation         String?
-  coordinatorName         String?
-  coordinatorPhone        String?
-  salespersonId           String
-  surveyorName            String?
-  status                  String                   @default("Draft")
-  version                 Int                      @default(1)
-  latitude                Float?
-  longitude               Float?
-  hasSingleLineDiagram    Boolean                  @default(false)
-  requiredInfoChecklist   String[]                 @default([])
-  additionalRemark        String?
-  createdAt               DateTime                 @default(now()) @db.Timestamptz(6)
-  updatedAt               DateTime                 @db.Timestamptz(6)
-  Quotation               Quotation[]
-  Company                 Company?                 @relation(fields: [companyId], references: [id])
-  User                    User                     @relation(fields: [salespersonId], references: [id])
-  SurveyBill              SurveyBill?
-  SurveyDocument          SurveyDocument[]
-  SurveyElectricalProfile SurveyElectricalProfile?
-  SurveyPhoto             SurveyPhoto[]
-  SurveyQA                SurveyQA?
-  SurveyStructure         SurveyStructure?
-  SurveyTariffSelection   SurveyTariffSelection?
-  SurveyUsageBehavior     SurveyUsageBehavior?
+  id                                      String                   @id
+  surveyNumber                            String                   @unique
+  surveyDate                              DateTime                 @db.Date
+  companyId                               String?
+  customerName                            String?
+  projectName                             String?
+  projectLocation                         String?
+  coordinatorName                         String?
+  coordinatorPhone                        String?
+  salespersonId                           String
+  surveyorName                            String?
+  status                                  String                   @default("Draft")
+  version                                 Int                      @default(1)
+  latitude                                Float?
+  longitude                               Float?
+  hasSingleLineDiagram                    Boolean                  @default(false)
+  requiredInfoChecklist                   String[]                 @default([])
+  additionalRemark                        String?
+  createdAt                               DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt                               DateTime                 @db.Timestamptz(6)
+  estimatedAt                             DateTime?
+  estimatedByUserId                       String?
+  estimatedPrice                          Float?
+  estimationNote                          String?
+  estimationStatus                        String?
+  amrCustomerCode                         String?
+  buildingElectricalFileUrl               String?
+  buildingPlanFileUrl                     String?
+  electricalCabinetFileUrl                String?
+  loadProfileFileUrl                      String?
+  roofStructureFileUrl                    String?
+  Quotation                               Quotation[]
+  Company                                 Company?                 @relation(fields: [companyId], references: [id])
+  User_SiteSurvey_estimatedByUserIdToUser User?                    @relation("SiteSurvey_estimatedByUserIdToUser", fields: [estimatedByUserId], references: [id])
+  User                                    User                     @relation(fields: [salespersonId], references: [id])
+  SurveyBill                              SurveyBill?
+  SurveyDocument                          SurveyDocument[]
+  SurveyElectricalProfile                 SurveyElectricalProfile?
+  SurveyPhoto                             SurveyPhoto[]
+  SurveyQA                                SurveyQA?
+  SurveyStructure                         SurveyStructure?
+  SurveyTariffSelection                   SurveyTariffSelection?
+  SurveyUsageBehavior                     SurveyUsageBehavior?
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1887,3 +1911,46 @@ model announcements {
   created_by Int?
   admins     admins?  @relation(fields: [created_by], references: [id])
 }
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model goods_receipts {
+  id                   String          @id
+  sequenceNo           Int?
+  recordedAt           DateTime?       @db.Timestamptz(6)
+  company              String?
+  poNumber             String
+  item                 String?
+  quantity             Decimal?        @db.Decimal(10, 2)
+  totalAmount          Decimal?        @db.Decimal(12, 2)
+  creditTerm           String?
+  status               String?
+  targetDeliveryDate   DateTime?       @db.Timestamptz(6)
+  deliveredQuantity    Decimal?        @db.Decimal(10, 2)
+  receivedAt           DateTime?       @db.Timestamptz(6)
+  deliveryNoteNumber   String?
+  recipient            String?
+  isCompleteDelivery   Boolean         @default(false)
+  isIncompleteDelivery Boolean         @default(false)
+  createdAt            DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime        @db.Timestamptz(6)
+  purchase_orders      purchase_orders @relation(fields: [poNumber], references: [poNumber])
+
+  @@unique([poNumber, sequenceNo])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_requests {
+  id              Int               @id @default(autoincrement())
+  no              Int?
+  recordedAt      DateTime?         @db.Timestamptz(6)
+  prNumber        String            @unique
+  projectName     String?
+  itemList        String?
+  requestedBy     String?
+  note            String?
+  reportedBy      String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime          @db.Timestamptz(6)
+  purchase_orders purchase_orders[]
+}
+

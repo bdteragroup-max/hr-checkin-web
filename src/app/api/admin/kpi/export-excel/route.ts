@@ -13,12 +13,31 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const yearParam = url.searchParams.get('year');
         const sessionParam = url.searchParams.get('session');
-        const filterYear = yearParam ? parseInt(yearParam) : null;
+        const evalYear = yearParam ? parseInt(yearParam) : new Date().getFullYear();
         
-        const whereClause: any = { category: "ANNUAL" };
-        if (filterYear) {
-            whereClause.year = filterYear;
-        }
+        // 1. Fetch All Active Employees (Excluding Interns and Probationary)
+        const employees = await prisma.employees.findMany({
+            where: { 
+                is_active: true,
+                is_on_trial: false,
+                NOT: {
+                    job_positions: {
+                        title: { contains: "นักศึกษาฝึกงาน" }
+                    }
+                }
+            },
+            include: {
+                departments: { include: { divisions: true } },
+                job_positions: true,
+            },
+            orderBy: [
+                { departments: { name: 'asc' } },
+                { name: 'asc' }
+            ]
+        });
+
+        // 2. Fetch Evaluations based on filter
+        const whereClause: any = { category: "ANNUAL", year: evalYear };
         if (sessionParam) {
             if (sessionParam === 'Mid-Year') {
                 whereClause.session_name = { contains: 'Mid-Year', mode: 'insensitive' };
@@ -30,20 +49,16 @@ export async function GET(req: Request) {
         }
 
         const evaluations = await (prisma as any).kpi_evaluations.findMany({
-            where: whereClause,
-            include: {
-                employee: {
-                    include: {
-                        departments: { include: { divisions: true } },
-                        job_positions: true,
-                    }
-                }
-            },
-            orderBy: [
-                { year: 'desc' },
-                { session_name: 'desc' },
-                { employee: { departments: { name: 'asc' } } }
-            ]
+            where: whereClause
+        });
+        
+        // Map eval by emp_id
+        const evalMap = new Map();
+        evaluations.forEach((ev: any) => {
+            // Keep the latest or highest score if there are duplicates
+            if (!evalMap.has(ev.emp_id)) {
+                evalMap.set(ev.emp_id, ev);
+            }
         });
 
         const workbook = new ExcelJS.Workbook();
@@ -88,7 +103,6 @@ export async function GET(req: Request) {
         ];
 
         // Merge cells for group headers
-        // A1:A2 to P1:P2 + S, X, Y, Z
         const colsToMerge = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'S', 'X', 'Y', 'Z'];
         colsToMerge.forEach(col => {
             sheet.mergeCells(`${col}1:${col}2`);
@@ -108,7 +122,7 @@ export async function GET(req: Request) {
                 cell.fill = {
                     type: 'pattern',
                     pattern: 'solid',
-                    fgColor: { argb: 'FFE6E6FA' } // Light purple matching screenshot
+                    fgColor: { argb: 'FFE6E6FA' } 
                 };
                 cell.border = {
                     top: { style: 'thin' },
@@ -135,7 +149,7 @@ export async function GET(req: Request) {
         sheet.getColumn('M').width = 12;
         sheet.getColumn('N').width = 20;
         sheet.getColumn('O').width = 15;
-        sheet.getColumn('P').width = 10;
+        sheet.getColumn('P').width = 15; // Increased for "ยังไม่ประเมิน"
         sheet.getColumn('Q').width = 10;
         sheet.getColumn('R').width = 10;
         sheet.getColumn('S').width = 10;
@@ -148,30 +162,34 @@ export async function GET(req: Request) {
         sheet.getColumn('Z').width = 15;
 
         // Color specific header cells like in screenshot
-        sheet.getCell('Q1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } }; // Light Green for มาสาย
-        sheet.getCell('T1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE5CD' } }; // Light Orange for ขาดลา
-        sheet.getCell('X1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCFE2F3' } }; // Light Blue for working days
+        sheet.getCell('Q1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } }; 
+        sheet.getCell('T1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE5CD' } }; 
+        sheet.getCell('X1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCFE2F3' } }; 
 
         // Fetch all holidays for working days calculation
         const allHolidays = await (prisma as any).holidays.findMany({ select: { date: true } });
         const holidayDateStrings = new Set(allHolidays.map((h: any) => new Date(h.date).toISOString().split('T')[0]));
 
         // Process data
-        const now = new Date();
         let rowIndex = 3;
 
-        for (const ev of evaluations) {
-            const emp = ev.employee;
-            if (!emp) continue;
+        for (const emp of employees) {
+            const ev = evalMap.get(emp.emp_id);
+            
+            // Determine Default Period Start/End based on session
+            let periodStart = new Date(evalYear, 0, 1);
+            let periodEnd = new Date(evalYear, 11, 31, 23, 59, 59);
 
-            const evalYear = ev.year || now.getFullYear();
-            let periodStart = ev.period_start || new Date(evalYear, 0, 1);
-            let periodEnd = ev.period_end || new Date(evalYear, 11, 31, 23, 59, 59);
-
-            if (ev.session_name && ev.session_name.toLowerCase().includes('year-end')) {
-                periodStart = new Date(evalYear, 6, 1); // July 1st
-                periodEnd = new Date(evalYear, 11, 31, 23, 59, 59); // December 31st
+            if (sessionParam === 'Mid-Year' || (ev && ev.session_name?.toLowerCase().includes('mid-year'))) {
+                periodEnd = new Date(evalYear, 5, 30, 23, 59, 59); // June 30
+            } else if (sessionParam === 'Year-End' || (ev && ev.session_name?.toLowerCase().includes('year-end'))) {
+                periodStart = new Date(evalYear, 6, 1); // July 1
+                periodEnd = new Date(evalYear, 11, 31, 23, 59, 59);
             }
+            
+            // If the DB evaluation explicitly has dates, use those instead
+            if (ev?.period_start) periodStart = new Date(ev.period_start);
+            if (ev?.period_end) periodEnd = new Date(ev.period_end);
 
             // Calculate Working Days (excluding Sundays and Holidays)
             let effectiveStart = periodStart;
@@ -187,7 +205,6 @@ export async function GET(req: Request) {
 
             while (current <= end) {
                 if (current.getDay() !== 0) { // Not Sunday
-                    // Adjust to local timezone date string (or avoid timezone shift by doing this)
                     const year = current.getFullYear();
                     const month = String(current.getMonth() + 1).padStart(2, '0');
                     const day = String(current.getDate()).padStart(2, '0');
@@ -211,7 +228,7 @@ export async function GET(req: Request) {
                         lte: periodEnd
                     }
                 },
-                select: { type: true, late_status: true, late_min: true, date_key: true }
+                select: { late_status: true, late_min: true, date_key: true }
             });
 
             const lateCheckins = checkins.filter((c: any) => c.late_status === 'late' || (c.late_min && c.late_min > 0));
@@ -241,29 +258,26 @@ export async function GET(req: Request) {
                 const lStart = new Date(l.start_date);
                 const lEnd = new Date(l.end_date);
                 
-                // If it's a single day, use the exact minutes (handles half-days)
                 if (lStart.getTime() === lEnd.getTime()) {
                     if (lStart >= periodStart && lStart <= periodEnd) {
                         overlapMins = l.minutes;
                     }
                 } else {
-                    // Multi-day leave, calculate overlapping valid days
-                    let current = new Date(Math.max(lStart.getTime(), periodStart.getTime()));
-                    current.setHours(0,0,0,0);
-                    const end = new Date(Math.min(lEnd.getTime(), periodEnd.getTime()));
-                    end.setHours(0,0,0,0);
+                    let cur = new Date(Math.max(lStart.getTime(), periodStart.getTime()));
+                    cur.setHours(0,0,0,0);
+                    const finish = new Date(Math.min(lEnd.getTime(), periodEnd.getTime()));
+                    finish.setHours(0,0,0,0);
                     
-                    while (current <= end) {
-                        if (current.getDay() !== 0) {
-                            const year = current.getFullYear();
-                            const month = String(current.getMonth() + 1).padStart(2, '0');
-                            const day = String(current.getDate()).padStart(2, '0');
-                            const dateStr = `${year}-${month}-${day}`;
-                            if (!holidayDateStrings.has(dateStr)) {
-                                overlapMins += 480; // 8 hours in minutes
+                    while (cur <= finish) {
+                        if (cur.getDay() !== 0) {
+                            const y = cur.getFullYear();
+                            const m = String(cur.getMonth() + 1).padStart(2, '0');
+                            const d = String(cur.getDate()).padStart(2, '0');
+                            if (!holidayDateStrings.has(`${y}-${m}-${d}`)) {
+                                overlapMins += 480; 
                             }
                         }
-                        current.setDate(current.getDate() + 1);
+                        cur.setDate(cur.getDate() + 1);
                     }
                 }
 
@@ -272,7 +286,6 @@ export async function GET(req: Request) {
                 else if (l.leave_type_id === "annual" || l.leave_type_id === "ลาพักร้อน" || l.leave_type_id === "VACATION" || l.leave_type_id === "vacation") vacationLeaveMins += overlapMins;
             });
 
-            // Convert minutes to hours
             const sickLeaveHours = Number((sickLeaveMins / 60).toFixed(2));
             const businessLeaveHours = Number((businessLeaveMins / 60).toFixed(2));
             const vacationLeaveHours = Number((vacationLeaveMins / 60).toFixed(2));
@@ -309,6 +322,10 @@ export async function GET(req: Request) {
             else if (emp.emp_id?.startsWith('TP')) company = "Tera Power";
 
             const row = sheet.getRow(rowIndex);
+            
+            // Fallback session label if they haven't been evaluated
+            const displaySessionName = ev?.session_name || (sessionParam ? sessionParam : "ยังไม่ถูกประเมิน");
+            
             row.values = [
                 rowIndex - 2,
                 company,
@@ -324,8 +341,8 @@ export async function GET(req: Request) {
                 calculateServiceLengthString(probationEnd),
                 emp.base_salary ? Number(emp.base_salary) : 0,
                 warningText,
-                ev.grade ? `Score: ${ev.total_supervisor_score} (${ev.grade})` : "-",
-                ev.session_name || "-", // รอบการประเมิน (Replaced unused 'ไฟล์แนบ' column)
+                ev?.grade ? `Score: ${ev.total_supervisor_score} (${ev.grade})` : "ยังไม่ประเมิน",
+                displaySessionName, 
                 lateTimes,
                 lateMinutes,
                 lateDays,
@@ -335,10 +352,9 @@ export async function GET(req: Request) {
                 totalLeaveHours,
                 actualWorkingDays,
                 actualWorkingHours,
-                totalLeaveHours // Total leave hours requested again at the end
+                totalLeaveHours 
             ];
 
-            // Add borders to the row
             row.eachCell(cell => {
                 cell.border = {
                     top: { style: 'thin' },
@@ -346,6 +362,15 @@ export async function GET(req: Request) {
                     bottom: { style: 'thin' },
                     right: { style: 'thin' }
                 };
+                
+                // Highlight rows that haven't been evaluated
+                if (!ev?.grade) {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFFF2CC' } // Light yellow warning
+                    };
+                }
             });
 
             rowIndex++;

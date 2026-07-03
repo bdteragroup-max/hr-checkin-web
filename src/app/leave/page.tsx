@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
-import { 
-    ClockIcon, 
-    CheckCircleIcon, 
-    XCircleIcon, 
-    InformationCircleIcon, 
+import {
+    ClockIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    InformationCircleIcon,
     ExclamationTriangleIcon,
     PaperClipIcon,
     ArrowPathIcon,
@@ -38,6 +38,7 @@ type LeaveItem = {
     status: "pending" | "approved" | "rejected" | string;
     reason?: string | null; attachment_url?: string | null;
     handover_person?: string | null;
+    substitute_date?: string | null;
 };
 interface AlertModal { visible: boolean; message: string; type: "error" | "ok" }
 
@@ -174,7 +175,7 @@ export default function LeavePage() {
     const [uploading, setUploading] = useState(false);
     const [editingId, setEditingId] = useState("");
     const [leaveTypeId, setLeaveTypeId] = useState("");
-    
+
     const [startDate, setStartDate] = useState("");
     const [startHour, setStartHour] = useState("08");
     const [startMin, setStartMin] = useState("00");
@@ -182,12 +183,13 @@ export default function LeavePage() {
     const [endHour, setEndHour] = useState("17");
     const [endMin, setEndMin] = useState("00");
     const [handoverPerson, setHandoverPerson] = useState("");
+    const [substituteDate, setSubstituteDate] = useState("");
     const [colleagues, setColleagues] = useState<string[]>([]);
     const [holidays, setHolidays] = useState<string[]>([]);
 
     const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
     const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
-    
+
     const estimatedMinutes = useMemo(() => {
         if (!startAt || !endAt) return 0;
         // The helper in src/utils/time.ts already has the Saturday padding logic
@@ -199,7 +201,7 @@ export default function LeavePage() {
         let current = startDate ? new Date(startDate) : new Date();
         // If today is Sunday, start from Monday
         if (current.getDay() === 0) current.setDate(current.getDate() + 1);
-        
+
         const start = new Date(current.getTime());
         const startStr = start.toISOString().split('T')[0];
         setStartDate(startStr);
@@ -208,7 +210,7 @@ export default function LeavePage() {
 
         let workDaysCount = 0;
         let end = new Date(current.getTime());
-        
+
         while (workDaysCount < days) {
             if (end.getDay() !== 0) { // Not Sunday
                 workDaysCount++;
@@ -252,8 +254,9 @@ export default function LeavePage() {
 
     const canSubmit = useMemo(() => {
         if (!leaveTypeId || !startDate || !endDate || !handoverPerson || !reason || reason.trim() === "" || loading || uploading) return false;
+        if (leaveTypeId === "holiday_swap" && !substituteDate) return false;
         return true;
-    }, [leaveTypeId, startDate, endDate, handoverPerson, reason, loading, uploading]);
+    }, [leaveTypeId, startDate, endDate, handoverPerson, reason, substituteDate, loading, uploading]);
 
     const currentMinDate = useMemo(() => {
         if (!selectedType) return "";
@@ -301,22 +304,22 @@ export default function LeavePage() {
     async function uploadFile(file: File) {
         setUploading(true);
         try {
-            const fd = new FormData(); 
+            const fd = new FormData();
             const safeName = `upload-${Date.now()}.${file.name.split('.').pop() || 'tmp'}`;
             fd.append("file", file, safeName);
             const r = await fetch("/api/upload", { method: "POST", body: fd });
             const data = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(data?.error || "UPLOAD_FAILED");
-            
+
             const newUrl = String(data.url || "");
             setAttachmentUrls(prev => [...prev, newUrl]);
             setFileNames(prev => [...prev, file.name]);
-            
+
             showAlert("อัปโหลดเอกสารแนบสำเร็จ", "ok");
         } catch {
             showAlert("อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
-        } finally { 
-            setUploading(false); 
+        } finally {
+            setUploading(false);
             if (fileRef.current) fileRef.current.value = "";
         }
     }
@@ -324,7 +327,7 @@ export default function LeavePage() {
     async function removeFile(index: number) {
         const urlToRemove = attachmentUrls[index];
         if (!urlToRemove) return;
-        
+
         setUploading(true);
         try {
             await fetch("/api/upload", {
@@ -333,7 +336,7 @@ export default function LeavePage() {
                 body: JSON.stringify({ url: urlToRemove })
             });
         } catch { }
-        
+
         setAttachmentUrls(prev => prev.filter((_, i) => i !== index));
         setFileNames(prev => prev.filter((_, i) => i !== index));
         setUploading(false);
@@ -349,6 +352,7 @@ export default function LeavePage() {
             reason: reason || null,
             attachment_url: attachmentUrls.length > 0 ? attachmentUrls.join(",") : null,
             handover_person: handoverPerson,
+            ...(leaveTypeId === "holiday_swap" ? { substitute_date: substituteDate } : {})
         };
         if (editingId) payload.id = editingId;
 
@@ -378,7 +382,7 @@ export default function LeavePage() {
             showAlert(errMap[data?.error] || data?.error || "ส่งคำขอไม่สำเร็จ", "error");
             return;
         }
-        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
+        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson(""); setSubstituteDate("");
         setAttachmentUrls([]); setFileNames([]);
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
@@ -387,7 +391,7 @@ export default function LeavePage() {
     }
 
     function cancelEdit() {
-        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson("");
+        setStartDate(""); setEndDate(""); setReason(""); setHandoverPerson(""); setSubstituteDate("");
         setAttachmentUrls([]); setFileNames([]);
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
@@ -414,11 +418,12 @@ export default function LeavePage() {
         setEndMin(String(dEnd.getMinutes()).padStart(2, '0'));
         setHandoverPerson(cleanText((item as any).handover_person || ""));
         setReason(cleanText(item.reason || ""));
-        
+        setSubstituteDate(item.substitute_date ? new Date(item.substitute_date).toISOString().split('T')[0] : "");
+
         const urls = item.attachment_url ? item.attachment_url.split(",") : [];
         setAttachmentUrls(urls);
         setFileNames(urls.map(() => "ไฟล์แนบเดิม"));
-        
+
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -510,9 +515,9 @@ export default function LeavePage() {
                             <select className={styles.select} value={leaveTypeId} onChange={e => setLeaveTypeId(e.target.value)}>
                                 {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
-                            
+
                             {selectedType?.note && <div className={styles.smallNote}>{selectedType.note}</div>}
-                            
+
                             {selectedType?.id === 'annual' && (
                                 <div className={`${styles.smallNote} ${styles.smallNoteWarn}`}>
                                     * ต้องลาล่วงหน้า 30 วัน
@@ -538,6 +543,16 @@ export default function LeavePage() {
                                 </div>
                             )}
                         </div>
+
+                        {selectedType?.id === 'holiday_swap' && (
+                            <div className={`${styles.dtBlock} ${styles.dateBlock}`} style={{ marginBottom: 16 }}>
+                                <label className={styles.label}>วันที่มาทำงานแทน (สลับวันหยุด) *</label>
+                                <input className={styles.input} type="date" value={substituteDate} onChange={e => setSubstituteDate(e.target.value)} />
+                                <div className={styles.smallNote}>
+                                    * กรุณาเลือกวันที่เป็นวันหยุดปกติ (เช่น อาทิตย์, หรือวันหยุดนักขัตฤกษ์) เพื่อมาทำงานชดเชย
+                                </div>
+                            </div>
+                        )}
 
                         {/* QUICK PRESET BUTTONS */}
                         <div className={styles.presetButtonGroup}>
@@ -598,13 +613,13 @@ export default function LeavePage() {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {estimatedMinutes > 0 && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 16px", 
-                                    background: "rgba(34, 197, 94, 0.08)", 
-                                    border: "1px dashed #22c55e", 
+                                <div style={{
+                                    marginTop: 16,
+                                    padding: "12px 16px",
+                                    background: "rgba(34, 197, 94, 0.08)",
+                                    border: "1px dashed #22c55e",
                                     borderRadius: 12,
                                     display: "flex",
                                     justifyContent: "space-between",
@@ -619,7 +634,7 @@ export default function LeavePage() {
                         {/* Handover Person */}
                         <div style={{ marginBottom: 16 }}>
                             <label className={styles.label}>ผู้รับผิดชอบงานแทน *</label>
-                            <SearchableSelect 
+                            <SearchableSelect
                                 options={colleagues.map(name => ({ value: name, label: name }))}
                                 value={handoverPerson}
                                 onChange={val => setHandoverPerson(val)}
@@ -630,12 +645,12 @@ export default function LeavePage() {
                         {/* Reason & Action */}
                         <div style={{ marginBottom: 16 }}>
                             <label className={styles.label}>เหตุผลการลา *</label>
-                            <textarea 
-                                className={styles.textarea} 
-                                value={reason} 
-                                onChange={e => setReason(cleanText(e.target.value))} 
-                                placeholder="ระบุรายละเอียดที่จำเป็น..." 
-                                required 
+                            <textarea
+                                className={styles.textarea}
+                                value={reason}
+                                onChange={e => setReason(cleanText(e.target.value))}
+                                placeholder="ระบุรายละเอียดที่จำเป็น..."
+                                required
                             />
                         </div>
 
@@ -652,15 +667,15 @@ export default function LeavePage() {
                                 </button>
                             </div>
                             <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" multiple style={{ display: "none" }}
-                                onChange={e => { 
-                                    const files = e.target.files; 
+                                onChange={e => {
+                                    const files = e.target.files;
                                     if (files) {
                                         for (let i = 0; i < files.length; i++) {
                                             uploadFile(files[i]);
                                         }
                                     }
                                 }} />
-                            
+
                             {attachmentUrls.map((url, idx) => (
                                 <div key={url} className={styles.filePreviewRow} style={{ marginTop: 8 }}>
                                     <div className={styles.fileName}>{fileNames[idx] || "ไฟล์แนบ"}</div>
@@ -672,9 +687,9 @@ export default function LeavePage() {
                         </div>
 
                         <button className={styles.btnPrimaryFull} disabled={!canSubmit || loading} onClick={submit}>
-                            {loading ? <ArrowPathIcon width={20} className="animate-spin" /> : 
-                            editingId ? <><ArrowPathIcon width={18} style={{ marginRight: 8 }} /> อัปเดตใบลา</> : 
-                            <><PaperAirplaneIcon width={18} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ยืนยันการส่งใบลา</>}
+                            {loading ? <ArrowPathIcon width={20} className="animate-spin" /> :
+                                editingId ? <><ArrowPathIcon width={18} style={{ marginRight: 8 }} /> อัปเดตใบลา</> :
+                                    <><PaperAirplaneIcon width={18} style={{ marginRight: 8, transform: 'rotate(-20deg)' }} /> ยืนยันการส่งใบลา</>}
                         </button>
                         {editingId && (
                             <button className={styles.btnOutlineFull} style={{ marginTop: 8, width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--gray-300)', backgroundColor: 'transparent', fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }} onClick={cancelEdit} disabled={loading}>
@@ -715,8 +730,8 @@ export default function LeavePage() {
                                         <div className={styles.colDays}>{formatLeaveMins(x.minutes)}</div>
                                         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                                             {x.status.startsWith('pending') && (
-                                                <button 
-                                                    className={styles.btnOutlineSm} 
+                                                <button
+                                                    className={styles.btnOutlineSm}
                                                     style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--gray-300)', backgroundColor: 'white', color: 'var(--text2)' }}
                                                     onClick={() => startEdit(x)}
                                                 >
@@ -724,8 +739,8 @@ export default function LeavePage() {
                                                 </button>
                                             )}
                                             {(x.status.startsWith('pending') || x.status === 'approved') && new Date(x.start_at) > new Date() && (
-                                                <button 
-                                                    className={styles.btnOutlineSm} 
+                                                <button
+                                                    className={styles.btnOutlineSm}
                                                     style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6, border: '1px solid var(--red-hover)', backgroundColor: 'white', color: 'var(--red)' }}
                                                     onClick={() => cancelRequest(x.id)}
                                                 >

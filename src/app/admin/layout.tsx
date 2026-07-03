@@ -345,6 +345,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
+
                              {/* ✅ Meeting Room Management */}
                             {hasAccess("/admin/meeting-rooms") && (
                                 <Link

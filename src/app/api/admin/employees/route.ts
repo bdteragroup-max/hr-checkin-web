@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireAdminOrSupervisor } from "@/lib/adminAuth";
@@ -116,7 +116,7 @@ export async function GET(req: Request) {
         if (minimal) {
             const list = await prisma.employees.findMany({
                 where: { is_active: true, ...subordinateFilter },
-                select: { name: true, nickname: true, birth_date: true },
+                select: { emp_id: true, name: true, nickname: true, birth_date: true },
             });
             const formattedList = list.map(emp => {
                 let finalName = emp.name;

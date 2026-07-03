@@ -15,6 +15,7 @@ type LeaveRow = {
     end_date: string; // ISO
     start_at?: string; // ISO
     end_at?: string; // ISO
+    substitute_date?: string | null;
     status: "pending" | "approved" | "rejected" | string;
     approved_by?: string | null;
     approved_at?: string | null;
@@ -504,6 +505,11 @@ export default function AdminLeavesPage() {
                                                         <td style={{ fontSize: 12, color: "var(--text2)" }}>
                                                             <div style={{ fontWeight: 600 }}>{fmtDateTime(r.start_at || r.start_date)}</div>
                                                             <div style={{ opacity: 0.6 }}>ถึง {fmtDateTime(r.end_at || r.end_date)}</div>
+                                                            {r.substitute_date && (
+                                                                <div style={{ color: "#ec4899", fontWeight: 700, marginTop: 4 }}>
+                                                                    สลับเป็น: {fmtDate(r.substitute_date)}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td style={{ textAlign: "center" }}>
                                                             <span className={`${styles.badge} ${styles.blue}`} style={{ fontWeight: 700 }}>{displayDuration}</span>
@@ -613,6 +619,11 @@ export default function AdminLeavesPage() {
                                                     <td style={{ fontSize: 12, color: "var(--text2)" }}>
                                                         <div style={{ fontWeight: 600 }}>{fmtDateTime(r.start_at || r.start_date)}</div>
                                                         <div style={{ opacity: 0.6 }}>ถึง {fmtDateTime(r.end_at || r.end_date)}</div>
+                                                        {r.substitute_date && (
+                                                            <div style={{ color: "#ec4899", fontWeight: 700, marginTop: 4 }}>
+                                                                สลับเป็น: {fmtDate(r.substitute_date)}
+                                                            </div>
+                                                        )}
                                                         <div style={{ color: "var(--blue)", fontWeight: 700, marginTop: 4 }}>
                                                             ({formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined))})
                                                         </div>

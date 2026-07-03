@@ -31,6 +31,7 @@ const LEAVE_TYPES: LeaveTypeDef[] = [
     { id: "maternity", name: "ลาคลอด", gender: "F", max_days: 120, advance_notice: 30 },
     { id: "paternity", name: "ลาดูแลภรรยาคลอดบุตร", gender: "M", max_days: 15, advance_notice: 15 },
     { id: "ordination", name: "ลาบวช", gender: "M", max_days: 15, advance_notice: 0 },
+    { id: "holiday_swap", name: "สลับวันหยุด", gender: "ANY", note: "สลับวันทำงานกับวันหยุด (ไม่มี OT สำหรับพนักงานเงินเดือน >20k)", advance_notice: 0 },
 ];
 
 function toDateKeyBangkok(d: Date) {
@@ -198,7 +199,7 @@ export async function GET() {
         select: { 
             emp_id: true, name: true, gender: true, hire_date: true, 
             supervisor_id: true, is_on_trial: true, department_id: true,
-            salary_type: true 
+            salary_type: true, base_salary: true
         },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
@@ -208,6 +209,8 @@ export async function GET() {
     // ส่ง types ที่ “ใช้ได้” ตามเพศ และประเภทการจ้างงาน (Daily/Intern)
     const types = LEAVE_TYPES
         .filter((t) => {
+            if (t.id === "holiday_swap" && (!emp.base_salary || Number(emp.base_salary) <= 20000)) return false;
+
             const genderMatch = t.gender === "ANY" || t.gender === emp.gender;
             // Interns (Daily) only allowed Sick and Unpaid
             if (emp.salary_type === "daily") {
@@ -242,6 +245,7 @@ export async function GET() {
             reason: true,
             attachment_url: true,
             handover_person: true,
+            substitute_date: true,
         },
     });
 
@@ -283,9 +287,14 @@ export async function POST(req: Request) {
     const reason = body?.reason ? String(body.reason) : null;
     const attachment_url = body?.attachment_url ? String(body.attachment_url) : null;
     const handover_person = String(body?.handover_person || "").trim();
+    const substitute_date_s = body?.substitute_date ? String(body.substitute_date).trim() : null;
 
     if (!leave_type_id || !start_at_s || !end_at_s || !handover_person) {
         return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 });
+    }
+    
+    if (leave_type_id === "holiday_swap" && !substitute_date_s) {
+        return NextResponse.json({ error: "MISSING_SUBSTITUTE_DATE" }, { status: 400 });
     }
     
     if (!reason || reason.trim() === "") {
@@ -302,12 +311,20 @@ export async function POST(req: Request) {
     }
     if (endAt < startAt) return NextResponse.json({ error: "END_BEFORE_START" }, { status: 400 });
 
+    let substituteDate: Date | null = null;
+    if (leave_type_id === "holiday_swap" && substitute_date_s) {
+        substituteDate = new Date(substitute_date_s);
+        if (Number.isNaN(substituteDate.getTime())) {
+            return NextResponse.json({ error: "INVALID_DATETIME" }, { status: 400 });
+        }
+    }
+
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
         select: { 
             emp_id: true, name: true, nickname: true, gender: true, hire_date: true, 
             supervisor_id: true, is_on_trial: true, line_user_id: true, 
-            salary_type: true,
+            salary_type: true, base_salary: true,
             supervisor: { select: { line_user_id: true } } 
         },
     });
@@ -316,6 +333,10 @@ export async function POST(req: Request) {
     // Rule: Check probation for Leave of Absence (personal/emergency) - NOT ALLOWED
     if ((leave_type_id === "personal" || leave_type_id === "emergency") && emp.is_on_trial) {
         return NextResponse.json({ error: "PROBATION_PERSONAL_NOT_ALLOWED" }, { status: 403 });
+    }
+
+    if (leave_type_id === "holiday_swap" && (!emp.base_salary || Number(emp.base_salary) <= 20000)) {
+        return NextResponse.json({ error: "HOLIDAY_SWAP_NOT_ALLOWED" }, { status: 403 });
     }
 
     // Rule: Interns (Daily) only allowed Sick and Unpaid
@@ -421,6 +442,7 @@ export async function POST(req: Request) {
                 status: initialStatus,
                 supervisor_id: emp.supervisor_id || null,
                 handover_person,
+                substitute_date: substituteDate,
             },
         });
 
@@ -528,8 +550,13 @@ export async function PUT(req: Request) {
     const reason = body?.reason ? String(body.reason) : null;
     const attachment_url = body?.attachment_url !== undefined ? (body.attachment_url ? String(body.attachment_url) : null) : existing.attachment_url;
     const handover_person = body?.handover_person !== undefined ? String(body.handover_person).trim() : (existing as any).handover_person;
+    const substitute_date_s = body?.substitute_date !== undefined ? (body.substitute_date ? String(body.substitute_date).trim() : null) : (existing as any).substitute_date?.toISOString();
 
     if (!handover_person) return NextResponse.json({ error: "MISSING_HANDOVER_PERSON" }, { status: 400 });
+    
+    if (leave_type_id === "holiday_swap" && !substitute_date_s) {
+        return NextResponse.json({ error: "MISSING_SUBSTITUTE_DATE" }, { status: 400 });
+    }
     
     if (!reason || reason.trim() === "") {
         return NextResponse.json({ error: "MISSING_REASON" }, { status: 400 });
@@ -545,6 +572,14 @@ export async function PUT(req: Request) {
     }
     if (endAt < startAt) return NextResponse.json({ error: "END_BEFORE_START" }, { status: 400 });
 
+    let substituteDate: Date | null = null;
+    if (leave_type_id === "holiday_swap" && substitute_date_s) {
+        substituteDate = new Date(substitute_date_s);
+        if (Number.isNaN(substituteDate.getTime())) {
+            return NextResponse.json({ error: "INVALID_DATETIME" }, { status: 400 });
+        }
+    }
+
     const emp = await prisma.employees.findUnique({
         where: { emp_id: p.emp_id },
         select: { 
@@ -556,6 +591,8 @@ export async function PUT(req: Request) {
             supervisor_id: true, 
             is_on_trial: true,
             line_user_id: true,
+            salary_type: true,
+            base_salary: true,
             supervisor: { select: { line_user_id: true } }
         },
     });
@@ -563,6 +600,10 @@ export async function PUT(req: Request) {
 
     if ((leave_type_id === "personal" || leave_type_id === "emergency") && emp.is_on_trial) {
         return NextResponse.json({ error: "PROBATION_PERSONAL_NOT_ALLOWED" }, { status: 403 });
+    }
+
+    if (leave_type_id === "holiday_swap" && (!emp.base_salary || Number(emp.base_salary) <= 20000)) {
+        return NextResponse.json({ error: "HOLIDAY_SWAP_NOT_ALLOWED" }, { status: 403 });
     }
 
     if (def.advance_notice && def.advance_notice > 0) {
@@ -667,6 +708,7 @@ export async function PUT(req: Request) {
                 handover_person,
                 status: initialStatus,
                 supervisor_id: emp.supervisor_id || null,
+                substitute_date: substituteDate,
             },
         });
 

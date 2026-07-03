@@ -79,6 +79,7 @@ export async function GET(req: Request) {
                 supervisor_approved_at: true,
                 handover_person: true,
                 attachment_url: true,
+                substitute_date: true,
                 employees: {
                     select: {
                         name: true,
