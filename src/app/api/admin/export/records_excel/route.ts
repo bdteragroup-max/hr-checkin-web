@@ -21,6 +21,7 @@ export async function GET(req: Request) {
         const paramStartDate = url.searchParams.get("start_date");
         const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
+        const status = url.searchParams.get("status");
 
         const teamOnly = url.searchParams.get("team") === "1";
         const subordinateFilter: any = {};
@@ -104,15 +105,21 @@ export async function GET(req: Request) {
             const employeeWhere: any = {
                 is_checkin_exempt: false,
                 ...subordinateFilter,
-                OR: [
+            };
+            if (status === "active") {
+                employeeWhere.is_active = true;
+            } else if (status === "inactive") {
+                employeeWhere.is_active = false;
+            } else {
+                employeeWhere.OR = [
                     { is_active: true },
                     { resignation_date: { gte: start, lte: end } }
-                ]
-            };
+                ];
+            }
 
             const emps = await prisma.employees.findMany({
                 where: employeeWhere,
-                select: { emp_id: true, name: true, branch_id: true },
+                select: { emp_id: true, name: true, branch_id: true, is_active: true },
                 orderBy: { emp_id: "asc" },
             });
 
@@ -124,6 +131,7 @@ export async function GET(req: Request) {
                 { header: "EMP_ID", key: "emp_id", width: 15 },
                 { header: "NAME", key: "name", width: 25 },
                 { header: "BRANCH", key: "branch", width: 15 },
+                { header: "STATUS", key: "status", width: 15 },
                 { header: "PRESENT_DAYS", key: "present", width: 15 },
                 { header: "ABSENT_DAYS", key: "absent", width: 15 },
                 { header: "APPROVED_LEAVES", key: "leave", width: 15 },
@@ -194,6 +202,7 @@ export async function GET(req: Request) {
                     emp_id: e.emp_id,
                     name: e.name,
                     branch: e.branch_id || "-",
+                    status: e.is_active ? "Active" : "Inactive",
                     present: s.present_dates.size,
                     absent: absences,
                     leave: s.leave_days,

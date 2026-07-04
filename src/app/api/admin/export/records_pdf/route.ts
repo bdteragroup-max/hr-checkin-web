@@ -28,6 +28,7 @@ export async function GET(req: Request) {
         const paramStartDate = url.searchParams.get("start_date");
         const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
+        const status = url.searchParams.get("status");
 
         const teamOnly = url.searchParams.get("team") === "1";
         const subordinateFilter: any = {};
@@ -267,11 +268,17 @@ export async function GET(req: Request) {
             drawPortrait(`Historical Records: ${periodLabel}`, 18, true);
             const employeeWhere: any = {
                 ...subordinateFilter,
-                OR: [
+            };
+            if (status === "active") {
+                employeeWhere.is_active = true;
+            } else if (status === "inactive") {
+                employeeWhere.is_active = false;
+            } else {
+                employeeWhere.OR = [
                     { is_active: true },
                     { resignation_date: { gte: start, lte: end } }
-                ]
-            };
+                ];
+            }
 
             const emps = await prisma.employees.findMany({
                 where: employeeWhere,

@@ -14,6 +14,7 @@ export async function GET(req: Request) {
         const endMonth = url.searchParams.get("end_month");     // e.g. "2026-03"
         const paramStartDate = url.searchParams.get("start_date"); // e.g. "2026-03-26"
         const paramEndDate = url.searchParams.get("end_date");     // e.g. "2026-04-25"
+        const status = url.searchParams.get("status");
 
         let startDate: Date;
         let endDate: Date;
@@ -42,13 +43,24 @@ export async function GET(req: Request) {
              ];
          }
 
+        const employeeWhere: any = {
+            is_checkin_exempt: false,
+            ...subordinateFilter
+        };
+        if (status === "active") {
+            employeeWhere.is_active = true;
+        } else if (status === "inactive") {
+            employeeWhere.is_active = false;
+        } else {
+            employeeWhere.OR = [
+                { is_active: true },
+                { resignation_date: { gte: startDate, lte: endDate } }
+            ];
+        }
+
         const [emps, holidaysFetch] = await Promise.all([
             prisma.employees.findMany({
-                where: { 
-                    is_active: true, 
-                    is_checkin_exempt: false,
-                    ...subordinateFilter
-                } as any, 
+                where: employeeWhere,
                 select: {
                     emp_id: true,
                     name: true,

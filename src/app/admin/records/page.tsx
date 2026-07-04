@@ -65,6 +65,8 @@ export default function RecordsPage() {
 
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [filterEmpId, setFilterEmpId] = useState("all");
+    const [exportStatus, setExportStatus] = useState<"all" | "active" | "inactive">("all");
+    const [exportingType, setExportingType] = useState<"pdf" | "excel" | null>(null);
     
     // Searchable Select States
     const [searchTerm, setSearchTerm] = useState("");
@@ -119,7 +121,10 @@ export default function RecordsPage() {
         if (!startDate || !endDate) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/records?start_date=${startDate}&end_date=${endDate}`);
+            const p = new URLSearchParams({ start_date: startDate, end_date: endDate });
+            if (exportStatus !== "all") p.set("status", exportStatus);
+            
+            const res = await fetch(`/api/admin/records?${p.toString()}`);
             const json = await res.json();
             if (json.ok) setData(json.summary || []);
             else showToast(json.error || "Failed to load records", "bad");
@@ -138,12 +143,14 @@ export default function RecordsPage() {
 
     useEffect(() => {
         loadData();
-    }, [startDate, endDate, filterEmpId]);
+    }, [startDate, endDate, filterEmpId, exportStatus]);
 
     async function exportFile(type: "pdf" | "excel") {
+        setExportingType(type);
         showToast("กำลังเตรียมไฟล์...");
         const p = new URLSearchParams({ start_date: startDate, end_date: endDate });
         if (filterEmpId !== "all") p.set("emp_id", filterEmpId);
+        if (exportStatus !== "all") p.set("status", exportStatus);
         
         try {
             const res = await fetch(`/api/admin/export/records_${type}?${p.toString()}`);
@@ -169,6 +176,8 @@ export default function RecordsPage() {
             window.URL.revokeObjectURL(url);
         } catch (e) {
             showToast("เกิดข้อผิดพลาดในการดาวน์โหลด", "bad");
+        } finally {
+            setExportingType(null);
         }
     }
 
@@ -214,12 +223,49 @@ export default function RecordsPage() {
                     <div className={styles.pageSubtitle}>ตรวจสอบและวิเคราะห์สถิติการเข้างานย้อนหลังของพนักงาน</div>
                 </div>
                 
-                <div style={{ display: "flex", gap: "12px" }}>
-                    <button className={styles.btnExcelSm} onClick={() => exportFile("excel")}>
-                        <ArrowDownTrayIcon width={16} /> Export Excel
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <button 
+                        onClick={loadData}
+                        disabled={loading}
+                        style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            height: 36, padding: "0 16px",
+                            borderRadius: 8, border: "1px solid var(--line)",
+                            background: "var(--surface)", color: "var(--text2)",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            fontSize: 14, fontWeight: 500
+                        }}
+                    >
+                        <ArrowPathIcon width={16} />
+                        {loading ? "กำลังโหลด..." : "รีโหลด"}
                     </button>
-                    <button className={styles.btnPdfSm} onClick={() => exportFile("pdf")}>
-                        <DocumentTextIcon width={16} /> Export PDF
+                    <select 
+                        className={styles.input} 
+                        style={{ height: "36px", padding: "0 12px", width: "auto" }}
+                        value={exportStatus}
+                        onChange={(e) => setExportStatus(e.target.value as any)}
+                    >
+                        <option value="all">ทั้งหมด (All)</option>
+                        <option value="active">ทำงานอยู่ (Active)</option>
+                        <option value="inactive">ลาออก (Inactive)</option>
+                    </select>
+                    <button 
+                        className={styles.btnExcelSm} 
+                        onClick={() => exportFile("excel")}
+                        disabled={exportingType === "excel"}
+                        style={{ cursor: exportingType === "excel" ? "not-allowed" : "pointer", opacity: exportingType === "excel" ? 0.7 : 1 }}
+                    >
+                        {exportingType === "excel" ? <ArrowPathIcon width={16} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowDownTrayIcon width={16} />}
+                        {exportingType === "excel" ? "กำลังโหลด..." : "Export Excel"}
+                    </button>
+                    <button 
+                        className={styles.btnPdfSm} 
+                        onClick={() => exportFile("pdf")}
+                        disabled={exportingType === "pdf"}
+                        style={{ cursor: exportingType === "pdf" ? "not-allowed" : "pointer", opacity: exportingType === "pdf" ? 0.7 : 1 }}
+                    >
+                        {exportingType === "pdf" ? <ArrowPathIcon width={16} style={{ animation: "spin 1s linear infinite" }} /> : <DocumentTextIcon width={16} />}
+                        {exportingType === "pdf" ? "กำลังโหลด..." : "Export PDF"}
                     </button>
                 </div>
             </div>
