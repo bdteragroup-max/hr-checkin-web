@@ -131,11 +131,36 @@ export default function TeamRecordsPage() {
         loadData();
     }, [startDate, endDate, filterEmpId]);
 
-    function exportFile(type: "pdf" | "excel") {
+    async function exportFile(type: "pdf" | "excel") {
         showToast("กำลังเตรียมไฟล์...");
         const p = new URLSearchParams({ start_date: startDate, end_date: endDate, team: "1" });
         if (filterEmpId !== "all") p.set("emp_id", filterEmpId);
-        window.location.href = `/api/admin/export/records_${type}?${p.toString()}`;
+        
+        try {
+            const res = await fetch(`/api/admin/export/records_${type}?${p.toString()}`);
+            if (!res.ok) {
+                showToast("ดาวน์โหลดไฟล์ไม่สำเร็จ", "bad");
+                return;
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            // Content-Disposition usually has the filename, but we can provide a fallback
+            const contentDisposition = res.headers.get('Content-Disposition');
+            let filename = `records_${new Date().getTime()}.${type === "pdf" ? "pdf" : "xlsx"}`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (match && match[1]) filename = match[1];
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            showToast("เกิดข้อผิดพลาดในการดาวน์โหลด", "bad");
+        }
     }
 
     const filteredEmployees = useMemo(() => {
@@ -293,7 +318,14 @@ export default function TeamRecordsPage() {
 
             {/* Detailed Table */}
             {filterEmpId !== "all" && (
-                <div className={styles.tableWrap} style={{ marginBottom: 32 }}>
+                <div className={styles.tableWrap} style={{ marginBottom: 32, position: "relative" }}>
+                    {loading && (
+                        <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--radius)", backdropFilter: "blur(2px)" }}>
+                            <div className={styles.loader} style={{ background: "var(--surface)", padding: "16px 24px", borderRadius: "12px", boxShadow: "var(--shadow-md)" }}>
+                                <div className={styles.spinner} />กำลังดึงข้อมูลรายละเอียด...
+                            </div>
+                        </div>
+                    )}
                     <div className={styles.tableHeader}>
                         <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <DocumentTextIcon width={22} style={{ color: "var(--red)" }} /> 
@@ -302,10 +334,7 @@ export default function TeamRecordsPage() {
                     </div>
                     
                     <div className={styles.tableScroll}>
-                        {loading && sortedDetails.length === 0 ? (
-                            <div className={styles.loader} style={{ height: 200 }}><div className={styles.spinner} />กำลังดึงข้อมูลรายละเอียด...</div>
-                        ) : (
-                            <table className={styles.table}>
+                        <table className={styles.table}>
                                 <thead>
                                     <tr>
                                         <th style={{ width: 160 }}>วันที่</th>
@@ -406,13 +435,19 @@ export default function TeamRecordsPage() {
                                     )}
                                 </tbody>
                             </table>
-                        )}
                     </div>
                 </div>
             )}
 
             {/* Summary Table */}
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrap} style={{ position: "relative" }}>
+                {loading && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--radius)", backdropFilter: "blur(2px)" }}>
+                        <div className={styles.loader} style={{ background: "var(--surface)", padding: "16px 24px", borderRadius: "12px", boxShadow: "var(--shadow-md)" }}>
+                            <div className={styles.spinner} />กำลังวิเคราะห์ข้อมูลทีมงาน...
+                        </div>
+                    </div>
+                )}
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Bars3CenterLeftIcon width={22} /> {filterEmpId === "all" ? "สรุปภาพรวมสถิติทีมงาน" : "สรุปภาพรวมสถิติรายบุคคล"}
@@ -420,9 +455,7 @@ export default function TeamRecordsPage() {
                 </div>
 
                 <div className={styles.tableScroll}>
-                    {loading ? (
-                        <div className={styles.loader} style={{ height: 250 }}><div className={styles.spinner} />กำลังวิเคราะห์ข้อมูลทีมงาน...</div>
-                    ) : selectedSummaryData.length === 0 ? (
+                    {selectedSummaryData.length === 0 && !loading ? (
                         <div className={styles.emptyState}>
                             <span className={styles.emptyIcon}><InboxIcon width={36} /></span>
                             ไม่พบข้อมูลสถิติในช่วงเวลานี้

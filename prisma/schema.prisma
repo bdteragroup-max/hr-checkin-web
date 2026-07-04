@@ -144,7 +144,6 @@ model employees {
   supervisor                        employees?               @relation("EmployeeToSupervisor", fields: [supervisor_id], references: [emp_id], onUpdate: NoAction)
   subordinates                      employees[]              @relation("EmployeeToSupervisor")
   branches                          branches?                @relation(fields: [branch_id], references: [id], onUpdate: NoAction, map: "fk_employees_branch")
-
   general_welfare_claims            general_welfare_claims[]
   kpiList                           kpi_evaluations[]        @relation("EmployeeToKPI")
   kpi_submissions                   kpi_evaluations[]        @relation("SupervisorToKPI")
@@ -1954,3 +1953,33 @@ model purchase_requests {
   purchase_orders purchase_orders[]
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model FuelFlagReview {
+  id         Int       @id @default(autoincrement())
+  employeeId String    @db.VarChar(20)
+  flagDate   DateTime  @db.Date
+  flagType   String
+  reviewedBy String?
+  reviewedAt DateTime? @db.Timestamptz(6)
+  note       String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([employeeId, flagDate, flagType])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model fleetcard_transactions {
+  id      Int      @id @default(autoincrement())
+  card_no String
+  date    DateTime @db.Timestamptz(6)
+  liters  Decimal  @db.Decimal(10, 2)
+  amount  Decimal  @db.Decimal(10, 2)
+  status  String   @db.VarChar(50)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model fleetcards {
+  id      Int    @id @default(autoincrement())
+  card_no String @unique
+  emp_id  String @db.VarChar(20)
+}

@@ -42,56 +42,57 @@ export async function GET(req: Request) {
              ];
          }
 
-        const emps = await prisma.employees.findMany({
-            where: { 
-                is_active: true, 
-                is_checkin_exempt: false,
-                ...subordinateFilter
-            } as any, 
-            select: {
-                emp_id: true,
-                name: true,
-                nickname: true,
-                branch_id: true,
-                is_active: true,
-            },
-            orderBy: { emp_id: "asc" },
-        });
+        const [emps, holidaysFetch] = await Promise.all([
+            prisma.employees.findMany({
+                where: { 
+                    is_active: true, 
+                    is_checkin_exempt: false,
+                    ...subordinateFilter
+                } as any, 
+                select: {
+                    emp_id: true,
+                    name: true,
+                    nickname: true,
+                    branch_id: true,
+                    is_active: true,
+                },
+                orderBy: { emp_id: "asc" },
+            }),
+            prisma.holidays.findMany({
+                where: { date: { gte: startDate, lte: endDate } }
+            })
+        ]);
 
         const empIds = emps.map(e => e.emp_id);
 
-        const rows = await prisma.checkins.findMany({
-            where: {
-                emp_id: { in: empIds },
-                date_key: { gte: startDate, lte: endDate },
-            },
-            select: { emp_id: true, date_key: true, timestamp: true, type: true, late_status: true, late_min: true },
-        });
-
-        const leaves = await prisma.leave_requests.findMany({
-            where: {
-                emp_id: { in: empIds },
-                start_date: { lte: endDate },
-                end_date: { gte: startDate },
-            },
-            select: { emp_id: true, days: true, status: true },
-        });
-
-        const travels = await prisma.travel_claims.findMany({
-            where: {
-                emp_id: { in: empIds },
-                status: "approved",
-                date: { lte: endDate },
-                OR: [
-                    { end_date: { gte: startDate } },
-                    { end_date: null, date: { gte: startDate } }
-                ]
-            },
-        });
-
-        const holidaysFetch = await prisma.holidays.findMany({
-            where: { date: { gte: startDate, lte: endDate } }
-        });
+        const [rows, leaves, travels] = await Promise.all([
+            prisma.checkins.findMany({
+                where: {
+                    emp_id: { in: empIds },
+                    date_key: { gte: startDate, lte: endDate },
+                },
+                select: { emp_id: true, date_key: true, timestamp: true, type: true, late_status: true, late_min: true },
+            }),
+            prisma.leave_requests.findMany({
+                where: {
+                    emp_id: { in: empIds },
+                    start_date: { lte: endDate },
+                    end_date: { gte: startDate },
+                },
+                select: { emp_id: true, days: true, status: true },
+            }),
+            prisma.travel_claims.findMany({
+                where: {
+                    emp_id: { in: empIds },
+                    status: "approved",
+                    date: { lte: endDate },
+                    OR: [
+                        { end_date: { gte: startDate } },
+                        { end_date: null, date: { gte: startDate } }
+                    ]
+                },
+            })
+        ]);
 
         const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
