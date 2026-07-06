@@ -252,14 +252,14 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
                 <span className={styles.cardBadge}>{todayKey || "—"}</span>
             </div>
 
-            {inItem && outItem && (
+            {inItem && (
                 <div className={styles.workSummary}>
                     <div className={styles.workStat}>
                         <div className={styles.wsVal}>{formatTime24h(inItem.timestamp)}</div>
                         <div className={styles.wsLabel}>เวลาเข้า</div>
                     </div>
                     <div className={styles.workStat}>
-                        <div className={styles.wsVal}>{formatTime24h(outItem.timestamp)}</div>
+                        <div className={styles.wsVal}>{outItem ? formatTime24h(outItem.timestamp) : <span style={{ color: "var(--warn)", fontSize: "0.75em" }}>ยังไม่เช็คเอาท์</span>}</div>
                         <div className={styles.wsLabel}>เวลาออก</div>
                     </div>
                     <div className={styles.workStat}>

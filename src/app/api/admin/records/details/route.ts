@@ -185,11 +185,18 @@ export async function GET(req: Request) {
                 if (inRecord.late_status === "late") {
                     status = `มาสาย`;
                 }
+
+                const todayStr = todayDate.toISOString().split("T")[0];
+                if (!outRecord && dateStr < todayStr) {
+                    status += " (ไม่เช็คเอาท์)";
+                }
                 if (leaveType) {
                     status += ` + ${leaveType}`;
                 } else if (isTravelDay) {
                     status += ` (ตจว.)`;
                 }
+            } else if (outRecord) {
+                status = "ไม่เช็คอิน";
             }
 
             const inLocs = new Set<string>();

@@ -325,6 +325,7 @@ function processEmployeeSheet(
         const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
 
         if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+        else if (outRecord) status = "ไม่เช็คอิน";
 
         const inLocs = new Set<string>();
         inRecords.forEach(c => {
@@ -340,7 +341,7 @@ function processEmployeeSheet(
         sheet.addRow({
             date: dateStr,
             in_time: inRecord ? formatTime(inRecord.timestamp) : "-",
-            in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : "-",
+            in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : (inRecord ? "-" : "ไม่เช็คอิน"),
             out_time: outRecord ? formatTime(outRecord.timestamp) : "-",
             out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
             late_mins: inRecord?.late_min || 0,
