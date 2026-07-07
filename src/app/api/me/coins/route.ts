@@ -42,6 +42,7 @@ export async function GET() {
             ok: true,
             balances,
             history,
+            employee: auth.emp,
             budget: budget || { balance: 0, monthly_topup: 20 }
         });
     } catch (e: any) {

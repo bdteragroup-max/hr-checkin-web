@@ -55,6 +55,10 @@ type PayrollResult = {
     is_salary_overridden: boolean;
     gross_pay: number;
     net_pay: number;
+    provident_fund: number;
+    taxable_income: number;
+    housing_benefit: number;
+    car_benefit: number;
     bank_name: string;
     bank_account_no: string;
     is_on_trial: boolean;
@@ -68,8 +72,28 @@ export default function PayrollPage() {
     const [data, setData] = useState<PayrollResult[]>([]);
     const [cycle, setCycle] = useState<{ start: string; end: string; is_published?: boolean } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [taxConfigs, setTaxConfigs] = useState<any>(null);
     const [publishing, setPublishing] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+
+    const handleIssue50Twi = async (empId: string, year: number) => {
+        try {
+            const res = await fetch('/api/admin/payroll/50twi/issue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employeeId: empId, year })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(`Error: ${data.error || 'Failed to issue'}`);
+            } else {
+                alert(`Issued 50 Tawi successfully! Document No: ${data.document?.document_number}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('An error occurred while issuing the document.');
+        }
+    };
 
     // Edit Modal State
     const [showModal, setShowModal] = useState(false);
@@ -277,10 +301,20 @@ export default function PayrollPage() {
         if (!confirm(publishStatus ? `ยืนยันการเผยแพร่สลิปเงินเดือนให้พนักงานคนนี้?` : `ยืนยันการยกเลิกเผยแพร่?`)) return;
         setPublishing(true);
         try {
+            const emp = data.find(d => d.emp_id === emp_id);
             const res = await fetch("/api/admin/payroll/publish", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ month, year, emp_id, is_published: publishStatus })
+                body: JSON.stringify({ 
+                    month, year, emp_id, 
+                    is_published: publishStatus,
+                    tax: emp?.tax,
+                    social_security: emp?.social_security,
+                    provident_fund: emp?.provident_fund,
+                    taxable_income: emp?.taxable_income,
+                    housing_benefit: emp?.housing_benefit,
+                    car_benefit: emp?.car_benefit
+                })
             });
             if (res.ok) {
                 loadData();
@@ -304,7 +338,16 @@ export default function PayrollPage() {
                 await fetch("/api/admin/payroll/publish", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ month, year, emp_id: emp.emp_id, is_published: targetStatus })
+                    body: JSON.stringify({ 
+                        month, year, emp_id: emp.emp_id, 
+                        is_published: targetStatus,
+                        tax: emp.tax,
+                        social_security: emp.social_security,
+                        provident_fund: emp.provident_fund,
+                        taxable_income: emp.taxable_income,
+                        housing_benefit: emp.housing_benefit,
+                        car_benefit: emp.car_benefit
+                    })
                 });
             }
             if (changesMade) loadData();
@@ -896,6 +939,15 @@ export default function PayrollPage() {
                                                         <div style={{ fontSize: 12, color: "var(--text3)" }}>{p.bank_account_no}</div>
                                                     </td>
                                                     <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => window.open(`/api/payroll/50twi?year=${year}&emp_id=${p.emp_id}&mode=draft`, "_blank")}>
+                                                            <ArrowDownTrayIcon width={14} /> ร่าง 50 ทวิ
+                                                        </button>
+                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12, color: 'var(--blue)' }} onClick={() => handleIssue50Twi(p.emp_id, year)}>
+                                                            ออก 50 ทวิ
+                                                        </button>
+                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12, color: 'var(--green)' }} onClick={() => window.open(`/api/payroll/50twi?year=${year}&emp_id=${p.emp_id}&mode=issued`, "_blank")}>
+                                                            <ArrowDownTrayIcon width={14} /> โหลดตัวจริง
+                                                        </button>
                                                         <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => openEditModal(p)}>
                                                             <PencilSquareIcon width={14} /> จัดการ
                                                         </button>

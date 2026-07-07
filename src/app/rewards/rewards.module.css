@@ -320,7 +320,7 @@
   align-items: flex-end;
   /* Mobile bottom sheet style */
   justify-content: center;
-  z-index: 100;
+  z-index: 9999;
   padding: 0;
 }
 
@@ -330,6 +330,7 @@
   max-width: 520px;
   border-radius: 24px 24px 0 0;
   padding: 24px;
+  padding-bottom: max(24px, 100px); /* Add extra padding to ensure buttons are above bottom nav */
   position: relative;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
   animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -528,4 +529,22 @@
   height: 48px;
   margin: 0 auto 12px;
   opacity: 0.5;
+}
+
+/* ════════════════════════════════════════
+   DESKTOP RESPONSIVE
+   ════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .modalOverlay {
+    align-items: center;
+  }
+
+  .modalContent {
+    border-radius: 24px;
+    padding-bottom: 24px; /* Reset bottom padding on desktop */
+  }
+
+  .modalHandle {
+    display: none;
+  }
 }

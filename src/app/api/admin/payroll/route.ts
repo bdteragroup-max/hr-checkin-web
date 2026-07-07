@@ -105,6 +105,19 @@ export async function GET(request: Request) {
             where: { cycle_month: prevMonth, cycle_year: prevYear }
         });
 
+        // Fetch Tax Config for current year
+        const taxConfig = await (prisma as any).tax_configs.findUnique({
+            where: { year: year }
+        });
+
+        // Fetch YTD payroll data for the current year up to the previous month
+        const ytdPayrollData = await prisma.monthly_payroll_data.findMany({
+            where: {
+                cycle_year: year,
+                cycle_month: { lt: month }
+            }
+        });
+
         // 2.10 Fetch Approved Travel & Off-Site Claims in this cycle (or overlapping)
         const travelClaims = await prisma.travel_claims.findMany({
             where: {
@@ -622,9 +635,14 @@ export async function GET(request: Request) {
             } else {
                 // Per user: This deduction will not apply to daily wage earners.
                 if (!isDaily) {
-                    // SSO is calculated on Base Salary + Position Allowance
-                    const ssoBase = Math.max(0, baseSalary + position_allowance - unpaid_absenteeism);
-                    
+                    // SSO is calculated dynamically based on selected components
+                    const ssoPosAllow = (emp as any).sso_include_position_allowance ? position_allowance : 0;
+                    const ssoGenAllow = (emp as any).sso_include_general_allowance ? general_allowance : 0;
+                    const ssoFixAcc = (emp as any).sso_include_fixed_accommodation ? accommodation_allowance : 0;
+                    const ssoFixMeal = (emp as any).sso_include_fixed_meal ? meal_allowance : 0;
+                    const ssoFixTrav = (emp as any).sso_include_fixed_travel ? travel_allowance : 0;
+                    const ssoBase = Math.max(0, baseSalary + ssoPosAllow + ssoGenAllow + ssoFixAcc + ssoFixMeal + ssoFixTrav - unpaid_absenteeism);
+
                     // 2026 Adjusted Rules: Max deduction 875 THB for earnings >= 17,500 THB
                     if (ssoBase >= 1650) {
                         const cappedBase = Math.min(17500, ssoBase);
@@ -633,20 +651,86 @@ export async function GET(request: Request) {
                 }
             }
 
-            const insurance = Number(adj?.insurance || 0);
-
-            // Use manual override if entered (> 0), otherwise use fixed profile deduction, otherwise fallback to prev month
-            const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0) 
-                ? Number(adj.tax) 
-                : (Number((emp as any).fixed_tax_deduction) > 0 ? Number((emp as any).fixed_tax_deduction) : Number(prevAdj?.tax || 0));
             const adjCommissions = adj?.commissions ? Number(adj.commissions) : 0;
             const commissions = adjCommissions !== 0 ? adjCommissions : calculatedCommissions;
             
+            const insurance = Number(adj?.insurance || 0);
+
+            const pvdAmt = Number((emp as any).provident_fund_amt || 0);
+            const pvdRate = Number((emp as any).provident_fund_rate || 0);
+            const provident_fund = pvdAmt > 0 ? pvdAmt : Math.round(baseSalary * (pvdRate / 100));
+
+            const housing_benefit = Number((emp as any).housing_benefit || 0);
+            const car_benefit = Number((emp as any).car_benefit || 0);
+
+            // Identify Fixed vs Variable Taxable Income for current month
+            const bonus = Number(adj?.bonus || 0);
+            // Note: travel_allowance and travel_site_allowance are considered tax-exempt per requirements
+            const fixedTaxableIncome = baseSalary + position_allowance + general_allowance + telephone_allowance + accommodation_allowance + housing_benefit + car_benefit; 
+            const variableTaxableIncome = totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + long_service_allowance + welfare_amount + commissions + bonus;
+            const currentMonthTaxable = fixedTaxableIncome + variableTaxableIncome;
+
+            const ytdEmpData = ytdPayrollData.filter(d => d.emp_id === emp.emp_id);
+            const ytdTaxableIncome = ytdEmpData.reduce((acc, d) => acc + Number((d as any).taxable_income || 0), 0);
+            const ytdTaxPaid = ytdEmpData.reduce((acc, d) => acc + Number(d.tax || 0), 0);
+            const ytdSsoPaid = ytdEmpData.reduce((acc, d) => acc + Number(d.social_security || 0), 0);
+            const ytdPvdPaid = ytdEmpData.reduce((acc, d) => acc + Number((d as any).provident_fund || 0), 0);
+
+            const remainingMonths = 12 - month;
+            const projectedRemainingIncome = fixedTaxableIncome * remainingMonths;
+
+            const annualizedIncome = ytdTaxableIncome + currentMonthTaxable + projectedRemainingIncome;
+            
+            // Apply Deductions
+            const configExpenseRate = taxConfig ? Number((taxConfig as any).expense_deduct_rate) / 100 : 0.5;
+            const configExpenseMax = taxConfig ? Number((taxConfig as any).expense_deduct_max) : 100000;
+            const configPersonal = taxConfig ? Number((taxConfig as any).personal_allowance) : 60000;
+            
+            const expenseDeduction = Math.min(annualizedIncome * configExpenseRate, configExpenseMax);
+            const annualizedSso = ytdSsoPaid + social_security + (social_security * remainingMonths);
+            const cappedSso = taxConfig ? Math.min(annualizedSso, Number((taxConfig as any).sso_max_yearly)) : Math.min(annualizedSso, 9000);
+            const annualizedPvd = ytdPvdPaid + provident_fund + (provident_fund * remainingMonths);
+            
+            const netAnnualIncome = Math.max(0, annualizedIncome - expenseDeduction - configPersonal - cappedSso - annualizedPvd);
+
+            // Calculate Progressive Tax
+            let annualTax = 0;
+            let taxBrackets = [];
+            if (taxConfig && (taxConfig as any).tax_brackets) {
+                taxBrackets = typeof (taxConfig as any).tax_brackets === 'string' ? JSON.parse((taxConfig as any).tax_brackets) : (taxConfig as any).tax_brackets;
+            } else {
+                taxBrackets = [
+                    { min: 0, max: 150000, rate: 0 },
+                    { min: 150001, max: 300000, rate: 0.05 },
+                    { min: 300001, max: 500000, rate: 0.10 },
+                    { min: 500001, max: 750000, rate: 0.15 },
+                    { min: 750001, max: 1000000, rate: 0.20 },
+                    { min: 1000001, max: 2000000, rate: 0.25 },
+                    { min: 2000001, max: 5000000, rate: 0.30 },
+                    { min: 5000001, max: 999999999, rate: 0.35 }
+                ];
+            }
+
+            for (const bracket of taxBrackets) {
+                if (netAnnualIncome > bracket.min) {
+                    const taxableInBracket = Math.min(netAnnualIncome, bracket.max) - bracket.min;
+                    annualTax += taxableInBracket * bracket.rate;
+                }
+            }
+
+            const remainingTax = Math.max(0, annualTax - ytdTaxPaid);
+            const calculatedProgressiveTax = remainingMonths >= 0 ? Math.round(remainingTax / (remainingMonths + 1)) : 0;
+
+            // Use manual override if entered (> 0), otherwise use fixed profile deduction override, otherwise progressive tax
+            const overrideTax = Number((emp as any).tax_deduction_override || 0);
+            const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0) 
+                ? Number(adj.tax) 
+                : (overrideTax > 0 ? overrideTax : calculatedProgressiveTax);
+
             if (emp.emp_id === "TP02211") {
                 console.log("DEBUG TP02211 commissions:", commissions, "calculated:", calculatedCommissions, "adj:", adj?.commissions);
             }
 
-            const bonus = Number(adj?.bonus || 0);
             const other_deductions = Number(adj?.other_deductions || 0);
             const other_benefits = Number(adj?.other_benefits || 0);
 
@@ -704,6 +788,10 @@ export async function GET(request: Request) {
                 gross_pay: grossPay,
                 net_pay: finalNetPay,
                 bank_name: (emp as any).bank_name || "-",
+                provident_fund,
+                taxable_income: currentMonthTaxable,
+                housing_benefit,
+                car_benefit,
                 bank_account_no: (emp as any).bank_account_no || "-",
                 is_published: adj?.is_published || false,
                 raw_adjustments: adj || null,

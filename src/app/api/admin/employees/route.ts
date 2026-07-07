@@ -41,6 +41,16 @@ type CreateEmployeeBody = {
     is_checkin_exempt?: boolean;
     secondary_supervisor_id?: string | null;
     email?: string | null;
+    sso_include_position_allowance?: boolean;
+    sso_include_general_allowance?: boolean;
+    sso_include_fixed_accommodation?: boolean;
+    sso_include_fixed_meal?: boolean;
+    sso_include_fixed_travel?: boolean;
+    provident_fund_rate?: number | null;
+    provident_fund_amt?: number | null;
+    tax_deduction_override?: number | null;
+    housing_benefit?: number | null;
+    car_benefit?: number | null;
 };
 
 type PatchEmployeeBody = {
@@ -81,6 +91,16 @@ type PatchEmployeeBody = {
     resignation_date?: string | null;
     secondary_supervisor_id?: string | null;
     email?: string | null;
+    sso_include_position_allowance?: boolean;
+    sso_include_general_allowance?: boolean;
+    sso_include_fixed_accommodation?: boolean;
+    sso_include_fixed_meal?: boolean;
+    sso_include_fixed_travel?: boolean;
+    provident_fund_rate?: number | null;
+    provident_fund_amt?: number | null;
+    tax_deduction_override?: number | null;
+    housing_benefit?: number | null;
+    car_benefit?: number | null;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -173,7 +193,12 @@ export async function GET(req: Request) {
                 salary_type: true,
                 is_checkin_exempt: true,
                 resignation_date: true,
-                email: true
+                email: true,
+                sso_include_position_allowance: true,
+                sso_include_general_allowance: true,
+                sso_include_fixed_accommodation: true,
+                sso_include_fixed_meal: true,
+                sso_include_fixed_travel: true,
             },
         });
 
@@ -260,6 +285,11 @@ export async function POST(req: Request) {
                 is_checkin_exempt: body.is_checkin_exempt ?? false,
                 secondary_supervisor_id: body.secondary_supervisor_id ? clean(body.secondary_supervisor_id) : null,
                 email: body.email ? clean(body.email) : null,
+                sso_include_position_allowance: body.sso_include_position_allowance ?? true,
+                sso_include_general_allowance: body.sso_include_general_allowance ?? false,
+                sso_include_fixed_accommodation: body.sso_include_fixed_accommodation ?? false,
+                sso_include_fixed_meal: body.sso_include_fixed_meal ?? false,
+                sso_include_fixed_travel: body.sso_include_fixed_travel ?? false,
             },
             select: {
                 emp_id: true,
@@ -296,6 +326,11 @@ export async function POST(req: Request) {
                 line_user_id: true,
                 is_checkin_exempt: true,
                 email: true,
+                sso_include_position_allowance: true,
+                sso_include_general_allowance: true,
+                sso_include_fixed_accommodation: true,
+                sso_include_fixed_meal: true,
+                sso_include_fixed_travel: true,
             },
         });
 
@@ -456,6 +491,22 @@ export async function PATCH(req: Request) {
         }
         if (body.email !== undefined) {
             data.email = body.email ? clean(body.email) : null;
+        }
+
+        if (body.sso_include_position_allowance !== undefined) {
+            data.sso_include_position_allowance = Boolean(body.sso_include_position_allowance);
+        }
+        if (body.sso_include_general_allowance !== undefined) {
+            data.sso_include_general_allowance = Boolean(body.sso_include_general_allowance);
+        }
+        if (body.sso_include_fixed_accommodation !== undefined) {
+            data.sso_include_fixed_accommodation = Boolean(body.sso_include_fixed_accommodation);
+        }
+        if (body.sso_include_fixed_meal !== undefined) {
+            data.sso_include_fixed_meal = Boolean(body.sso_include_fixed_meal);
+        }
+        if (body.sso_include_fixed_travel !== undefined) {
+            data.sso_include_fixed_travel = Boolean(body.sso_include_fixed_travel);
         }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้

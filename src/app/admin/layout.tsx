@@ -14,7 +14,8 @@ import {
     DocumentCheckIcon,
     AcademicCapIcon,
     ArchiveBoxIcon,
-    MegaphoneIcon
+    MegaphoneIcon,
+    BuildingStorefrontIcon
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 
@@ -203,6 +204,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                     className={`${styles.navItem} ${pathname.startsWith("/admin/branches") ? styles.active : ""}`}
                                 >
                                     <span className={styles.navIcon}><MapPinIcon width={20} /></span>สาขา (Branches)
+                                </Link>
+                            )}
+
+                            {/* ✅ Company Settings */}
+                            {hasAccess("/admin/organization") && (
+                                <Link
+                                    href="/admin/company-settings"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/company-settings") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><BuildingStorefrontIcon width={20} /></span>ข้อมูลบริษัท (Company)
                                 </Link>
                             )}
 

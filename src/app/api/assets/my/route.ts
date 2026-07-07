@@ -14,7 +14,8 @@ export async function GET(req: Request) {
         const token = (await cookies()).get("token")?.value;
         if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-        const payload = verifyToken(token) as { emp_id: string };
+        const payload = verifyToken(token) as { emp_id: string; role?: string };
+        const isAdmin = payload.role === "admin" || payload.role === "SUPER_ADMIN" || payload.role === "WAREHOUSE_MANAGER";
 
         // 1. Find subordinates
         const subordinates = await prisma.employees.findMany({
@@ -30,9 +31,11 @@ export async function GET(req: Request) {
         const allIds = [payload.emp_id, ...subIds];
 
         const whereClause: any = { 
-            emp_id: { in: allIds }, 
             status: { in: ["borrowed", "reserved"] } 
         };
+        if (!isAdmin) {
+            whereClause.emp_id = { in: allIds };
+        }
         if (category) {
             whereClause.assets = { category };
         } else if (categoryExclude) {

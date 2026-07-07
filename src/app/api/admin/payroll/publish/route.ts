@@ -9,11 +9,21 @@ export async function POST(request: Request) {
     try {
         await requireAdmin();
         const body = await request.json();
-        const { month, year, emp_id, is_published } = body;
+        const { month, year, emp_id, is_published, tax, social_security, provident_fund, taxable_income, housing_benefit, car_benefit } = body;
 
         if (!month || !year || !emp_id) {
             return NextResponse.json({ error: "Missing month, year, or emp_id" }, { status: 400 });
         }
+
+        const dataInput = {
+            is_published,
+            ...(tax !== undefined && { tax }),
+            ...(social_security !== undefined && { social_security }),
+            ...(provident_fund !== undefined && { provident_fund }),
+            ...(taxable_income !== undefined && { taxable_income }),
+            ...(housing_benefit !== undefined && { housing_benefit }),
+            ...(car_benefit !== undefined && { car_benefit })
+        };
 
         await prisma.monthly_payroll_data.upsert({
             where: {
@@ -23,14 +33,12 @@ export async function POST(request: Request) {
                     cycle_year: year
                 }
             },
-            update: {
-                is_published: is_published
-            },
+            update: dataInput,
             create: {
                 emp_id: emp_id,
                 cycle_month: month,
                 cycle_year: year,
-                is_published: is_published
+                ...dataInput
             }
         });
 

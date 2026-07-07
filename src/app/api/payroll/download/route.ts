@@ -343,12 +343,19 @@ export async function GET(request: Request) {
         const insurance = Number(adj.insurance || 0);
         const insurance_income = Number(adj.insurance_income || 0);
         const unpaid_absenteeism = Number(adj.unpaid_absenteeism || 0);
+        const provident_fund = Number((adj as any).provident_fund || 0);
 
         let social_security = 0;
         if (adj.social_security !== null && adj.social_security !== undefined) {
             social_security = Number(adj.social_security);
         } else {
-            const ssoBase = Math.max(0, baseSalary - unpaid_absenteeism);
+            const ssoPosAllow = (emp as any).sso_include_position_allowance ? position_allowance : 0;
+            const ssoGenAllow = (emp as any).sso_include_general_allowance ? general_allowance : 0;
+            const ssoFixAcc = (emp as any).sso_include_fixed_accommodation ? accommodation_allowance : 0;
+            const ssoFixMeal = (emp as any).sso_include_fixed_meal ? meal_allowance : 0;
+            const ssoFixTrav = (emp as any).sso_include_fixed_travel ? travel_allowance : 0;
+            
+            const ssoBase = Math.max(0, baseSalary + ssoPosAllow + ssoGenAllow + ssoFixAcc + ssoFixMeal + ssoFixTrav - unpaid_absenteeism);
             if (ssoBase > 1650 && !isDaily) {
                 social_security = Math.round(Math.min(17500, ssoBase) * 0.05);
             }
@@ -391,7 +398,7 @@ export async function GET(request: Request) {
 
         // Final Pay Calculation
         const totalIncome = baseSalary + totalOtAmount + commissions + bonus + totalOtherIncome + insurance_income;
-        const totalExpense = unpaid_absenteeism + tax + social_security + student_loan + insurance + other_deductions;
+        const totalExpense = unpaid_absenteeism + tax + social_security + provident_fund + student_loan + insurance + other_deductions;
         const netPay = totalIncome - totalExpense;
 
         // --------- START PDF GENERATION ---------
@@ -529,7 +536,7 @@ export async function GET(request: Request) {
         drawCell("Absent Not Paid", "ขาดงานไม่จ่ายค่าจ้าง", 0, Y[2], 2);
         drawCell("Tax", "ภาษี", 2, Y[2]);
         drawCell("Social Security", "ประกันสังคม", 3, Y[2]);
-        drawCell("Advance", "เบิกล่วงหน้า", 4, Y[2]);
+        drawCell("Provident Fund", "กองทุนสำรองฯ", 4, Y[2]);
         drawCell("Insurance", "ประกันทำงาน", 5, Y[2]);
         drawCell("Student Loan", "กยศ.", 6, Y[2]);
         drawCell("Other", "อื่นๆ", 7, Y[2]);
@@ -541,7 +548,7 @@ export async function GET(request: Request) {
         drawVal(unpaid_absenteeism > 0 ? formatB(unpaid_absenteeism) : "-", 0, Y[3], 2);
         drawVal(tax > 0 ? formatB(tax) : "-", 2, Y[3]);
         drawVal(social_security > 0 ? formatB(social_security) : "-", 3, Y[3]);
-        drawVal("-", 4, Y[3]); // Missing Advance structural integration defaults to -
+        drawVal(provident_fund > 0 ? formatB(provident_fund) : "-", 4, Y[3]);
         drawVal(insurance > 0 ? formatB(insurance) : "-", 5, Y[3]);
         drawVal(student_loan > 0 ? formatB(student_loan) : "-", 6, Y[3]);
         drawVal(otherDedRemaining > 0 ? formatB(otherDedRemaining) : "-", 7, Y[3]);
