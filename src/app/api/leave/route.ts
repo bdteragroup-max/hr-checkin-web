@@ -325,7 +325,8 @@ export async function POST(req: Request) {
             emp_id: true, name: true, nickname: true, gender: true, hire_date: true, 
             supervisor_id: true, is_on_trial: true, line_user_id: true, 
             salary_type: true, base_salary: true,
-            supervisor: { select: { line_user_id: true } } 
+            supervisor: { select: { line_user_id: true } },
+            departments: { select: { name: true } }
         },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
@@ -507,6 +508,23 @@ export async function POST(req: Request) {
                 handoverPerson: handover_person,
                 status: "pending_hr",
             }).catch(console.error);
+        }
+
+        // ✅ 3. Notify TE64002 if department is Production or Technical
+        if (emp.departments?.name === "Production" || emp.departments?.name === "Technical") {
+            const te = await prisma.employees.findUnique({ where: { emp_id: "TE64002" }, select: { line_user_id: true } });
+            if (te?.line_user_id) {
+                const { sendDepartmentLeaveNotification } = await import("@/utils/lineMessaging");
+                sendDepartmentLeaveNotification(te.line_user_id, {
+                    empName: empDisplayName,
+                    leaveType: def.name,
+                    startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                    endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                    minutes,
+                    reason: reason || "",
+                    departmentName: emp.departments.name
+                }).catch(console.error);
+            }
         }
     } catch (e: any) {
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้

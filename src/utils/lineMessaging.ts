@@ -3220,3 +3220,46 @@ export async function sendProductReturnNotification(
   return results.every(r => r);
 }
 
+export async function sendDepartmentLeaveNotification(
+  lineUserId: string,
+  leaveData: {
+    empName: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    minutes: number;
+    reason: string;
+    departmentName: string;
+  }
+) {
+  // Format names with nicknames
+  if (leaveData) {
+    if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
+  }
+
+  const contents = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#f0f9ff",
+      contents: [
+        { type: "text", text: `แจ้งเตือนการลา (${leaveData.departmentName})`, weight: "bold", color: "#0284c7", size: "sm" }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
+        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] }
+      ]
+    }
+  };
+
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการลา: ${leaveData.empName}`, contents: contents as any }]);
+}
+
