@@ -527,6 +527,7 @@ export async function POST(req: Request) {
             }
         }
     } catch (e: any) {
+        console.error("LEAVE API ERROR:", e);
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้
         const msg = String(e?.message || "");
         if (msg.includes("SICK_ATTACHMENT_REQUIRED")) {
@@ -535,7 +536,7 @@ export async function POST(req: Request) {
         if (msg.includes("GENDER_NOT_ALLOWED_MATERNITY") || msg.includes("GENDER_NOT_ALLOWED_ORDINATION") || msg.includes("GENDER_NOT_ALLOWED_PATERNITY")) {
             return NextResponse.json({ error: "GENDER_NOT_ALLOWED" }, { status: 403 });
         }
-        return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
+        return NextResponse.json({ error: "DB_ERROR", details: msg, stack: e?.stack }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, id, days, minutes });
