@@ -6,6 +6,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
 import path from "path";
+import { toBangkokWallClock } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -142,11 +143,24 @@ export async function GET(request: Request) {
             holiday_3x_hours = Number(adj.holiday_3_x_hours_override || 0);
         } else if (isOtEligible) {
             otRequests.forEach((req: any) => {
-                const reqDate = new Date(req.date_for);
+                const reqDate = toBangkokWallClock(req.date_for);
                 const reqDateStr = fmt(reqDate);
-                const isHoliday = reqDate.getDay() === 0 || holidayDates.has(reqDateStr);
-                const startOT = new Date(req.start_time); const endOT = new Date(req.end_time);
+                const isSunday = reqDate.getDay() === 0;
+                const isPublicHoliday = holidayDates.has(reqDateStr);
+                const isHoliday = isSunday || isPublicHoliday;
+                
+                const startOT = toBangkokWallClock(req.start_time); 
+                const isHolidayAtStart = isHoliday;
+                const endOT = toBangkokWallClock(req.end_time);
                 if (endOT <= startOT) endOT.setDate(endOT.getDate() + 1);
+                
+                const checkIsHoliday = (d: Date) => {
+                    const ds = fmt(d);
+                    return d.getDay() === 0 || holidayDates.has(ds);
+                };
+                
+                const isSaturdayAtStart = startOT.getDay() === 6;
+
                 const totalHrsReq = (endOT.getTime() - startOT.getTime()) / (1000 * 60 * 60);
 
                 const lunchStart = new Date(startOT); lunchStart.setHours(12, 0, 0, 0);
@@ -159,25 +173,54 @@ export async function GET(request: Request) {
                 const approvedHrs = req.approved_hours !== null ? Number(req.approved_hours) : netTotalHrsReq;
                 const ratio = netTotalHrsReq > 0 ? approvedHrs / netTotalHrsReq : 0;
 
-                if (!isHoliday) {
-                    normal_1_5x_hours += approvedHrs;
+                if (fmt(startOT) === fmt(endOT)) {
+                    if (!isHolidayAtStart) {
+                        normal_1_5x_hours += approvedHrs;
+                    } else {
+                        const boundaryStart = new Date(startOT); boundaryStart.setHours(8, 0, 0, 0);
+                        const boundaryEnd = new Date(startOT); boundaryEnd.setHours(isSaturdayAtStart ? 15 : 17, 0, 0, 0);
+                        const overlapStart = Math.max(startOT.getTime(), boundaryStart.getTime());
+                        const overlapEnd = Math.min(endOT.getTime(), boundaryEnd.getTime());
+                        let overlapHrs = Math.max(0, overlapEnd - overlapStart) / (1000 * 60 * 60);
+                        const lunchInNormalStart = Math.max(overlapStart, lunchStart.getTime());
+                        const lunchInNormalEnd = Math.min(overlapEnd, lunchEnd.getTime());
+                        overlapHrs -= Math.max(0, lunchInNormalEnd - lunchInNormalStart) / (1000 * 60 * 60);
+                        const outsideHrs = netTotalHrsReq - overlapHrs;
+                        holiday_1x_hours += overlapHrs * ratio;
+                        holiday_3x_hours += outsideHrs * ratio;
+                    }
                 } else {
-                    const isSaturday = reqDate.getDay() === 6;
-                    const boundaryStart = new Date(startOT); boundaryStart.setHours(8, 0, 0, 0);
-                    const boundaryEnd = new Date(startOT); boundaryEnd.setHours(isSaturday ? 15 : 17, 0, 0, 0);
+                    const midnight = new Date(startOT);
+                    midnight.setDate(midnight.getDate() + 1);
+                    midnight.setHours(0, 0, 0, 0);
 
-                    const overlapStart = Math.max(startOT.getTime(), boundaryStart.getTime());
-                    const overlapEnd = Math.min(endOT.getTime(), boundaryEnd.getTime());
-                    let overlapHrs = Math.max(0, overlapEnd - overlapStart) / (1000 * 60 * 60);
+                    const part1HrsTotal = (midnight.getTime() - startOT.getTime()) / (1000 * 60 * 60);
+                    const part1LunchStart = Math.max(startOT.getTime(), lunchStart.getTime());
+                    const part1LunchEnd = Math.min(midnight.getTime(), lunchEnd.getTime());
+                    const part1NetHrs = part1HrsTotal - Math.max(0, part1LunchEnd - part1LunchStart) / (1000 * 60 * 60);
 
-                    const lunchInNormalStart = Math.max(overlapStart, lunchStart.getTime());
-                    const lunchInNormalEnd = Math.min(overlapEnd, lunchEnd.getTime());
-                    const lunchInNormalHrs = Math.max(0, lunchInNormalEnd - lunchInNormalStart) / (1000 * 60 * 60);
+                    const part2HrsTotal = (endOT.getTime() - midnight.getTime()) / (1000 * 60 * 60);
+                    const part2NetHrs = part2HrsTotal;
 
-                    overlapHrs -= lunchInNormalHrs;
-                    const outsideHrs = netTotalHrsReq - overlapHrs;
-                    holiday_1x_hours += overlapHrs * ratio;
-                    holiday_3x_hours += outsideHrs * ratio;
+                    if (!isHolidayAtStart) {
+                        normal_1_5x_hours += part1NetHrs * ratio;
+                    } else {
+                        const bStart = new Date(startOT); bStart.setHours(8, 0, 0, 0);
+                        const bEnd = new Date(startOT); bEnd.setHours(isSaturdayAtStart ? 15 : 17, 0, 0, 0);
+                        const oStart = Math.max(startOT.getTime(), bStart.getTime());
+                        const oEnd = Math.min(midnight.getTime(), bEnd.getTime());
+                        let oHrs = Math.max(0, oEnd - oStart) / (1000 * 60 * 60);
+                        oHrs -= Math.max(0, part1LunchEnd - part1LunchStart) / (1000 * 60 * 60);
+                        holiday_1x_hours += oHrs * ratio;
+                        holiday_3x_hours += (part1NetHrs - oHrs) * ratio;
+                    }
+
+                    const isHolidayNext = checkIsHoliday(midnight);
+                    if (!isHolidayNext) {
+                        normal_1_5x_hours += part2NetHrs * ratio;
+                    } else {
+                        holiday_1x_hours += part2NetHrs * ratio;
+                    }
                 }
             });
         }

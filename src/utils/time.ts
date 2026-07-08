@@ -16,6 +16,17 @@ export function getBangkokWallClock(): Date {
 }
 
 /**
+ * Takes a Date (which might represent absolute UTC time) and returns a new Date
+ * object whose local time matches the Bangkok "wall clock" time of the original Date.
+ * Useful when you need to use .getHours(), .getDate(), .getDay() on a UTC server 
+ * but want Bangkok's numbers.
+ */
+export function toBangkokWallClock(date: Date | string): Date {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+}
+
+/**
  * Returns today's date in YYYY-MM-DD format for Bangkok.
  */
 export function getTodayBangkokISO(): string {

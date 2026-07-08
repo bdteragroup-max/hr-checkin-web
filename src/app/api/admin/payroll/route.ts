@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/adminAuth";
-
+import { toBangkokWallClock } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
 
@@ -206,7 +206,7 @@ export async function GET(request: Request) {
                 // Note: when overriding hours, holiday_working_days remains empty (summing total sum)
             } else if (isOtEligible) {
                 empOts.forEach((req: any) => {
-                    const reqDate = new Date(req.date_for);
+                    const reqDate = toBangkokWallClock(req.date_for);
                     const reqDateStr = fmt(reqDate);
 
                     const isSunday = reqDate.getDay() === 0;
@@ -214,9 +214,9 @@ export async function GET(request: Request) {
                     const isHoliday = isSunday || isPublicHoliday;
 
                     // Parse times properly based on the date_for
-                    const startOT = new Date(req.start_time);
+                    const startOT = toBangkokWallClock(req.start_time);
                     const isHolidayAtStart = isHoliday;
-                    const endOT = new Date(req.end_time);
+                    const endOT = toBangkokWallClock(req.end_time);
                     if (endOT <= startOT) endOT.setDate(endOT.getDate() + 1); // handle overnight shift
 
                     // Helper to check holiday for a specific datetime
@@ -285,14 +285,12 @@ export async function GET(request: Request) {
                             holiday_3x_hours += (part1NetHrs - oHrs) * ratio;
                         }
 
-                        // Part 2 logic (Next Day)
                         const isHolidayNext = checkIsHoliday(midnight);
                         if (!isHolidayNext) {
                             normal_1_5x_hours += part2NetHrs * ratio;
                         } else {
                             holiday_working_days.add(fmt(midnight));
-                            // Usually midnight shifts are non-normal hours (3x)
-                            holiday_3x_hours += part2NetHrs * ratio;
+                            holiday_1x_hours += part2NetHrs * ratio;
                         }
                     }
                 });
