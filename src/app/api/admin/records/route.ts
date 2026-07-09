@@ -67,6 +67,8 @@ export async function GET(req: Request) {
                     nickname: true,
                     branch_id: true,
                     is_active: true,
+                    hire_date: true,
+                    resignation_date: true,
                 },
                 orderBy: { emp_id: "asc" },
             }),
@@ -113,16 +115,7 @@ export async function GET(req: Request) {
         const todayDate = new Date(Date.UTC(nowBKK.getFullYear(), nowBKK.getMonth(), nowBKK.getDate()));
         const effectiveEnd = endDate < todayDate ? endDate : todayDate;
 
-        // Calculate expected Work Days using UTC logic up to effectiveEnd
-        let totalWorkDays = 0;
-        for (let dt = new Date(startDate); dt <= effectiveEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
-            if (dt.getUTCDay() === 0) continue; // skip sunday
-            const dStr = dt.toISOString().split("T")[0];
-            if (holidayDates.has(dStr)) continue; // skip holiday
-            totalWorkDays++;
-        }
-
-        // Initialize counters for all employees
+        // Calculate expected Work Days per employee based on hire_date and resignation_date
         const stats: Record<string, {
             leave_days: number;
             pending_leave_days: number;
@@ -130,10 +123,40 @@ export async function GET(req: Request) {
             late_mins: number;
             present_dates: Set<string>;
             travel_dates: Set<string>;
+            total_work_days: number;
         }> = {};
 
-        for (const id of empIds) {
-            stats[id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set(), travel_dates: new Set() };
+        for (const e of emps) {
+            let empStartDate = startDate;
+            if (e.hire_date && e.hire_date > startDate) {
+                empStartDate = e.hire_date;
+            }
+            
+            let empEndDate = effectiveEnd;
+            if (e.resignation_date && e.resignation_date < effectiveEnd) {
+                empEndDate = e.resignation_date;
+            }
+
+            let empTotalWorkDays = 0;
+            // Only count if start is before or equal to end
+            if (empStartDate <= empEndDate) {
+                for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
+                    if (dt.getUTCDay() === 0) continue; // skip sunday
+                    const dStr = dt.toISOString().split("T")[0];
+                    if (holidayDates.has(dStr)) continue; // skip holiday
+                    empTotalWorkDays++;
+                }
+            }
+
+            stats[e.emp_id] = { 
+                leave_days: 0, 
+                pending_leave_days: 0, 
+                late_count: 0, 
+                late_mins: 0, 
+                present_dates: new Set(), 
+                travel_dates: new Set(),
+                total_work_days: empTotalWorkDays
+            };
         }
 
         // Process leaves
@@ -191,7 +214,7 @@ export async function GET(req: Request) {
             const attendedDates = new Set([...Array.from(s.present_dates), ...Array.from(s.travel_dates)]);
             const travelDays = s.travel_dates.size;
 
-            let absences = totalWorkDays - attendedDates.size - s.leave_days;
+            let absences = s.total_work_days - attendedDates.size - s.leave_days;
             if (absences < 0) absences = 0;
 
             let finalName = e.name;
@@ -211,7 +234,7 @@ export async function GET(req: Request) {
                 absent_days: absences,
                 present_days: s.present_dates.size,
                 travel_days: travelDays,
-                total_work_days_period: totalWorkDays,
+                total_work_days_period: s.total_work_days,
             };
         });
 

@@ -119,7 +119,7 @@ export async function GET(req: Request) {
 
             const emps = await prisma.employees.findMany({
                 where: employeeWhere,
-                select: { emp_id: true, name: true, branch_id: true, is_active: true },
+                select: { emp_id: true, name: true, branch_id: true, is_active: true, hire_date: true, resignation_date: true },
                 orderBy: { emp_id: "asc" },
             });
 
@@ -165,15 +165,30 @@ export async function GET(req: Request) {
 
             const holidayDates = new Set(Array.from(holidayMap.keys()));
 
-            let totalWorkDays = 0;
-            for (let dt = new Date(start); dt <= end; dt.setUTCDate(dt.getUTCDate() + 1)) {
-                if (dt.getUTCDay() === 0) continue;
-                if (holidayDates.has(dt.toISOString().split("T")[0])) continue;
-                totalWorkDays++;
-            }
+            const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string>, total_work_days: number }> = {};
+            
+            for (const e of emps) {
+                let empStartDate = start;
+                if (e.hire_date && e.hire_date > start) {
+                    empStartDate = e.hire_date;
+                }
+                
+                let empEndDate = end;
+                if (e.resignation_date && e.resignation_date < end) {
+                    empEndDate = e.resignation_date;
+                }
 
-            const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string> }> = {};
-            for (const id of empIds) stats[id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set() };
+                let empTotalWorkDays = 0;
+                if (empStartDate <= empEndDate) {
+                    for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
+                        if (dt.getUTCDay() === 0) continue;
+                        if (holidayDates.has(dt.toISOString().split("T")[0])) continue;
+                        empTotalWorkDays++;
+                    }
+                }
+
+                stats[e.emp_id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set(), total_work_days: empTotalWorkDays };
+            }
 
             for (const l of leavesAll) {
                 if (!stats[l.emp_id]) continue;
@@ -195,7 +210,7 @@ export async function GET(req: Request) {
 
             for (const e of emps) {
                 const s = stats[e.emp_id];
-                let absences = totalWorkDays - s.present_dates.size - s.leave_days;
+                let absences = s.total_work_days - s.present_dates.size - s.leave_days;
                 if (absences < 0) absences = 0;
 
                 summarySheet.addRow({
@@ -209,7 +224,7 @@ export async function GET(req: Request) {
                     pending: s.pending_leave_days,
                     late_count: s.late_count,
                     late_mins: s.late_mins,
-                    total_days: totalWorkDays
+                    total_days: s.total_work_days
                 });
             }
 
