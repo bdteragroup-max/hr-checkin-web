@@ -57,7 +57,11 @@ export async function GET(req: Request) {
       include: {
         variant: {
           include: {
-            item: true
+            item: {
+              include: {
+                variants: true
+              }
+            }
           }
         }
       },

@@ -29,9 +29,14 @@ type RequestHistory = {
     status: string;
     quantity: number;
     requested_at: string;
+    reason: string | null;
     variant: {
+        id: number;
         size: string;
-        item: { name: string };
+        item: { 
+            name: string;
+            variants?: { id: number; size: string; stock_quantity: number; }[];
+        };
     };
     admin_note: string | null;
 };
@@ -46,6 +51,11 @@ export default function ClothingPage() {
     const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState("");
+
+    const [editingRequestId, setEditingRequestId] = useState<number | null>(null);
+    const [editVariantId, setEditVariantId] = useState<number | null>(null);
+    const [editQuantity, setEditQuantity] = useState(1);
+    const [editReason, setEditReason] = useState("");
     
     const [submitting, setSubmitting] = useState(false);
     const [msg, setMsg] = useState<{ text: string, type: 'ok' | 'bad' } | null>(null);
@@ -108,6 +118,42 @@ export default function ClothingPage() {
             setTimeout(() => setMsg(null), 5000);
         } catch (error: any) {
             setMsg({ text: error.message, type: 'bad' });
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function deleteRequest(id: number) {
+        if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอนี้?")) return;
+        setSubmitting(true);
+        try {
+            const r = await fetch(`/api/clothing/requests/${id}`, { method: "DELETE" });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการยกเลิก");
+            setMsg({ text: "ยกเลิกคำขอเรียบร้อยแล้ว", type: 'ok' });
+            loadData();
+        } catch (e: any) {
+            setMsg({ text: e.message, type: 'bad' });
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function updateRequest(id: number) {
+        setSubmitting(true);
+        try {
+            const r = await fetch(`/api/clothing/requests/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ variant_id: editVariantId, quantity: editQuantity, reason: editReason })
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการแก้ไข");
+            setMsg({ text: "แก้ไขคำขอเรียบร้อยแล้ว", type: 'ok' });
+            setEditingRequestId(null);
+            loadData();
+        } catch (e: any) {
+            setMsg({ text: e.message, type: 'bad' });
         } finally {
             setSubmitting(false);
         }
@@ -288,18 +334,110 @@ export default function ClothingPage() {
                                 if (h.status === 'fulfilled') { tagClass = styles.tagBlue; tagText = "รับของแล้ว"; }
                                 if (h.status === 'rejected') { tagClass = styles.tagBad; tagText = "ไม่อนุมัติ"; }
 
+                                const isEditing = editingRequestId === h.id;
+
                                 return (
-                                    <div key={h.id} className={styles.historyItem}>
-                                        <div className={styles.historyInfo}>
-                                            <div className={styles.historyType}>{h.variant.item.name} (ไซส์ {h.variant.size})</div>
-                                            <div className={styles.historyMeta}>
-                                                จำนวน: {h.quantity} ตัว · เบิกเมื่อ {date}
-                                                {h.admin_note && <div>หมายเหตุ: {h.admin_note}</div>}
+                                    <div key={h.id} className={styles.historyItem} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div className={styles.historyInfo}>
+                                                <div className={styles.historyType}>{h.variant.item.name} (ไซส์ {h.variant.size})</div>
+                                                <div className={styles.historyMeta}>
+                                                    จำนวน: {h.quantity} ตัว · เบิกเมื่อ {date}
+                                                    {h.reason && <div>เหตุผล: {h.reason}</div>}
+                                                    {h.admin_note && <div>หมายเหตุ: {h.admin_note}</div>}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                                                <div className={`${styles.historyTag} ${tagClass}`}>
+                                                    {tagText}
+                                                </div>
+                                                {h.status === 'pending' && !isEditing && (
+                                                    <div style={{ display: 'flex', gap: 8 }}>
+                                                        <button 
+                                                            style={{ fontSize: 12, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={() => {
+                                                                setEditingRequestId(h.id);
+                                                                setEditVariantId(h.variant.id);
+                                                                setEditQuantity(h.quantity);
+                                                                setEditReason(h.reason || "");
+                                                            }}
+                                                        >
+                                                            แก้ไข
+                                                        </button>
+                                                        <button 
+                                                            style={{ fontSize: 12, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                                            onClick={() => deleteRequest(h.id)}
+                                                            disabled={submitting}
+                                                        >
+                                                            ยกเลิก
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className={`${styles.historyTag} ${tagClass}`}>
-                                            {tagText}
-                                        </div>
+                                        
+                                        {isEditing && (
+                                            <div style={{ marginTop: 12, padding: 12, background: 'var(--surface2)', borderRadius: 8 }}>
+                                                {h.variant.item.variants && h.variant.item.variants.length > 0 && (
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <label className={styles.label}>เปลี่ยนไซส์</label>
+                                                        <div className={styles.sizeGrid} style={{ marginBottom: 0 }}>
+                                                            {h.variant.item.variants.map(v => (
+                                                                <button
+                                                                    key={v.id}
+                                                                    className={`
+                                                                        ${styles.sizeBtn} 
+                                                                        ${editVariantId === v.id ? styles.sizeBtnActive : ""} 
+                                                                        ${v.stock_quantity === 0 && h.variant.id !== v.id ? styles.sizeBtnDisabled : ""}
+                                                                    `}
+                                                                    disabled={v.stock_quantity === 0 && h.variant.id !== v.id}
+                                                                    onClick={() => setEditVariantId(v.id)}
+                                                                >
+                                                                    {v.size} {v.stock_quantity === 0 && h.variant.id !== v.id ? "(หมด)" : ""}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className={styles.label}>จำนวน</label>
+                                                        <input 
+                                                            type="number" 
+                                                            min={1} 
+                                                            className={styles.input} 
+                                                            value={editQuantity} 
+                                                            onChange={e => setEditQuantity(Number(e.target.value))} 
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.label}>เหตุผล</label>
+                                                        <input 
+                                                            type="text" 
+                                                            className={styles.input} 
+                                                            value={editReason} 
+                                                            onChange={e => setEditReason(e.target.value)} 
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                                    <button 
+                                                        className={styles.btnSecondary}
+                                                        onClick={() => setEditingRequestId(null)}
+                                                        disabled={submitting}
+                                                    >
+                                                        ยกเลิก
+                                                    </button>
+                                                    <button 
+                                                        className={styles.btnPrimary}
+                                                        onClick={() => updateRequest(h.id)}
+                                                        disabled={submitting || editQuantity < 1 || !editVariantId}
+                                                    >
+                                                        {submitting ? "กำลังบันทึก..." : "บันทึก"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

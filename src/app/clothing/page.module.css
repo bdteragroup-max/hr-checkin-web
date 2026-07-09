@@ -283,6 +283,33 @@
   cursor: not-allowed;
 }
 
+.btnSecondary {
+  font-family: var(--font-th);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: var(--white);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--gray-50);
+  border-color: var(--text3);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .sizeGrid {
   display: flex;
   flex-wrap: wrap;
