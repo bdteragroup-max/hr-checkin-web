@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { 
     PlusIcon, 
@@ -29,14 +30,29 @@ export default function AdminClothingPage() {
 }
 
 function AdminClothingPageInner() {
+    const queryClient = useQueryClient();
     const [viewMode, setViewMode] = useState<Tab>("requests");
-    const [loading, setLoading] = useState(true);
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
-    // Data
-    const [requests, setRequests] = useState<any[]>([]);
-    const [items, setItems] = useState<any[]>([]);
-    const [reports, setReports] = useState<any>(null);
+    const { data, isLoading: loading } = useQuery({
+        queryKey: ['admin-clothing'],
+        queryFn: async () => {
+            const [reqRes, itemRes, repRes] = await Promise.all([
+                fetch("/api/admin/clothing/requests").then(r => r.json()),
+                fetch("/api/admin/clothing/items").then(r => r.json()),
+                fetch("/api/admin/clothing/reports").then(r => r.json())
+            ]);
+            return {
+                requests: Array.isArray(reqRes) ? reqRes : [],
+                items: Array.isArray(itemRes) ? itemRes : [],
+                reports: repRes && !repRes.error ? repRes : null
+            };
+        }
+    });
+
+    const requests = data?.requests || [];
+    const items = data?.items || [];
+    const reports = data?.reports || null;
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
@@ -52,28 +68,7 @@ function AdminClothingPageInner() {
     const [actionType, setActionType] = useState<"approved" | "rejected" | "fulfilled" | null>(null);
     const [actionSaving, setActionSaving] = useState(false);
 
-    async function loadData() {
-        setLoading(true);
-        try {
-            const [reqRes, itemRes, repRes] = await Promise.all([
-                fetch("/api/admin/clothing/requests").then(r => r.json()),
-                fetch("/api/admin/clothing/items").then(r => r.json()),
-                fetch("/api/admin/clothing/reports").then(r => r.json())
-            ]);
-            setRequests(Array.isArray(reqRes) ? reqRes : []);
-            setItems(Array.isArray(itemRes) ? itemRes : []);
-            setReports(repRes && !repRes.error ? repRes : null);
-        } catch (e) {
-            console.error(e);
-            setRequests([]);
-            setItems([]);
-            setReports(null);
-        } finally {
-            setLoading(false);
-        }
-    }
 
-    useEffect(() => { loadData(); }, []);
 
     // Inventory Handlers
     function handleEditItem(item: any) {
@@ -103,7 +98,7 @@ function AdminClothingPageInner() {
             if (res.ok) {
                 setAlert({ visible: true, message: "บันทึกข้อมูลสินค้าเรียบร้อย", type: "ok" });
                 setShowItemModal(false);
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ['admin-clothing'] });
             } else {
                 setAlert({ visible: true, message: "บันทึกไม่สำเร็จ", type: "error" });
             }
@@ -136,7 +131,7 @@ function AdminClothingPageInner() {
             if (res.ok) {
                 setAlert({ visible: true, message: "ดำเนินการเรียบร้อยแล้ว", type: "ok" });
                 setShowActionModal(false);
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ['admin-clothing'] });
             } else {
                 setAlert({ visible: true, message: data.error || "ดำเนินการไม่สำเร็จ", type: "error" });
             }

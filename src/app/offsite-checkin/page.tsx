@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import {
     CheckCircleIcon,
@@ -196,9 +197,43 @@ function TimeCard() {
    MAIN PAGE
 ────────────────────────────────────────── */
 export default function OffsiteCheckinPage() {
-    const [me, setMe] = useState<Me | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [today, setToday] = useState<TodayItem[]>([]);
+    const queryClient = useQueryClient();
+
+    const { data: me } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const r = await fetch("/api/me");
+            if (!r.ok) { window.location.href = "/"; throw new Error("Not logged in"); }
+            return r.json() as Promise<Me>;
+        }
+    });
+
+    const { data: wpData, isLoading: isPlanLoading } = useQuery({
+        queryKey: ["work-plans"],
+        queryFn: async () => {
+            const r = await fetch("/api/work-plans");
+            return r.json();
+        }
+    });
+    const planSubmittedToday = wpData?.ok && wpData?.plan;
+
+    const { data: branches = [] } = useQuery({
+        queryKey: ["branches"],
+        queryFn: async () => {
+            const r = await fetch("/api/branches");
+            const d = await r.json();
+            return (d.branches || []) as Branch[];
+        }
+    });
+
+    const { data: today = [], refetch: refreshToday } = useQuery({
+        queryKey: ["checkins"],
+        queryFn: async () => {
+            const r = await fetch("/api/checkins");
+            const d = await r.json();
+            return (d.list || []) as TodayItem[];
+        }
+    });
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false, isMandatory: false });
     const closeAlert = useCallback((sharedClick = false) => {
@@ -220,8 +255,6 @@ export default function OffsiteCheckinPage() {
 
     // Work Plan State
     const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
-    const [isPlanLoading, setIsPlanLoading] = useState(true);
     const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
     useEffect(() => {
@@ -241,38 +274,12 @@ export default function OffsiteCheckinPage() {
     const rawCanvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
-    useEffect(() => {
-        (async () => {
-            const r = await fetch("/api/me");
-            if (!r.ok) return (window.location.href = "/");
-            const meData = await r.json();
-            setMe(meData);
+    // Data fetching is now handled by useQuery hooks
 
-            // Check work plan
-            const wp = await fetch("/api/work-plans", { cache: "no-store" });
-            const wpData = await wp.json();
-            if (wpData.ok && wpData.plan) {
-                setPlanSubmittedToday(true);
-            }
-            setIsPlanLoading(false);
-
-            const b = await fetch("/api/branches");
-            const bd = await b.json();
-            setBranches(bd.branches || []);
-
-            refreshToday();
-        })();
-    }, []);
 
     useEffect(() => {
         readGPSNoTarget();
     }, []);
-
-    async function refreshToday() {
-        const r = await fetch("/api/checkins", { cache: "no-store" });
-        const data = await r.json().catch(() => ({}));
-        setToday(data.list || []);
-    }
 
     function showAlert(message: string, type: "error" | "ok" = "error") {
         setAlert({ visible: true, message, type });
@@ -550,7 +557,7 @@ export default function OffsiteCheckinPage() {
                 body: JSON.stringify(data)
             });
             if (res.ok) {
-                setPlanSubmittedToday(true);
+                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
                 setShowWorkPlan(false);
                 if (pendingAction) {
                     pendingAction();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css";
 import localStyles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
@@ -60,8 +61,7 @@ const WELFARE_TITLES: Record<string, string> = {
 };
 
 export default function AdminWelfarePage() {
-    const [claims, setClaims] = useState<Claim[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState("pending");
     const [searchQuery, setSearchQuery] = useState("");
     const [startDate, setStartDate] = useState("");
@@ -79,23 +79,15 @@ export default function AdminWelfarePage() {
     });
     const [saving, setSaving] = useState(false);
 
-    async function loadClaims() {
-        setLoading(true);
-        try {
+    const { data: claims = [], isLoading: loading } = useQuery<Claim[]>({
+        queryKey: ['admin-welfare'],
+        queryFn: async () => {
             const res = await fetch("/api/admin/welfare");
-            if (res.ok) {
-                const data = await res.json();
-                setClaims(data.list || []);
-            }
-        } catch (e) {
-            console.error(e);
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            return data.list || [];
         }
-        setLoading(false);
-    }
-
-    useEffect(() => {
-        loadClaims();
-    }, []);
+    });
 
     function openAdjustment(claim: Claim) {
         setSelectedClaim(claim);
@@ -124,7 +116,7 @@ export default function AdminWelfarePage() {
             if (data.ok) {
                 setAlert({ visible: true, message: `บันทึกรายการเรียบร้อยแล้ว`, type: "ok" });
                 setShowModal(false);
-                loadClaims();
+                queryClient.invalidateQueries({ queryKey: ['admin-welfare'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -213,7 +205,7 @@ export default function AdminWelfarePage() {
                         <div className={styles.filterLabel}>TO</div>
                         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                     </div>
-                    <button className={styles.btnPrimary} onClick={loadClaims} disabled={loading}>
+                    <button className={styles.btnPrimary} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-welfare'] })} disabled={loading}>
                         {loading ? "..." : <ArrowPathIcon width={16} />}
                     </button>
                 </div>

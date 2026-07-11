@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
@@ -67,12 +68,26 @@ type PayrollResult = {
 };
 
 export default function PayrollPage() {
+    const queryClient = useQueryClient();
     const [month, setMonth] = useState(new Date().getMonth() + 1); // 1-12
     const [year, setYear] = useState(new Date().getFullYear());
-    const [data, setData] = useState<PayrollResult[]>([]);
-    const [cycle, setCycle] = useState<{ start: string; end: string; is_published?: boolean } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [taxConfigs, setTaxConfigs] = useState<any>(null);
+
+    const { data: payrollData, isLoading, isFetching } = useQuery({
+        queryKey: ['admin-payroll', month, year],
+        queryFn: async () => {
+            const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}`);
+            if (res.status === 401) {
+                window.location.href = "/admin/login";
+                throw new Error("Unauthorized");
+            }
+            if (!res.ok) throw new Error("Failed to load payroll data");
+            return res.json();
+        }
+    });
+
+    const data: PayrollResult[] = payrollData?.list || [];
+    const cycle = payrollData?.cycle || null;
+    const loading = isLoading;
     const [publishing, setPublishing] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -203,7 +218,7 @@ export default function PayrollPage() {
             });
             if (res.ok) {
                 setShowModal(false);
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
             } else {
                 alert("Failed to save adjustments");
             }
@@ -261,7 +276,7 @@ export default function PayrollPage() {
             });
 
             if (res.ok) {
-                await loadData(true);
+                queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
             } else {
                 alert("Failed to save");
             }
@@ -271,31 +286,7 @@ export default function PayrollPage() {
         setQuickSaving(null);
     };
 
-    async function loadData(silent = false) {
-        if (!silent) setLoading(true);
-        try {
-            const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}&t=${Date.now()}`);
-            if (res.status === 401) {
-                window.location.href = "/admin/login";
-                return;
-            }
-            if (res.ok) {
-                const d = await res.json();
-                setData(d.list);
-                setCycle(d.cycle);
-            } else {
-                alert("Failed to load payroll data");
-            }
-        } catch (e) {
-            console.error(e);
-        }
-        if (!silent) setLoading(false);
-    }
 
-
-    useEffect(() => {
-        loadData();
-    }, [month, year]);
 
     const handlePublish = async (emp_id: string, publishStatus: boolean) => {
         if (!confirm(publishStatus ? `ยืนยันการเผยแพร่สลิปเงินเดือนให้พนักงานคนนี้?` : `ยืนยันการยกเลิกเผยแพร่?`)) return;
@@ -305,8 +296,8 @@ export default function PayrollPage() {
             const res = await fetch("/api/admin/payroll/publish", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    month, year, emp_id, 
+                body: JSON.stringify({
+                    month, year, emp_id,
                     is_published: publishStatus,
                     tax: emp?.tax,
                     social_security: emp?.social_security,
@@ -317,7 +308,7 @@ export default function PayrollPage() {
                 })
             });
             if (res.ok) {
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
             } else {
                 alert("เกิดข้อผิดพลาด");
             }
@@ -338,8 +329,8 @@ export default function PayrollPage() {
                 await fetch("/api/admin/payroll/publish", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        month, year, emp_id: emp.emp_id, 
+                    body: JSON.stringify({
+                        month, year, emp_id: emp.emp_id,
                         is_published: targetStatus,
                         tax: emp.tax,
                         social_security: emp.social_security,
@@ -350,7 +341,7 @@ export default function PayrollPage() {
                     })
                 });
             }
-            if (changesMade) loadData();
+            if (changesMade) queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
         } catch (e) {
             alert("เกิดข้อผิดพลาดในการตั้งค่า");
         }
@@ -365,7 +356,7 @@ export default function PayrollPage() {
                 body: JSON.stringify({ companyTitle, month, year, data: items })
             });
             if (!res.ok) throw new Error("Export failed");
-            
+
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -387,8 +378,8 @@ export default function PayrollPage() {
     const filteredData = useMemo(() => {
         if (!searchTerm.trim()) return data;
         const s = searchTerm.toLowerCase();
-        return data.filter(d => 
-            d.name.toLowerCase().includes(s) || 
+        return data.filter(d =>
+            d.name.toLowerCase().includes(s) ||
             d.emp_id.toLowerCase().includes(s)
         );
     }, [data, searchTerm]);
@@ -466,10 +457,10 @@ export default function PayrollPage() {
                 <div className={styles.filters}>
                     <div className={styles.searchBox}>
                         <MagnifyingGlassIcon className={styles.searchIcon} width={18} />
-                        <input 
-                            type="text" 
-                            className={styles.searchInput} 
-                            placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..." 
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -514,10 +505,10 @@ export default function PayrollPage() {
                                             <tr key={role}>
                                                 <td>
                                                     <span className={`${styles.roleBadge} ${styles[`role${role}`]}`}>
-                                                        {role === "Manager" ? "ผู้จัดการ" : 
-                                                         role === "Engineer" ? "วิศวกร" : 
-                                                         role === "Foreman" ? "หัวหน้าช่าง" : 
-                                                         role === "Driver" ? "คนขับรถ" : "พนักงานทั่วไป"}
+                                                        {role === "Manager" ? "ผู้จัดการ" :
+                                                            role === "Engineer" ? "วิศวกร" :
+                                                                role === "Foreman" ? "หัวหน้าช่าง" :
+                                                                    role === "Driver" ? "คนขับรถ" : "พนักงานทั่วไป"}
                                                     </span>
                                                 </td>
                                                 <td style={{ textAlign: 'center', fontWeight: 600 }}>{stats.count}</td>
@@ -639,9 +630,9 @@ export default function PayrollPage() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    
+
                                                     {/* Salary */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-override_salary` ? styles.cellSaving : ""}`} 
+                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-override_salary` ? styles.cellSaving : ""}`}
                                                         onClick={() => { setActiveCell({ empId: p.emp_id, field: "override_salary" }); setTempValue(p.is_salary_overridden ? String(p.base_salary) : ""); }}>
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "override_salary" ? (
                                                             <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "override_salary", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "override_salary", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
@@ -809,7 +800,7 @@ export default function PayrollPage() {
                                                     <td className={styles.tdRight} style={{ fontWeight: 600, color: (p.ot_amount + (p.holiday_allowance || 0)) > 0 ? "var(--ok)" : "inherit" }}>
                                                         {formatB(p.ot_amount + (p.holiday_allowance || 0))}
                                                     </td>
-                                                    
+
                                                     {/* Commissions */}
                                                     <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-commissions` ? styles.cellSaving : ""}`}
                                                         onClick={() => { setActiveCell({ empId: p.emp_id, field: "commissions" }); setTempValue(p.commissions > 0 ? String(p.commissions) : ""); }}>

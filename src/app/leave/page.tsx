@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import {
     ClockIcon,
@@ -169,12 +170,47 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
    MAIN PAGE
 ══════════════════════════════════════ */
 export default function LeavePage() {
-    const [types, setTypes] = useState<LeaveType[]>([]);
-    const [list, setList] = useState<LeaveItem[]>([]);
+    const queryClient = useQueryClient();
+
+    const { data: leaveData } = useQuery({
+        queryKey: ["leave"],
+        queryFn: async () => {
+            const r = await fetch("/api/leave");
+            if (!r.ok) { window.location.href = "/"; throw new Error("Not logged in"); }
+            return r.json();
+        }
+    });
+
+    const types: LeaveType[] = leaveData?.types || [];
+    const list: LeaveItem[] = leaveData?.list || [];
+    const colleagues: string[] = leaveData?.colleagues || [];
+
+    const { data: holidays = [] } = useQuery({
+        queryKey: ["holidays"],
+        queryFn: async () => {
+            const r2 = await fetch("/api/holidays");
+            if (!r2.ok) return [];
+            const hData = await r2.json();
+            return (hData.list || []).map((h: any) => {
+                const d = new Date(h.date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            });
+        }
+    });
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [editingId, setEditingId] = useState("");
     const [leaveTypeId, setLeaveTypeId] = useState("");
+
+    // Initialize leaveTypeId when types are loaded
+    useEffect(() => {
+        if (!leaveTypeId && types.length > 0) {
+            setLeaveTypeId(types[0].id);
+        }
+    }, [types, leaveTypeId]);
 
     const [startDate, setStartDate] = useState("");
     const [startHour, setStartHour] = useState("08");
@@ -184,8 +220,6 @@ export default function LeavePage() {
     const [endMin, setEndMin] = useState("00");
     const [handoverPerson, setHandoverPerson] = useState("");
     const [substituteDate, setSubstituteDate] = useState("");
-    const [colleagues, setColleagues] = useState<string[]>([]);
-    const [holidays, setHolidays] = useState<string[]>([]);
 
     const startAt = useMemo(() => startDate ? `${startDate}T${startHour}:${startMin}:00+07:00` : "", [startDate, startHour, startMin]);
     const endAt = useMemo(() => endDate ? `${endDate}T${endHour}:${endMin}:00+07:00` : "", [endDate, endHour, endMin]);
@@ -276,30 +310,7 @@ export default function LeavePage() {
         return val.replace(/[^a-zA-Z0-9\u0E00-\u0E7F\s()]/g, "");
     };
 
-    async function load() {
-        const r = await fetch("/api/leave", { cache: "no-store" });
-        if (!r.ok) { window.location.href = "/"; return; }
-        const data = await r.json().catch(() => ({}));
-        const loadedTypes: LeaveType[] = data.types || [];
-        setTypes(loadedTypes);
-        setList(data.list || []);
-        setColleagues(data.colleagues || []);
-        if (!leaveTypeId && loadedTypes.length > 0) setLeaveTypeId(loadedTypes[0].id);
-
-        const r2 = await fetch("/api/holidays", { cache: "no-store" });
-        if (r2.ok) {
-            const hData = await r2.json().catch(() => ({}));
-            const hDates = (hData.list || []).map((h: any) => {
-                // Ensure date string is properly formatted as YYYY-MM-DD in local time
-                const d = new Date(h.date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            });
-            setHolidays(hDates);
-        }
-    }
+    // load() is now handled by useQuery
 
     async function uploadFile(file: File) {
         setUploading(true);
@@ -386,7 +397,7 @@ export default function LeavePage() {
         setAttachmentUrls([]); setFileNames([]);
         setEditingId("");
         if (fileRef.current) fileRef.current.value = "";
-        await load();
+        queryClient.invalidateQueries({ queryKey: ["leave"] });
         showAlert(editingId ? `อัปเดตคำขอลาสำเร็จ` : `ส่งคำขอลาสำเร็จ\n${data.days} วันทำงาน · ${Math.floor((data.minutes || 0) / 60)}ชม ${(data.minutes || 0) % 60}นาที`, "ok");
     }
 
@@ -447,15 +458,13 @@ export default function LeavePage() {
                 return;
             }
             showAlert("ยกเลิกใบลาสำเร็จ", "ok");
-            await load();
+            queryClient.invalidateQueries({ queryKey: ["leave"] });
         } catch {
             showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อ", "error");
         } finally {
             setLoading(false);
         }
     }
-
-    useEffect(() => { load(); }, []);
 
     useEffect(() => {
         function onKeyDown(e: KeyboardEvent) {

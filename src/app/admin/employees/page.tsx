@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import {
     UsersIcon,
@@ -107,12 +108,36 @@ type JobPosition = { id: number; department_id: number; title: string; is_ot_eli
 
 /* ── Component ──────────────────────────────────────────────── */
 export default function AdminEmployeesPage() {
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [positions, setPositions] = useState<JobPosition[]>([]);
-    const [list, setList] = useState<Emp[]>([]);
-    const [msg, setMsg] = useState("");
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
+
+    const { data: loadData, isLoading: loading, error: queryError, refetch: reload } = useQuery({
+        queryKey: ["admin-employees-page"],
+        queryFn: async () => {
+            const [b, e, dRes, pRes] = await Promise.all([
+                fetch("/api/branches", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+                fetch("/api/admin/employees", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+                fetch("/api/admin/organization/departments", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+                fetch("/api/admin/organization/positions", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
+            ]);
+
+            if (e?.error === "UNAUTHORIZED") throw new Error("ยังไม่ได้เข้าสู่ระบบ Admin (โปรด login)");
+            if (e?.error === "FORBIDDEN") throw new Error("ไม่มีสิทธิ์ Admin");
+            if (!e?.ok) throw new Error(e?.error || "LOAD_FAILED");
+
+            return {
+                branches: (b.branches || []) as Branch[],
+                departments: (dRes.list || []) as Department[],
+                positions: (pRes.list || []) as JobPosition[],
+                list: (e.list || []) as Emp[]
+            };
+        }
+    });
+
+    const branches = loadData?.branches || [];
+    const departments = loadData?.departments || [];
+    const positions = loadData?.positions || [];
+    const list = loadData?.list || [];
+    const msg = queryError ? queryError.message : "";
     const [saving, setSaving] = useState(false);
     const [visibleSalaries, setVisibleSalaries] = useState<Set<string>>(new Set());
 
@@ -196,7 +221,7 @@ export default function AdminEmployeesPage() {
         if (typeFilter !== "all") params.append("salary_type", typeFilter);
         if (branchFilter !== "all") params.append("branch", branchFilter);
         if (deptFilter !== "all") params.append("dept", String(deptFilter));
-        
+
         window.location.href = `/api/admin/employees/export?${params.toString()}`;
     };
 
@@ -211,32 +236,18 @@ export default function AdminEmployeesPage() {
     const inactiveCnt = list.length - activeCnt;
 
     /* ── load ── */
-    async function load() {
-        setMsg(""); setLoading(true);
-        try {
-            const [b, e, dRes, pRes] = await Promise.all([
-                fetch("/api/branches", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/employees", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/organization/departments", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/organization/positions", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
-            ]);
-            setBranches(b.branches || []);
-            setDepartments(dRes.list || []);
-            setPositions(pRes.list || []);
-            if (e?.ok) setList(e.list || []);
-            else if (e?.error === "UNAUTHORIZED") setMsg("ยังไม่ได้เข้าสู่ระบบ Admin (โปรด login)");
-            else if (e?.error === "FORBIDDEN") setMsg("ไม่มีสิทธิ์ Admin");
-            else setMsg(e?.error || "LOAD_FAILED");
-        } finally { setLoading(false); }
-    }
-
-    useEffect(() => { load(); }, []);
+    // Handled by useQuery
 
     /* ── create ── */
     async function create() {
-        setMsg("");
-        if (!empId.trim()) return setMsg("กรุณากรอกรหัสพนักงาน");
-        if (!name.trim()) return setMsg("กรุณากรอกชื่อ-สกุล");
+        if (!empId.trim()) {
+            showToast("กรุณากรอกรหัสพนักงาน", "bad");
+            return;
+        }
+        if (!name.trim()) {
+            showToast("กรุณากรอกชื่อ-สกุล", "bad");
+            return;
+        }
         setSaving(true);
         try {
             const r = await fetch("/api/admin/employees", {
@@ -289,7 +300,7 @@ export default function AdminEmployeesPage() {
                     UNAUTHORIZED: "ยังไม่ได้เข้าสู่ระบบ Admin",
                     FORBIDDEN: "ไม่มีสิทธิ์ Admin",
                 };
-                return setMsg(map[t?.error] || t?.error || "CREATE_FAILED");
+                return showToast(map[t?.error] || t?.error || "CREATE_FAILED", "bad");
             }
             showToast(`เพิ่ม ${name.trim()} แล้ว`);
             setNewEmpId(empId.trim());
@@ -308,7 +319,7 @@ export default function AdminEmployeesPage() {
             setIsCheckinExempt(false);
             setProbationEndDate("");
             setCreateModalOpen(false);
-            await load();
+            queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
         } finally { setSaving(false); }
     }
 
@@ -378,7 +389,7 @@ export default function AdminEmployeesPage() {
             }
             showToast(`อัปเดต ${editDraft.name} แล้ว`);
             setEditDraft(null);
-            await load();
+            queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
         } finally { setSaving(false); }
     }
 
@@ -437,7 +448,7 @@ export default function AdminEmployeesPage() {
             });
             if (r.ok) {
                 showToast(next ? `เปิดใช้งาน ${x.name}` : `ปิดใช้งาน ${x.name}`, next ? "ok" : "bad");
-                setList((prev) => prev.map((e) => e.emp_id === x.emp_id ? { ...e, is_active: next } : e));
+                queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
             } else showToast("เกิดข้อผิดพลาด", "bad");
         } finally { setSaving(false); }
     }
@@ -522,7 +533,7 @@ export default function AdminEmployeesPage() {
                     <button className={styles.btnAdd} onClick={() => setCreateModalOpen(true)}>
                         + เพิ่มพนักงาน
                     </button>
-                    <button className={styles.btnGhost} onClick={load} disabled={loading}>
+                    <button className={styles.btnGhost} onClick={() => reload()} disabled={loading}>
                         {loading ? "กำลังโหลด..." : "↻ รีเฟรช"}
                     </button>
                 </div>
@@ -604,12 +615,12 @@ export default function AdminEmployeesPage() {
                                     <option key={d.id} value={d.id}>{d.name}</option>
                                 ))}
                             </select>
-                            <button className={styles.btnRefresh} onClick={load} disabled={loading} title="รีเฟรช">
+                            <button className={styles.btnRefresh} onClick={() => reload()} disabled={loading} title="รีเฟรช">
                                 ↻
                             </button>
-                            <button 
-                                className={styles.btnGhost} 
-                                onClick={handleExport} 
+                            <button
+                                className={styles.btnGhost}
+                                onClick={handleExport}
                                 disabled={loading}
                                 style={{ height: 38 }}
                                 title="ส่งออกไฟล์ CSV"
@@ -642,8 +653,8 @@ export default function AdminEmployeesPage() {
                             <div>
                                 <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 700, color: "var(--text)" }}>คู่มือการส่งออกข้อมูล (Data Export Guide)</h4>
                                 <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-3)", lineHeight: 1.5 }}>
-                                    ท่านสามารถกรองข้อมูลพนักงานตาม <b>สาขา, แผนก, ประเภทเงินเดือน</b> หรือ <b>สถานะ</b> โดยใช้ตัวเลือกด้านบน 
-                                    ระบบจะแสดงรายการที่ตรงตามเงื่อนไขโดยอัตโนมัติ และท่านสามารถกดปุ่ม <b>Export</b> เพื่อดาวน์โหลดไฟล์ CSV 
+                                    ท่านสามารถกรองข้อมูลพนักงานตาม <b>สาขา, แผนก, ประเภทเงินเดือน</b> หรือ <b>สถานะ</b> โดยใช้ตัวเลือกด้านบน
+                                    ระบบจะแสดงรายการที่ตรงตามเงื่อนไขโดยอัตโนมัติ และท่านสามารถกดปุ่ม <b>Export</b> เพื่อดาวน์โหลดไฟล์ CSV
                                     สำหรับนำไปใช้งานต่อใน Excel ได้ทันที
                                 </p>
                             </div>
@@ -679,12 +690,12 @@ export default function AdminEmployeesPage() {
                                                 <td style={{ fontWeight: 600, color: "var(--text)" }}>
                                                     {x.name} {x.nickname && <span style={{ color: "var(--text-3)", fontSize: 13, fontWeight: 500 }}>({x.nickname})</span>}
                                                     {!x.line_user_id && x.is_active && (
-                                                        <span style={{ 
-                                                            marginLeft: 8, 
-                                                            fontSize: 10, 
-                                                            color: "var(--red)", 
-                                                            background: "rgba(239, 68, 68, 0.1)", 
-                                                            padding: "2px 6px", 
+                                                        <span style={{
+                                                            marginLeft: 8,
+                                                            fontSize: 10,
+                                                            color: "var(--red)",
+                                                            background: "rgba(239, 68, 68, 0.1)",
+                                                            padding: "2px 6px",
                                                             borderRadius: 4,
                                                             fontWeight: 600,
                                                             border: "1px solid rgba(239, 68, 68, 0.2)"
@@ -733,8 +744,8 @@ export default function AdminEmployeesPage() {
                                                     )}
                                                 </td>
                                                 <td style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 13 }}>
-                                                    <div 
-                                                        style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer" }} 
+                                                    <div
+                                                        style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer" }}
                                                         onClick={(e) => { e.stopPropagation(); toggleSalaryVisibility(x.emp_id); }}
                                                         title="คลิกเพื่อดู/ซ่อน เงินเดือน"
                                                     >
@@ -795,10 +806,10 @@ export default function AdminEmployeesPage() {
                                                                     probation_meal_allowance: x.probation_meal_allowance,
                                                                     probation_travel_allowance: x.probation_travel_allowance,
                                                                     fixed_accommodation_allowance: x.fixed_accommodation_allowance ? String(x.fixed_accommodation_allowance) : "",
-                fixed_meal_allowance: x.fixed_meal_allowance ? String(x.fixed_meal_allowance) : "",
-                fixed_travel_allowance: x.fixed_travel_allowance ? String(x.fixed_travel_allowance) : "",
-                fixed_tax_deduction: x.fixed_tax_deduction ? String(x.fixed_tax_deduction) : "",
-                position_allowance: x.position_allowance ? String(x.position_allowance) : "",
+                                                                    fixed_meal_allowance: x.fixed_meal_allowance ? String(x.fixed_meal_allowance) : "",
+                                                                    fixed_travel_allowance: x.fixed_travel_allowance ? String(x.fixed_travel_allowance) : "",
+                                                                    fixed_tax_deduction: x.fixed_tax_deduction ? String(x.fixed_tax_deduction) : "",
+                                                                    position_allowance: x.position_allowance ? String(x.position_allowance) : "",
                                                                     general_allowance: x.general_allowance ? String(x.general_allowance) : "",
                                                                     national_id_card: x.national_id_card || "",
                                                                     address: x.address || "",
@@ -1015,7 +1026,7 @@ export default function AdminEmployeesPage() {
                                     <div style={{ flex: 1 }}>
                                         <label className={styles.lbl}>ค่าเดินทาง (Travel)</label>
                                         <input type="number" className={styles.input} placeholder="0.00" value={fixedTravelAllowance} onChange={(e) => setFixedTravelAllowance(e.target.value)} />
-                                </div>
+                                    </div>
                                     <div style={{ flex: 1 }}>
                                         <label className={styles.lbl}>หักภาษีรายเดือน (คงที่)</label>
                                         <input type="number" className={styles.input} placeholder="0.00" value={fixedTaxDeduction} onChange={(e) => setFixedTaxDeduction(e.target.value)} />

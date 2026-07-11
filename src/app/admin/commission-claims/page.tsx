@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import { 
@@ -35,10 +36,10 @@ type CommissionClaim = {
 };
 
 export default function AdminCommissionClaimsPage() {
+    const queryClient = useQueryClient();
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
-    const [claims, setClaims] = useState<CommissionClaim[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [statusFilter, setStatusFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -50,22 +51,15 @@ export default function AdminCommissionClaimsPage() {
         setPendingAction(null);
     };
 
-    useEffect(() => {
-        fetchClaims();
-    }, []);
-
-    const fetchClaims = async () => {
-        setLoading(true);
-        try {
+    const { data: claims = [], isLoading: loading } = useQuery<CommissionClaim[]>({
+        queryKey: ['admin-commission-claims', startDate, endDate],
+        queryFn: async () => {
             const res = await fetch(`/api/admin/commission-claims?start_date=${startDate}&end_date=${endDate}`);
+            if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
-            if (data.ok) setClaims(data.list);
-        } catch (error) {
-            console.error("Fetch error:", error);
-        } finally {
-            setLoading(false);
+            return data.list || [];
         }
-    };
+    });
 
     const handleExportExcel = () => {
         const url = `/api/admin/export/commission_claims_excel?start_date=${startDate}&end_date=${endDate}`;
@@ -85,7 +79,7 @@ export default function AdminCommissionClaimsPage() {
         if (!pendingAction) return;
         const { id, action, perPersonCommission } = pendingAction;
 
-        setLoading(true);
+        setSaving(true);
         try {
             const res = await fetch("/api/admin/commission-claims", {
                 method: "PATCH",
@@ -95,15 +89,14 @@ export default function AdminCommissionClaimsPage() {
             const data = await res.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ดำเนินการเรียบร้อยแล้ว", type: "ok" });
-                fetchClaims();
+                queryClient.invalidateQueries({ queryKey: ['admin-commission-claims'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
-                setLoading(false);
             }
         } catch (error) {
             setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
-            setLoading(false);
         } finally {
+            setSaving(false);
             setPendingAction(null);
         }
     };
@@ -160,7 +153,6 @@ export default function AdminCommissionClaimsPage() {
                             className={styles.input}
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            onBlur={fetchClaims}
                         />
                         <span style={{ color: "var(--text4)" }}>-</span>
                         <input
@@ -168,7 +160,6 @@ export default function AdminCommissionClaimsPage() {
                             className={styles.input}
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            onBlur={fetchClaims}
                         />
                     </div>
                 </div>
@@ -201,7 +192,7 @@ export default function AdminCommissionClaimsPage() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading}>
+                    <button className={styles.btnRefresh} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-commission-claims'] })} disabled={loading}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
                     </button>
                     <button 

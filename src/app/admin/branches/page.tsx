@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import { DocumentTextIcon, PencilSquareIcon, SparklesIcon } from "@heroicons/react/24/outline";
@@ -15,8 +16,19 @@ interface Branch {
 }
 
 export default function AdminBranchesPage() {
-    const [loading, setLoading] = useState(true);
-    const [branches, setBranches] = useState<Branch[]>([]);
+    const queryClient = useQueryClient();
+    const { data: branches = [], isLoading: queryLoading } = useQuery({
+        queryKey: ["admin-branches"],
+        queryFn: async () => {
+            const r = await fetch("/api/admin/branches");
+            const data = await r.json();
+            if (!data.ok) throw new Error(data.error || "Failed");
+            return (data.list || []) as Branch[];
+        }
+    });
+
+    const [deleting, setDeleting] = useState(false);
+    const loading = queryLoading || deleting;
     const [search, setSearch] = useState("");
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
@@ -37,22 +49,7 @@ export default function AdminBranchesPage() {
     // Delete Confirmation
     const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchBranches();
-    }, []);
-
-    const fetchBranches = async () => {
-        setLoading(true);
-        try {
-            const r = await fetch("/api/admin/branches");
-            const data = await r.json();
-            if (data.ok) setBranches(data.list || []);
-        } catch (e) {
-            console.error("Fetch branches failed", e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // fetchBranches handled by useQuery
 
     const filtered = useMemo(() => {
         return branches.filter(b =>
@@ -96,7 +93,7 @@ export default function AdminBranchesPage() {
 
     const confirmDelete = async () => {
         if (!pendingDelete) return;
-        setLoading(true);
+        setDeleting(true);
         try {
             const r = await fetch("/api/admin/branches", {
                 method: "DELETE",
@@ -106,7 +103,7 @@ export default function AdminBranchesPage() {
             const data = await r.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ลบข้อมูลเรียบร้อยแล้ว", type: "ok" });
-                fetchBranches();
+                queryClient.invalidateQueries({ queryKey: ["admin-branches"] });
             } else {
                 setAlert({ visible: true, message: data.error || "ลบไม่สำเร็จ", type: "error" });
             }
@@ -114,7 +111,7 @@ export default function AdminBranchesPage() {
             setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการลบ", type: "error" });
         } finally {
             setPendingDelete(null);
-            setLoading(false);
+            setDeleting(false);
         }
     };
 
@@ -140,7 +137,7 @@ export default function AdminBranchesPage() {
                     setNewBranchId(form.id.toUpperCase());
                     setTimeout(() => setNewBranchId(null), 3000);
                 }
-                fetchBranches();
+                queryClient.invalidateQueries({ queryKey: ["admin-branches"] });
             } else {
                 setAlert({ visible: true, message: data.error || "บันทึกไม่สำเร็จ", type: "error" });
             }

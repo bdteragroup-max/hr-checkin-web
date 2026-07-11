@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -19,8 +20,17 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function TravelAllowancePage() {
-    const [loading, setLoading] = useState(true);
-    const [history, setHistory] = useState<any[]>([]);
+    const queryClient = useQueryClient();
+
+    const { data: history = [], isLoading: loading } = useQuery({
+        queryKey: ["travel-claims"],
+        queryFn: async () => {
+            const r = await fetch("/api/travel-claims");
+            const data = await r.json();
+            if (data.ok) return data.list || [];
+            return [];
+        }
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [msg, setMsg] = useState({ text: "", type: "" });
 
@@ -36,21 +46,7 @@ export default function TravelAllowancePage() {
     const [hasPreApproval, setHasPreApproval] = useState(false);
     const [isSupervisorShared, setIsSupervisorShared] = useState(false);
 
-    useEffect(() => {
-        fetchHistory();
-    }, []);
-
-    async function fetchHistory() {
-        try {
-            const r = await fetch("/api/travel-claims");
-            const data = await r.json();
-            if (data.ok) setHistory(data.list || []);
-        } catch (e) {
-            console.error("Fetch history failed", e);
-        } finally {
-            setLoading(false);
-        }
-    }
+    // fetchHistory is now handled by useQuery
 
     async function uploadFile(file: File, prefix: string) {
         const formData = new FormData();
@@ -119,7 +115,7 @@ export default function TravelAllowancePage() {
                 setReportFiles([]);
                 setReceiptFiles([]);
                 setIsOvernight(false);
-                fetchHistory();
+                queryClient.invalidateQueries({ queryKey: ["travel-claims"] });
             } else {
                 setMsg({ text: data.error || "เกิดข้อผิดพลาด", type: "bad" });
             }

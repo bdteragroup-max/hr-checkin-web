@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -28,9 +29,29 @@ interface Booking {
 const MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
 export default function AdminMeetingRoomsPage() {
-    const [rooms, setRooms] = useState<Room[]>([]);
-    const [bookings, setBookings] = useState<Booking[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const { data, isLoading: loading } = useQuery({
+        queryKey: ['admin-meeting-rooms'],
+        queryFn: async () => {
+            const params = new URLSearchParams({
+                start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+                end: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+            });
+            const [roomsRes, bookingsRes] = await Promise.all([
+                fetch("/api/meeting-rooms"),
+                fetch(`/api/bookings?${params.toString()}`)
+            ]);
+            const roomsData = await roomsRes.json();
+            const bookingsData = await bookingsRes.json();
+            return {
+                rooms: Array.isArray(roomsData) ? roomsData : [],
+                bookings: Array.isArray(bookingsData) ? bookingsData : []
+            };
+        }
+    });
+
+    const rooms = data?.rooms || [];
+    const bookings = data?.bookings || [];
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [editingRoom, setEditingRoom] = useState<Partial<Room> | null>(null);
     const [activeTab, setActiveTab] = useState<"upcoming" | "history">("history");
@@ -45,31 +66,7 @@ export default function AdminMeetingRoomsPage() {
     const currentYear = now.getFullYear();
     const years = Array.from({ length: 3 }, (_, i) => currentYear - 1 + i);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
 
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const params = new URLSearchParams({
-                start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-                end: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
-            });
-            const [roomsRes, bookingsRes] = await Promise.all([
-                fetch("/api/meeting-rooms"),
-                fetch(`/api/bookings?${params.toString()}`)
-            ]);
-            const roomsData = await roomsRes.json();
-            const bookingsData = await bookingsRes.json();
-            setRooms(Array.isArray(roomsData) ? roomsData : []);
-            setBookings(Array.isArray(bookingsData) ? bookingsData : []);
-        } catch (error) {
-            console.error("Failed to fetch admin data", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleSaveRoom = async () => {
         try {
@@ -79,7 +76,7 @@ export default function AdminMeetingRoomsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(editingRoom)
             });
-            if (res.ok) { setShowRoomModal(false); fetchData(); }
+            if (res.ok) { setShowRoomModal(false); queryClient.invalidateQueries({ queryKey: ['admin-meeting-rooms'] }); }
         } catch { alert("Failed to save room"); }
     };
 
@@ -87,7 +84,7 @@ export default function AdminMeetingRoomsPage() {
         if (!confirm("ยืนยันการยกเลิกการจองนี้?")) return;
         try {
             const res = await fetch(`/api/bookings?id=${id}`, { method: "DELETE" });
-            if (res.ok) fetchData();
+            if (res.ok) queryClient.invalidateQueries({ queryKey: ['admin-meeting-rooms'] });
         } catch { alert("Failed to cancel booking"); }
     };
 

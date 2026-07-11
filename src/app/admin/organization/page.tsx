@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import Link from "next/link";
 import { 
@@ -45,11 +46,32 @@ type JobPosition = {
 };
 
 export default function OrganizationPage() {
-    const [deptLayers, setDeptLayers] = useState<DeptLayer[]>([]); 
-    const [secLayers, setSecLayers] = useState<SectionLayer[]>([]);
-    const [positions, setPositions] = useState<JobPosition[]>([]);
-    const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const { data: orgData, isLoading: loading, refetch: reload } = useQuery({
+        queryKey: ['admin-organization'],
+        queryFn: async () => {
+            const [divRes, deptRes, posRes, branchRes] = await Promise.all([
+                fetch("/api/admin/organization/divisions"),
+                fetch("/api/admin/organization/departments"),
+                fetch("/api/admin/organization/positions"),
+                fetch("/api/admin/branches")
+            ]);
+            const [divData, deptData, posData, branchData] = await Promise.all([
+                divRes.json(), deptRes.json(), posRes.json(), branchRes.json()
+            ]);
+            return {
+                deptLayers: (divData.list || []) as DeptLayer[],
+                secLayers: (deptData.list || []) as SectionLayer[],
+                positions: (posData.list || []) as JobPosition[],
+                branches: (branchData.list || []) as { id: string; name: string }[]
+            };
+        }
+    });
+
+    const deptLayers = orgData?.deptLayers || [];
+    const secLayers = orgData?.secLayers || [];
+    const positions = orgData?.positions || [];
+    const branches = orgData?.branches || [];
     const [viewMode, setViewMode] = useState<"table" | "flowchart">("table");
 
     // Charts & Viewport State
@@ -166,27 +188,7 @@ export default function OrganizationPage() {
         is_ot_eligible: true 
     });
 
-    async function loadData() {
-        setLoading(true);
-        try {
-            const [divRes, deptRes, posRes, branchRes] = await Promise.all([
-                fetch("/api/admin/organization/divisions"),
-                fetch("/api/admin/organization/departments"),
-                fetch("/api/admin/organization/positions"),
-                fetch("/api/admin/branches")
-            ]);
-            const [divData, deptData, posData, branchData] = await Promise.all([
-                divRes.json(), deptRes.json(), posRes.json(), branchRes.json()
-            ]);
-            setDeptLayers(divData.list || []);
-            setSecLayers(deptData.list || []);
-            setPositions(posData.list || []);
-            setBranches(branchData.list || []);
-        } catch (e) { console.error(e); }
-        setLoading(false);
-    }
-
-    useEffect(() => { loadData(); }, []);
+    // Handled by useQuery
 
     // AUTO-CENTER ON VIEW CHANGE
     useEffect(() => {
@@ -243,7 +245,7 @@ export default function OrganizationPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(deptModal)
         });
-        if (res.ok) { setDeptModal({ open: false, isEdit: false, id: 0, name: "" }); loadData(); }
+        if (res.ok) { setDeptModal({ open: false, isEdit: false, id: 0, name: "" }); queryClient.invalidateQueries({ queryKey: ['admin-organization'] }); }
     }
     // ... other save functions (omitted for space, assume same as before)
     async function saveSec(e: React.FormEvent) {
@@ -253,7 +255,7 @@ export default function OrganizationPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(secModal)
         });
-        if (res.ok) { setSecModal({ open: false, id: 0, name: "", division_id: 0, isEdit: false }); loadData(); }
+        if (res.ok) { setSecModal({ open: false, id: 0, name: "", division_id: 0, isEdit: false }); queryClient.invalidateQueries({ queryKey: ['admin-organization'] }); }
     }
     async function savePos(e: React.FormEvent) {
         e.preventDefault();
@@ -262,13 +264,13 @@ export default function OrganizationPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(posModal)
         });
-        if (res.ok) { setPosModal({ ...posModal, open: false }); loadData(); }
+        if (res.ok) { setPosModal({ ...posModal, open: false }); queryClient.invalidateQueries({ queryKey: ['admin-organization'] }); }
     }
     async function deleteItem(type: 'dept'|'sec'|'pos', id: number) {
         if (!confirm("Are you sure?")) return;
         const endpoint = type === 'dept' ? '/api/admin/organization/divisions' : (type === 'sec' ? '/api/admin/organization/departments' : '/api/admin/organization/positions');
         const res = await fetch(endpoint, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
-        if (res.ok) loadData();
+        if (res.ok) queryClient.invalidateQueries({ queryKey: ['admin-organization'] });
     }
 
     if (loading) return <div className={styles.loading}>Generating Premium Chart...</div>;

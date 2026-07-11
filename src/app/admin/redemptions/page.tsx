@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./redemptions.module.css";
 import Link from "next/link";
 
@@ -36,9 +37,8 @@ interface Redemption {
 }
 
 export default function AdminRedemptionsPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
-  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Reject Modal State
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -46,24 +46,14 @@ export default function AdminRedemptionsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const fetchRedemptions = async (status: "pending" | "history") => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/redemptions?status=${status}`);
+  const { data: redemptions = [], isLoading: loading } = useQuery<Redemption[]>({
+    queryKey: ['admin-redemptions', activeTab],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/redemptions?status=${activeTab}`);
       const data = await res.json();
-      if (data.success) {
-        setRedemptions(data.redemptions);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      return data.success ? data.redemptions : [];
     }
-  };
-
-  useEffect(() => {
-    fetchRedemptions(activeTab);
-  }, [activeTab]);
+  });
 
   const handleFulfill = async (id: number) => {
     if (!confirm("คุณแน่ใจหรือไม่ที่จะอนุมัติคำขอนี้?")) return;
@@ -75,7 +65,7 @@ export default function AdminRedemptionsPage() {
       const data = await res.json();
       if (data.success) {
         alert("อนุมัติสำเร็จ");
-        fetchRedemptions(activeTab);
+        queryClient.invalidateQueries({ queryKey: ['admin-redemptions'] });
       } else {
         alert(data.error || "ไม่สามารถอนุมัติได้");
       }
@@ -110,7 +100,7 @@ export default function AdminRedemptionsPage() {
       if (data.success) {
         alert("ปฏิเสธคำขอและคืนเหรียญเรียบร้อยแล้ว");
         setRejectModalOpen(false);
-        fetchRedemptions(activeTab);
+        queryClient.invalidateQueries({ queryKey: ['admin-redemptions'] });
       } else {
         alert(data.error || "ไม่สามารถปฏิเสธได้");
       }

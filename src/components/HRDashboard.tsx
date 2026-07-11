@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
-import { 
-  UsersIcon, UserGroupIcon, UserIcon, UserPlusIcon, ArrowRightStartOnRectangleIcon, 
+import {
+  UsersIcon, UserGroupIcon, UserIcon, UserPlusIcon, ArrowRightStartOnRectangleIcon,
   ArrowUpIcon, ArrowDownIcon, ArrowDownTrayIcon, ArrowPathIcon
 } from "@heroicons/react/24/outline";
 import styles from "./HRDashboard.module.css";
@@ -48,49 +49,37 @@ interface ChartData {
 }
 
 export default function HRDashboard() {
-  const [data, setData] = React.useState<HRData | null>(null);
-  const [deptChartData, setDeptChartData] = React.useState<ChartData[]>([]);
-  const [genderChartData, setGenderChartData] = React.useState<ChartData[]>([]);
-  const [ageChartData, setAgeChartData] = React.useState<ChartData[]>([]);
-  const [turnoverChartData, setTurnoverChartData] = React.useState<{month: string; rate: number; resigned: number}[]>([]);
-  const [leaveChartData, setLeaveChartData] = React.useState<{types: string[], data: any[], summary?: any[], totalDays?: number, totalRequests?: number}>({types: [], data: []});
   const [selectedLeaveType, setSelectedLeaveType] = React.useState<string>('all');
-  const [newResignedChartData, setNewResignedChartData] = React.useState<ChartData[]>([]);
-  const [expiringContractsData, setExpiringContractsData] = React.useState<{name: string, role: string, dept: string, date: string}[]>([]);
-  const [performancesData, setPerformancesData] = React.useState<{grade: string, count: number, pct: string, badge: string}[]>([]);
-  const [trainingData, setTrainingData] = React.useState<{totalEmployees: number, trainedEmployees: number, percentage: number, recentTrainings: any[]}>({totalEmployees: 0, trainedEmployees: 0, percentage: 0, recentTrainings: []});
-  const [isLoading, setIsLoading] = React.useState<boolean>(true);
-  
+
   // Date Filters
   const [startDate, setStartDate] = React.useState<string>('');
   const [endDate, setEndDate] = React.useState<string>('');
 
-  React.useEffect(() => {
-    let url = '/api/admin/dashboard/hr';
-    if (startDate && endDate) {
-      url += `?start=${startDate}&end=${endDate}`;
+  const { data: rawData, isLoading } = useQuery({
+    queryKey: ['hr-dashboard', startDate, endDate],
+    queryFn: async () => {
+      let url = '/api/admin/dashboard/hr';
+      if (startDate && endDate) {
+        url += `?start=${startDate}&end=${endDate}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch HR data');
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || 'Failed to fetch HR data');
+      return json;
     }
+  });
 
-    setIsLoading(true);
-    fetch(url)
-      .then(res => res.json())
-      .then(res => {
-        if (res.ok) {
-          if (res.kpis) setData(res.kpis);
-          if (res.charts?.deptData) setDeptChartData(res.charts.deptData);
-          if (res.charts?.genderData) setGenderChartData(res.charts.genderData);
-          if (res.charts?.ageData) setAgeChartData(res.charts.ageData);
-          if (res.charts?.turnoverData) setTurnoverChartData(res.charts.turnoverData);
-          if (res.charts?.leaveData) setLeaveChartData(res.charts.leaveData);
-          if (res.charts?.newResignedData) setNewResignedChartData(res.charts.newResignedData);
-          if (res.charts?.expiringContracts) setExpiringContractsData(res.charts.expiringContracts);
-          if (res.charts?.performances) setPerformancesData(res.charts.performances);
-          if (res.charts?.training) setTrainingData(res.charts.training);
-        }
-      })
-      .catch(err => console.error("Error loading HR Data", err))
-      .finally(() => setIsLoading(false));
-  }, [startDate, endDate]);
+  const data = (rawData?.kpis ?? null) as HRData | null;
+  const deptChartData = (rawData?.charts?.deptData ?? []) as ChartData[];
+  const genderChartData = (rawData?.charts?.genderData ?? []) as ChartData[];
+  const ageChartData = (rawData?.charts?.ageData ?? []) as ChartData[];
+  const turnoverChartData = (rawData?.charts?.turnoverData ?? []) as { month: string; rate: number; resigned: number }[];
+  const leaveChartData = (rawData?.charts?.leaveData ?? { types: [], data: [] }) as { types: string[], data: any[], summary?: any[], totalDays?: number, totalRequests?: number };
+  const newResignedChartData = (rawData?.charts?.newResignedData ?? []) as ChartData[];
+  const expiringContractsData = (rawData?.charts?.expiringContracts ?? []) as { name: string, role: string, dept: string, date: string }[];
+  const performancesData = (rawData?.charts?.performances ?? []) as { grade: string, count: number, pct: string, badge: string }[];
+  const trainingData = (rawData?.charts?.training ?? { totalEmployees: 0, trainedEmployees: 0, percentage: 0, recentTrainings: [] }) as { totalEmployees: number, trainedEmployees: number, percentage: number, recentTrainings: any[] };
 
   return (
     <div className={styles.dashboardContainer} style={{ position: 'relative', minHeight: 400 }}>
@@ -107,28 +96,28 @@ export default function HRDashboard() {
       {/* Date Filter */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20, gap: 10, alignItems: 'center' }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#475569' }}>กรองข้อมูล:</span>
-        <input 
-          type="date" 
-          value={startDate} 
-          onChange={e => setStartDate(e.target.value)} 
-          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', outline: 'none' }} 
+        <input
+          type="date"
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', outline: 'none' }}
         />
         <span style={{ fontSize: 14, color: '#475569' }}>ถึง</span>
-        <input 
-          type="date" 
-          value={endDate} 
-          onChange={e => setEndDate(e.target.value)} 
-          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', outline: 'none' }} 
+        <input
+          type="date"
+          value={endDate}
+          onChange={e => setEndDate(e.target.value)}
+          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', outline: 'none' }}
         />
         {(startDate || endDate) && (
-          <button 
+          <button
             onClick={() => { setStartDate(''); setEndDate(''); }}
             style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', fontWeight: 600 }}
           >
             ล้างตัวกรอง
           </button>
         )}
-        <button 
+        <button
           onClick={() => {
             const params = new URLSearchParams();
             if (startDate) params.append('start', startDate);
@@ -141,7 +130,7 @@ export default function HRDashboard() {
           Export Excel
         </button>
       </div>
-      
+
       {/* 1. KPI Cards */}
       <div className={styles.kpiRow}>
         <div className={styles.kpiCard}>
@@ -151,7 +140,7 @@ export default function HRDashboard() {
             </div>
             <div className={styles.kpiTitle}>จำนวนพนักงานทั้งหมด</div>
           </div>
-          <div className={styles.kpiValue}>{data?.total ?? 0} <span style={{fontSize: 14, fontWeight: 600, color: '#64748b'}}>คน</span></div>
+          <div className={styles.kpiValue}>{data?.total ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>คน</span></div>
           <div className={styles.kpiSub}>
             {data && data.totalDiff >= 0 ? (
               <><span style={{ color: '#16a34a', display: 'flex', alignItems: 'center' }}><ArrowUpIcon width={12} /> {data.totalDiff} คน</span> จากปีที่แล้ว</>
@@ -160,7 +149,7 @@ export default function HRDashboard() {
             )}
           </div>
         </div>
-        
+
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
             <div className={styles.kpiIconWrapper} style={{ background: '#f0fdf4', color: '#16a34a' }}>
@@ -168,7 +157,7 @@ export default function HRDashboard() {
             </div>
             <div className={styles.kpiTitle}>พนักงานประจำ</div>
           </div>
-          <div className={styles.kpiValue}>{data?.permanent ?? 0} <span style={{fontSize: 14, fontWeight: 600, color: '#64748b'}}>คน</span></div>
+          <div className={styles.kpiValue}>{data?.permanent ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>คน</span></div>
           <div className={styles.kpiSub}>{data?.total ? ((data.permanent / data.total) * 100).toFixed(2) : 0}% ของทั้งหมด</div>
         </div>
 
@@ -179,7 +168,7 @@ export default function HRDashboard() {
             </div>
             <div className={styles.kpiTitle}>พนักงานชั่วคราว / ทดลองงาน</div>
           </div>
-          <div className={styles.kpiValue}>{data?.temporary ?? 0} <span style={{fontSize: 14, fontWeight: 600, color: '#64748b'}}>คน</span></div>
+          <div className={styles.kpiValue}>{data?.temporary ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>คน</span></div>
           <div className={styles.kpiSub}>{data?.total ? ((data.temporary / data.total) * 100).toFixed(2) : 0}% ของทั้งหมด</div>
         </div>
 
@@ -190,7 +179,7 @@ export default function HRDashboard() {
             </div>
             <div className={styles.kpiTitle}>พนักงานเข้าใหม่ (ปีนี้)</div>
           </div>
-          <div className={styles.kpiValue}>{data?.newHires ?? 0} <span style={{fontSize: 14, fontWeight: 600, color: '#64748b'}}>คน</span></div>
+          <div className={styles.kpiValue}>{data?.newHires ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>คน</span></div>
           <div className={styles.kpiSub}>
             {data && data.newHiresDiff >= 0 ? (
               <><span style={{ color: '#16a34a', display: 'flex', alignItems: 'center' }}><ArrowUpIcon width={12} /> {data.newHiresDiff} คน</span> จากปีก่อน</>
@@ -207,7 +196,7 @@ export default function HRDashboard() {
             </div>
             <div className={styles.kpiTitle}>พนักงานลาออก (ปีนี้)</div>
           </div>
-          <div className={styles.kpiValue}>{data?.resigned ?? 0} <span style={{fontSize: 14, fontWeight: 600, color: '#64748b'}}>คน</span></div>
+          <div className={styles.kpiValue}>{data?.resigned ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>คน</span></div>
           <div className={styles.kpiSub}>
             {data && data.resignedDiff >= 0 ? (
               <><span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}><ArrowUpIcon width={12} /> {data.resignedDiff} คน</span> จากปีก่อน</>
@@ -227,8 +216,8 @@ export default function HRDashboard() {
               <BarChart data={deptChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={130} tick={{fontSize: 12}} />
-                <RechartsTooltip cursor={{fill: '#f1f5f9'}} />
+                <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 12 }} />
+                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} />
                 <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
@@ -258,9 +247,9 @@ export default function HRDashboard() {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={ageChartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" fontSize={12} interval={0} tick={{width: 70}} />
+                <XAxis dataKey="name" fontSize={12} interval={0} tick={{ width: 70 }} />
                 <YAxis fontSize={12} />
-                <RechartsTooltip cursor={{fill: '#f1f5f9'}} />
+                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} />
                 <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={30} label={{ position: 'top', fontSize: 12, fill: '#334155', fontWeight: 600 }} />
               </BarChart>
             </ResponsiveContainer>
@@ -274,7 +263,7 @@ export default function HRDashboard() {
           <div className={styles.chartTitle}>อัตราการลาออกของพนักงาน (Turnover Rate)</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b', marginBottom: 16 }}>
             {turnoverChartData.length > 0 ? (turnoverChartData.reduce((sum, d) => sum + d.rate, 0) / turnoverChartData.length).toFixed(2) : '0.00'}%
-            <span style={{fontSize: 12, fontWeight: 500, color: '#64748b', marginLeft: 8}}>เฉลี่ยรายเดือน (เป้าหมายไม่เกิน 8%)</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#64748b', marginLeft: 8 }}>เฉลี่ยรายเดือน (เป้าหมายไม่เกิน 8%)</span>
           </div>
           <div className={styles.chartArea} style={{ height: 195 }}>
             <ResponsiveContainer width="100%" height={195}>
@@ -286,7 +275,7 @@ export default function HRDashboard() {
                   if (name === 'rate') return [`${value}%`, 'Turnover Rate'];
                   return [value, name];
                 }} />
-                <Line type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
+                <Line type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -300,7 +289,7 @@ export default function HRDashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" fontSize={11} />
                 <YAxis fontSize={11} />
-                <RechartsTooltip cursor={{fill: '#f1f5f9'}} />
+                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
                 <Bar dataKey="เข้าใหม่" fill="#10b981" radius={[4, 4, 0, 0]} barSize={10} />
                 <Bar dataKey="ลาออก" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={10} />
@@ -398,7 +387,7 @@ export default function HRDashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" fontSize={11} />
                 <YAxis fontSize={11} />
-                <RechartsTooltip cursor={{fill: '#f1f5f9'}} formatter={(value: any, name: any) => [`${value} วัน`, name]} />
+                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} formatter={(value: any, name: any) => [`${value} วัน`, name]} />
                 {selectedLeaveType === 'all' ? (
                   leaveChartData.types.map((type: string, index: number) => (
                     <Bar key={type} dataKey={type} stackId="a" fill={LEAVE_COLORS[index % LEAVE_COLORS.length]} barSize={28} radius={index === leaveChartData.types.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
@@ -430,10 +419,10 @@ export default function HRDashboard() {
               <tbody>
                 {expiringContractsData.map((emp, i) => (
                   <tr key={i}>
-                    <td style={{fontWeight: 500}}>{emp.name}</td>
+                    <td style={{ fontWeight: 500 }}>{emp.name}</td>
                     <td>{emp.role}</td>
                     <td>{emp.dept}</td>
-                    <td style={{color: '#ef4444', fontWeight: 600}}>{emp.date}</td>
+                    <td style={{ color: '#ef4444', fontWeight: 600 }}>{emp.date}</td>
                   </tr>
                 ))}
               </tbody>
@@ -509,7 +498,7 @@ export default function HRDashboard() {
                 {performancesData.map((p, idx) => (
                   <tr key={idx}>
                     <td><span className={`${styles.badge} ${styles[p.badge]}`}>{p.grade}</span></td>
-                    <td style={{fontWeight: 600}}>{p.count}</td>
+                    <td style={{ fontWeight: 600 }}>{p.count}</td>
                     <td>{p.pct}</td>
                   </tr>
                 ))}
@@ -518,7 +507,7 @@ export default function HRDashboard() {
           </div>
         </div>
       </div>
-      
+
     </div>
   );
 }

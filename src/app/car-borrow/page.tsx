@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../assets/borrow/page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import {
@@ -69,10 +70,30 @@ type Asset = {
 };
 
 export default function CarBorrowPage() {
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<"borrow" | "my">("borrow");
-    const [assets, setAssets] = useState<Asset[]>([]);
-    const [myBorrowings, setMyBorrowings] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+
+    const { data: assets = [], isLoading: isLoadingAssets } = useQuery({
+        queryKey: ["assets", "available", "Car"],
+        queryFn: async () => {
+            const res = await fetch("/api/assets/available?category=Car");
+            const data = await res.json();
+            return Array.isArray(data) ? data as Asset[] : [];
+        },
+        enabled: activeTab === "borrow"
+    });
+
+    const { data: myBorrowings = [], isLoading: isLoadingMy } = useQuery({
+        queryKey: ["assets", "my", "Car"],
+        queryFn: async () => {
+            const res = await fetch("/api/assets/my?category=Car");
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+        },
+        enabled: activeTab === "my"
+    });
+
+    const loading = activeTab === "borrow" ? isLoadingAssets : isLoadingMy;
     const [search, setSearch] = useState("");
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -116,10 +137,6 @@ export default function CarBorrowPage() {
     });
 
     useEffect(() => {
-        loadData();
-    }, [activeTab]);
-
-    useEffect(() => {
         if (selectedAsset) {
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 10);
@@ -135,24 +152,7 @@ export default function CarBorrowPage() {
         }
     }, [selectedAsset]);
 
-    async function loadData() {
-        setLoading(true);
-        try {
-            if (activeTab === "borrow") {
-                const res = await fetch("/api/assets/available?category=Car");
-                const data = await res.json();
-                setAssets(Array.isArray(data) ? data : []);
-            } else {
-                const res = await fetch("/api/assets/my?category=Car");
-                const data = await res.json();
-                setMyBorrowings(Array.isArray(data) ? data : []);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    }
+    // Data fetching is now handled by useQuery hooks
 
     async function compressImage(file: File): Promise<File | Blob> {
         return new Promise((resolve) => {
@@ -297,7 +297,7 @@ export default function CarBorrowPage() {
                     borrow_is_insurance_ok: true,
                     borrow_inspection_remark: ""
                 }));
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 const errMsg = 
                     data.error === "TIME_OVERLAP" ? data.message :
@@ -351,7 +351,7 @@ export default function CarBorrowPage() {
             if (data.ok) {
                 setAlert({ visible: true, message: "แจ้งคืนรถยนต์สำเร็จ แจ้งเตือนไปยังหัวหน้าและ HR แล้ว", type: "ok" });
                 setShowReturnModal(false);
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -374,7 +374,7 @@ export default function CarBorrowPage() {
             const data = await res.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ยกเลิกการจองเรียบร้อยแล้ว", type: "ok" });
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาดในการยกเลิก", type: "error" });
             }

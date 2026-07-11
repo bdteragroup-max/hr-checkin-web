@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { MagnifyingGlassIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
 
 interface DirectoryEmp {
@@ -16,21 +17,17 @@ interface DirectoryEmp {
 }
 
 export default function DirectoryPage() {
-    const [employees, setEmployees] = useState<DirectoryEmp[]>([]);
     const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetch("/api/directory")
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    setEmployees(data.list);
-                }
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    }, []);
+    const { data: employees = [], isLoading: loading } = useQuery({
+        queryKey: ["directory"],
+        queryFn: async () => {
+            const res = await fetch("/api/directory");
+            const data = await res.json();
+            if (!data.ok) throw new Error("Failed to fetch directory");
+            return data.list as DirectoryEmp[];
+        }
+    });
 
     const filtered = employees.filter(e => {
         const query = search.toLowerCase();

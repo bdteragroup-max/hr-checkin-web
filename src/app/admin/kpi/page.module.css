@@ -276,6 +276,12 @@
     color: #64748b;
 }
 
+.badge_PENDING_APPROVAL,
+.badge_pending_approval {
+    background: #fef3c7;
+    color: #d97706;
+}
+
 .actions {
     display: flex;
     gap: 8px;

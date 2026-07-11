@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import styles from "./page.module.css";
 import { 
@@ -61,8 +62,43 @@ function AdminAssetsPageInner() {
     const type = searchParams.get("type") || "item";
     const isEquipment = type === "equipment";
 
-    const [assets, setAssets] = useState<Asset[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const { data: assets = [], isLoading: loading } = useQuery<Asset[]>({
+        queryKey: ['admin-assets', type],
+        queryFn: async () => {
+            const url = isEquipment 
+                ? "/api/admin/assets?category_exclude=Car"
+                : "/api/admin/products";
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            
+            return data.map((p: any) => {
+                const borrowings = p.product_borrowings || p.asset_borrowings || [];
+                const activeBorrowings = borrowings.filter((b: any) => b.status === "borrowed" || b.status === "reserved");
+                let borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + (b.quantity || 1), 0);
+                
+                // For equipment, if status says borrowed but no records found, force it to 1 for display
+                if (isEquipment && p.status === "borrowed" && borrowedCount === 0) {
+                    borrowedCount = 1;
+                }
+
+                const stock = isEquipment ? 1 : (p.stock || 0);
+
+                return {
+                    id: p.id,
+                    asset_id: p.product_code || p.asset_id,
+                    name: p.product_name || p.name,
+                    category: p.category,
+                    company_name: p.company_name || p.company_owner,
+                    status: p.status,
+                    stock: stock,
+                    borrowed_count: borrowedCount,
+                    asset_borrowings: borrowings
+                };
+            });
+        }
+    });
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
     
     // Deletion Modal state
@@ -141,54 +177,7 @@ function AdminAssetsPageInner() {
     const [historyLoading, setHistoryLoading] = useState(false);
     const [assetHistory, setAssetHistory] = useState<any[]>([]);
 
-    async function loadAssets() {
-        setLoading(true);
-        try {
-            const url = isEquipment 
-                ? "/api/admin/assets?category_exclude=Car"
-                : "/api/admin/products";
-            const res = await fetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                
-                // Normalize for UI
-                const normalized = data.map((p: any) => {
-                    const borrowings = p.product_borrowings || p.asset_borrowings || [];
-                    const activeBorrowings = borrowings.filter((b: any) => b.status === "borrowed" || b.status === "reserved");
-                    let borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + (b.quantity || 1), 0);
-                    
-                    // For equipment, if status says borrowed but no records found, force it to 1 for display
-                    if (isEquipment && p.status === "borrowed" && borrowedCount === 0) {
-                        borrowedCount = 1;
-                    }
 
-                    const stock = isEquipment ? 1 : (p.stock || 0);
-
-                    return {
-                        id: p.id,
-                        asset_id: p.product_code || p.asset_id,
-                        name: p.product_name || p.name,
-                        category: p.category,
-                        company_name: p.company_name || p.company_owner,
-                        status: p.status,
-                        stock: stock,
-                        borrowed_count: borrowedCount,
-                        asset_borrowings: borrowings
-                    };
-                });
-                
-                setAssets(normalized);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        loadAssets();
-    }, [type]);
 
     function openAddModal() {
         setIsEditing(false);
@@ -246,7 +235,7 @@ function AdminAssetsPageInner() {
             if (data.ok) {
                 setAlert({ visible: true, message: `บันทึกข้อมูล ${assetForm.name} เรียบร้อยแล้ว`, type: "ok" });
                 setShowAssetModal(false);
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-assets'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -277,7 +266,7 @@ function AdminAssetsPageInner() {
             const data = await res.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ลบข้อมูลเรียบร้อยแล้ว", type: "ok" });
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-assets'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -320,7 +309,7 @@ function AdminAssetsPageInner() {
             if (data.ok) {
                 setAlert({ visible: true, message: `รับคืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}เรียบร้อยแล้ว`, type: "ok" });
                 setShowReturnModal(false);
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-assets'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -1031,7 +1020,7 @@ function AdminAssetsPageInner() {
                 asset={selectedAsset}
                 type={type as any}
                 onSuccess={() => {
-                    loadAssets();
+                    queryClient.invalidateQueries({ queryKey: ['admin-assets'] });
                     setAlert({ visible: true, message: `บันทึกการยืม${isEquipment ? 'อุปกรณ์' : 'สินค้า'}สำเร็จ`, type: "ok" });
                 }}
             />

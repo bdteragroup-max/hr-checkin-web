@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { 
     CheckCircleIcon, 
@@ -230,10 +231,52 @@ function TimeCard() {
    MAIN PAGE
 ────────────────────────────────────────── */
 export default function ProjectCheckinPage() {
-    const [me, setMe] = useState<Me | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [today, setToday] = useState<TodayItem[]>([]);
+    const queryClient = useQueryClient();
+
+    const { data: me } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const r = await fetch("/api/me");
+            if (!r.ok) { window.location.href = "/"; throw new Error("Not logged in"); }
+            return r.json() as Promise<Me>;
+        }
+    });
+
+    const { data: wpData, isLoading: isPlanLoading } = useQuery({
+        queryKey: ["work-plans"],
+        queryFn: async () => {
+            const r = await fetch("/api/work-plans");
+            return r.json();
+        }
+    });
+    const planSubmittedToday = wpData?.ok && wpData?.plan;
+
+    const { data: branches = [] } = useQuery({
+        queryKey: ["branches"],
+        queryFn: async () => {
+            const r = await fetch("/api/branches");
+            const d = await r.json();
+            return (d.branches || []) as Branch[];
+        }
+    });
+
+    const { data: projects = [] } = useQuery({
+        queryKey: ["projects"],
+        queryFn: async () => {
+            const r = await fetch("/api/projects");
+            const d = await r.json();
+            return (d.projects || []) as Project[];
+        }
+    });
+
+    const { data: today = [], refetch: refreshToday } = useQuery({
+        queryKey: ["checkins"],
+        queryFn: async () => {
+            const r = await fetch("/api/checkins");
+            const d = await r.json();
+            return (d.list || []) as TodayItem[];
+        }
+    });
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "error", hasShared: false, isMandatory: false });
     const closeAlert = useCallback((sharedClick = false) => {
@@ -272,10 +315,7 @@ export default function ProjectCheckinPage() {
     const [newCusGps, setNewCusGps] = useState<{ lat: number, lng: number } | null>(null);
     const [isSavingCus, setIsSavingCus] = useState(false);
 
-    // Work Plan State
     const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
-    const [isPlanLoading, setIsPlanLoading] = useState(true);
     const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
     useEffect(() => {
@@ -284,29 +324,7 @@ export default function ProjectCheckinPage() {
         }
     }, [isPlanLoading, planSubmittedToday, me]);
 
-    useEffect(() => {
-        (async () => {
-            const r = await fetch("/api/me");
-            if (!r.ok) return (window.location.href = "/");
-            const meData = await r.json();
-            setMe(meData);
-
-            // Check if plan submitted today
-            const wp = await fetch("/api/work-plans", { cache: "no-store" });
-            const wpData = await wp.json();
-            if (wpData.ok && wpData.plan) {
-                setPlanSubmittedToday(true);
-            }
-            setIsPlanLoading(false);
-
-            const b = await fetch("/api/branches");
-            const bd = await b.json();
-            setBranches(bd.branches || []);
-
-            fetchProjects();
-            refreshToday();
-        })();
-    }, []);
+    // Data fetching is now handled by useQuery hooks
 
     // Watch for GPS changes aggressively to show distance when selecting
     useEffect(() => {
@@ -314,9 +332,7 @@ export default function ProjectCheckinPage() {
     }, []);
 
     async function fetchProjects() {
-        const pRes = await fetch("/api/projects");
-        const pData = await pRes.json().catch(() => ({}));
-        setProjects(pData.projects || []);
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
     }
 
     useEffect(() => {
@@ -330,11 +346,8 @@ export default function ProjectCheckinPage() {
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [preview, isSubmitting]);
 
-    async function refreshToday() {
-        const r = await fetch("/api/checkins", { cache: "no-store" });
-        const data = await r.json().catch(() => ({}));
-        setToday(data.list || []);
-    }
+    // refreshToday is now provided by useQuery
+
 
     function showAlert(message: string, type: "error" | "ok" = "error") {
         setAlert({ visible: true, message, type });
@@ -690,7 +703,7 @@ export default function ProjectCheckinPage() {
                 body: JSON.stringify(data)
             });
             if (res.ok) {
-                setPlanSubmittedToday(true);
+                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
                 setShowWorkPlan(false);
                 if (pendingAction) {
                     pendingAction();

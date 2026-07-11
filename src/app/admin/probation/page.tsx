@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { 
     DocumentArrowDownIcon, 
@@ -37,9 +38,7 @@ const CATEGORIES = [
 ];
 
 export default function AdminProbationPage() {
-    const [list, setList] = useState<any[]>([]);
-    const [pendingList, setPendingList] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const [staffType, setStaffType] = useState<'all' | 'trial' | 'regular'>('all');
     const [sendingId, setSendingId] = useState<number | null>(null);
@@ -52,23 +51,18 @@ export default function AdminProbationPage() {
     const [showBreakdown, setShowBreakdown] = useState<string | null>(null); 
     const [saving, setSaving] = useState(false);
 
-    const refresh = () => {
-        setLoading(true);
-        fetch("/api/admin/probation/evaluations")
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) {
-                    setList(data.list || []);
-                    setPendingList(data.pending || []);
-                }
-            })
-            .catch(err => console.error("Refresh Error:", err))
-            .finally(() => setLoading(false));
-    };
+    const { data, isLoading: loading } = useQuery({
+        queryKey: ['admin-probation'],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/probation/evaluations");
+            if (!res.ok) throw new Error("Failed to fetch");
+            const json = await res.json();
+            return { list: json.list || [], pending: json.pending || [] };
+        }
+    });
 
-    useEffect(() => {
-        refresh();
-    }, []);
+    const list: any[] = data?.list || [];
+    const pendingList: any[] = data?.pending || [];
 
     const filtered = (list || []).filter(item => {
         const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -174,7 +168,7 @@ export default function AdminProbationPage() {
             });
             if (res.ok) {
                 setSelectedId(null);
-                refresh();
+                queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
                 alert("เกิดข้อผิดพลาดในการบันทึก");
             }
@@ -203,7 +197,7 @@ export default function AdminProbationPage() {
             const res = await fetch(`/api/admin/probation/evaluations/${id}/send-summary`, { method: "POST" });
             if (res.ok) {
                 alert("ส่งเรียบร้อยแล้ว");
-                refresh();
+                queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
                 alert("เกิดข้อผิดพลาดในการส่ง");
             }

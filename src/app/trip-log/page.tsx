@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import styles from "./page.module.css";
 import {
@@ -55,9 +56,47 @@ function getThaiDateStr() {
    MAIN PAGE
 ────────────────────────────────────────── */
 export default function TripLogPage() {
-    const [me, setMe] = useState<Me | null>(null);
-    const [history, setHistory] = useState<TripItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+
+    const { data: me, isLoading: meLoading } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const r = await fetch("/api/me");
+            if (!r.ok) { window.location.href = "/"; throw new Error("Not logged in"); }
+            return r.json() as Promise<Me>;
+        }
+    });
+
+    const { data: wpData, isLoading: isPlanLoading } = useQuery({
+        queryKey: ["work-plans"],
+        queryFn: async () => {
+            const r = await fetch("/api/work-plans");
+            return r.json();
+        }
+    });
+    const planSubmittedToday = wpData?.ok && wpData?.plan;
+
+    const { data: history = [], isLoading: historyLoading } = useQuery({
+        queryKey: ["checkins", "trip"],
+        queryFn: async () => {
+            const r = await fetch("/api/checkins?trip=true");
+            const data = await r.json();
+            const tripLogs = (data.list || [])
+                .filter((x: any) => x.is_trip || x.type === "Trip-Update")
+                .map((x: any) => ({
+                    id: x.id,
+                    timestamp: x.timestamp,
+                    location: x.remark?.split(" | ")[0] || x.branch_name,
+                    remark: x.remark?.split(" | ")[1] || "",
+                    photo_url: x.photo_url,
+                    lat: x.lat,
+                    lon: x.lon
+                }));
+            return tripLogs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as TripItem[];
+        }
+    });
+
+    const loading = meLoading || isPlanLoading || historyLoading;
 
     // Form State — single field: locationName is required, no separate remark
     const [locationName, setLocationName] = useState("");
@@ -69,8 +108,6 @@ export default function TripLogPage() {
     const [isCameraReady, setIsCameraReady] = useState(false);
     const [pendingAction, setPendingAction] = useState<'update' | 'accommodation' | 'checkout'>('update');
     const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
-    const [isPlanLoading, setIsPlanLoading] = useState(true);
 
     useEffect(() => {
         if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
@@ -89,57 +126,18 @@ export default function TripLogPage() {
 
     // Initial Load
     useEffect(() => {
-        (async () => {
-            try {
-                const rMe = await fetch("/api/me");
-                if (!rMe.ok) { window.location.href = "/"; return; }
-                const meData = await rMe.json();
-                setMe(meData);
-
-                await refreshHistory();
-
-                if (navigator.geolocation) {
-                    navigator.geolocation.watchPosition(
-                        (p) => setGps({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
-                        () => { },
-                        { enableHighAccuracy: true }
-                    );
-                }
-
-                // Check if work plan is already submitted today
-                const planRes = await fetch("/api/work-plans", { cache: "no-store" });
-                const planData = await planRes.json();
-                if (planData.ok && planData.plan) {
-                    setPlanSubmittedToday(true);
-                }
-                setIsPlanLoading(false);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        })();
+        if (navigator.geolocation) {
+            const watchId = navigator.geolocation.watchPosition(
+                (p) => setGps({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
+                () => { },
+                { enableHighAccuracy: true }
+            );
+            return () => navigator.geolocation.clearWatch(watchId);
+        }
     }, []);
 
     async function refreshHistory() {
-        try {
-            const r = await fetch("/api/checkins?trip=true");
-            const data = await r.json();
-            const tripLogs = (data.list || [])
-                .filter((x: any) => x.is_trip || x.type === "Trip-Update")
-                .map((x: any) => ({
-                    id: x.id,
-                    timestamp: x.timestamp,
-                    location: x.remark?.split(" | ")[0] || x.branch_name,
-                    remark: x.remark?.split(" | ")[1] || "",
-                    photo_url: x.photo_url,
-                    lat: x.lat,
-                    lon: x.lon
-                }));
-            setHistory(tripLogs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        } catch (e) {
-            console.error("History Refresh Error:", e);
-        }
+        queryClient.invalidateQueries({ queryKey: ["checkins", "trip"] });
     }
 
     /* ── CAMERA ── */
@@ -190,7 +188,7 @@ export default function TripLogPage() {
             });
             const result = await res.json();
             if (result.ok) {
-                setPlanSubmittedToday(true);
+                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
                 setShowWorkPlan(false);
                 proceedToCamera(pendingAction);
             } else {

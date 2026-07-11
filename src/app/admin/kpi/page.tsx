@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
     ClipboardDocumentListIcon,
     ArrowPathIcon,
@@ -18,8 +19,7 @@ import {
 import styles from "./page.module.css";
 
 export default function AdminKPIPage() {
-    const [list, setList] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const [tab, setTab] = useState<"trial" | "permanent">("permanent");
     
@@ -39,16 +39,15 @@ export default function AdminKPIPage() {
         setShowExportModal(false);
     };
 
-    const refresh = () => {
-        setLoading(true);
-        fetch("/api/admin/kpi")
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) setList(data.list || []);
-            })
-            .catch(err => console.error("Refresh Error:", err))
-            .finally(() => setLoading(false));
-    };
+    const { data: list = [], isLoading: loading } = useQuery<any[]>({
+        queryKey: ['admin-kpi'],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/kpi");
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            return data.list || [];
+        }
+    });
 
     const handleRetroAward = async () => {
         const cat = prompt("กรุณาระบุหมวดหมู่การประเมิน (เช่น MID_YEAR, ANNUAL, PROBATION):", "MID_YEAR");
@@ -75,10 +74,6 @@ export default function AdminKPIPage() {
         }
     };
 
-    useEffect(() => {
-        refresh();
-    }, []);
-
     const filtered = (list || []).filter(item => {
         const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
                              (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
@@ -93,6 +88,8 @@ export default function AdminKPIPage() {
             case "pending_supervisor": return "รอหัวหน้าประเมิน";
             case "pending_employee": return "รอพนักงานประเมิน";
             case "draft": return "ร่าง (ยังไม่ส่ง)";
+            case "PENDING_APPROVAL":
+            case "pending_approval": return "รออนุมัติ";
             default: return status;
         }
     };
@@ -161,7 +158,7 @@ export default function AdminKPIPage() {
                 body: JSON.stringify(editData)
             });
             if (res.ok) {
-                refresh();
+                queryClient.invalidateQueries({ queryKey: ['admin-kpi'] });
                 setSelectedEval(editData);
                 setIsEditMode(false);
             } else {
@@ -189,7 +186,7 @@ export default function AdminKPIPage() {
                     <button className={styles.btnRefresh} onClick={handleRetroAward} style={{ background: '#f59e0b', color: 'white', borderColor: '#d97706' }}>
                         แจกเหรียญย้อนหลัง
                     </button>
-                    <button className={styles.btnRefresh} onClick={refresh} disabled={loading}>
+                    <button className={styles.btnRefresh} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-kpi'] })} disabled={loading}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} /> รีเฟรช
                     </button>
                 </div>

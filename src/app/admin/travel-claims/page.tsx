@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -21,10 +22,10 @@ import {
 import { startOfMonth, endOfMonth } from "date-fns";
 
 export default function AdminTravelClaimsPage() {
+    const queryClient = useQueryClient();
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
-    const [loading, setLoading] = useState(true);
-    const [claims, setClaims] = useState<any[]>([]);
+    const [saving, setSaving] = useState(false);
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
     const [pendingAction, setPendingAction] = useState<{ id: string, status: string } | null>(null);
@@ -37,22 +38,15 @@ export default function AdminTravelClaimsPage() {
         setPendingAction(null);
     };
 
-    useEffect(() => {
-        fetchClaims();
-    }, []);
-
-    async function fetchClaims() {
-        setLoading(true);
-        try {
+    const { data: claims = [], isLoading: loading } = useQuery<any[]>({
+        queryKey: ['admin-travel-claims', startDate, endDate],
+        queryFn: async () => {
             const r = await fetch(`/api/admin/travel-claims?start_date=${startDate}&end_date=${endDate}`);
+            if (!r.ok) throw new Error("Failed to fetch");
             const data = await r.json();
-            if (data.ok) setClaims(data.list || []);
-        } catch (e) {
-            console.error("Fetch claims failed", e);
-        } finally {
-            setLoading(false);
+            return data.list || [];
         }
-    }
+    });
 
     async function handleActionClick(id: string, status: string) {
         setPendingAction({ id, status });
@@ -67,7 +61,7 @@ export default function AdminTravelClaimsPage() {
         if (!pendingAction) return;
         const { id, status } = pendingAction;
 
-        setLoading(true);
+        setSaving(true);
         try {
             const r = await fetch("/api/admin/travel-claims", {
                 method: "POST",
@@ -77,15 +71,14 @@ export default function AdminTravelClaimsPage() {
             const data = await r.json();
             if (data.ok) {
                 setAlert({ visible: true, message: `บันทึกรายการเรียบร้อยแล้ว`, type: "ok" });
-                fetchClaims();
+                queryClient.invalidateQueries({ queryKey: ['admin-travel-claims'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
-                setLoading(false);
             }
         } catch (e: any) {
             setAlert({ visible: true, message: e.message, type: "error" });
-            setLoading(false);
         } finally {
+            setSaving(false);
             setPendingAction(null);
         }
     }
@@ -143,7 +136,6 @@ export default function AdminTravelClaimsPage() {
                             className={styles.input}
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            onBlur={fetchClaims}
                         />
                         <span style={{ color: "var(--text4)" }}>-</span>
                         <input
@@ -151,7 +143,6 @@ export default function AdminTravelClaimsPage() {
                             className={styles.input}
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            onBlur={fetchClaims}
                         />
                     </div>
                 </div>
@@ -180,7 +171,7 @@ export default function AdminTravelClaimsPage() {
                     />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <button className={styles.btnRefresh} onClick={fetchClaims} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button className={styles.btnRefresh} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-travel-claims'] })} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
                     </button>
                     <button 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import { DocumentTextIcon, CameraIcon } from "@heroicons/react/24/outline";
@@ -19,10 +20,10 @@ type Claim = {
 };
 
 export default function AdminBirthdayClaimsPage() {
-    const [claims, setClaims] = useState<Claim[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [filterStatus, setFilterStatus] = useState("pending");
     const [searchQuery, setSearchQuery] = useState("");
+    const [saving, setSaving] = useState(false);
 
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
     const [pendingAction, setPendingAction] = useState<{ id: string, status: 'approved' | 'rejected' } | null>(null);
@@ -32,18 +33,15 @@ export default function AdminBirthdayClaimsPage() {
         setPendingAction(null);
     };
 
-    async function load() {
-        setLoading(true);
-        try {
+    const { data: claims = [], isLoading: loading } = useQuery<Claim[]>({
+        queryKey: ['admin-birthday-claims'],
+        queryFn: async () => {
             const r = await fetch("/api/admin/birthday-claims");
+            if (!r.ok) throw new Error("Failed to fetch");
             const t = await r.json();
-            if (t.ok) setClaims(t.claims || []);
-        } finally {
-            setLoading(false);
+            return t.claims || [];
         }
-    }
-
-    useEffect(() => { load(); }, []);
+    });
 
     async function confirmAction(id: string, status: 'approved' | 'rejected') {
         setPendingAction({ id, status });
@@ -57,7 +55,7 @@ export default function AdminBirthdayClaimsPage() {
     async function executeAction() {
         if (!pendingAction) return;
         const { id, status } = pendingAction;
-        setLoading(true);
+        setSaving(true);
         try {
             const r = await fetch(`/api/admin/birthday-claims/${id}`, {
                 method: "PATCH",
@@ -66,7 +64,7 @@ export default function AdminBirthdayClaimsPage() {
             });
             if (r.ok) {
                 setAlert({ visible: true, message: `ดำเนินการเรียบร้อยแล้ว`, type: "ok" });
-                load();
+                queryClient.invalidateQueries({ queryKey: ['admin-birthday-claims'] });
             } else {
                 setAlert({ visible: true, message: "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -74,7 +72,7 @@ export default function AdminBirthdayClaimsPage() {
             setAlert({ visible: true, message: e.message, type: "error" });
         } finally {
             setPendingAction(null);
-            setLoading(false);
+            setSaving(false);
         }
     }
 
@@ -130,7 +128,7 @@ export default function AdminBirthdayClaimsPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className={styles.btnPrimary} onClick={load} disabled={loading}>
+                <button className={styles.btnPrimary} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-birthday-claims'] })} disabled={loading}>
                     {loading ? "กำลังโหลด..." : "Refresh"}
                 </button>
             </div>

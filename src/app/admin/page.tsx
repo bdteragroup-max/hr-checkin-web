@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import {
     HandRaisedIcon, GiftIcon, PencilSquareIcon, CheckCircleIcon,
@@ -181,6 +182,7 @@ function tabFromQuery(t: string | null): TabKey {
 ══════════════════════════════════════════════ */
 function AdminPageInner() {
     const searchParams = useSearchParams();
+    const queryClient = useQueryClient();
     const [admin, setAdmin] = useState<any>(null);
 
     useEffect(() => {
@@ -215,9 +217,6 @@ function AdminPageInner() {
     } | null>(null);
 
     /* ── Attendance ── */
-    const [allRows, setAllRows] = useState<CheckItem[]>([]);
-    const [attLoading, setAttLoading] = useState(false);
-    const [attMsg, setAttMsg] = useState("");
     const [filterDate, setFilterDate] = useState("");
     const [filterBranch, setFilterBranch] = useState("");
     const [filterSearch, setFilterSearch] = useState("");
@@ -234,8 +233,16 @@ function AdminPageInner() {
     const [holidayName, setHolidayName] = useState("");
 
     /* ── Projects ── */
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [projectsLoading, setProjectsLoading] = useState(false);
+    const { data: projects = [], isLoading: projectsLoading } = useQuery({
+        queryKey: ['admin-projects'],
+        queryFn: async () => {
+            const r = await fetch("/api/projects?all=1", { cache: "no-store" });
+            const d = await r.json();
+            if (!r.ok) throw new Error("Failed");
+            return d.projects || [];
+        },
+        enabled: activeTab === "projects"
+    });
     const [projectsSearch, setProjectsSearch] = useState("");
     const [showProjectModal, setShowProjectModal] = useState(false);
     const [projectForm, setProjectForm] = useState<Partial<Project>>({ id: 0, code: "", name: "", client_name: "", address: "", is_active: true, status: "CURRENT", contact: "", phone: "", lat: null, lng: null, radius_m: 200 });
@@ -334,11 +341,9 @@ function AdminPageInner() {
 
     /* Reload attendance / report when tab switches */
     useEffect(() => {
-        if (activeTab === "attendance") loadAttendance();
         if (activeTab === "leave") loadLeave();
         if (activeTab === "holiday") loadHolidays();
         // if (activeTab === "report") loadReport();
-        if (activeTab === "projects") loadProjects();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
@@ -376,17 +381,27 @@ function AdminPageInner() {
         return p.toString();
     }, [filterDate, filterBranch, filterStatus]);
 
-    async function loadAttendance() {
-        setAttLoading(true); setAttMsg("");
-        try {
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterDate, filterBranch, filterSearch, filterStatus]);
+
+    const { data: attendanceData, isLoading: attQueryLoading, error: attError, refetch: reloadAttendance } = useQuery({
+        queryKey: ['admin-attendance', qs],
+        queryFn: async () => {
             const r = await fetch(`/api/admin/checkins?${qs}`, { cache: "no-store" });
             const data = await r.json().catch(() => ({}));
-            if (!r.ok) { handleAuthError(data); setAllRows([]); setAttMsg(data?.error || "FAILED"); return; }
-            setAllRows(data.list || []);
-            setCurrentPage(1);
-        } catch { setAllRows([]); setAttMsg("โหลดข้อมูลไม่สำเร็จ"); }
-        finally { setAttLoading(false); }
-    }
+            if (!r.ok) {
+                handleAuthError(data);
+                throw new Error(data?.error || "FAILED");
+            }
+            return (data.list || []) as CheckItem[];
+        },
+        enabled: activeTab === "attendance"
+    });
+
+    const allRows = attendanceData || [];
+    const attLoading = attQueryLoading && activeTab === "attendance";
+    const attMsg = attError ? attError.message : "";
 
     const filteredRows = useMemo(() => {
         const q = filterSearch.toLowerCase();
@@ -478,16 +493,6 @@ function AdminPageInner() {
     /* ─────────────────────────────────── */
     /*  PROJECTS                           */
     /* ─────────────────────────────────── */
-    async function loadProjects() {
-        setProjectsLoading(true);
-        try {
-            const r = await fetch("/api/projects?all=1", { cache: "no-store" });
-            if (!r.ok) return;
-            const d = await r.json();
-            setProjects(d.projects || []);
-        } catch { setProjects([]); }
-        finally { setProjectsLoading(false); }
-    }
 
     async function saveProject() {
         if (!projectForm.name?.trim()) { showToast("กรุณากรอกชื่อโครงการ", "bad"); return; }
@@ -501,7 +506,7 @@ function AdminPageInner() {
             if (r.ok) {
                 showToast(`${isEdit ? "แก้ไข" : "เพิ่ม"}โครงการสำเร็จ`);
                 setShowProjectModal(false);
-                loadProjects();
+                queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
             } else {
                 showToast("เกิดข้อผิดพลาด", "bad");
             }
@@ -512,14 +517,14 @@ function AdminPageInner() {
         if (!confirm(`ยืนยันการลบโครงการนี้?`)) return;
         try {
             const r = await fetch(`/api/projects?id=${id}`, { method: "DELETE" });
-            if (r.ok) { showToast("ลบแล้ว"); loadProjects(); }
+            if (r.ok) { showToast("ลบแล้ว"); queryClient.invalidateQueries({ queryKey: ["admin-projects"] }); }
             else showToast("เกิดข้อผิดพลาด", "bad");
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
 
     const filteredProjects = useMemo(() => {
         const q = projectsSearch.toLowerCase();
-        return projects.filter(p =>
+        return projects.filter((p: Project) =>
             !q || p.name.toLowerCase().includes(q) ||
             (p.code && p.code.toLowerCase().includes(q)) ||
             (p.client_name && p.client_name.toLowerCase().includes(q))
@@ -725,7 +730,7 @@ function AdminPageInner() {
 
         return (
             <>
-            {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0 || notifs.missingPlansCount > 0) && (
+                {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0 || notifs.missingPlansCount > 0) && (
                     <div className={styles.notifTray}>
                         {notifs.arrivals.map(a => (
                             <div key={a.emp_id} className={styles.notifItem}>
@@ -805,7 +810,7 @@ function AdminPageInner() {
                     </div>
                     <div className={styles.filterGroup}>
                         <span className={styles.filterLabel}>&nbsp;</span>
-                        <button className={styles.btnPrimary} onClick={loadAttendance} disabled={attLoading} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button className={styles.btnPrimary} onClick={() => reloadAttendance()} disabled={attLoading} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             {attLoading ? <><span className={styles.spinner} style={{ width: 14, height: 14 }} />โหลด...</> : <><MagnifyingGlassIcon width={16} /> ค้นหา</>}
                         </button>
                     </div>
@@ -1251,7 +1256,7 @@ function AdminPageInner() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredProjects.map(p => {
+                                    {filteredProjects.map((p: Project) => {
                                         let badgeStyle = styles.badge;
                                         let badgeLabel = "Inactive";
                                         if (p.is_active) {

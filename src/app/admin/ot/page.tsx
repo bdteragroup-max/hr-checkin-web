@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css";
 import localStyles from "./page.module.css";
 import { formatTime24h, formatDateThai, formatDecimalHoursToHHMM } from "@/utils/time";
@@ -23,8 +24,7 @@ type OtRequest = {
 };
 
 export default function AdminOtPage() {
-    const [requests, setRequests] = useState<OtRequest[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [startDate, setStartDate] = useState("");
@@ -46,23 +46,14 @@ export default function AdminOtPage() {
     });
     const [saving, setSaving] = useState(false);
 
-    async function loadRequests() {
-        setLoading(true);
-        try {
+    const { data: requests = [], isLoading: loading, error } = useQuery({
+        queryKey: ['admin-ot'],
+        queryFn: async () => {
             const res = await fetch("/api/admin/ot");
-            if (res.ok) {
-                const data = await res.json();
-                setRequests(data);
-            }
-        } catch (e) {
-            console.error(e);
+            if (!res.ok) throw new Error("Failed to fetch OT requests");
+            return await res.json() as OtRequest[];
         }
-        setLoading(false);
-    }
-
-    useEffect(() => {
-        loadRequests();
-    }, []);
+    });
 
     function openAdjustment(req: OtRequest) {
         setSelectedReq(req);
@@ -101,7 +92,7 @@ export default function AdminOtPage() {
             if (data.ok) {
                 setAlert({ visible: true, message: `บันทึกรายการเรียบร้อยแล้ว`, type: "ok" });
                 setShowModal(false);
-                loadRequests();
+                queryClient.invalidateQueries({ queryKey: ['admin-ot'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -124,7 +115,7 @@ export default function AdminOtPage() {
                 setAlert({ visible: true, message: data?.error || `DELETE_FAILED_${res.status}`, type: "error" });
             } else {
                 setAlert({ visible: true, message: "ลบรายการเรียบร้อยแล้ว", type: "ok" });
-                loadRequests();
+                queryClient.invalidateQueries({ queryKey: ['admin-ot'] });
             }
         } catch (e: any) {
             setAlert({ visible: true, message: e.message || "DELETE_ERROR", type: "error" });
@@ -376,7 +367,7 @@ export default function AdminOtPage() {
                                     onChange={(e) => setEndDate(e.target.value)}
                                 />
                             </div>
-                            <button className={styles.btnPrimary} onClick={loadRequests} disabled={loading}>
+                            <button className={styles.btnPrimary} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-ot'] })} disabled={loading}>
                                 {loading ? "กำลังโหลด..." : "Refresh"}
                             </button>
                             <button className={styles.btnExport} onClick={exportListToCSV}>

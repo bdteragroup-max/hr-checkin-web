@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { 
     PlusIcon, 
@@ -43,9 +44,18 @@ type Asset = {
 };
 
 export default function AdminAssetsPage() {
-    const [assets, setAssets] = useState<Asset[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [alert, setAlert] = useState<AlertState>({ visible: false, message: "", type: "ok" });
+
+    const { data: assets = [], isLoading: loading } = useQuery<Asset[]>({
+        queryKey: ['admin-cars'],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/assets?category=Car");
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            return data;
+        }
+    });
     
     // Deletion Modal state
     const [pendingDelete, setPendingDelete] = useState<{ id: number, name: string } | null>(null);
@@ -90,24 +100,7 @@ export default function AdminAssetsPage() {
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
 
-    async function loadAssets() {
-        setLoading(true);
-        try {
-            const res = await fetch("/api/admin/assets?category=Car");
-            if (res.ok) {
-                const data = await res.json();
-                setAssets(data);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    }
 
-    useEffect(() => {
-        loadAssets();
-    }, []);
 
     function openAddModal() {
         setIsEditing(false);
@@ -172,7 +165,7 @@ export default function AdminAssetsPage() {
             if (data.ok) {
                 setAlert({ visible: true, message: `บันทึกข้อมูล ${assetForm.name} เรียบร้อยแล้ว`, type: "ok" });
                 setShowAssetModal(false);
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-cars'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -202,7 +195,7 @@ export default function AdminAssetsPage() {
             const data = await res.json();
             if (data.ok) {
                 setAlert({ visible: true, message: "ลบข้อมูลเรียบร้อยแล้ว", type: "ok" });
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-cars'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -246,7 +239,7 @@ export default function AdminAssetsPage() {
             if (data.ok) {
                 setAlert({ visible: true, message: "รับคืนรถยนต์เรียบร้อยแล้ว", type: "ok" });
                 setShowReturnModal(false);
-                loadAssets();
+                queryClient.invalidateQueries({ queryKey: ['admin-cars'] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }

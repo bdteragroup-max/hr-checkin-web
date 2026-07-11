@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 import {
@@ -76,14 +77,115 @@ export default function AssetBorrowPage() {
 }
 
 function AssetBorrowPageInner() {
+    const queryClient = useQueryClient();
     const searchParams = useSearchParams();
     const type = searchParams.get("type") || "item";
     const isEquipment = type === "equipment";
 
     const [activeTab, setActiveTab] = useState<"borrow" | "my">("borrow");
-    const [assets, setAssets] = useState<Asset[]>([]);
-    const [myBorrowings, setMyBorrowings] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+
+    const { data: assets = [], isLoading: isLoadingAssets } = useQuery({
+        queryKey: ["assets", "available", type],
+        queryFn: async () => {
+            const url = isEquipment 
+                ? "/api/assets/available?category_exclude=Car&include_borrowed=true"
+                : "/api/admin/products"; // Use products API for items to match admin
+            const res = await fetch(url);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Failed to fetch");
+            }
+            const data = await res.json();
+            
+            // Map fields based on type to ensure correct borrowing information
+            const normalized = Array.isArray(data) ? data.map((item: any) => {
+                if (isEquipment) {
+                    // Equipment (Assets) - 1:1 tracking
+                    // Find any active borrowing (borrowed or reserved)
+                    const currentBorrow = (item.asset_borrowings || []).find((b: any) => 
+                        ["borrowed", "reserved"].includes(b.status)
+                    );
+                    const borrowerName = currentBorrow?.employee?.nickname 
+                        ? `${currentBorrow.employee.name} (${currentBorrow.employee.nickname})`
+                        : currentBorrow?.employee?.name || "";
+
+                    return {
+                        id: item.id,
+                        asset_id: item.asset_id,
+                        name: item.name,
+                        description: item.description,
+                        image_url: item.image_url,
+                        status: currentBorrow ? "borrowed" : (item.status || "available"),
+                        stock: 1,
+                        borrowed_count: currentBorrow ? 1 : (item.status === "borrowed" ? 1 : 0),
+                        company_name: item.company_owner || item.company_name,
+                        current_borrowings: currentBorrow ? [{
+                            borrower_name: borrowerName,
+                            borrow_date: currentBorrow.borrow_date,
+                            expected_return_date: currentBorrow.expected_return_date,
+                            quantity: 1
+                        }] : []
+                    };
+                } else {
+                    // Items (Products) - Quantity-based tracking
+                    const borrowings = item.product_borrowings || [];
+                    const activeBorrowings = borrowings.map((b: any) => ({
+                        borrower_name: b.employee?.nickname 
+                            ? `${b.employee.name} (${b.employee.nickname})`
+                            : b.employee?.name || "ไม่ระบุชื่อ",
+                        borrow_date: b.borrow_date,
+                        expected_return_date: b.expected_return_date,
+                        quantity: b.quantity || 1
+                    }));
+
+                    const borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + b.quantity, 0);
+                    const stock = item.stock || 0;
+                    const available = stock - borrowedCount;
+
+                    return {
+                        id: item.id,
+                        asset_id: item.product_code,
+                        name: item.product_name,
+                        description: item.description,
+                        image_url: item.image_url,
+                        status: available > 0 ? "available" : "borrowed",
+                        stock: stock,
+                        borrowed_count: borrowedCount,
+                        company_name: item.company_name,
+                        current_borrowings: activeBorrowings
+                    };
+                }
+            }) : [];
+            
+            return normalized;
+        },
+        enabled: activeTab === "borrow"
+    });
+
+    const { data: myBorrowings = [], isLoading: isLoadingMy } = useQuery({
+        queryKey: ["assets", "my", type],
+        queryFn: async () => {
+            const url = isEquipment 
+                ? "/api/assets/my?category_exclude=Car"
+                : "/api/products/my";
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            // Normalize my borrowings
+            const normalized = Array.isArray(data) ? data.map((b: any) => ({
+                ...b,
+                assets: b.product ? {
+                    asset_id: b.product.product_code,
+                    name: b.product.product_name
+                } : b.assets
+            })) : [];
+            
+            return normalized;
+        },
+        enabled: activeTab === "my"
+    });
+
+    const loading = activeTab === "borrow" ? isLoadingAssets : isLoadingMy;
     const [search, setSearch] = useState("");
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -145,110 +247,7 @@ function AssetBorrowPageInner() {
         );
     }, [assets, search, statusFilter, isEquipment]);
 
-    useEffect(() => {
-        loadData();
-    }, [activeTab, type]);
-
-    async function loadData() {
-        setLoading(true);
-        try {
-            if (activeTab === "borrow") {
-                const url = isEquipment 
-                    ? "/api/assets/available?category_exclude=Car&include_borrowed=true"
-                    : "/api/admin/products"; // Use products API for items to match admin
-                const res = await fetch(url);
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || "Failed to fetch");
-                }
-                const data = await res.json();
-                console.log(`[AssetBorrowPage] Loaded ${isEquipment ? 'Equipment' : 'Items'}:`, data);
-                
-                // Map fields based on type to ensure correct borrowing information
-                const normalized = Array.isArray(data) ? data.map((item: any) => {
-                    if (isEquipment) {
-                        // Equipment (Assets) - 1:1 tracking
-                        // Find any active borrowing (borrowed or reserved)
-                        const currentBorrow = (item.asset_borrowings || []).find((b: any) => 
-                            ["borrowed", "reserved"].includes(b.status)
-                        );
-                        const borrowerName = currentBorrow?.employee?.nickname 
-                            ? `${currentBorrow.employee.name} (${currentBorrow.employee.nickname})`
-                            : currentBorrow?.employee?.name || "";
-
-                        return {
-                            id: item.id,
-                            asset_id: item.asset_id,
-                            name: item.name,
-                            description: item.description,
-                            image_url: item.image_url,
-                            status: currentBorrow ? "borrowed" : (item.status || "available"),
-                            stock: 1,
-                            borrowed_count: currentBorrow ? 1 : (item.status === "borrowed" ? 1 : 0),
-                            company_name: item.company_owner || item.company_name,
-                            current_borrowings: currentBorrow ? [{
-                                borrower_name: borrowerName,
-                                borrow_date: currentBorrow.borrow_date,
-                                expected_return_date: currentBorrow.expected_return_date,
-                                quantity: 1
-                            }] : []
-                        };
-                    } else {
-                        // Items (Products) - Quantity-based tracking
-                        const borrowings = item.product_borrowings || [];
-                        const activeBorrowings = borrowings.map((b: any) => ({
-                            borrower_name: b.employee?.nickname 
-                                ? `${b.employee.name} (${b.employee.nickname})`
-                                : b.employee?.name || "ไม่ระบุชื่อ",
-                            borrow_date: b.borrow_date,
-                            expected_return_date: b.expected_return_date,
-                            quantity: b.quantity || 1
-                        }));
-
-                        const borrowedCount = activeBorrowings.reduce((sum: number, b: any) => sum + b.quantity, 0);
-                        const stock = item.stock || 0;
-                        const available = stock - borrowedCount;
-
-                        return {
-                            id: item.id,
-                            asset_id: item.product_code,
-                            name: item.product_name,
-                            description: item.description,
-                            image_url: item.image_url,
-                            status: available > 0 ? "available" : "borrowed",
-                            stock: stock,
-                            borrowed_count: borrowedCount,
-                            company_name: item.company_name,
-                            current_borrowings: activeBorrowings
-                        };
-                    }
-                }) : [];
-                
-                setAssets(normalized);
-            } else {
-                const url = isEquipment 
-                    ? "/api/assets/my?category_exclude=Car"
-                    : "/api/products/my";
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                // Normalize my borrowings
-                const normalized = Array.isArray(data) ? data.map((b: any) => ({
-                    ...b,
-                    assets: b.product ? {
-                        asset_id: b.product.product_code,
-                        name: b.product.product_name
-                    } : b.assets
-                })) : [];
-                
-                setMyBorrowings(normalized);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    }
+    // Data fetching is now handled by useQuery hooks
 
     async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, type: "borrow" | "return") {
         const file = e.target.files?.[0];
@@ -327,7 +326,7 @@ function AssetBorrowPageInner() {
                     remark: "",
                     quantity: 1
                 });
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -379,7 +378,7 @@ function AssetBorrowPageInner() {
             if (data.ok) {
                 setAlert({ visible: true, message: `แจ้งคืน${isEquipment ? 'อุปกรณ์' : 'สินค้า'}เรียบร้อยแล้ว`, type: "ok" });
                 setShowReturnModal(false);
-                loadData();
+                queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
@@ -505,7 +504,7 @@ function AssetBorrowPageInner() {
                                                 <div className={styles.borrowerTitle} style={{ color: "#1d4ed8", fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: "6px" }}>
                                                     <UserIcon width={16} /> ข้อมูลการยืมปัจจุบัน
                                                 </div>
-                                                {asset.current_borrowings.map((b, idx) => (
+                                                {asset.current_borrowings.map((b: any, idx: number) => (
                                                     <div key={idx} style={{ 
                                                         background: "white",
                                                         padding: "10px",

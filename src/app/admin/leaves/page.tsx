@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css"; // ✅ ใช้ CSS admin ใหญ่
 import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, InboxIcon, ChartBarIcon, ClipboardDocumentListIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { formatTime24h, formatDateThai } from "@/utils/time";
@@ -81,8 +82,8 @@ function normalizeReason(s: string) {
 }
 
 export default function AdminLeavesPage() {
-    const [leaveLoading, setLeaveLoading] = useState(false);
-    const [err, setErr] = useState("");
+    const queryClient = useQueryClient();
+    const [mutationErr, setMutationErr] = useState("");
     const [processingId, setProcessingId] = useState<string | null>(null); // ✅ Track which row is being processed
     const [viewMode, setViewMode] = useState<"list" | "report">("list");
     const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
@@ -97,8 +98,6 @@ export default function AdminLeavesPage() {
     // เพิ่ม filter เหตุผล (client filter)
     const [reasonQuery, setReasonQuery] = useState<string>("");
 
-    const [leaveRequests, setLeaveRequests] = useState<LeaveRow[]>([]);
-
     const qs = useMemo(() => {
         const sp = new URLSearchParams();
         if (status) sp.set("status", status);
@@ -108,30 +107,17 @@ export default function AdminLeavesPage() {
         return sp.toString();
     }, [status, startDate, endDate, empId]);
 
-    async function load() {
-        setLeaveLoading(true);
-        setErr("");
-        try {
+    const { data: leaveRequests = [], isLoading: leaveLoading, error } = useQuery({
+        queryKey: ['admin-leaves', qs],
+        queryFn: async () => {
             const res = await fetch(`/api/admin/leaves?${qs}`, { cache: "no-store" });
             const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                setErr(data?.error || `HTTP_${res.status}`);
-                setLeaveRequests([]);
-                return;
-            }
-            setLeaveRequests(data?.list || []);
-        } catch (e: any) {
-            setErr(e?.message || "LOAD_FAILED");
-            setLeaveRequests([]);
-        } finally {
-            setLeaveLoading(false);
+            if (!res.ok) throw new Error(data?.error || `HTTP_${res.status}`);
+            return (data?.list || []) as LeaveRow[];
         }
-    }
+    });
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [qs]);
+    const err = (error ? (error as Error).message : "") || mutationErr;
 
     // ✅ Client filter by reason
     const filteredByReason = useMemo(() => {
@@ -185,14 +171,14 @@ export default function AdminLeavesPage() {
     }, [leaveRequests]);
 
     const reportData = useMemo(() => {
-        const groups: Record<string, Record<string, { 
+        const groups: Record<string, Record<string, {
             total_requests: number,
             total_minutes: number,
             emp_ids: Set<string>,
             leave_types: Record<string, number>,
             employees: Record<string, { name: string, emp_id: string, total_requests: number, total_minutes: number, types: Record<string, number> }>
         }>> = {};
-        
+
         filteredByReason.forEach(req => {
             const date = new Date(req.start_date);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -200,45 +186,45 @@ export default function AdminLeavesPage() {
             const deptName = req.employees?.departments?.name || "ไม่ระบุแผนก";
             const leaveType = req.leave_type || "อื่นๆ";
             const mins = req.minutes || (req.days ? req.days * 480 : 0);
-            
+
             if (!groups[monthKey]) groups[monthKey] = {};
             if (!groups[monthKey][deptName]) {
-                groups[monthKey][deptName] = { 
-                    total_requests: 0, 
-                    total_minutes: 0, 
+                groups[monthKey][deptName] = {
+                    total_requests: 0,
+                    total_minutes: 0,
                     emp_ids: new Set(),
                     leave_types: {},
                     employees: {}
                 };
             }
-            
+
             const g = groups[monthKey][deptName];
             g.total_requests++;
             g.total_minutes += mins;
             g.emp_ids.add(req.emp_id);
             g.leave_types[leaveType] = (g.leave_types[leaveType] || 0) + 1;
-            
+
             if (!g.employees[req.emp_id]) {
                 g.employees[req.emp_id] = { name: req.name || "Unknown", emp_id: req.emp_id, total_requests: 0, total_minutes: 0, types: {} };
             }
-            
+
             const emp = g.employees[req.emp_id];
             emp.total_requests++;
             emp.total_minutes += mins;
             emp.types[leaveType] = (emp.types[leaveType] || 0) + 1;
         });
-        
+
         // Convert to sorted array
-        const result: { 
-            month: string, 
-            depts: { 
-                name: string, 
-                total_requests: number, 
-                total_minutes: number, 
-                emp_count: number, 
+        const result: {
+            month: string,
+            depts: {
+                name: string,
+                total_requests: number,
+                total_minutes: number,
+                emp_count: number,
                 leave_types: [string, number][],
-                employees: { name: string, emp_id: string, total_requests: number, total_minutes: number, types: [string, number][] }[] 
-            }[] 
+                employees: { name: string, emp_id: string, total_requests: number, total_minutes: number, types: [string, number][] }[]
+            }[]
         }[] = [];
 
         Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(month => {
@@ -252,10 +238,10 @@ export default function AdminLeavesPage() {
                     types: Object.entries(emp.types).sort((a, b) => b[1] - a[1])
                 })).sort((a, b) => b.total_minutes - a.total_minutes)
             })).sort((a, b) => b.total_minutes - a.total_minutes);
-            
+
             result.push({ month, depts });
         });
-        
+
         return result;
     }, [filteredByReason, selectedMonth]);
 
@@ -274,7 +260,7 @@ export default function AdminLeavesPage() {
                 csvContent += `${m.month},"${d.name} TOTAL",-,-,"${deptTypeSummary}",${d.total_minutes},${deptDays}\n`;
             });
         });
-        
+
         const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -289,14 +275,14 @@ export default function AdminLeavesPage() {
     function exportListToCSV() {
         const BOM = "\uFEFF";
         let csvContent = "Employee ID,Name,Department,Leave Type,Start,End,Duration,Reason,Handover Person,Status\n";
-        
+
         filteredByReason.forEach(r => {
             const dept = r.employees?.departments?.name || "-";
             const duration = formatLeaveMins(r.minutes || (r.days ? r.days * 480 : undefined));
             const startStr = fmtDateTime(r.start_at || r.start_date);
             const endStr = fmtDateTime(r.end_at || r.end_date);
             const statusStr = r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : r.status === "cancelled" ? "ยกเลิกแล้ว" : "รออนุมัติ";
-            
+
             csvContent += `"${r.emp_id}","${r.name || ""}","${dept}","${r.leave_type || ""}","${startStr}","${endStr}","${duration}","${normalizeReason(r.reason || "")}","${r.handover_person || ""}","${statusStr}"\n`;
         });
 
@@ -317,7 +303,7 @@ export default function AdminLeavesPage() {
         if (nextStatus === "approved") {
             if (!confirm("ยืนยันอนุมัติใบลานี้?")) return;
             setProcessingId(id);
-            setErr("");
+            setMutationErr("");
             try {
                 const res = await fetch(`/api/admin/leaves/${id}/approve`, {
                     method: "POST",
@@ -326,16 +312,16 @@ export default function AdminLeavesPage() {
                 const data = await res.json().catch(() => null);
                 if (!res.ok) {
                     if (data?.error === "ALREADY_PROCESSED") {
-                        setErr("คำขอนี้ดำเนินการไปแล้ว");
+                        setMutationErr("คำขอนี้ดำเนินการไปแล้ว");
                     } else {
-                        setErr(data?.error || `HTTP_${res.status}`);
+                        setMutationErr(data?.error || `HTTP_${res.status}`);
                     }
-                    await load();
+                    queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
                     return;
                 }
-                await load();
+                queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
             } catch (e: any) {
-                setErr(e?.message || "APPROVE_FAILED");
+                setMutationErr(e?.message || "APPROVE_FAILED");
             } finally {
                 setProcessingId(null);
             }
@@ -347,7 +333,7 @@ export default function AdminLeavesPage() {
         if (!reason.trim()) return;
 
         setProcessingId(id);
-        setErr("");
+        setMutationErr("");
         try {
             const res = await fetch(`/api/admin/leaves/${id}/reject`, {
                 method: "POST",
@@ -357,16 +343,16 @@ export default function AdminLeavesPage() {
             const data = await res.json().catch(() => null);
             if (!res.ok) {
                 if (data?.error === "ALREADY_PROCESSED") {
-                    setErr("คำขอนี้ดำเนินการไปแล้ว");
+                    setMutationErr("คำขอนี้ดำเนินการไปแล้ว");
                 } else {
-                    setErr(data?.error || `HTTP_${res.status}`);
+                    setMutationErr(data?.error || `HTTP_${res.status}`);
                 }
-                await load();
+                queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
                 return;
             }
-            await load();
+            queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
         } catch (e: any) {
-            setErr(e?.message || "REJECT_FAILED");
+            setMutationErr(e?.message || "REJECT_FAILED");
         } finally {
             setProcessingId(null);
         }
@@ -375,19 +361,19 @@ export default function AdminLeavesPage() {
     async function deleteLeave(id: string) {
         if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการนี้? การลบจะไม่สามารถกู้คืนได้")) return;
         setProcessingId(id);
-        setErr("");
+        setMutationErr("");
         try {
             const res = await fetch(`/api/admin/leaves/${id}`, {
                 method: "DELETE",
             });
             const data = await res.json().catch(() => null);
             if (!res.ok) {
-                setErr(data?.error || `DELETE_FAILED_${res.status}`);
+                setMutationErr(data?.error || `DELETE_FAILED_${res.status}`);
             } else {
-                await load();
+                queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
             }
         } catch (e: any) {
-            setErr(e?.message || "DELETE_ERROR");
+            setMutationErr(e?.message || "DELETE_ERROR");
         } finally {
             setProcessingId(null);
         }
@@ -455,7 +441,7 @@ export default function AdminLeavesPage() {
                                     />
                                 </div>
 
-                                <button className={styles.btnPrimary} onClick={load} disabled={leaveLoading}>
+                                <button className={styles.btnPrimary} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-leaves'] })} disabled={leaveLoading}>
                                     {leaveLoading ? "Loading..." : "Refresh"}
                                 </button>
 
@@ -477,17 +463,17 @@ export default function AdminLeavesPage() {
                                 {pendingLeave.length === 0 && !leaveLoading ? (
                                     <div className={styles.emptyState} style={{ padding: 16 }}>ไม่มีรายการรออนุมัติ</div>
                                 ) : (
-                                    <table className={styles.table} style={{ tableLayout: "fixed" }}>
+                                    <table className={styles.table} style={{ minWidth: 1050 }}>
                                         <thead>
                                             <tr>
-                                                <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
-                                                <th style={{ width: "12%" }}>ประเภท (Type)</th>
-                                                <th style={{ width: "18%" }}>วันที่ (Date)</th>
-                                                <th style={{ width: "10%", textAlign: "center" }}>จำนวน (Duration)</th>
-                                                <th style={{ width: "15%" }}>เหตุผล (Reason)</th>
-                                                <th style={{ width: "10%" }}>ผู้รับผิดชอบแทน</th>
-                                                <th style={{ width: "60px", textAlign: "center" }}>ไฟล์</th>
-                                                <th style={{ width: "140px", textAlign: "center" }}>จัดการ</th>
+                                                <th style={{ width: "18%", minWidth: 160 }}>พนักงาน (Employee)</th>
+                                                <th style={{ width: "12%", minWidth: 120 }}>ประเภท (Type)</th>
+                                                <th style={{ width: "18%", minWidth: 160 }}>วันที่ (Date)</th>
+                                                <th style={{ width: "10%", minWidth: 110, textAlign: "center" }}>จำนวน (Duration)</th>
+                                                <th style={{ width: "16%", minWidth: 140 }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "12%", minWidth: 130 }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "60px", minWidth: 60, textAlign: "center" }}>ไฟล์</th>
+                                                <th style={{ width: "140px", minWidth: 140, textAlign: "center" }}>จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -524,7 +510,7 @@ export default function AdminLeavesPage() {
                                                             {r.attachment_url ? (
                                                                 <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
                                                                     {r.attachment_url.split(",").map((url, i) => (
-                                                                        <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i+1}`} style={{ color: "var(--blue)" }}>
+                                                                        <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i + 1}`} style={{ color: "var(--blue)" }}>
                                                                             <DocumentTextIcon width={24} />
                                                                         </a>
                                                                     ))}
@@ -537,18 +523,18 @@ export default function AdminLeavesPage() {
                                                                     {r.status === "pending_hr" ? "รอ HR อนุมัติ" : "รอหัวหน้าอนุมัติ"}
                                                                 </span>
                                                                 <div style={{ display: "flex", gap: 6 }}>
-                                                                    <button 
-                                                                        className={styles.btnApprove} 
-                                                                        onClick={() => approveLeave(r.id, "approved")} 
-                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                                    <button
+                                                                        className={styles.btnApprove}
+                                                                        onClick={() => approveLeave(r.id, "approved")}
+                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")}
                                                                         style={{ height: 28, padding: "0 8px", fontSize: 11 }}
                                                                     >
                                                                         <CheckCircleIcon width={12} /> อนุมัติ
                                                                     </button>
-                                                                    <button 
-                                                                        className={styles.btnReject} 
-                                                                        onClick={() => approveLeave(r.id, "rejected")} 
-                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")} 
+                                                                    <button
+                                                                        className={styles.btnReject}
+                                                                        onClick={() => approveLeave(r.id, "rejected")}
+                                                                        disabled={!!processingId || (r.status !== "pending" && r.status !== "pending_hr")}
                                                                         style={{ height: 28, padding: "0 8px", fontSize: 11 }}
                                                                     >
                                                                         <XCircleIcon width={12} /> ไม่อนุมัติ
@@ -577,17 +563,17 @@ export default function AdminLeavesPage() {
                                         <span className={styles.emptyIcon}><InboxIcon width={32} /></span>ยังไม่มีประวัติการลา
                                     </div>
                                 ) : (
-                                    <table className={styles.table} style={{ tableLayout: "fixed" }}>
+                                    <table className={styles.table} style={{ minWidth: 1100 }}>
                                         <thead>
                                             <tr>
-                                                <th style={{ width: "20%" }}>พนักงาน (Employee)</th>
-                                                <th style={{ width: "10%" }}>ประเภท (Type)</th>
-                                                <th style={{ width: "18%" }}>วันที่ (Date)</th>
-                                                <th style={{ width: "10%", textAlign: "center" }}>จํานวน (Days)</th>
-                                                <th style={{ width: "17%" }}>เหตุผล (Reason)</th>
-                                                <th style={{ width: "10%" }}>ผู้รับผิดชอบแทน</th>
-                                                <th style={{ width: "60px", textAlign: "center" }}>ไฟล์</th>
-                                                <th style={{ width: "160px", textAlign: "center" }}>สถานะ / จัดการ</th>
+                                                <th style={{ width: "18%", minWidth: 160 }}>พนักงาน (Employee)</th>
+                                                <th style={{ width: "12%", minWidth: 120 }}>ประเภท (Type)</th>
+                                                <th style={{ width: "18%", minWidth: 160 }}>วันที่ (Date)</th>
+                                                <th style={{ width: "10%", minWidth: 110, textAlign: "center" }}>จํานวน (Days)</th>
+                                                <th style={{ width: "16%", minWidth: 140 }}>เหตุผล (Reason)</th>
+                                                <th style={{ width: "12%", minWidth: 130 }}>ผู้รับผิดชอบแทน</th>
+                                                <th style={{ width: "60px", minWidth: 60, textAlign: "center" }}>ไฟล์</th>
+                                                <th style={{ width: "160px", minWidth: 160, textAlign: "center" }}>สถานะ / จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -597,12 +583,12 @@ export default function AdminLeavesPage() {
                                                         <div style={{ fontWeight: 700, color: "var(--text)", wordBreak: "break-word" }}>
                                                             {r.name || "-"}
                                                             {!r.employees?.supervisor_id && (
-                                                                <span style={{ 
-                                                                    marginLeft: 8, 
-                                                                    fontSize: 10, 
-                                                                    color: "#f59e0b", 
-                                                                    background: "rgba(245, 158, 11, 0.1)", 
-                                                                    padding: "2px 6px", 
+                                                                <span style={{
+                                                                    marginLeft: 8,
+                                                                    fontSize: 10,
+                                                                    color: "#f59e0b",
+                                                                    background: "rgba(245, 158, 11, 0.1)",
+                                                                    padding: "2px 6px",
                                                                     borderRadius: 4,
                                                                     fontWeight: 600,
                                                                     border: "1px solid rgba(245, 158, 11, 0.2)"
@@ -630,7 +616,7 @@ export default function AdminLeavesPage() {
                                                     </td>
                                                     <td style={{ textAlign: "center" }}>
                                                         <div style={{ fontSize: 12, color: "var(--text4)", fontWeight: 600 }}>
-                                                            {( (r.minutes || (r.days ? r.days * 480 : 0)) / 480 ).toFixed(1)} วัน
+                                                            {((r.minutes || (r.days ? r.days * 480 : 0)) / 480).toFixed(1)} วัน
                                                         </div>
                                                     </td>
                                                     <td style={{ overflow: "hidden" }}>
@@ -643,7 +629,7 @@ export default function AdminLeavesPage() {
                                                         {r.attachment_url ? (
                                                             <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
                                                                 {r.attachment_url.split(",").map((url, i) => (
-                                                                    <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i+1}`} style={{ color: "var(--blue)" }}>
+                                                                    <a key={i} href={url} target="_blank" rel="noreferrer" title={`ดูเอกสารแนบ ${i + 1}`} style={{ color: "var(--blue)" }}>
                                                                         <DocumentTextIcon width={24} />
                                                                     </a>
                                                                 ))}
@@ -653,13 +639,13 @@ export default function AdminLeavesPage() {
                                                     <td>
                                                         <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
                                                             <span className={badgeClass(r.status)}>
-                                                                {r.status === "approved" ? "อนุมัติ" 
-                                                                  : r.status === "rejected" ? "ไม่อนุมัติ" 
-                                                                  : r.status === "cancelled" ? "ยกเลิกแล้ว" 
-                                                                  : (r.status === "pending_hr" ? "รอ HR อนุมัติ" : "รอหัวหน้าอนุมัติ")}
+                                                                {r.status === "approved" ? "อนุมัติ"
+                                                                    : r.status === "rejected" ? "ไม่อนุมัติ"
+                                                                        : r.status === "cancelled" ? "ยกเลิกแล้ว"
+                                                                            : (r.status === "pending_hr" ? "รอ HR อนุมัติ" : "รอหัวหน้าอนุมัติ")}
                                                             </span>
-                                                            <button 
-                                                                className={styles.btnDangerGhost} 
+                                                            <button
+                                                                className={styles.btnDangerGhost}
                                                                 style={{ padding: '0 10px', height: 32, fontSize: 11 }}
                                                                 onClick={() => deleteLeave(r.id)}
                                                                 disabled={!!processingId}
@@ -687,7 +673,7 @@ export default function AdminLeavesPage() {
                             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div className={styles.filterGroup}>
                                     <div className={styles.filterLabel}>MONTH</div>
-                                    <select 
+                                    <select
                                         style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)', background: '#fff', minWidth: 140 }}
                                         value={selectedMonth}
                                         onChange={e => setSelectedMonth(e.target.value)}
@@ -700,8 +686,8 @@ export default function AdminLeavesPage() {
                                 </div>
                                 <div className={styles.filterGroup}>
                                     <div className={styles.filterLabel}>FROM</div>
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)' }}
                                         value={startDate}
                                         onChange={e => setStartDate(e.target.value)}
@@ -709,8 +695,8 @@ export default function AdminLeavesPage() {
                                 </div>
                                 <div className={styles.filterGroup}>
                                     <div className={styles.filterLabel}>TO</div>
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line2)' }}
                                         value={endDate}
                                         onChange={e => setEndDate(e.target.value)}
@@ -719,10 +705,10 @@ export default function AdminLeavesPage() {
 
                                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
                                     <label className={styles.toggleDetail} title="แสดงรายบุคคล">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={showEmployeeDetail} 
-                                            onChange={e => setShowEmployeeDetail(e.target.checked)} 
+                                        <input
+                                            type="checkbox"
+                                            checked={showEmployeeDetail}
+                                            onChange={e => setShowEmployeeDetail(e.target.checked)}
                                         />
                                         <span className={styles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
                                     </label>
@@ -759,7 +745,7 @@ export default function AdminLeavesPage() {
                                             <td colSpan={5} className={styles.emptyState}>ไม่มีข้อมูลสำหรับรายงาน</td>
                                         </tr>
                                     ) : (
-                                        reportData.flatMap((m) => 
+                                        reportData.flatMap((m) =>
                                             m.depts.flatMap((d, dIdx) => [
                                                 // Dept Summary Row
                                                 <tr key={`${m.month}-${d.name}`} style={{ background: 'var(--surface2)' }}>

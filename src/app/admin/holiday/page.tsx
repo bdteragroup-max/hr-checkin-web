@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./holiday.module.css";
 import { CalendarDaysIcon, PlusIcon, CakeIcon } from "@heroicons/react/24/outline";
 
@@ -43,13 +44,37 @@ function fmtTH(iso: string) {
 }
 
 export default function AdminHolidayPage() {
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
     const [err, setErr] = useState("");
+    const [actionSaving, setActionSaving] = useState(false);
 
     const [year, setYear] = useState<number>(new Date().getFullYear());
     const [month, setMonth] = useState<number>(new Date().getMonth());
-    const [list, setList] = useState<HolidayRow[]>([]);
-    const [emps, setEmps] = useState<EmpSmall[]>([]);
+
+    const { data: holidayData, isLoading: holidaysLoading, isFetching: holidaysFetching } = useQuery({
+        queryKey: ['admin-holidays', year],
+        queryFn: async () => {
+            const res = await fetch(`/api/admin/holidays?year=${year}`);
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.error || `HTTP_${res.status}`);
+            }
+            return res.json();
+        }
+    });
+
+    const { data: empData, isLoading: empsLoading } = useQuery({
+        queryKey: ['admin-employees-minimal'],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/employees?minimal=1");
+            return res.json();
+        }
+    });
+
+    const list: HolidayRow[] = holidayData?.list || [];
+    const emps: EmpSmall[] = empData?.list || [];
+    const loading = holidaysLoading || empsLoading || actionSaving;
+    const isFetching = holidaysFetching;
 
     const [newDate, setNewDate] = useState(todayISO_BKK());
     const [newName, setNewName] = useState("");
@@ -70,36 +95,7 @@ export default function AdminHolidayPage() {
         };
     }, [list]);
 
-    async function load() {
-        setLoading(true);
-        setErr("");
-        try {
-            const res = await fetch(`/api/admin/holidays?year=${year}`, { cache: "no-store" });
-            const data = await res.json().catch(() => null);
 
-            if (!res.ok) {
-                setErr(data?.error || `HTTP_${res.status}`);
-                setList([]);
-                return;
-            }
-
-            setList(data?.list || []);
-
-            const empRes = await fetch("/api/admin/employees?minimal=1");
-            const empData = await empRes.json().catch(() => ({}));
-            if (empData.ok) setEmps(empData.list || []);
-        } catch (e: any) {
-            setErr(e?.message || "LOAD_FAILED");
-            setList([]);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [year]);
 
     const holidayMap = useMemo(() => {
         const m = new Map<string, HolidayRow>();
@@ -160,7 +156,7 @@ export default function AdminHolidayPage() {
             return;
         }
 
-        setLoading(true);
+        setActionSaving(true);
         try {
             const res = await fetch("/api/admin/holidays", {
                 method: "POST",
@@ -175,11 +171,11 @@ export default function AdminHolidayPage() {
             }
 
             setNewName("");
-            await load();
+            queryClient.invalidateQueries({ queryKey: ['admin-holidays', year] });
         } catch (e: any) {
             setErr(e?.message || "ADD_FAILED");
         } finally {
-            setLoading(false);
+            setActionSaving(false);
         }
     }
 
@@ -187,7 +183,7 @@ export default function AdminHolidayPage() {
         const ymd = isoToYMD(dateIso);
         if (!confirm(`ลบวันหยุดวันที่ ${ymd} ใช่ไหม?`)) return;
 
-        setLoading(true);
+        setActionSaving(true);
         setErr("");
         try {
             const res = await fetch(`/api/admin/holidays/${ymd}`, { method: "DELETE" });
@@ -196,11 +192,11 @@ export default function AdminHolidayPage() {
                 setErr(data?.error || `HTTP_${res.status}`);
                 return;
             }
-            await load();
+            queryClient.invalidateQueries({ queryKey: ['admin-holidays', year] });
         } catch (e: any) {
             setErr(e?.message || "DELETE_FAILED");
         } finally {
-            setLoading(false);
+            setActionSaving(false);
         }
     }
 
@@ -224,8 +220,8 @@ export default function AdminHolidayPage() {
                         })}
                     </select>
 
-                    <button className={styles.btnGhost} onClick={load} disabled={loading}>
-                        {loading ? "Loading..." : "Refresh"}
+                    <button className={styles.btnGhost} onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-holidays', year] })} disabled={isFetching}>
+                        {isFetching ? "Loading..." : "Refresh"}
                     </button>
                 </div>
             </div>

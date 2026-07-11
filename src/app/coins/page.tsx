@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import styles from "./coins.module.css";
 import Link from "next/link";
 import {
@@ -53,9 +54,18 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: () => void
 }
 
 export default function CoinsPage() {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const queryClient = useQueryClient();
+    const { data, isLoading: loading, error: queryError } = useQuery({
+        queryKey: ["coins"],
+        queryFn: async () => {
+            const res = await fetch("/api/me/coins");
+            const json = await res.json();
+            if (!json.ok) throw new Error(json.error || "Failed to load");
+            return json;
+        }
+    });
+    const error = queryError instanceof Error ? queryError.message : "";
+
     const [alertState, setAlertState] = useState<AlertState>({ visible: false, message: "", type: "ok" });
 
     // Modal state
@@ -69,86 +79,70 @@ export default function CoinsPage() {
     const [transferAmount, setTransferAmount] = useState(1);
     const [transferMessage, setTransferMessage] = useState("");
 
-    const [actionLoading, setActionLoading] = useState(false);
-
-    const loadData = async () => {
-        try {
-            const res = await fetch("/api/me/coins");
-            const json = await res.json();
-            if (json.ok) {
-                setData(json);
-            } else {
-                setError(json.error || "Failed to load");
-            }
-        } catch (e) {
-            setError("Network error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadData();
-    }, []);
-
     const getBalance = (coinTypeId: string) => {
         if (!data?.balances) return 0;
         const b = data.balances.find((b: any) => b.coin_type_id === coinTypeId);
         return b ? b.balance : 0;
     };
 
-    const handleExchange = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setActionLoading(true);
-        try {
+    const exchangeMutation = useMutation({
+        mutationFn: async (payload: any) => {
             const res = await fetch("/api/coins/exchange", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    from_coin_type: exchangeFrom,
-                    to_coin_type: exchangeTo,
-                    amount_to_exchange: Number(exchangeAmount)
-                })
+                body: JSON.stringify(payload)
             });
             const json = await res.json();
-            if (json.ok) {
-                setAlertState({ visible: true, message: "แลกเปลี่ยนสำเร็จ!", type: "ok" });
-                setIsExchangeOpen(false);
-                loadData();
-            } else {
-                setAlertState({ visible: true, message: json.error || "เกิดข้อผิดพลาดในการแลกเปลี่ยน", type: "error" });
-            }
-        } catch {
-            setAlertState({ visible: true, message: "เกิดข้อผิดพลาดทางเครือข่าย", type: "error" });
+            if (!json.ok) throw new Error(json.error || "เกิดข้อผิดพลาดในการแลกเปลี่ยน");
+            return json;
+        },
+        onSuccess: () => {
+            setAlertState({ visible: true, message: "แลกเปลี่ยนสำเร็จ!", type: "ok" });
+            setIsExchangeOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["coins"] });
+        },
+        onError: (err: any) => {
+            setAlertState({ visible: true, message: err.message || "เกิดข้อผิดพลาดทางเครือข่าย", type: "error" });
         }
-        setActionLoading(false);
+    });
+
+    const handleExchange = (e: React.FormEvent) => {
+        e.preventDefault();
+        exchangeMutation.mutate({
+            from_coin_type: exchangeFrom,
+            to_coin_type: exchangeTo,
+            amount_to_exchange: Number(exchangeAmount)
+        });
     };
 
-    const handleTransfer = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setActionLoading(true);
-        try {
+    const transferMutation = useMutation({
+        mutationFn: async (payload: any) => {
             const res = await fetch("/api/coins/transfer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    receiver_emp_id: transferTo,
-                    amount: Number(transferAmount),
-                    message: transferMessage
-                })
+                body: JSON.stringify(payload)
             });
             const json = await res.json();
-            if (json.ok) {
-                setAlertState({ visible: true, message: "โอนเหรียญสำเร็จ!", type: "ok" });
-                setIsTransferOpen(false);
-                loadData();
-            } else {
-                setAlertState({ visible: true, message: json.error || "เกิดข้อผิดพลาดในการโอนเหรียญ", type: "error" });
-            }
-        } catch {
-            setAlertState({ visible: true, message: "เกิดข้อผิดพลาดทางเครือข่าย", type: "error" });
+            if (!json.ok) throw new Error(json.error || "เกิดข้อผิดพลาดในการโอนเหรียญ");
+            return json;
+        },
+        onSuccess: () => {
+            setAlertState({ visible: true, message: "โอนเหรียญสำเร็จ!", type: "ok" });
+            setIsTransferOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["coins"] });
+        },
+        onError: (err: any) => {
+            setAlertState({ visible: true, message: err.message || "เกิดข้อผิดพลาดทางเครือข่าย", type: "error" });
         }
-        setActionLoading(false);
+    });
+
+    const handleTransfer = (e: React.FormEvent) => {
+        e.preventDefault();
+        transferMutation.mutate({
+            receiver_emp_id: transferTo,
+            amount: Number(transferAmount),
+            message: transferMessage
+        });
     };
 
     if (loading) return (
@@ -420,7 +414,7 @@ export default function CoinsPage() {
                                 </div>
                                 <div className={styles.modalActions}>
                                     <button type="button" className={`${styles.btn} ${styles.btnCancel}`} onClick={() => setIsExchangeOpen(false)}>ยกเลิก</button>
-                                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={actionLoading}>{actionLoading ? "รอสักครู่..." : "ยืนยันการแลก"}</button>
+                                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={exchangeMutation.isPending}>{exchangeMutation.isPending ? "รอสักครู่..." : "ยืนยันการแลก"}</button>
                                 </div>
                             </form>
                         </div>
@@ -450,7 +444,7 @@ export default function CoinsPage() {
                                 </div>
                                 <div className={styles.modalActions}>
                                     <button type="button" className={`${styles.btn} ${styles.btnCancel}`} onClick={() => setIsTransferOpen(false)}>ยกเลิก</button>
-                                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={actionLoading}>{actionLoading ? "รอสักครู่..." : "ยืนยันการโอน"}</button>
+                                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={transferMutation.isPending}>{transferMutation.isPending ? "รอสักครู่..." : "ยืนยันการโอน"}</button>
                                 </div>
                             </form>
                         </div>

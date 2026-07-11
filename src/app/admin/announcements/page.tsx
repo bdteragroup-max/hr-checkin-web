@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 
 type Announcement = {
@@ -12,33 +13,22 @@ type Announcement = {
 };
 
 export default function AnnouncementsAdminPage() {
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const queryClient = useQueryClient();
     
-    const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ id: 0, title: "", content: "", is_active: true });
-    
-    useEffect(() => {
-        fetchAnnouncements();
-    }, []);
-
-    async function fetchAnnouncements() {
-        setLoading(true);
-        try {
+    const { data: announcements = [], isLoading: loading, error: queryError } = useQuery({
+        queryKey: ["admin-announcements"],
+        queryFn: async () => {
             const res = await fetch("/api/admin/announcements");
             const data = await res.json();
-            if (data.ok) {
-                setAnnouncements(data.announcements);
-            } else {
-                setError(data.error);
-            }
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setLoading(false);
+            if (!data.ok) throw new Error(data.error || "Failed to fetch announcements");
+            return (data.announcements || []) as Announcement[];
         }
-    }
+    });
+
+    const error = queryError ? queryError.message : "";
+
+    const [showForm, setShowForm] = useState(false);
+    const [formData, setFormData] = useState({ id: 0, title: "", content: "", is_active: true });
 
     function handleEdit(a: Announcement) {
         setFormData({
@@ -72,7 +62,7 @@ export default function AnnouncementsAdminPage() {
             
             if (res.ok) {
                 setShowForm(false);
-                fetchAnnouncements();
+                queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
             } else {
                 const data = await res.json();
                 alert(data.error || "Error saving announcement");
@@ -87,7 +77,7 @@ export default function AnnouncementsAdminPage() {
         try {
             const res = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
             if (res.ok) {
-                fetchAnnouncements();
+                queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
             } else {
                 const data = await res.json();
                 alert(data.error || "Error deleting announcement");
