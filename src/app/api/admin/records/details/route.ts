@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
+import { adjustCheckinsForLeaves } from "@/utils/checkin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
         });
         if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
-        const checkins = await prisma.checkins.findMany({
+        let checkins = await prisma.checkins.findMany({
             where: {
                 emp_id,
                 date_key: { gte: startDate, lte: endDate },
@@ -75,6 +76,8 @@ export async function GET(req: Request) {
                 end_date: { gte: startDate },
             },
         });
+
+        checkins = adjustCheckinsForLeaves(checkins, leaves);
 
         const travels = await prisma.travel_claims.findMany({
             where: {
@@ -112,7 +115,14 @@ export async function GET(req: Request) {
             while (cur <= endD) {
                 const ds = cur.toISOString().split("T")[0];
                 let leaveLabel = l.leave_type;
-                if (l.days < 1 && l.start_at && l.end_at) {
+                if (l.days === 0.5 && l.start_at) {
+                    const bkkHour = parseInt(new Date(l.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
+                    if (bkkHour < 12) {
+                        leaveLabel += " (ครึ่งเช้า 08:00-12:00)";
+                    } else {
+                        leaveLabel += " (ครึ่งบ่าย 13:00-17:00)";
+                    }
+                } else if (l.days < 1 && l.start_at && l.end_at) {
                     leaveLabel += ` (${formatTime(new Date(l.start_at))} - ${formatTime(new Date(l.end_at))})`;
                 }
                 leaveDaysMap.set(ds, leaveLabel);

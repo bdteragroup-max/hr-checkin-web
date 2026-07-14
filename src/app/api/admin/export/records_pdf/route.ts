@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
+import { adjustCheckinsForLeaves } from "@/utils/checkin";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
@@ -115,13 +116,14 @@ export async function GET(req: Request) {
             drawText(`Period: ${periodLabel}`, MARGIN, y, 12);
             y -= 30;
 
-            const checkins = await prisma.checkins.findMany({
+            let checkins = await prisma.checkins.findMany({
                 where: { emp_id, timestamp: { gte: start, lte: end } },
                 orderBy: { timestamp: "asc" },
             });
             const leaves = await prisma.leave_requests.findMany({
                 where: { emp_id, status: "approved", start_date: { lte: end }, end_date: { gte: start } },
             });
+            checkins = adjustCheckinsForLeaves(checkins, leaves);
             const holidays = await prisma.holidays.findMany({ where: { date: { gte: start, lte: end } } });
 
             const holidayMap = new Map<string, string>();
@@ -132,7 +134,16 @@ export async function GET(req: Request) {
                 let cur = new Date(l.start_date);
                 const endD = new Date(l.end_date);
                 while (cur <= endD) {
-                    leaveDaysMap.set(cur.toISOString().split("T")[0], l.leave_type);
+                    let leaveTypeStr = l.leave_type;
+                    if (l.days === 0.5 && l.start_at) {
+                        const bkkHour = parseInt(new Date(l.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
+                        if (bkkHour < 12) {
+                            leaveTypeStr += " (ครึ่งเช้า 08:00-12:00)";
+                        } else {
+                            leaveTypeStr += " (ครึ่งบ่าย 13:00-17:00)";
+                        }
+                    }
+                    leaveDaysMap.set(cur.toISOString().split("T")[0], leaveTypeStr);
                     cur.setDate(cur.getDate() + 1);
                 }
             });
@@ -204,7 +215,16 @@ export async function GET(req: Request) {
                 const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
                 const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
 
-                if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+                if (inRecord) {
+                    status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+                    if (leaveType) {
+                        status += ` + ${leaveType}`;
+                    } else if (isTravel) {
+                        status += ` (ตจว.)`;
+                    }
+                } else if (outRecord) {
+                    status = "ไม่เช็คอิน";
+                }
 
                 const inLocs = new Set<string>();
                 inRecords.forEach(c => {
@@ -287,15 +307,17 @@ export async function GET(req: Request) {
             });
 
             const empIds = emps.map(e => e.emp_id);
-            const rows = await prisma.checkins.findMany({
+            let rows = await prisma.checkins.findMany({
                 where: { emp_id: { in: empIds }, timestamp: { gte: start, lte: end } },
                 select: { emp_id: true, timestamp: true, type: true, late_status: true, late_min: true },
             });
 
             const leaves = await prisma.leave_requests.findMany({
                 where: { emp_id: { in: empIds }, start_date: { lte: end }, end_date: { gte: start } },
-                select: { emp_id: true, days: true, status: true },
+                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true },
             });
+            
+            rows = adjustCheckinsForLeaves(rows, leaves);
 
             const holidaysFetch = await prisma.holidays.findMany({
                 where: { date: { gte: start, lte: end } }

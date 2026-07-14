@@ -266,7 +266,7 @@ export default function RecordsPage() {
                         disabled={exportingType === "excel"}
                         style={{ cursor: exportingType === "excel" ? "not-allowed" : "pointer", opacity: exportingType === "excel" ? 0.7 : 1 }}
                     >
-                        {exportingType === "excel" ? <ArrowPathIcon width={16} style={{ animation: "spin 1s linear infinite" }} /> : <ArrowDownTrayIcon width={16} />}
+                        {exportingType === "excel" ? <div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite", display: "inline-block" }} /> : <ArrowDownTrayIcon width={16} />}
                         {exportingType === "excel" ? "กำลังโหลด..." : "Export Excel"}
                     </button>
                     <button
@@ -275,7 +275,7 @@ export default function RecordsPage() {
                         disabled={exportingType === "pdf"}
                         style={{ cursor: exportingType === "pdf" ? "not-allowed" : "pointer", opacity: exportingType === "pdf" ? 0.7 : 1 }}
                     >
-                        {exportingType === "pdf" ? <ArrowPathIcon width={16} style={{ animation: "spin 1s linear infinite" }} /> : <DocumentTextIcon width={16} />}
+                        {exportingType === "pdf" ? <div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite", display: "inline-block" }} /> : <DocumentTextIcon width={16} />}
                         {exportingType === "pdf" ? "กำลังโหลด..." : "Export PDF"}
                     </button>
                 </div>

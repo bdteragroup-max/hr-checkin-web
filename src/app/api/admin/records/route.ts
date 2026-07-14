@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
+import { adjustCheckinsForLeaves } from "@/utils/checkin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
                     start_date: { lte: endDate },
                     end_date: { gte: startDate },
                 },
-                select: { emp_id: true, days: true, status: true },
+                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true },
             }),
             prisma.travel_claims.findMany({
                 where: {
@@ -186,7 +187,9 @@ export async function GET(req: Request) {
         }
 
         // Process checkins
-        for (const r of rows) {
+        const checkins = adjustCheckinsForLeaves(rows, leaves);
+
+        for (const r of checkins) {
             if (!stats[r.emp_id]) continue;
             // Match by date_key string comparison
             const d = r.date_key.toISOString().split("T")[0];

@@ -100,9 +100,21 @@ export async function GET(req: Request) {
             if (nickname && !empName.includes(`(${nickname})`)) {
                 finalName = `${empName} (${nickname})`;
             }
+
+            let updatedLeaveType = r.leave_type;
+            if (r.days === 0.5 && r.start_at) {
+                const bkkHour = parseInt(new Date(r.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
+                if (bkkHour < 12) {
+                    updatedLeaveType += " (ครึ่งเช้า 08:00-12:00)";
+                } else {
+                    updatedLeaveType += " (ครึ่งบ่าย 13:00-17:00)";
+                }
+            }
+
             return {
                 ...r,
-                name: finalName
+                name: finalName,
+                leave_type: updatedLeaveType
             };
         });
 

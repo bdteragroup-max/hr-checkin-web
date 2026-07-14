@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
+import { adjustCheckinsForLeaves } from "@/utils/checkin";
 import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
@@ -71,13 +72,14 @@ export async function GET(req: Request) {
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
             const sheet = workbook.addWorksheet("Attendance Details");
-            const checkins = await prisma.checkins.findMany({
+            let checkins = await prisma.checkins.findMany({
                 where: { emp_id, timestamp: { gte: start, lte: end } },
                 orderBy: { timestamp: "asc" },
             });
             const leaves = await prisma.leave_requests.findMany({
                 where: { emp_id, start_date: { lte: end }, end_date: { gte: start } },
             });
+            checkins = adjustCheckinsForLeaves(checkins, leaves);
             const travels = await prisma.travel_claims.findMany({
                 where: { 
                     emp_id, 
@@ -142,7 +144,7 @@ export async function GET(req: Request) {
             ];
             summarySheet.getRow(1).font = { bold: true };
 
-            const checkinsAll = await prisma.checkins.findMany({
+            let checkinsAll = await prisma.checkins.findMany({
                 where: { emp_id: { in: empIds }, timestamp: { gte: start, lte: end } },
                 orderBy: { timestamp: "asc" },
             });
@@ -150,6 +152,8 @@ export async function GET(req: Request) {
             const leavesAll = await prisma.leave_requests.findMany({
                 where: { emp_id: { in: empIds }, start_date: { lte: end }, end_date: { gte: start } },
             });
+
+            checkinsAll = adjustCheckinsForLeaves(checkinsAll, leavesAll);
 
             const travelsAll = await prisma.travel_claims.findMany({
                 where: { 
@@ -301,7 +305,16 @@ function processEmployeeSheet(
         let cur = new Date(l.start_date);
         const endD = new Date(l.end_date);
         while (cur <= endD) {
-            leaveDaysMap.set(cur.toISOString().split("T")[0], l.leave_type);
+            let leaveTypeStr = l.leave_type;
+            if (l.days === 0.5 && l.start_at) {
+                const bkkHour = parseInt(new Date(l.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
+                if (bkkHour < 12) {
+                    leaveTypeStr += " (ครึ่งเช้า 08:00-12:00)";
+                } else {
+                    leaveTypeStr += " (ครึ่งบ่าย 13:00-17:00)";
+                }
+            }
+            leaveDaysMap.set(cur.toISOString().split("T")[0], leaveTypeStr);
             cur.setDate(cur.getDate() + 1);
         }
     });
@@ -339,8 +352,16 @@ function processEmployeeSheet(
         const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
         const outRecord = outRecords.length > 0 ? outRecords[outRecords.length - 1] : null;
 
-        if (inRecord) status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
-        else if (outRecord) status = "ไม่เช็คอิน";
+        if (inRecord) {
+            status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
+            if (leaveType) {
+                status += ` + ${leaveType}`;
+            } else if (isTravel) {
+                status += ` (ตจว.)`;
+            }
+        } else if (outRecord) {
+            status = "ไม่เช็คอิน";
+        }
 
         const inLocs = new Set<string>();
         inRecords.forEach(c => {
