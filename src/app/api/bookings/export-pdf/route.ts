@@ -197,7 +197,7 @@ function drawPageHeader(
 
     // Company name
     const nameX = MARGIN + 70;
-    page.drawText("บริษัท เทอรา กรุ๊ป จำกัด", {
+    page.drawText("บริษัท เทอรา กรุ้ป จำกัด", {
         x: nameX, y: yTop - 28, size: 16, font: fontBold, color: COL_RED,
     });
     page.drawText("TERA GROUP CO.,LTD.", {
@@ -304,8 +304,8 @@ export async function GET(req: Request) {
         const iconImage = iconBytes ? await pdf.embedJpg(iconBytes) : null;
 
         // ── Format booking data ────────────────────────────────────────────────────
-        const startDate = new Date(booking.start_time);
-        const endDate = new Date(booking.end_time);
+        const startDate = new Date(new Date(booking.start_time).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+        const endDate = new Date(new Date(booking.end_time).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
         const dateStr = format(startDate, "d/M/yyyy");
         const timeStr = `${format(startDate, "HH.mm")} - ${format(endDate, "HH.mm")} น.`;
         const roomStr = `${booking.room.name} ชั้น ${booking.room.floor ?? "-"}`;
@@ -324,6 +324,8 @@ export async function GET(req: Request) {
         } catch {
             agendas = booking.minutes ? [{ person: "", details: booking.minutes }] : [];
         }
+
+        agendas = agendas.filter(a => a.details && a.details.trim().length > 0);
 
         // ══════════════════════════════════════════════════════════════════════════
         // PAGE 1
@@ -499,8 +501,8 @@ export async function GET(req: Request) {
 
         let currentPage = page2;
 
-        for (let i = 0; i < agendas.length || i < 5; i++) {
-            const agenda = agendas[i] ?? { person: "", details: "" };
+        for (let i = 0; i < agendas.length; i++) {
+            const agenda = agendas[i];
 
             // Pre-calculate wrapped detail lines
             const wrappedLines = wrapText(agenda.details || "", fontRegular, 11, CONTENT_W - 12);
