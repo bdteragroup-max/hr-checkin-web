@@ -460,7 +460,7 @@ export function adjustCheckinsForLeaves(checkinsAll: any[], leavesAll: any[]): a
         const leaves = leavesByEmp[c.emp_id] || [];
         const checkinDate = new Date(c.timestamp).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
 
-        const matchingLeave = leaves.find(l => {
+        const matchingLeave = leaves.find((l: any) => {
             const startD = new Date(l.start_date).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
             const endD = new Date(l.end_date).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
             return checkinDate >= startD && checkinDate <= endD;
