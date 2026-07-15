@@ -30,6 +30,9 @@ export default function AdminKPIPage() {
     const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<any>(null);
 
+    // Approval Modal State
+    const [showApproveConfirmModal, setShowApproveConfirmModal] = useState<number | null>(null);
+
     // Export Modal State
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportYear, setExportYear] = useState(new Date().getFullYear().toString());
@@ -85,6 +88,7 @@ export default function AdminKPIPage() {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case "completed": return "ประเมินเสร็จสิ้น";
+            case "APPROVED": return "อนุมัติแล้ว";
             case "pending_supervisor": return "รอหัวหน้าประเมิน";
             case "pending_employee": return "รอพนักงานประเมิน";
             case "draft": return "ร่าง (ยังไม่ส่ง)";
@@ -168,6 +172,31 @@ export default function AdminKPIPage() {
             alert("เกิดข้อผิดพลาด");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleApprove = (id: number) => {
+        setShowApproveConfirmModal(id);
+    };
+
+    const executeApprove = async () => {
+        if (!showApproveConfirmModal) return;
+        try {
+            const res = await fetch("/api/admin/kpi", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: showApproveConfirmModal, status: "APPROVED" })
+            });
+            if (res.ok) {
+                queryClient.invalidateQueries({ queryKey: ['admin-kpi'] });
+                // We could use a toast here instead of alert, but keeping it simple for now
+            } else {
+                alert("อนุมัติไม่สำเร็จ");
+            }
+        } catch (e) {
+            alert("เกิดข้อผิดพลาด");
+        } finally {
+            setShowApproveConfirmModal(null);
         }
     };
 
@@ -290,7 +319,7 @@ export default function AdminKPIPage() {
                                         </span>
                                     </td>
                                     <td>
-                                        {item.status === "completed" ? (
+                                        {(item.status === "completed" || item.status === "APPROVED") ? (
                                             <div className={styles.scoreRow}>
                                                 <span className={styles.scoreVal}>{Number(item.total_supervisor_score).toFixed(2)}</span>
                                                 <span className={styles.gradeVal}>{item.grade}</span>
@@ -306,7 +335,17 @@ export default function AdminKPIPage() {
                                             >
                                                 <EyeIcon width={18} />
                                             </button>
-                                            {item.status === "completed" && (
+                                            {(item.status === "PENDING_APPROVAL" || item.status === "pending_approval") && (
+                                                <button 
+                                                    className={styles.btnAction} 
+                                                    style={{ color: '#10b981' }} 
+                                                    title="อนุมัติ"
+                                                    onClick={() => handleApprove(item.id)}
+                                                >
+                                                    <CheckIcon width={18} />
+                                                </button>
+                                            )}
+                                            {(item.status === "completed" || item.status === "APPROVED") && (
                                                 <button 
                                                     className={styles.btnAction} 
                                                     style={{ color: '#0369a1' }} 
@@ -530,6 +569,34 @@ export default function AdminKPIPage() {
                     </div>
                 </div>
             )}
+
+            {/* --- MODAL: APPROVE CONFIRM --- */}
+            {showApproveConfirmModal !== null && (() => {
+                const approveEval = list.find(it => it.id === showApproveConfirmModal);
+                const isMidYear = approveEval?.session_name === 'Mid-Year' || approveEval?.session_name === 'Mid-Year Assessment' || approveEval?.category === 'MID_YEAR';
+                return (
+                    <div className={styles.modalOverlay} onClick={() => setShowApproveConfirmModal(null)}>
+                        <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+                            <div className={styles.modalHeader}>
+                                <h2>ยืนยันการอนุมัติ</h2>
+                                <button className={styles.btnAction} onClick={() => setShowApproveConfirmModal(null)}>
+                                    <XMarkIcon width={24} />
+                                </button>
+                            </div>
+                            <div className={styles.modalBody}>
+                                <p style={{ fontSize: '15px', color: '#475569', lineHeight: 1.5 }}>
+                                    คุณต้องการยืนยันการอนุมัติการประเมินนี้ใช่หรือไม่? 
+                                    {isMidYear && " หลังจากอนุมัติแล้วระบบอาจมีการแจกเหรียญรางวัลให้กับพนักงานตามเกรดที่ได้"}
+                                </p>
+                            </div>
+                            <div className={styles.modalFooter}>
+                                <button className={styles.btnCancel} onClick={() => setShowApproveConfirmModal(null)}>ยกเลิก</button>
+                                <button className={styles.btnSave} onClick={executeApprove}>ยืนยันการอนุมัติ</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

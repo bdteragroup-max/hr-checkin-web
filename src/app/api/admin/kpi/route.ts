@@ -107,10 +107,14 @@ export async function PATCH(req: Request) {
                     throw new Error("ALREADY_APPROVED_OR_NOT_FOUND");
                 }
 
-                // 2. Award KPI Coins based on grade
+                // 2. Award KPI Coins based on grade (Only for Mid-Year Assessment)
+                const isMidYear = currentEval.session_name === 'Mid-Year' || currentEval.session_name === 'Mid-Year Assessment' || currentEval.category === 'MID_YEAR';
                 let coinAmount = 0;
-                if (finalGrade === "A") coinAmount = 2;
-                else if (finalGrade === "B" || finalGrade === "B+") coinAmount = 1;
+                
+                if (isMidYear) {
+                    if (finalGrade === "A") coinAmount = 2;
+                    else if (finalGrade === "B" || finalGrade === "B+") coinAmount = 1;
+                }
 
                 if (coinAmount > 0) {
                     const kpiCoinTypeId = "KPI";

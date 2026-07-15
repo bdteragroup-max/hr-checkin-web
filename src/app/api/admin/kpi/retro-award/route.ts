@@ -28,7 +28,9 @@ export async function POST(req: Request) {
 
         for (const ev of evals) {
             const finalGrade = ev.grade;
-            if (['A', 'B', 'B+'].includes(finalGrade)) {
+            const isMidYear = ev.session_name === 'Mid-Year' || ev.session_name === 'Mid-Year Assessment' || ev.category === 'MID_YEAR';
+            
+            if (isMidYear && ['A', 'B', 'B+'].includes(finalGrade)) {
                 let coinAmount = 0;
                 if (finalGrade === 'A') coinAmount = 2;
                 else if (finalGrade === 'B' || finalGrade === 'B+') coinAmount = 1;

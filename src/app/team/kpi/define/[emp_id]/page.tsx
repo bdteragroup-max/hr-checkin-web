@@ -83,7 +83,7 @@ export default function KPIDefinePage() {
                         ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor')
                     );
 
-                    const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === category && ev.status === 'completed').length || 0;
+                    const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === category && (ev.status === 'completed' || ev.status === 'APPROVED')).length || 0;
                     const targetRound = round ? Number(round) : (
                         ongoing ? ongoing.evaluation_no : (
                             category === "MONTHLY" ? new Date().getMonth() + 1 : 
@@ -145,7 +145,7 @@ export default function KPIDefinePage() {
                         }
 
                         if (category === "PROBATION") {
-                            const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === "PROBATION" && ev.status === 'completed').length || 0;
+                            const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === "PROBATION" && (ev.status === 'completed' || ev.status === 'APPROVED')).length || 0;
                             const roundNo = targetRound || (completedRounds + 1);
                             setCurrentRound(roundNo);
                             const dates = calculateProbationDates(data.employee.hire_date, roundNo);

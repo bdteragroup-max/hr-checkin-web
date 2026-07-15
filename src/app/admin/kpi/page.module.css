@@ -256,7 +256,8 @@
     font-weight: 800;
 }
 
-.badge_completed {
+.badge_completed,
+.badge_APPROVED {
     background: #f0fdf4;
     color: #16a34a;
 }

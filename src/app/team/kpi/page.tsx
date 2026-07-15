@@ -65,6 +65,8 @@ export default function SupervisorKPIPage() {
             case "draft": return { label: "ร่าง (ยังไม่ส่ง)", color: "#94a3b8", icon: <PencilSquareIcon width={14} /> };
             case "pending_employee": return { label: "รอพนักงานประเมิน", color: "#f59e0b", icon: <EyeIcon width={14} /> };
             case "pending_supervisor": return { label: "รอหัวหน้าประเมิน", color: "#3b82f6", icon: <CheckBadgeIcon width={14} /> };
+            case "PENDING_APPROVAL":
+            case "pending_approval": return { label: "รออนุมัติ", color: "#8b5cf6", icon: <CheckBadgeIcon width={14} /> };
             case "completed": return { label: "ประเมินเสร็จสิ้น", color: "#10b981", icon: <CheckBadgeIcon width={14} /> };
             default: return { label: status, color: "#94a3b8", icon: null };
         }
@@ -155,12 +157,12 @@ export default function SupervisorKPIPage() {
 
                                             // Only fall back to others if we don't have a current one
                                             if (!currentEval) {
-                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && ev.status !== 'completed');
+                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && ev.status !== 'completed' && ev.status !== 'APPROVED');
                                             }
                                             
                                             // Only show completed ones if we are NOT currently in an unlocked state for a new one
                                             if (!currentEval && !info.is_unlocked) {
-                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && ev.status === 'completed');
+                                                currentEval = emp.evaluations.find(ev => (ev as any).category === category && (ev.status === 'completed' || ev.status === 'APPROVED'));
                                             }
 
                                             const statusInfo = currentEval ? getStatusInfo(currentEval.status) : null;
@@ -206,7 +208,7 @@ export default function SupervisorKPIPage() {
                                                     </div>
 
                                                     <div className={styles.trackActions}>
-                                                        {(!currentEval || isMismatch || currentEval.status === "completed") ? (
+                                                        {(!currentEval || isMismatch || currentEval.status === "completed" || currentEval.status === "APPROVED") ? (
                                                             (!info.is_unlocked) ? (
                                                                 <div className={styles.lockedHint}>
                                                                     เปิด {info.unlock_date ? new Date(info.unlock_date).toLocaleDateString("th-TH") : "-"}
@@ -214,10 +216,10 @@ export default function SupervisorKPIPage() {
                                                             ) : (
                                                                 <Link 
                                                                     href={`/team/kpi/define/${emp.emp_id}?category=${category}${category === 'MONTHLY' ? `&round=${currentMonth}&year=${currentYear}` : ''}`} 
-                                                                    className={currentEval?.status === 'completed' ? styles.btnActionDone : styles.btnActionPrimary}
+                                                                    className={(currentEval?.status === 'completed' || currentEval?.status === 'APPROVED') ? styles.btnActionDone : styles.btnActionPrimary}
                                                                 >
-                                                                    {currentEval?.status === 'completed' ? <CheckBadgeIcon width={14} /> : <PencilSquareIcon width={14} />}
-                                                                    <span>{currentEval?.status === 'completed' ? 'เสร็จสิ้น' : `เริ่ม${category === 'ANNUAL' ? 'ประเมินปี' : 'เป้าหมาย'}`}</span>
+                                                                    {(currentEval?.status === 'completed' || currentEval?.status === 'APPROVED') ? <CheckBadgeIcon width={14} /> : <PencilSquareIcon width={14} />}
+                                                                    <span>{(currentEval?.status === 'completed' || currentEval?.status === 'APPROVED') ? 'เสร็จสิ้น' : `เริ่ม${category === 'ANNUAL' ? 'ประเมินปี' : 'เป้าหมาย'}`}</span>
                                                                 </Link>
                                                             )
                                                         ) : currentEval.status === "pending_supervisor" ? (
@@ -254,7 +256,7 @@ export default function SupervisorKPIPage() {
                                                         <>
                                                             {renderTrack('PROBATION', 'ประเมินผลทดลองงาน', emp.track_info.probation)}
                                                             {/* History for KPI Rounds */}
-                                                            {emp.evaluations.filter(ev => ev.category === 'PROBATION' && ev.status === 'completed').length > 0 && (
+                                                            {emp.evaluations.filter(ev => ev.category === 'PROBATION' && (ev.status === 'completed' || ev.status === 'APPROVED')).length > 0 && (
                                                                 <div className={styles.historyContainer}>
                                                                     <div className={styles.historyTitle}>ประวัติ KPI ที่ผ่านมา:</div>
                                                                     <div className={styles.historyGrid}>
