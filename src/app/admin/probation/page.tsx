@@ -14,13 +14,15 @@ import {
     XMarkIcon,
     ChatBubbleLeftEllipsisIcon,
     ExclamationTriangleIcon,
-    EyeIcon
+    EyeIcon,
+    ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 import { 
     calculateTotalScore, 
     calculateGrade, 
     calculateAttendanceScore 
 } from "@/utils/probationCalculations";
+import * as XLSX from "xlsx";
 
 const CATEGORIES = [
     { key: "work_quality", label: "1. คุณภาพงาน", weight: 4 },
@@ -215,6 +217,58 @@ export default function AdminProbationPage() {
         salary_adjust: { label: "ปรับเงินเดือน", color: "#2563eb" }
     };
 
+    const handleExportExcel = () => {
+        const wb = XLSX.utils.book_new();
+
+        // 1. To Action Sheet
+        const toActionData = filtered.map(item => ({
+            "ชื่อพนักงาน": item.employee?.name || "-",
+            "รหัสพนักงาน": item.employee?.emp_id || "-",
+            "ผู้ประเมิน": item.supervisor?.name || "-",
+            "ครั้งที่": item.evaluation_no,
+            "วันที่เริ่มประเมิน": item.period_start ? new Date(item.period_start).toLocaleDateString("th-TH") : "-",
+            "วันที่สิ้นสุดประเมิน": item.period_end ? new Date(item.period_end).toLocaleDateString("th-TH") : "-",
+            "คะแนน": item.total_score,
+            "เกรด": item.grade,
+            "ผลสรุป": decisionMap[item.decision]?.label || item.decision,
+            "สถานะ HR": item.status === "reviewed" ? "ตรวจสอบแล้ว" : "รอการตรวจสอบ"
+        }));
+        const wsToAction = XLSX.utils.json_to_sheet(toActionData);
+        XLSX.utils.book_append_sheet(wb, wsToAction, "To Action");
+
+        // 2. Upcoming Sheet
+        const upcomingData = filteredPending.map(emp => {
+            const info = getDaysInfo(emp.probation_end_date);
+            
+            const getTargetDate = (round: number) => {
+                if (!emp.hire_date) return "-";
+                const dueDays = round === 1 ? 30 : round === 2 ? 60 : round === 3 ? 90 : 119;
+                const hire = new Date(emp.hire_date);
+                const target = new Date(hire);
+                target.setDate(hire.getDate() + dueDays);
+                return target.toLocaleDateString("th-TH");
+            };
+
+            return {
+                "ชื่อพนักงาน": emp.name,
+                "รหัสพนักงาน": emp.emp_id,
+                "ตำแหน่ง": emp.job_title,
+                "ประเมินครั้งถัดไป": emp.next_round,
+                "วันที่เริ่มงาน": emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("th-TH") : "-",
+                "วันสิ้นสุดทดลองงาน": emp.probation_end_date ? new Date(emp.probation_end_date).toLocaleDateString("th-TH") : "-",
+                "เหลือเวลา (วัน)": info ? info.days : "-",
+                "กำหนดประเมินครั้งที่ 1 (30 วัน)": getTargetDate(1),
+                "กำหนดประเมินครั้งที่ 2 (60 วัน)": getTargetDate(2),
+                "กำหนดประเมินครั้งที่ 3 (90 วัน)": getTargetDate(3),
+                "กำหนดประเมินครั้งที่ 4 (119 วัน)": getTargetDate(4)
+            };
+        });
+        const wsUpcoming = XLSX.utils.json_to_sheet(upcomingData);
+        XLSX.utils.book_append_sheet(wb, wsUpcoming, "Upcoming");
+
+        XLSX.writeFile(wb, `Probation_Overview_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
     return (
         <div className={styles.wrap}>
             {/* --- HEADER --- */}
@@ -252,10 +306,13 @@ export default function AdminProbationPage() {
                     <div className={styles.tableHeaderTitle}>
                         <DocumentCheckIcon width={20} /> {activeTab === 'to_action' ? 'รายการส่งประเมินที่รอตรวจสอบ' : 'พนักงานที่ใกล้ถึงกำหนดประเมิน'}
                     </div>
-                    <div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         <span className={styles.rowCount}>
                             {activeTab === 'to_action' ? filtered.length : filteredPending.length} รายการ
                         </span>
+                        <button onClick={handleExportExcel} style={{ background: '#10b981', color: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                            <ArrowDownTrayIcon width={16} /> Export Excel
+                        </button>
                     </div>
                 </div>
 
