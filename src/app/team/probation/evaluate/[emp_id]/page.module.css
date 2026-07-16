@@ -32,7 +32,7 @@
   min-height: 100vh;
   color: var(--text);
   position: relative;
-  padding-bottom: 120px;
+  padding-bottom: 180px;
 }
 
 .wrapper::before {
@@ -473,7 +473,7 @@
 
 .summarySticky {
     position: fixed;
-    bottom: 24px;
+    bottom: 90px;
     left: 14px;
     right: 14px;
     max-width: 492px;
