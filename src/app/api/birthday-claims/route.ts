@@ -79,30 +79,14 @@ export async function POST(req: Request) {
             );
 
             if (hasIn && hasOut) {
-                if (isSales) {
-                    // For sales, any external activity (Project, Offsite, or Trip) counts
-                    const hasExternalActivity = dayScans.some(s => 
-                        s.type === "Project-In" || 
-                        s.type === "Project-Out" || 
-                        s.type === "Offsite-In" || 
-                        s.type === "Offsite-Out" || 
-                        s.type === "Trip-Update" || 
-                        s.is_trip
-                    );
-                    if (hasExternalActivity) {
-                        hasValidDay = true;
-                        break;
-                    }
-                } else {
-                    hasValidDay = true;
-                    break;
-                }
+                hasValidDay = true;
+                break;
             }
         }
 
         if (!hasValidDay) {
             return NextResponse.json({
-                error: isSales ? "SALES_NO_PROJECT_SCAN" : "NO_ATTENDANCE"
+                error: "NO_ATTENDANCE"
             }, { status: 400 });
         }
 

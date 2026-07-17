@@ -118,8 +118,7 @@ export default function BirthdayPage() {
 
             if (!cRes.ok) {
                 const map: any = {
-                    NO_ATTENDANCE: "ไม่พบประวัติการรูดบัตรในวันเกิดของคุณ (ต้องรูดบัตรเข้า-ออกในวันเกิด)",
-                    SALES_NO_PROJECT_SCAN: "พนักงานฝ่ายขายต้องมีประวัติการรูดบัตรเข้าโครงการ (Customer Check-in) ในวันเกิด"
+                    NO_ATTENDANCE: "ไม่พบประวัติการรูดบัตรในวันเกิดของคุณ (ต้องรูดบัตรเข้า-ออกในวันเกิด)"
                 };
                 throw new Error(map[cRes.error] || cRes.error);
             }
