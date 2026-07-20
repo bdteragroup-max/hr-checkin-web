@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./redemptions.module.css";
 import Link from "next/link";
+import AlertModal, { AlertState } from "@/components/AlertModal";
 
 interface Employee {
   name: string;
@@ -40,11 +41,24 @@ export default function AdminRedemptionsPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
 
-  // Reject Modal State
+  // Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [rewardFilter, setRewardFilter] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Modal State
+  const [fulfillModalOpen, setFulfillModalOpen] = useState(false);
+  const [fulfillId, setFulfillId] = useState<number | null>(null);
+  
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [alertState, setAlertState] = useState<AlertState>({ visible: false, message: "", type: "ok" });
+  const showAlert = (message: string, type: "ok" | "error" = "ok") => setAlertState({ visible: true, message, type });
+  const hideAlert = () => setAlertState(prev => ({ ...prev, visible: false }));
 
   const { data: redemptions = [], isLoading: loading } = useQuery<Redemption[]>({
     queryKey: ['admin-redemptions', activeTab],
@@ -55,22 +69,95 @@ export default function AdminRedemptionsPage() {
     }
   });
 
-  const handleFulfill = async (id: number) => {
-    if (!confirm("คุณแน่ใจหรือไม่ที่จะอนุมัติคำขอนี้?")) return;
+  // Client-side filtering
+  const filteredRedemptions = redemptions.filter((r) => {
+    // 1. Search Query (Employee Name or ID)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (!r.employee.name.toLowerCase().includes(query) && !r.emp_id.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    // 2. Reward Filter
+    if (rewardFilter && r.reward.name !== rewardFilter) {
+      return false;
+    }
+    // 3. Date Range
+    if (startDate || endDate) {
+      const rDate = new Date(r.redeemed_at);
+      rDate.setHours(0,0,0,0);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0,0,0,0);
+        if (rDate < start) return false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(0,0,0,0);
+        if (rDate > end) return false;
+      }
+    }
+    return true;
+  });
+
+  // Unique rewards for dropdown
+  const uniqueRewards = Array.from(new Set(redemptions.map(r => r.reward.name)));
+
+  const handleExport = async () => {
+    if (filteredRedemptions.length === 0) {
+      showAlert("ไม่มีข้อมูลสำหรับส่งออก", "error");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const res = await fetch('/api/admin/redemptions/export-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          data: filteredRedemptions, 
+          status: activeTab 
+        })
+      });
+      if (!res.ok) throw new Error("Failed to export");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `redemptions_${activeTab}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      showAlert("เกิดข้อผิดพลาดในการส่งออก Excel", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const openFulfillModal = (id: number) => {
+    setFulfillId(id);
+    setFulfillModalOpen(true);
+  };
+
+  const handleFulfill = async () => {
+    if (!fulfillId) return;
     setProcessing(true);
     try {
-      const res = await fetch(`/api/admin/redemptions/${id}/fulfill`, {
+      const res = await fetch(`/api/admin/redemptions/${fulfillId}/fulfill`, {
         method: "PUT"
       });
       const data = await res.json();
       if (data.success) {
-        alert("อนุมัติสำเร็จ");
+        showAlert("อนุมัติสำเร็จ", "ok");
+        setFulfillModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['admin-redemptions'] });
       } else {
-        alert(data.error || "ไม่สามารถอนุมัติได้");
+        showAlert(data.error || "ไม่สามารถอนุมัติได้", "error");
       }
     } catch (err) {
-      alert("เกิดข้อผิดพลาดในการอนุมัติ");
+      showAlert("เกิดข้อผิดพลาดในการอนุมัติ", "error");
     } finally {
       setProcessing(false);
     }
@@ -85,7 +172,7 @@ export default function AdminRedemptionsPage() {
   const handleReject = async () => {
     if (!rejectId) return;
     if (!rejectReason.trim()) {
-      alert("กรุณาระบุเหตุผลในการปฏิเสธ");
+      showAlert("กรุณาระบุเหตุผลในการปฏิเสธ", "error");
       return;
     }
 
@@ -98,14 +185,14 @@ export default function AdminRedemptionsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("ปฏิเสธคำขอและคืนเหรียญเรียบร้อยแล้ว");
+        showAlert("ปฏิเสธคำขอและคืนเหรียญเรียบร้อยแล้ว", "ok");
         setRejectModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['admin-redemptions'] });
       } else {
-        alert(data.error || "ไม่สามารถปฏิเสธได้");
+        showAlert(data.error || "ไม่สามารถปฏิเสธได้", "error");
       }
     } catch (err) {
-      alert("เกิดข้อผิดพลาดในการปฏิเสธ");
+      showAlert("เกิดข้อผิดพลาดในการปฏิเสธ", "error");
     } finally {
       setProcessing(false);
     }
@@ -146,11 +233,58 @@ export default function AdminRedemptionsPage() {
           </button>
         </div>
 
+        <div className={styles.filterBar}>
+          <input 
+            type="text" 
+            placeholder="ค้นหาชื่อ หรือ รหัสพนักงาน..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.filterInput}
+          />
+          <select 
+            value={rewardFilter} 
+            onChange={(e) => setRewardFilter(e.target.value)}
+            className={styles.filterSelect}
+          >
+            <option value="">ของรางวัลทั้งหมด</option>
+            {uniqueRewards.map(name => (
+              <option key={name as string} value={name as string}>{name as string}</option>
+            ))}
+          </select>
+          <input 
+            type="date" 
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className={styles.filterDate}
+            title="ตั้งแต่วันที่"
+          />
+          <span style={{color: '#6b7280'}}>-</span>
+          <input 
+            type="date" 
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className={styles.filterDate}
+            title="ถึงวันที่"
+          />
+          <button 
+            className={styles.exportBtn} 
+            onClick={handleExport}
+            disabled={isExporting || loading || redemptions.length === 0}
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {isExporting ? "กำลังส่งออก..." : "ส่งออก Excel"}
+          </button>
+        </div>
+
         <div className={styles.tableCard}>
           {loading ? (
             <div className={styles.emptyState}>กำลังโหลด...</div>
           ) : redemptions.length === 0 ? (
             <div className={styles.emptyState}>ไม่พบข้อมูลการแลกของรางวัล</div>
+          ) : filteredRedemptions.length === 0 ? (
+            <div className={styles.emptyState}>ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</div>
           ) : (
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
@@ -168,7 +302,7 @@ export default function AdminRedemptionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {redemptions.map((r) => (
+                  {filteredRedemptions.map((r) => (
                     <tr key={r.id}>
                       <td>
                         <div className={styles.date}>
@@ -192,7 +326,7 @@ export default function AdminRedemptionsPage() {
                       {activeTab === 'pending' ? (
                         <td>
                           <div className={styles.actions}>
-                            <button className={styles.fulfillBtn} onClick={() => handleFulfill(r.id)} disabled={processing}>
+                            <button className={styles.fulfillBtn} onClick={() => openFulfillModal(r.id)} disabled={processing}>
                               อนุมัติ
                             </button>
                             <button className={styles.rejectBtn} onClick={() => openRejectModal(r.id)} disabled={processing}>
@@ -222,6 +356,33 @@ export default function AdminRedemptionsPage() {
           )}
         </div>
       </div>
+
+      {fulfillModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h2 className={styles.modalTitle}>ยืนยันการอนุมัติ</h2>
+            <p className={styles.modalDesc}>
+              คุณแน่ใจหรือไม่ที่จะอนุมัติคำขอนี้? หากอนุมัติแล้วระบบจะประมวลผลทันที
+            </p>
+            <div className={styles.modalActions}>
+              <button 
+                className={styles.cancelBtn} 
+                onClick={() => setFulfillModalOpen(false)}
+                disabled={processing}
+              >
+                ยกเลิก
+              </button>
+              <button 
+                className={styles.confirmFulfillBtn} 
+                onClick={handleFulfill}
+                disabled={processing}
+              >
+                {processing ? "กำลังประมวลผล..." : "ยืนยันการอนุมัติ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {rejectModalOpen && (
         <div className={styles.modalOverlay}>
@@ -261,6 +422,8 @@ export default function AdminRedemptionsPage() {
           </div>
         </div>
       )}
+
+      <AlertModal alert={alertState} onClose={hideAlert} />
     </div>
   );
 }

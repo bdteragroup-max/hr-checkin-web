@@ -288,6 +288,9 @@ export async function GET(request: Request) {
             if (adj.accommodation_allowance_override !== null && adj.accommodation_allowance_override !== undefined) accommodation_allowance = Number(adj.accommodation_allowance_override);
         }
 
+        if ((emp as any).company_car) travel_allowance = 0;
+        if ((emp as any).company_accommodation) accommodation_allowance = 0;
+
         position_allowance = adj.position_allowance_override !== null && adj.position_allowance_override !== undefined ? Number(adj.position_allowance_override) : (isDaily ? 0 : (Number(emp.position_allowance) || 0));
         general_allowance = adj.general_allowance_override !== null && adj.general_allowance_override !== undefined ? Number(adj.general_allowance_override) : (isDaily ? 0 : (Number((emp as any).general_allowance) || 0));
         // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (Synced with Admin View) ---

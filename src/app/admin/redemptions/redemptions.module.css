@@ -345,6 +345,28 @@
   background: #e5e7eb;
 }
 
+.confirmFulfillBtn {
+  flex: 1;
+  padding: 12px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: "Prompt", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.confirmFulfillBtn:hover {
+  background: #059669;
+}
+
+.confirmFulfillBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .confirmRejectBtn {
   flex: 1;
   padding: 12px;
@@ -372,4 +394,68 @@
   text-align: center;
   color: #6b7280;
   font-family: "Prompt", sans-serif;
+}
+
+/* Filters */
+.filterBar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.filterInput {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: "Sarabun", sans-serif;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: "Sarabun", sans-serif;
+  font-size: 14px;
+  background-color: white;
+}
+
+.filterDate {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: "Sarabun", sans-serif;
+  font-size: 14px;
+}
+
+.exportBtn {
+  margin-left: auto;
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: "Prompt", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.exportBtn:hover {
+  background: #059669;
+}
+.exportBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

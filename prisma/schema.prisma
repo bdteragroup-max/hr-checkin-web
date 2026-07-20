@@ -134,6 +134,8 @@ model employees {
   provident_fund_amt                Decimal?                    @db.Decimal(10, 2)
   provident_fund_rate               Decimal?                    @db.Decimal(5, 2)
   tax_deduction_override            Decimal?                    @db.Decimal(10, 2)
+  company_accommodation             Boolean                     @default(false)
+  company_car                       Boolean                     @default(false)
   asset_borrowings                  asset_borrowings[]
   birthday_claims                   birthday_claims[]
   clothing_requests                 clothing_requests[]
@@ -716,12 +718,12 @@ model BusinessType {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Company {
-  id                    String       @id
+  id                    String               @id
   companyName           String
   taxId                 String?
   address               String?
-  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime     @db.Timestamptz(6)
+  createdAt             DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime             @db.Timestamptz(6)
   area                  String?
   branchOrHeadOffice    String?
   businessType          String?
@@ -744,7 +746,11 @@ model Company {
   shippingProvince      String?
   shippingPostalCode    String?
   paymentMethod         String?
-  User                  User?        @relation(fields: [assignedUserId], references: [id])
+  region                String?
+  segment               String?
+  tags                  String[]
+  User                  User?                @relation(fields: [assignedUserId], references: [id])
+  CompanyInteraction    CompanyInteraction[]
   Contact               Contact[]
   Order                 Order[]
   Quotation             Quotation[]
@@ -1290,6 +1296,7 @@ model User {
   otpExpiresAt                                                    DateTime?             @db.Timestamptz(6)
   isActive                                                        Boolean               @default(true)
   Company                                                         Company[]
+  CompanyInteraction                                              CompanyInteraction[]
   CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[] @relation("CustomerRequirement_estimatedByUserIdToUser")
   CustomerRequirement                                             CustomerRequirement[]
   InstallationOrder                                               InstallationOrder[]
@@ -2089,4 +2096,18 @@ model ServiceSchedule {
   createdAt      DateTime @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @db.Timestamptz(6)
   User           User     @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CompanyInteraction {
+  id          String   @id
+  companyId   String
+  userId      String
+  type        String
+  title       String
+  description String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+  Company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -51,6 +51,8 @@ type CreateEmployeeBody = {
     tax_deduction_override?: number | null;
     housing_benefit?: number | null;
     car_benefit?: number | null;
+    company_car?: boolean;
+    company_accommodation?: boolean;
 };
 
 type PatchEmployeeBody = {
@@ -101,6 +103,8 @@ type PatchEmployeeBody = {
     tax_deduction_override?: number | null;
     housing_benefit?: number | null;
     car_benefit?: number | null;
+    company_car?: boolean;
+    company_accommodation?: boolean;
 
     // ถ้าส่ง pin มา = ตั้ง/รีเซ็ต
     pin?: string;
@@ -199,6 +203,10 @@ export async function GET(req: Request) {
                 sso_include_fixed_accommodation: true,
                 sso_include_fixed_meal: true,
                 sso_include_fixed_travel: true,
+                // @ts-ignore
+                company_car: true,
+                // @ts-ignore
+                company_accommodation: true,
             },
         });
 
@@ -290,6 +298,10 @@ export async function POST(req: Request) {
                 sso_include_fixed_accommodation: body.sso_include_fixed_accommodation ?? false,
                 sso_include_fixed_meal: body.sso_include_fixed_meal ?? false,
                 sso_include_fixed_travel: body.sso_include_fixed_travel ?? false,
+                // @ts-ignore
+                company_car: body.company_car ?? false,
+                // @ts-ignore
+                company_accommodation: body.company_accommodation ?? false,
             },
             select: {
                 emp_id: true,
@@ -331,6 +343,8 @@ export async function POST(req: Request) {
                 sso_include_fixed_accommodation: true,
                 sso_include_fixed_meal: true,
                 sso_include_fixed_travel: true,
+                company_car: true,
+                company_accommodation: true,
             },
         });
 
@@ -508,6 +522,14 @@ export async function PATCH(req: Request) {
         if (body.sso_include_fixed_travel !== undefined) {
             data.sso_include_fixed_travel = Boolean(body.sso_include_fixed_travel);
         }
+        if (body.company_car !== undefined) {
+            // @ts-ignore
+            data.company_car = Boolean(body.company_car);
+        }
+        if (body.company_accommodation !== undefined) {
+            // @ts-ignore
+            data.company_accommodation = Boolean(body.company_accommodation);
+        }
 
         // pin: ถ้าส่งมาเป็น string ว่าง = ไม่แก้
         if (body.pin !== undefined) {
@@ -557,6 +579,8 @@ export async function PATCH(req: Request) {
                 is_checkin_exempt: true,
                 resignation_date: true,
                 email: true,
+                company_car: true,
+                company_accommodation: true,
             },
         });
 

@@ -336,6 +336,11 @@ export async function GET(request: Request) {
                 else if (yrs < 5) accommodation_allowance = 2700;
                 else accommodation_allowance = 3000;
             }
+            
+            // Zero out if company provides accommodation
+            if ((emp as any).company_accommodation) {
+                accommodation_allowance = 0;
+            }
 
             // 4.2 Attendance, Meal, Travel (Calculated for all active employees)
             let totalPaidDays = 0;
@@ -447,6 +452,13 @@ export async function GET(request: Request) {
                     max_travel_allowance = maxWorkdays * 60;
                     travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
                 }
+            }
+            
+            // Zero out if company provides a car
+            if ((emp as any).company_car) {
+                travel_allowance = 0;
+                max_travel_allowance = 0;
+                travel_deduction = 0;
             }
             // 4.3 Position & Phone & Travel Claims
             position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined

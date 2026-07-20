@@ -63,6 +63,8 @@ type Emp = {
     is_checkin_exempt: boolean;
     probation_end_date?: string | null;
     email?: string | null;
+    company_car: boolean;
+    company_accommodation: boolean;
 };
 
 type EditDraft = {
@@ -101,6 +103,8 @@ type EditDraft = {
     resignation_date: string;
     secondary_supervisor_id: string;
     email: string;
+    company_car: boolean;
+    company_accommodation: boolean;
 };
 
 type Department = { id: number; name: string };
@@ -195,6 +199,8 @@ export default function AdminEmployeesPage() {
     const [email, setEmail] = useState("");
     const [isCheckinExempt, setIsCheckinExempt] = useState(false);
     const [probationEndDate, setProbationEndDate] = useState("");
+    const [companyCar, setCompanyCar] = useState(false);
+    const [companyAccommodation, setCompanyAccommodation] = useState(false);
 
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
@@ -289,6 +295,8 @@ export default function AdminEmployeesPage() {
                     email: email.trim() || null,
                     is_checkin_exempt: isCheckinExempt,
                     probation_end_date: isOnTrial && probationEndDate ? probationEndDate : null,
+                    company_car: companyCar,
+                    company_accommodation: companyAccommodation,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -318,6 +326,8 @@ export default function AdminEmployeesPage() {
             setEmail("");
             setIsCheckinExempt(false);
             setProbationEndDate("");
+            setCompanyCar(false);
+            setCompanyAccommodation(false);
             setCreateModalOpen(false);
             queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
         } finally { setSaving(false); }
@@ -374,6 +384,8 @@ export default function AdminEmployeesPage() {
                     is_checkin_exempt: editDraft.is_checkin_exempt,
                     probation_end_date: editDraft.is_on_trial && editDraft.probation_end_date ? editDraft.probation_end_date : null,
                     resignation_date: !editDraft.is_active ? editDraft.resignation_date : null,
+                    company_car: editDraft.company_car,
+                    company_accommodation: editDraft.company_accommodation,
                 }),
             });
             const t = await r.json().catch(() => ({}));
@@ -435,6 +447,8 @@ export default function AdminEmployeesPage() {
                 resignation_date: new Date().toISOString().split("T")[0], // Default to today
                 secondary_supervisor_id: x.secondary_supervisor_id ?? "",
                 email: x.email || "",
+                company_car: x.company_car ?? false,
+                company_accommodation: x.company_accommodation ?? false,
             });
             return;
         }
@@ -822,6 +836,8 @@ export default function AdminEmployeesPage() {
                                                                     resignation_date: x.resignation_date ? String(x.resignation_date).slice(0, 10) : "",
                                                                     secondary_supervisor_id: x.secondary_supervisor_id ?? "",
                                                                     email: x.email || "",
+                                                                    company_car: x.company_car ?? false,
+                                                                    company_accommodation: x.company_accommodation ?? false,
                                                                 });
                                                             }}
                                                         >
@@ -1108,6 +1124,18 @@ export default function AdminEmployeesPage() {
                                     </label>
                                 </div>
 
+                                <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
+                                    <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการที่บริษัทจัดหาให้ (Company-provided benefits)</div>
+                                    <label className={styles.row} style={{ marginBottom: 8 }}>
+                                        <input type="checkbox" checked={companyCar} onChange={(e) => setCompanyCar(e.target.checked)} />
+                                        <span>บริษัทจัดหารถยนต์ให้ (Company provides a car)</span>
+                                    </label>
+                                    <label className={styles.row}>
+                                        <input type="checkbox" checked={companyAccommodation} onChange={(e) => setCompanyAccommodation(e.target.checked)} />
+                                        <span>บริษัทจัดหาที่พักให้ (Company provides accommodation)</span>
+                                    </label>
+                                </div>
+
                                 <label className={styles.row} style={{ marginTop: 10 }}>
                                     <input type="checkbox" checked={isCheckinExempt} onChange={(e) => setIsCheckinExempt(e.target.checked)} />
                                     <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
@@ -1370,8 +1398,18 @@ export default function AdminEmployeesPage() {
                                     <span>รับค่าเดินทาง (Travel Allowance)</span>
                                 </label>
                             </div>
-                            <label className={styles.row} style={{ display: "none" }}>
-                            </label>
+                            
+                            <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
+                                <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการที่บริษัทจัดหาให้ (Company-provided benefits)</div>
+                                <label className={styles.row} style={{ marginBottom: 8 }}>
+                                    <input type="checkbox" checked={editDraft.company_car} onChange={(e) => setEditDraft((d) => d && ({ ...d, company_car: e.target.checked }))} />
+                                    <span>บริษัทจัดหารถยนต์ให้ (Company provides a car)</span>
+                                </label>
+                                <label className={styles.row}>
+                                    <input type="checkbox" checked={editDraft.company_accommodation} onChange={(e) => setEditDraft((d) => d && ({ ...d, company_accommodation: e.target.checked }))} />
+                                    <span>บริษัทจัดหาที่พักให้ (Company provides accommodation)</span>
+                                </label>
+                            </div>
 
                             <label className={styles.row} style={{ marginBottom: 10 }}>
                                 <input type="checkbox"

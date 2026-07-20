@@ -34,16 +34,66 @@ export async function PUT(
 
     try {
         await prisma.$transaction(async (tx) => {
-            const updated = await tx.reward_redemptions.updateMany({
-                where: { id: redemptionId, status: "pending" }, // prevent double-fulfill
+            const redemption = await tx.reward_redemptions.findFirst({
+                where: { id: redemptionId, status: "pending" },
+                include: { reward: true }
+            });
+
+            if (!redemption) {
+                throw new Error("Already processed or not found");
+            }
+
+            await tx.reward_redemptions.update({
+                where: { id: redemptionId },
                 data: { 
                     status: "fulfilled", 
                     fulfilled_at: new Date(),
                     processed_by: auth.emp.emp_id
                 }
             });
-            if (updated.count === 0) {
-                throw new Error("Already processed or not found");
+
+            // Automatically add to payroll if it's a Cash Coupon
+            if (redemption.reward.name.includes("คูปองเงินสด") || redemption.reward.name.includes("Cash Coupon")) {
+                const match = redemption.reward.name.match(/(\d+)/);
+                if (match) {
+                    const cashValue = parseInt(match[1], 10) * redemption.quantity;
+                    const now = new Date();
+                    const cycleMonth = now.getMonth() + 1;
+                    const cycleYear = now.getFullYear();
+
+                    const payroll = await tx.monthly_payroll_data.findUnique({
+                        where: {
+                            emp_id_cycle_month_cycle_year: {
+                                emp_id: redemption.emp_id,
+                                cycle_month: cycleMonth,
+                                cycle_year: cycleYear
+                            }
+                        }
+                    });
+
+                    const currentBenefits = payroll?.other_benefits ? Number(payroll.other_benefits) : 0;
+                    const newBenefits = currentBenefits + cashValue;
+
+                    await tx.monthly_payroll_data.upsert({
+                        where: {
+                            emp_id_cycle_month_cycle_year: {
+                                emp_id: redemption.emp_id,
+                                cycle_month: cycleMonth,
+                                cycle_year: cycleYear
+                            }
+                        },
+                        update: {
+                            other_benefits: newBenefits,
+                            updated_at: new Date()
+                        },
+                        create: {
+                            emp_id: redemption.emp_id,
+                            cycle_month: cycleMonth,
+                            cycle_year: cycleYear,
+                            other_benefits: newBenefits
+                        }
+                    });
+                }
             }
         });
 

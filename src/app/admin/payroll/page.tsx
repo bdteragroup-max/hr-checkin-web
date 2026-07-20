@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import AlertModal, { AlertState } from "@/components/AlertModal";
 
 type PayrollResult = {
     emp_id: string;
@@ -143,7 +144,10 @@ export default function PayrollPage() {
     // Quick Edit State
     const [activeCell, setActiveCell] = useState<{ empId: string, field: string } | null>(null);
     const [tempValue, setTempValue] = useState("");
-    const [quickSaving, setQuickSaving] = useState<string | null>(null); // empId-field
+    const [quickSaving, setQuickSaving] = useState<string | null>(null);
+
+    const [alertConfig, setAlertConfig] = useState<{ alert: AlertState, onConfirm?: () => void }>({ alert: { visible: false, message: "", type: "ok" } });
+    const closeAlert = () => setAlertConfig(prev => ({ ...prev, alert: { ...prev.alert, visible: false } }));
 
     const openEditModal = (emp: PayrollResult) => {
         setEditingEmp(emp);
@@ -288,64 +292,82 @@ export default function PayrollPage() {
 
 
 
-    const handlePublish = async (emp_id: string, publishStatus: boolean) => {
-        if (!confirm(publishStatus ? `ยืนยันการเผยแพร่สลิปเงินเดือนให้พนักงานคนนี้?` : `ยืนยันการยกเลิกเผยแพร่?`)) return;
-        setPublishing(true);
-        try {
-            const emp = data.find(d => d.emp_id === emp_id);
-            const res = await fetch("/api/admin/payroll/publish", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    month, year, emp_id,
-                    is_published: publishStatus,
-                    tax: emp?.tax,
-                    social_security: emp?.social_security,
-                    provident_fund: emp?.provident_fund,
-                    taxable_income: emp?.taxable_income,
-                    housing_benefit: emp?.housing_benefit,
-                    car_benefit: emp?.car_benefit
-                })
-            });
-            if (res.ok) {
-                queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
-            } else {
-                alert("เกิดข้อผิดพลาด");
+    const handlePublish = (emp_id: string, publishStatus: boolean) => {
+        setAlertConfig({
+            alert: {
+                visible: true,
+                message: publishStatus ? `ยืนยันการเผยแพร่สลิปเงินเดือนให้พนักงานคนนี้?` : `ยืนยันการยกเลิกเผยแพร่?`,
+                type: "ok"
+            },
+            onConfirm: async () => {
+                closeAlert();
+                setPublishing(true);
+                try {
+                    const emp = data.find(d => d.emp_id === emp_id);
+                    const res = await fetch("/api/admin/payroll/publish", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            month, year, emp_id,
+                            is_published: publishStatus,
+                            tax: emp?.tax,
+                            social_security: emp?.social_security,
+                            provident_fund: emp?.provident_fund,
+                            taxable_income: emp?.taxable_income,
+                            housing_benefit: emp?.housing_benefit,
+                            car_benefit: emp?.car_benefit
+                        })
+                    });
+                    if (res.ok) {
+                        queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
+                    } else {
+                        setAlertConfig({ alert: { visible: true, message: "เกิดข้อผิดพลาด", type: "error" } });
+                    }
+                } catch (e) {
+                    setAlertConfig({ alert: { visible: true, message: "Error", type: "error" } });
+                }
+                setPublishing(false);
             }
-        } catch (e) {
-            alert("Error");
-        }
-        setPublishing(false);
+        });
     };
 
-    const handlePublishBatch = async (companyTitle: string, items: PayrollResult[], targetStatus: boolean) => {
-        if (!confirm(`ยืนยันการ${targetStatus ? 'เผยแพร่' : 'ยกเลิกเผยแพร่'}สลิปเงินเดือนทั้งหมดให้กับพนักงานใน ${companyTitle} จำนวน ${items.length} คน?`)) return;
-        setPublishing(true);
-        try {
-            let changesMade = false;
-            for (const emp of items) {
-                if (Boolean(emp.is_published) === targetStatus) continue;
-                changesMade = true;
-                await fetch("/api/admin/payroll/publish", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        month, year, emp_id: emp.emp_id,
-                        is_published: targetStatus,
-                        tax: emp.tax,
-                        social_security: emp.social_security,
-                        provident_fund: emp.provident_fund,
-                        taxable_income: emp.taxable_income,
-                        housing_benefit: emp.housing_benefit,
-                        car_benefit: emp.car_benefit
-                    })
-                });
+    const handlePublishBatch = (companyTitle: string, items: PayrollResult[], targetStatus: boolean) => {
+        setAlertConfig({
+            alert: {
+                visible: true,
+                message: `ยืนยันการ${targetStatus ? 'เผยแพร่' : 'ยกเลิกเผยแพร่'}สลิปเงินเดือนทั้งหมดให้กับพนักงานใน ${companyTitle} จำนวน ${items.length} คน?`,
+                type: "ok"
+            },
+            onConfirm: async () => {
+                closeAlert();
+                setPublishing(true);
+                try {
+                    let changesMade = false;
+                    for (const emp of items) {
+                        if (Boolean(emp.is_published) === targetStatus) continue;
+                        changesMade = true;
+                        await fetch("/api/admin/payroll/publish", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                month, year, emp_id: emp.emp_id,
+                                is_published: targetStatus,
+                                tax: emp.tax,
+                                social_security: emp.social_security,
+                                provident_fund: emp.provident_fund,
+                                taxable_income: emp.taxable_income,
+                                housing_benefit: emp.housing_benefit,
+                                car_benefit: emp.car_benefit
+                            })
+                        });
+                    }
+                    if (changesMade) queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
+                } catch (e) {
+                    setAlertConfig({ alert: { visible: true, message: "เกิดข้อผิดพลาดในการตั้งค่า", type: "error" } });
+                }
+                setPublishing(false);
             }
-            if (changesMade) queryClient.invalidateQueries({ queryKey: ['admin-payroll', month, year] });
-        } catch (e) {
-            alert("เกิดข้อผิดพลาดในการตั้งค่า");
-        }
-        setPublishing(false);
+        });
     };
 
     const handleExportExcel = async (companyTitle: string, items: PayrollResult[]) => {
@@ -1099,6 +1121,12 @@ export default function PayrollPage() {
                     </div>
                 </div>
             )}
+
+            <AlertModal
+                alert={alertConfig.alert}
+                onClose={closeAlert}
+                onConfirm={alertConfig.onConfirm}
+            />
         </div>
     );
 }
