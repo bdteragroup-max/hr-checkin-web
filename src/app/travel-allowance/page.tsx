@@ -50,10 +50,25 @@ export default function TravelAllowancePage() {
 
     async function uploadFile(file: File, prefix: string) {
         const formData = new FormData();
-        const safeName = `upload-${Date.now()}.${file.name.split('.').pop() || 'tmp'}`;
+        
+        // Ensure extension only contains alphanumeric characters to prevent undici formData parsing errors
+        const parts = file.name.split('.');
+        let ext = parts.length > 1 ? parts.pop() || 'tmp' : 'tmp';
+        ext = ext.replace(/[^a-zA-Z0-9]/g, '');
+        if (!ext) ext = 'tmp';
+
+        const safeName = `upload-${Date.now()}.${ext}`;
         formData.append("file", file, safeName);
         formData.append("prefix", prefix);
+        
         const r = await fetch("/api/upload", { method: "POST", body: formData });
+        
+        // Prevent DOMException (The string did not match the expected pattern) in Safari when receiving HTML 500 pages
+        if (!r.ok) {
+            const errText = await r.text().catch(() => "Upload failed");
+            throw new Error(`Upload failed (${r.status})`);
+        }
+        
         const data = await r.json();
         if (!data.ok) throw new Error(data.error || "Upload failed");
         return data.url;
@@ -106,6 +121,13 @@ export default function TravelAllowancePage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
             });
+
+            if (!r.ok) {
+                const isJson = r.headers.get("content-type")?.includes("application/json");
+                if (!isJson) {
+                    throw new Error(`Server error (${r.status}). Please try again.`);
+                }
+            }
 
             const data = await r.json();
             if (data.ok) {
