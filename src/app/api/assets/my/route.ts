@@ -31,7 +31,10 @@ export async function GET(req: Request) {
         const allIds = [payload.emp_id, ...subIds];
 
         const whereClause: any = { 
-            status: { in: ["borrowed", "reserved"] } 
+            OR: [
+                { status: { in: ["borrowed", "reserved"] } },
+                { status: "returned", return_status: "PENDING_KEY" }
+            ]
         };
         if (!isAdmin) {
             whereClause.emp_id = { in: allIds };

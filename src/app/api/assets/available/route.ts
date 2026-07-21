@@ -34,6 +34,7 @@ export async function GET(req: Request) {
                     some: {
                         OR: [
                             { status: "borrowed" },
+                            { status: "returned", return_status: "PENDING_KEY" },
                             {
                                 status: "reserved",
                                 borrow_date: { lte: now },
@@ -50,10 +51,9 @@ export async function GET(req: Request) {
             include: {
                 asset_borrowings: {
                     where: {
-                        status: { in: ["borrowed", "reserved"] },
                         OR: [
-                            { expected_return_date: { gte: now } },
-                            { status: "borrowed" }
+                            { status: { in: ["borrowed", "reserved"] } },
+                            { status: "returned", return_status: "PENDING_KEY" }
                         ]
                     },
                     include: {

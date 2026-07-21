@@ -450,6 +450,11 @@ model asset_borrowings {
   borrow_is_tires_ok       Boolean?
   borrow_vehicle_status    String?   @db.VarChar(50)
   quantity                 Int       @default(1)
+  key_photo_url            String?
+  key_received_by          String?   @db.VarChar(20)
+  key_returned_at          DateTime? @db.Timestamptz(6)
+  key_signature_url        String?
+  return_status            String?   @default("PENDING") @db.VarChar(20)
   assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../assets/borrow/page.module.css";
 import AlertModal, { AlertState } from "@/components/AlertModal";
+import KeyReturnModal from "@/components/KeyReturnModal";
 import {
     MagnifyingGlassIcon,
     TruckIcon,
@@ -110,6 +111,7 @@ export default function CarBorrowPage() {
 
     // Return Modal State
     const [showReturnModal, setShowReturnModal] = useState(false);
+    const [showKeyReturnModal, setShowKeyReturnModal] = useState<any | null>(null);
     const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
     const [returnData, setReturnData] = useState({
         actual_return_date: new Date().toISOString().slice(0,10),
@@ -349,8 +351,9 @@ export default function CarBorrowPage() {
 
             const data = await res.json();
             if (data.ok) {
-                setAlert({ visible: true, message: "แจ้งคืนรถยนต์สำเร็จ แจ้งเตือนไปยังหัวหน้าและ HR แล้ว", type: "ok" });
+                setAlert({ visible: true, message: "แจ้งคืนรถยนต์สำเร็จ กรุณาดำเนินการคืนกุญแจ", type: "ok" });
                 setShowReturnModal(false);
+                setShowKeyReturnModal(selectedReturn);
                 queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
                 setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
@@ -522,19 +525,21 @@ export default function CarBorrowPage() {
                             </div>
                         ) : (
                             <div className={styles.assetGrid}>
-                                {myBorrowings.map(b => (
+                                {myBorrowings.map(b => {
+                                    const isPendingKey = b.status === "returned" && b.return_status === "PENDING_KEY";
+                                    return (
                                     <div key={b.id} className={styles.card}>
                                         <div className={styles.myHeader}>
                                             <div className={styles.assetId}>{b.assets.asset_id}</div>
                                             <div className={styles.myStatus} style={{ 
-                                                backgroundColor: b.status === "reserved" ? "#fef3c7" : "#eff6ff", 
-                                                color: b.status === "reserved" ? "#92400e" : "#1d4ed8", 
+                                                backgroundColor: b.status === "reserved" ? "#fef3c7" : isPendingKey ? "#ffedd5" : "#eff6ff", 
+                                                color: b.status === "reserved" ? "#92400e" : isPendingKey ? "#ea580c" : "#1d4ed8", 
                                                 padding: "2px 8px", 
                                                 borderRadius: "12px", 
                                                 fontSize: "11px", 
                                                 fontWeight: 600 
                                             }}>
-                                                {b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งานรถยนต์"}
+                                                {b.status === "reserved" ? "จองล่วงหน้า" : isPendingKey ? "รอคืนกุญแจ" : "กำลังใช้งานรถยนต์"}
                                             </div>
                                         </div>
                                         <h3 className={styles.assetName}>{b.assets.name}</h3>
@@ -552,24 +557,36 @@ export default function CarBorrowPage() {
                                         </div>
 
                                         <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-                                            <button
-                                                className={styles.btn}
-                                                onClick={() => openReturnModal(b)}
-                                                style={{ flex: 1, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
-                                            >
-                                                ดำเนินการคืนรถ
-                                            </button>
-                                            <button
-                                                className={styles.btn}
-                                                onClick={() => handleCancelBooking(b.id)}
-                                                style={{ flex: 1, backgroundColor: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}
-                                                disabled={submitting}
-                                            >
-                                                ยกเลิกการจอง
-                                            </button>
+                                            {isPendingKey ? (
+                                                <button
+                                                    className={styles.btn}
+                                                    onClick={() => setShowKeyReturnModal(b)}
+                                                    style={{ flex: 1, backgroundColor: "#fff7ed", color: "#ea580c", border: "1px solid #fdba74" }}
+                                                >
+                                                    ดำเนินการคืนกุญแจ
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        className={styles.btn}
+                                                        onClick={() => openReturnModal(b)}
+                                                        style={{ flex: 1, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
+                                                    >
+                                                        ดำเนินการคืนรถ
+                                                    </button>
+                                                    <button
+                                                        className={styles.btn}
+                                                        onClick={() => handleCancelBooking(b.id)}
+                                                        style={{ flex: 1, backgroundColor: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}
+                                                        disabled={submitting}
+                                                    >
+                                                        ยกเลิกการจอง
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         )}
                     </>
@@ -926,6 +943,19 @@ export default function CarBorrowPage() {
                         </form>
                     </div>
                 </div>
+            )}
+            {/* Key Return Modal */}
+            {showKeyReturnModal && (
+                <KeyReturnModal
+                    borrowingId={showKeyReturnModal.id}
+                    assetName={showKeyReturnModal.assets.name}
+                    onClose={() => setShowKeyReturnModal(null)}
+                    onSuccess={() => {
+                        setShowKeyReturnModal(null);
+                        setAlert({ visible: true, message: "บันทึกการคืนรถและกุญแจรถยนต์สำเร็จ", type: "ok" });
+                        queryClient.invalidateQueries({ queryKey: ["assets"] });
+                    }}
+                />
             )}
         </div>
     );

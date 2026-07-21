@@ -64,7 +64,8 @@ export async function POST(req: Request) {
                     condition_at_return: condition_at_return || null,
                     is_damaged: is_damaged || false,
                     photo_url_return: photo_url_return || null,
-                    status: "returned"
+                    status: "returned",
+                    return_status: "PENDING_KEY"
                 }
             });
 
