@@ -59,7 +59,7 @@ export async function GET(req: Request) {
             ];
         }
 
-        const [emps, holidaysFetch] = await Promise.all([
+        const [emps] = await Promise.all([
             prisma.employees.findMany({
                 where: employeeWhere,
                 select: {
@@ -109,7 +109,7 @@ export async function GET(req: Request) {
             })
         ]);
 
-        const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
+        // const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
         // Guard: Today's date in Bangkok
         const nowBKK = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
@@ -144,7 +144,6 @@ export async function GET(req: Request) {
                 for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
                     if (dt.getUTCDay() === 0) continue; // skip sunday
                     const dStr = dt.toISOString().split("T")[0];
-                    if (holidayDates.has(dStr)) continue; // skip holiday
                     empTotalWorkDays++;
                 }
             }
@@ -178,7 +177,7 @@ export async function GET(req: Request) {
             while (cur <= endD) {
                 const dStr = cur.toISOString().split("T")[0];
                 if (cur >= startDate && cur <= effectiveEnd) {
-                    if (cur.getUTCDay() !== 0 && !holidayDates.has(dStr)) { // Only count work days
+                    if (cur.getUTCDay() !== 0) { // Only count work days (excluding Sunday)
                         stats[t.emp_id].travel_dates.add(dStr);
                     }
                 }
@@ -197,9 +196,9 @@ export async function GET(req: Request) {
             if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In" || r.type === "Trip-Update") {
                 stats[r.emp_id].present_dates.add(d);
 
-                // Consistency: Skip counting late on Sundays and Holidays
+                // Consistency: Skip counting late on Sundays
                 const isSunday = r.date_key.getUTCDay() === 0;
-                if (!isSunday && !holidayDates.has(d)) {
+                if (!isSunday) {
                     if (r.late_status === "late") {
                         stats[r.emp_id].late_count += 1;
                         if (r.late_min) stats[r.emp_id].late_mins += r.late_min;

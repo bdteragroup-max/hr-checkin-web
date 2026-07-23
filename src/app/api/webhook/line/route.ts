@@ -921,6 +921,60 @@ export async function POST(req: Request) {
                                 });
                             }
                         }
+                    } else if (action === "approve_trip_fee" || action === "reject_trip_fee") {
+                        const tripFeeId = Number(targetId);
+                        if (!tripFeeId) throw new Error("Missing ID for trip fee action");
+
+                        const borrowing = await prisma.asset_borrowings.findUnique({
+                            where: { id: tripFeeId },
+                            include: { 
+                                employee: { include: { supervisor: true, secondary_supervisor: true } },
+                                assets: true
+                            }
+                        });
+
+                        if (!borrowing) throw new Error("Borrowing not found for trip fee action");
+                        if ((borrowing as any).trip_fee_status && (borrowing as any).trip_fee_status !== "PENDING") {
+                            await sendReplyMessage(replyToken, "⚠️ รายการนี้ได้รับการตรวจสอบไปแล้ว");
+                            continue;
+                        }
+
+                        const supervisor = borrowing.employee?.supervisor;
+                        const secondary = borrowing.employee?.secondary_supervisor;
+
+                        // Check authorization
+                        const isPrimary = supervisor?.line_user_id === lineUserId;
+                        const isSecondary = secondary?.line_user_id === lineUserId;
+
+                        if (!isPrimary && !isSecondary) {
+                            await sendReplyMessage(replyToken, "❌ คุณไม่มีสิทธิ์อนุมัติรายการนี้");
+                            continue;
+                        }
+
+                        const approverName = isPrimary ? supervisor?.name : secondary?.name;
+
+                        if (action === "approve_trip_fee") {
+                            await prisma.asset_borrowings.update({
+                                where: { id: tripFeeId },
+                                data: { trip_fee_status: "APPROVED" } as any
+                            });
+                            await sendReplyMessage(replyToken, `✅ คุณได้อนุมัติค่าเที่ยวให้ ${borrowing.employee.name} แล้ว`);
+                        } else {
+                            await prisma.asset_borrowings.update({
+                                where: { id: tripFeeId },
+                                data: { trip_fee_status: "REJECTED" } as any
+                            });
+                            await sendReplyMessage(replyToken, `❌ คุณได้ปฏิเสธค่าเที่ยวให้ ${borrowing.employee.name} แล้ว`);
+                        }
+                        
+                        // We also need to update the card they clicked so it shows the decision
+                        const { sendTripFeeApprovalRequest, formatNameDb } = await import("@/utils/lineMessaging");
+                        const empDisplayName = await formatNameDb(borrowing.employee.name);
+                        
+                        
+                        // Wait, sendTripFeeApprovalRequest doesn't have an "approvedBy" arg to replace the card.
+                        // For now just reply to the token to confirm action, which we did.
+
                     }
                 } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;

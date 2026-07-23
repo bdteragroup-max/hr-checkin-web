@@ -455,6 +455,9 @@ model asset_borrowings {
   key_returned_at          DateTime? @db.Timestamptz(6)
   key_signature_url        String?
   return_status            String?   @default("PENDING") @db.VarChar(20)
+  nights_count             Int?
+  overnight_required       Boolean   @default(false)
+  trip_fee_status          String?   @db.VarChar(20)
   assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 

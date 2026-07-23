@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
         const payload = verifyToken(token) as { emp_id: string };
         const body = await req.json();
-        const { borrowing_id, actual_return_date, condition_at_return, is_damaged, photo_url_return } = body;
+        const { borrowing_id, actual_return_date, condition_at_return, is_damaged, photo_url_return, overnight_required, nights_count } = body;
 
         if (!borrowing_id || !actual_return_date) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
@@ -64,8 +64,14 @@ export async function POST(req: Request) {
                     condition_at_return: condition_at_return || null,
                     is_damaged: is_damaged || false,
                     photo_url_return: photo_url_return || null,
+                    overnight_required: overnight_required ?? false,
+                    nights_count: nights_count ?? null,
+                    trip_fee_status: overnight_required ? "PENDING" : null,
                     status: "returned",
                     return_status: "PENDING_KEY"
+                } as any,
+                include: {
+                    employee: { include: { supervisor: true } }
                 }
             });
 
@@ -97,10 +103,12 @@ export async function POST(req: Request) {
                     .map(m => m.line_user_id)
                     .filter(id => !!id) as string[];
 
-                const { sendAssetReturnNotification } = await import("@/utils/lineMessaging");
+                const { sendAssetReturnNotification, sendTripFeeApprovalRequest } = await import("@/utils/lineMessaging");
                 const { formatName } = await import("@/utils/formatName");
+                const empNameFormatted = formatName((borrowing.employee as any).name, (borrowing.employee as any).nickname);
+
                 await sendAssetReturnNotification({
-                    empName: formatName((borrowing.employee as any).name, (borrowing.employee as any).nickname),
+                    empName: empNameFormatted,
                     jobTitle: (borrowing.employee as any).job_positions?.title,
                     branchName: (borrowing.employee as any).branches?.name,
                     assetName: borrowing.assets.name,
@@ -112,6 +120,22 @@ export async function POST(req: Request) {
                     location: borrowing.location ?? undefined,
                     extraTargetIds: extraIds
                 });
+
+                // Send Trip Fee Approval if overnight_required
+                if (overnight_required) {
+                    const supervisorLineId = (result as any).employee?.supervisor?.line_user_id;
+                    if (supervisorLineId) {
+                        await sendTripFeeApprovalRequest(supervisorLineId, {
+                            id: result.id,
+                            empName: empNameFormatted,
+                            assetName: borrowing.assets.name,
+                            borrowDate: borrowing.created_at.toLocaleDateString("th-TH"),
+                            returnDate: new Date(actual_return_date).toLocaleDateString("th-TH"),
+                            nightsCount: nights_count || 0
+                        });
+                    }
+                }
+
             } catch (err) {
                 console.error("[API/assets/return] Notification Error:", err);
             }

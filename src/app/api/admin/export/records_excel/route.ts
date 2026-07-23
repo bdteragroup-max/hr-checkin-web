@@ -167,7 +167,7 @@ export async function GET(req: Request) {
                 },
             });
 
-            const holidayDates = new Set(Array.from(holidayMap.keys()));
+            // const holidayDates = new Set(Array.from(holidayMap.keys()));
 
             const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string>, total_work_days: number }> = {};
             
@@ -186,7 +186,6 @@ export async function GET(req: Request) {
                 if (empStartDate <= empEndDate) {
                     for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
                         if (dt.getUTCDay() === 0) continue;
-                        if (holidayDates.has(dt.toISOString().split("T")[0])) continue;
                         empTotalWorkDays++;
                     }
                 }
@@ -295,26 +294,37 @@ function processEmployeeSheet(
         { header: "OUT_LOCATION", key: "out_loc", width: 30 },
         { header: "LATE_MINS", key: "late_mins", width: 12 },
         { header: "STATUS", key: "status", width: 25 },
+        { header: "MORNING", key: "morning", width: 15 },
+        { header: "AFTERNOON", key: "afternoon", width: 15 },
         { header: "WEEKEND", key: "weekend", width: 10 },
     ];
     sheet.getRow(1).font = { bold: true };
 
-    const leaveDaysMap = new Map<string, string>();
+    const leaveDaysMap = new Map<string, { type: string, morning: string, afternoon: string }>();
     leaves.forEach((l: any) => {
         if (l.status !== "approved") return;
         let cur = new Date(l.start_date);
         const endD = new Date(l.end_date);
         while (cur <= endD) {
             let leaveTypeStr = l.leave_type;
-            if (l.days === 0.5 && l.start_at) {
+            let morning = "-";
+            let afternoon = "-";
+            
+            // A leave is considered half-day if minutes < 480 (or explicitly days === 0.5 just in case)
+            if ((l.days === 0.5 || (l.days === 1 && l.minutes > 0 && l.minutes < 480)) && l.start_at) {
                 const bkkHour = parseInt(new Date(l.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
                 if (bkkHour < 12) {
                     leaveTypeStr += " (ครึ่งเช้า 08:00-12:00)";
+                    morning = l.leave_type;
                 } else {
                     leaveTypeStr += " (ครึ่งบ่าย 13:00-17:00)";
+                    afternoon = l.leave_type;
                 }
+            } else {
+                morning = l.leave_type;
+                afternoon = l.leave_type;
             }
-            leaveDaysMap.set(cur.toISOString().split("T")[0], leaveTypeStr);
+            leaveDaysMap.set(cur.toISOString().split("T")[0], { type: leaveTypeStr, morning, afternoon });
             cur.setDate(cur.getDate() + 1);
         }
     });
@@ -334,19 +344,19 @@ function processEmployeeSheet(
         const dateStr = dt.toISOString().split("T")[0];
         const isSunday = dt.getUTCDay() === 0;
         const holName = holidayMap.get(dateStr);
-        const leaveType = leaveDaysMap.get(dateStr);
+        const leaveData = leaveDaysMap.get(dateStr);
         const isTravel = travelDaysMap.has(dateStr);
 
         const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
         const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
         const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
 
-        if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
+        // if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
 
         let status = "ขาด";
         if (isSunday) status = "วันหยุด";
         if (holName) status = `หยุดพิเศษ (${holName})`;
-        if (leaveType) status = leaveType;
+        if (leaveData) status = leaveData.type;
         else if (isTravel) status = "ออกต่างจังหวัด";
         
         const inRecord = inRecords.length > 0 ? inRecords[0] : null; 
@@ -354,8 +364,8 @@ function processEmployeeSheet(
 
         if (inRecord) {
             status = inRecord.late_status === "late" ? "มาสาย" : "มาทำงาน";
-            if (leaveType) {
-                status += ` + ${leaveType}`;
+            if (leaveData) {
+                status += ` + ${leaveData.type}`;
             } else if (isTravel) {
                 status += ` (ตจว.)`;
             }
@@ -382,6 +392,8 @@ function processEmployeeSheet(
             out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
             late_mins: inRecord?.late_min || 0,
             status: status,
+            morning: leaveData?.morning || "-",
+            afternoon: leaveData?.afternoon || "-",
             weekend: isSunday ? "YES" : "NO"
         });
     }

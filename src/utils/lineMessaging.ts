@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 const nameCache = new Map<string, string>();
-async function formatNameDb(name: string | undefined): Promise<string> {
+export async function formatNameDb(name: string | undefined): Promise<string> {
   if (!name || name.includes('(')) return name || "";
   if (nameCache.has(name)) return nameCache.get(name)!;
   try {
@@ -65,7 +65,7 @@ async function sendLineMessage(to: string, messages: any[], replyToken?: string)
       if (res.ok) return true;
       const errTxt = await res.text();
       let errObj = errTxt as any;
-      try { errObj = JSON.parse(errTxt); } catch(e) {}
+      try { errObj = JSON.parse(errTxt); } catch (e) { }
       console.error("[LINE UTILS] sendLineMessage fail:", res.status, JSON.stringify(errObj, null, 2));
       return false; // If API responds with error, don't retry (app level error)
     } catch (e: any) {
@@ -2703,24 +2703,24 @@ export async function sendWorkPlanNotificationBatch(
 
   for (let i = 0; i < plansData.length; i += maxPeoplePerCard) {
     const chunk = plansData.slice(i, i + maxPeoplePerCard);
-    
+
     const bodyContents: any[] = [];
-    
+
     for (let j = 0; j < chunk.length; j++) {
       const data = chunk[j];
       const empName = await formatNameDb(data.empName);
-      
+
       const personBox: any = {
         type: "box",
         layout: "vertical",
         margin: j === 0 ? "none" : "lg",
         spacing: "sm",
         contents: [
-          { 
-            type: "text", 
-            text: `👤 ${empName} (${data.deptName || "-"})`, 
-            weight: "bold", 
-            size: "sm", 
+          {
+            type: "text",
+            text: `👤 ${empName} (${data.deptName || "-"})`,
+            weight: "bold",
+            size: "sm",
             color: "#1e293b",
             wrap: true
           },
@@ -2752,7 +2752,7 @@ export async function sendWorkPlanNotificationBatch(
       }
 
       bodyContents.push(personBox);
-      
+
       if (j < chunk.length - 1) {
         bodyContents.push({ type: "separator", margin: "lg" });
       }
@@ -3265,3 +3265,123 @@ export async function sendDepartmentLeaveNotification(
   return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการลา: ${leaveData.empName}`, contents: contents as any }]);
 }
 
+
+export async function sendTripFeeApprovalRequest(
+  supervisorLineId: string,
+  borrowing: {
+    id: number;
+    empName: string;
+    assetName: string;
+    borrowDate: string;
+    returnDate: string;
+    nightsCount: number;
+  }
+) {
+  if (!supervisorLineId) return false;
+
+  const flexMessage = {
+    type: "flex",
+    altText: `คำขออนุมัติค่าเที่ยวขับรถจาก ${borrowing.empName}`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "อนุมัติค่าเที่ยวขับรถ",
+            weight: "bold",
+            color: "#ffffff",
+            size: "md"
+          }
+        ],
+        backgroundColor: "#0ea5e9"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "พนักงาน:", color: "#aaaaaa", size: "sm", flex: 3 },
+              { type: "text", text: borrowing.empName, color: "#333333", size: "sm", flex: 7, wrap: true }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "รถ:", color: "#aaaaaa", size: "sm", flex: 3 },
+              { type: "text", text: borrowing.assetName, color: "#333333", size: "sm", flex: 7, wrap: true }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "ค้างคืน:", color: "#aaaaaa", size: "sm", flex: 3 },
+              { type: "text", text: `${borrowing.nightsCount} คืน`, color: "#333333", size: "sm", flex: 7 }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "ยืม:", color: "#aaaaaa", size: "sm", flex: 3 },
+              { type: "text", text: borrowing.borrowDate, color: "#333333", size: "sm", flex: 7 }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "คืน:", color: "#aaaaaa", size: "sm", flex: 3 },
+              { type: "text", text: borrowing.returnDate, color: "#333333", size: "sm", flex: 7 }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#22c55e",
+            action: {
+              type: "postback",
+              label: "✅ อนุมัติ",
+              data: `action=approve_trip_fee&id=${borrowing.id}`,
+              displayText: "อนุมัติค่าเที่ยว"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            color: "#ef4444",
+            action: {
+              type: "postback",
+              label: "❌ ไม่อนุมัติ",
+              data: `action=reject_trip_fee&id=${borrowing.id}`,
+              displayText: "ไม่อนุมัติค่าเที่ยว"
+            }
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    return sendLineMessage(supervisorLineId, [flexMessage]);
+  } catch (error) {
+    console.error("Error sending trip fee approval message:", error);
+    return false;
+  }
+}

@@ -319,15 +319,14 @@ export async function GET(req: Request) {
             
             rows = adjustCheckinsForLeaves(rows, leaves);
 
-            const holidaysFetch = await prisma.holidays.findMany({
-                where: { date: { gte: start, lte: end } }
-            });
-            const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
+            // const holidaysFetch = await prisma.holidays.findMany({
+            //     where: { date: { gte: start, lte: end } }
+            // });
+            // const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
             let totalWorkDays = 0;
             for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
                 if (dt.getUTCDay() === 0) continue;
-                if (holidayDates.has(dt.toISOString().split("T")[0])) continue;
                 totalWorkDays++;
             }
 

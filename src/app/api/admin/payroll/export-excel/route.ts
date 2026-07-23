@@ -37,6 +37,7 @@ export async function POST(req: Request) {
             { header: "คอมมิชชั่น", key: "commissions", width: 15 },
             { header: "โบนัส", key: "bonus", width: 15 },
             { header: "รายได้อื่นๆ", key: "other_benefits", width: 15 },
+            { header: "ค่าเที่ยวขับรถ", key: "truck_trip_fee", width: 15 },
             { header: "สวัสดิการอื่นๆ", key: "welfare_amount", width: 15 },
             { header: "รวมรายได้สุทธิ", key: "gross_pay", width: 15 },
             { header: "หักประกันสังคม", key: "social_security", width: 15 },
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
                 commissions: emp.commissions,
                 bonus: emp.bonus,
                 other_benefits: emp.other_benefits,
+                truck_trip_fee: emp.truck_trip_fee,
                 welfare_amount: emp.welfare_amount,
                 gross_pay: emp.gross_pay,
                 social_security: emp.social_security,
@@ -98,11 +100,11 @@ export async function POST(req: Request) {
         // Apply number formats
         const numColumns = [
             "base_salary", "position_allowance", "general_allowance", "normal_1_5x_hours", "normal_ot_pay",
-            "holiday_1x_hours", "holiday_1x_pay", "holiday_3x_hours", "holiday_3x_pay",
-            "diligence_allowance", "meal_allowance", "travel_allowance", "accommodation_allowance",
-            "travel_site_allowance", "telephone_allowance", "long_service_allowance",
-            "commissions", "bonus", "other_benefits", "welfare_amount", "gross_pay", "social_security",
-            "student_loan", "insurance", "unpaid_absenteeism", "tax", "other_deductions", "net_pay"
+            "holiday_1x_hours", "holiday_1x_pay", "holiday_3x_hours", "holiday_3x_pay", "diligence_allowance",
+            "meal_allowance", "travel_allowance", "accommodation_allowance", "travel_site_allowance",
+            "travel_accommodation", "telephone_allowance", "long_service_allowance", "commissions", "bonus",
+            "other_benefits", "truck_trip_fee", "welfare_amount", "gross_pay", "social_security", "student_loan",
+            "insurance", "unpaid_absenteeism", "tax", "other_deductions", "net_pay"
         ];
         
         numColumns.forEach(key => {

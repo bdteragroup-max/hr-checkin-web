@@ -38,13 +38,12 @@ export async function POST(request: Request) {
         }
 
         // --- NEW: VALIDATION AGAINST ACTUAL CHECK-IN/OUT ---
+        // Use date_key to accurately get check-ins for the specified shift date
+        const dateForObj = new Date(date_for);
         const shiftCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id: decoded.emp_id,
-                timestamp: {
-                    gte: new Date(start.getTime() - 24 * 60 * 60 * 1000),
-                    lte: new Date(end.getTime() + 24 * 60 * 60 * 1000)
-                }
+                date_key: dateForObj
             },
             orderBy: { timestamp: "asc" }
         });

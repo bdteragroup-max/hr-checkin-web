@@ -57,6 +57,8 @@ type PayrollResult = {
     is_salary_overridden: boolean;
     gross_pay: number;
     net_pay: number;
+    truck_trip_fee?: number;
+    truck_hotel_allowance_max?: number;
     provident_fund: number;
     taxable_income: number;
     housing_benefit: number;
@@ -620,6 +622,7 @@ export default function PayrollPage() {
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>คอมมิชชั่น</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัส</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รายได้อื่นๆ</th>
+                                                <th className={styles.thRight} style={{ minWidth: 100 }}>ค่าเที่ยวขับรถ</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>สวัสดิการอื่นๆ</th>
                                                 <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
                                                 <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
@@ -783,6 +786,9 @@ export default function PayrollPage() {
                                                         ) : (
                                                             <span style={{ fontWeight: 600, color: p.accommodation_allowance > 0 ? "var(--ink)" : "inherit" }}>
                                                                 {p.accommodation_allowance > 0 ? formatB(p.accommodation_allowance) : "-"}
+                                                                {p.truck_hotel_allowance_max && p.truck_hotel_allowance_max > 0 ? (
+                                                                    <div style={{ fontSize: "10px", color: "var(--teal)", marginTop: "2px" }}>(Max {formatB(p.truck_hotel_allowance_max)})</div>
+                                                                ) : null}
                                                             </span>
                                                         )}
                                                     </td>
@@ -857,6 +863,13 @@ export default function PayrollPage() {
                                                                 {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
                                                             </span>
                                                         )}
+                                                    </td>
+
+                                                    {/* Truck Trip Fee */}
+                                                    <td className={styles.tdRight}>
+                                                        <span style={{ fontWeight: 600, color: p.truck_trip_fee && p.truck_trip_fee > 0 ? "var(--ok)" : "inherit" }}>
+                                                            {p.truck_trip_fee && p.truck_trip_fee > 0 ? formatB(p.truck_trip_fee) : "-"}
+                                                        </span>
                                                     </td>
 
                                                     {/* General Welfare (Automated) */}

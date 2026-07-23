@@ -117,7 +117,9 @@ export default function CarBorrowPage() {
         actual_return_date: new Date().toISOString().slice(0,10),
         actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
-        is_damaged: false
+        is_damaged: false,
+        overnight_required: false,
+        nights_count: 1
     });
 
     const nowRounded = (() => { const d = new Date(); d.setSeconds(0, 0); return d; })();
@@ -322,7 +324,9 @@ export default function CarBorrowPage() {
             actual_return_date: new Date().toISOString().slice(0,10),
             actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
             condition_at_return: "",
-            is_damaged: false
+            is_damaged: false,
+            overnight_required: false,
+            nights_count: 1
         });
         setShowReturnModal(true);
     }
@@ -345,7 +349,9 @@ export default function CarBorrowPage() {
                     actual_return_date: `${returnData.actual_return_date}T${returnData.actual_return_time}:00`,
                     condition_at_return: returnData.condition_at_return,
                     is_damaged: returnData.is_damaged,
-                    photo_url_return: JSON.stringify(returnPhotos)
+                    photo_url_return: JSON.stringify(returnPhotos),
+                    overnight_required: returnData.overnight_required,
+                    nights_count: returnData.overnight_required ? Number(returnData.nights_count) : null
                 })
             });
 
@@ -924,6 +930,42 @@ export default function CarBorrowPage() {
                                     onChange={e => setReturnData({ ...returnData, condition_at_return: e.target.value })}
                                 />
                             </div>
+
+                            {selectedReturn.assets?.asset_id === "71-1557" && (
+                                <div style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "8px", marginBottom: "16px", border: "1px solid #e2e8f0" }}>
+                                    <h4 style={{ margin: "0 0 12px 0", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <TruckIcon width={20} />
+                                        ค่าเที่ยวขับรถ (Trip Fee)
+                                    </h4>
+                                    
+                                    <label className={styles.checkboxLabel} style={{ marginBottom: "12px" }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={returnData.overnight_required}
+                                            onChange={e => setReturnData({ ...returnData, overnight_required: e.target.checked })}
+                                        />
+                                        <span className={styles.checkboxText} style={{ fontWeight: 500 }}>มีการค้างคืน (Overnight stay required)</span>
+                                    </label>
+
+                                    {returnData.overnight_required && (
+                                        <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                <label style={{ fontSize: "14px", fontWeight: 500 }}>จำนวนคืนที่ค้าง (Nights):</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    style={{ width: "80px", padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                                    value={returnData.nights_count}
+                                                    onChange={e => setReturnData({ ...returnData, nights_count: parseInt(e.target.value) || 1 })}
+                                                />
+                                            </div>
+                                            <div style={{ padding: "12px", backgroundColor: "#eff6ff", color: "#1e3a8a", borderRadius: "6px", fontSize: "14px", fontWeight: 500, marginTop: "8px" }}>
+                                                ค่าตอบแทนที่ได้รับ: {(returnData.nights_count * 600).toLocaleString()} บาท ({returnData.nights_count} × 600)
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <label className={styles.checkboxLabel}>
                                 <input

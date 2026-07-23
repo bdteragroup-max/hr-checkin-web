@@ -146,6 +146,16 @@ export async function GET(request: Request) {
             }
         });
 
+        // 2.14 Fetch Asset Borrowings for trip fee
+        const tripFeeAssets = ["71-1557"]; // Hiab truck
+        const assetBorrowings = await prisma.asset_borrowings.findMany({
+            where: {
+                overnight_required: true,
+                assets: { asset_id: { in: tripFeeAssets } },
+                borrow_date: { gte: startDate, lte: endDate }
+            }
+        });
+
         // 3. Process each employee
         const results = employees.map(emp => {
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
@@ -608,6 +618,23 @@ export async function GET(request: Request) {
             
             const calculatedCommissions = Array.from(uniqueClaimsMap.values()).reduce((a, b) => a + b, 0);
 
+            // 4.7 Truck Trip Fee
+            let truck_trip_fee = 0;
+            let truck_hotel_allowance_max = 0;
+            const posTitle = (emp.job_positions?.title || "").toLowerCase();
+            const isDriver = posTitle.includes("driver") || posTitle.includes("ขับรถ") || posTitle.includes("warehouse") || posTitle.includes("transport");
+            
+            if (isDriver) {
+                const empBorrowings = assetBorrowings.filter((b: any) => 
+                    b.emp_id === emp.emp_id && 
+                    b.overnight_required === true &&
+                    b.trip_fee_status === "APPROVED"
+                );
+                truck_trip_fee = empBorrowings.length * 600;
+                const totalTripNights = empBorrowings.reduce((sum: number, b: any) => sum + (b.nights_count ?? 0), 0);
+                truck_hotel_allowance_max = totalTripNights * 600;
+            }
+
             const totalHolidayAllowance = 0;
             // Exclude travel_accommodation from net pay as it is processed separately but kept for record-keeping/evidence
             const netPayCalculated = baseSalary + totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + travel_allowance + accommodation_allowance + long_service_allowance + telephone_allowance + travel_site_allowance + position_allowance + general_allowance + welfare_amount;
@@ -744,7 +771,7 @@ export async function GET(request: Request) {
             const other_deductions = Number(adj?.other_deductions || 0);
             const other_benefits = Number(adj?.other_benefits || 0);
 
-            const grossPay = netPayCalculated + commissions + bonus + other_benefits;
+            const grossPay = netPayCalculated + commissions + bonus + other_benefits + truck_trip_fee;
             const finalNetPay = grossPay - social_security - student_loan - insurance - other_deductions - unpaid_absenteeism - tax;
 
             return {
@@ -758,6 +785,8 @@ export async function GET(request: Request) {
                 is_ot_eligible: isOtEligible,
                 ot_rule: otRule,
                 is_on_trial: isOnTrial,
+                truck_trip_fee,
+                truck_hotel_allowance_max,
 
                 normal_1_5x_hours,
                 normal_ot_pay: normalOtPay,

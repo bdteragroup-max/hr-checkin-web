@@ -234,7 +234,7 @@ export async function POST(req: Request) {
     }
 
     // Radius Check
-    const isUnmapped = targetLat === 0 && targetLon === 0 && targetRad === 0;
+    const isUnmapped = targetLat === 0 && targetLon === 0;
     const distance = (isUnmapped || isOffsite) ? 0 : getDistanceMeters(lat, lon, targetLat, targetLon);
 
     if (!(isUnmapped || isOffsite) && distance > targetRad) {
