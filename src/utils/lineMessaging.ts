@@ -64,7 +64,9 @@ async function sendLineMessage(to: string, messages: any[], replyToken?: string)
       });
       if (res.ok) return true;
       const errTxt = await res.text();
-      console.error("[LINE UTILS] sendLineMessage fail:", res.status, errTxt);
+      let errObj = errTxt as any;
+      try { errObj = JSON.parse(errTxt); } catch(e) {}
+      console.error("[LINE UTILS] sendLineMessage fail:", res.status, JSON.stringify(errObj, null, 2));
       return false; // If API responds with error, don't retry (app level error)
     } catch (e: any) {
       retries--;
