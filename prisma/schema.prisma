@@ -887,21 +887,33 @@ model MonthlyTarget {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Order {
-  id                 String           @id
-  orderNumber        String           @unique
-  companyId          String
+  id                 String              @id
+  orderNumber        String              @unique
+  companyId          String?
   quotationId        String?
   salespersonId      String?
-  status             String           @default("เน€เธเธเน€เธเธเน€เธเธเน€เธเธ—เน€เธยเน€เธเธเน€เธเธ‘เน€เธย")
-  value              Float            @default(0)
-  priority           String           @default("Normal")
-  targetDeliveryDate DateTime?        @db.Timestamptz(6)
-  createdAt          DateTime         @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime         @db.Timestamptz(6)
-  Company            Company          @relation(fields: [companyId], references: [id])
-  Quotation          Quotation?       @relation(fields: [quotationId], references: [id])
-  User               User?            @relation(fields: [salespersonId], references: [id])
+  status             String              @default("รอยืนยัน")
+  value              Float               @default(0)
+  priority           String              @default("Normal")
+  targetDeliveryDate DateTime?           @db.Timestamptz(6)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime            @db.Timestamptz(6)
+  estimatedDays      Int?
+  materialReady      Boolean             @default(false)
+  prFulfilledAt      DateTime?           @db.Timestamptz(6)
+  prNote             String?
+  prRequired         Boolean             @default(false)
+  productionDeadline DateTime?           @db.Timestamptz(6)
+  qcAt               DateTime?           @db.Timestamptz(6)
+  qcBy               String?
+  qcImages           String[]            @default([])
+  qcNote             String?
+  qcStatus           String?             @default("PENDING")
+  Company            Company?            @relation(fields: [companyId], references: [id])
+  Quotation          Quotation?          @relation(fields: [quotationId], references: [id])
+  User               User?               @relation(fields: [salespersonId], references: [id])
   OrderStatusLog     OrderStatusLog[]
+  purchase_requests  purchase_requests[]
 
   @@index([companyId])
   @@index([quotationId])
@@ -1308,6 +1320,7 @@ model User {
   CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[] @relation("CustomerRequirement_estimatedByUserIdToUser")
   CustomerRequirement                                             CustomerRequirement[]
   InstallationOrder                                               InstallationOrder[]
+  JobDocument                                                     JobDocument[]
   MarketingLead_MarketingLead_assignedToIdToUser                  MarketingLead[]       @relation("MarketingLead_assignedToIdToUser")
   MarketingLead_MarketingLead_createdByUserIdToUser               MarketingLead[]       @relation("MarketingLead_createdByUserIdToUser")
   MonthlyTarget                                                   MonthlyTarget[]
@@ -1372,45 +1385,48 @@ model job_step_logs {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model jobs {
-  id                 String              @id
-  jobNumber          String              @unique
-  companyCode        String
-  jobType            String              @default("")
-  month              Int
-  yearBe             Int
-  dateClosed         DateTime            @db.Timestamptz(6)
-  customerName       String
-  item               String?
-  quotationNumber    String?
-  poNumber           String?
-  sellerName         String?
-  quotationId        String?
-  current_step       String              @default("sales")
-  flow_variant       String?
-  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime            @db.Timestamptz(6)
-  courierCompany     String?
-  deliveryDate       DateTime?           @db.Timestamptz(6)
-  deliveryMethod     String?
-  trackingNumber     String?
-  trackingPhotoUrl   String?
-  paymentMethod      String?
-  paymentStatus      String?             @default("pending")
-  billingRegulations String?
-  creditDocsUrl      String?
-  creditTerms        String?
-  percentageTerms    String?
-  salesOrderDate     DateTime?           @db.Timestamptz(6)
-  paymentDate        DateTime?           @db.Timestamptz(6)
-  billingDocsUrl     String?
-  InstallationOrder  InstallationOrder[]
-  OutsourceRepair    OutsourceRepair[]
-  Project            Project?
-  RepairDelivery     RepairDelivery[]
-  RepairOrder        RepairOrder?
-  job_step_logs      job_step_logs[]
-  Quotation          Quotation?          @relation(fields: [quotationId], references: [id])
-  payment_tasks      payment_tasks[]
+  id                    String              @id
+  jobNumber             String              @unique
+  companyCode           String
+  jobType               String              @default("")
+  month                 Int
+  yearBe                Int
+  dateClosed            DateTime            @db.Timestamptz(6)
+  customerName          String
+  item                  String?
+  quotationNumber       String?
+  poNumber              String?
+  sellerName            String?
+  quotationId           String?
+  current_step          String              @default("sales")
+  flow_variant          String?
+  createdAt             DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime            @db.Timestamptz(6)
+  courierCompany        String?
+  deliveryDate          DateTime?           @db.Timestamptz(6)
+  deliveryMethod        String?
+  trackingNumber        String?
+  trackingPhotoUrl      String?
+  paymentMethod         String?
+  paymentStatus         String?             @default("pending")
+  billingRegulations    String?
+  creditDocsUrl         String?
+  creditTerms           String?
+  percentageTerms       String?
+  salesOrderDate        DateTime?           @db.Timestamptz(6)
+  paymentDate           DateTime?           @db.Timestamptz(6)
+  billingDocsUrl        String?
+  additionalInformation String?
+  requiredDeliveryDate  DateTime?
+  InstallationOrder     InstallationOrder[]
+  JobDocument           JobDocument[]
+  OutsourceRepair       OutsourceRepair[]
+  Project               Project?
+  RepairDelivery        RepairDelivery[]
+  RepairOrder           RepairOrder?
+  job_step_logs         job_step_logs[]
+  Quotation             Quotation?          @relation(fields: [quotationId], references: [id])
+  payment_tasks         payment_tasks[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1428,6 +1444,7 @@ model payment_tasks {
   installmentAmount Float?
   installmentNo     Int?
   installmentTotal  Int?
+  creditType        String?
   jobs              jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
@@ -1983,7 +2000,9 @@ model purchase_requests {
   reportedBy      String?
   createdAt       DateTime          @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime          @db.Timestamptz(6)
+  orderId         String?
   purchase_orders purchase_orders[]
+  Order           Order?            @relation(fields: [orderId], references: [id])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2118,4 +2137,28 @@ model CompanyInteraction {
   createdAt   DateTime @default(now())
   Company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model JobDocument {
+  id         String   @id
+  jobId      String
+  type       String
+  fileUrl    String
+  fileName   String
+  fileSize   Int?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  jobs       jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  User       User     @relation(fields: [uploadedBy], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model order_running_numbers {
+  id         String @id
+  yearBe     Int
+  month      Int
+  lastNumber Int    @default(0)
+
+  @@unique([yearBe, month])
 }
