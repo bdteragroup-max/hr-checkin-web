@@ -59,8 +59,11 @@ export default function WheelRedeemSection() {
             });
             const data = await res.json();
             if (data.success) {
-                setSuccessMessage(`แลกสิทธิ์สำเร็จจำนวน ${data.tickets} สิทธิ์!`);
+                setSuccessMessage(`แลกสิทธิ์สำเร็จจำนวน ${data.tickets} สิทธิ์! ระบบกำลังอัปเดตหน้าจอ...`);
                 fetchEvent(); // refresh pool stats
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 setErrorMessage(data.error || "ไม่สามารถแลกสิทธิ์ได้");
             }
