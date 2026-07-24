@@ -161,7 +161,7 @@ export default function SupervisorProbationPage() {
                                                         tgt.setHours(0, 0, 0, 0);
                                                         
                                                         const unlockDate = new Date(tgt);
-                                                        unlockDate.setDate(unlockDate.getDate() - 7);
+                                                        unlockDate.setDate(unlockDate.getDate() - 14);
                                                         
                                                         const diffMs = now.getTime() - tgt.getTime();
                                                         if (diffMs > 0) {

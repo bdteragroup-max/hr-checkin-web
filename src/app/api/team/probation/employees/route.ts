@@ -103,7 +103,7 @@ export async function GET() {
                     dueDate.setDate(dueDate.getDate() + dueDays);
                     
                     unlockDate = new Date(dueDate);
-                    unlockDate.setDate(unlockDate.getDate() - 7);
+                    unlockDate.setDate(unlockDate.getDate() - 14); // Allow evaluation 14 days in advance instead of 7
                     
                     isUnlocked = now >= unlockDate;
                 }
