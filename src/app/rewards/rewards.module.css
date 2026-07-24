@@ -330,7 +330,8 @@
   max-width: 520px;
   border-radius: 24px 24px 0 0;
   padding: 24px;
-  padding-bottom: max(24px, 100px); /* Add extra padding to ensure buttons are above bottom nav */
+  padding-bottom: max(24px, 100px);
+  /* Add extra padding to ensure buttons are above bottom nav */
   position: relative;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
   animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -541,7 +542,8 @@
 
   .modalContent {
     border-radius: 24px;
-    padding-bottom: 24px; /* Reset bottom padding on desktop */
+    padding-bottom: 24px;
+    /* Reset bottom padding on desktop */
   }
 
   .modalHandle {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import styles from "./rewards.module.css";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { GiftIcon } from "@heroicons/react/24/outline";
+import WheelRedeemSection from "./components/WheelRedeemSection";
 
 export default function RewardsCatalog() {
   const [rewards, setRewards] = useState<any[]>([]);
@@ -261,6 +262,8 @@ export default function RewardsCatalog() {
           </div>
         </div>
       )}
+      
+      <WheelRedeemSection />
       </div>
     </div>
   );

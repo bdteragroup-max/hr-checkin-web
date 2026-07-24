@@ -174,6 +174,8 @@ model employees {
   tasks_created                     tasks[]
   transfer_budgets                  transfer_budgets?
   travel_claims                     travel_claims[]
+  wheel_tickets                     wheel_tickets[]
+  wheel_winners                     wheel_winners[]
   withholding_tax_documents         withholding_tax_documents[]
 
   @@index([is_active], map: "idx_employees_active")
@@ -455,8 +457,8 @@ model asset_borrowings {
   key_returned_at          DateTime? @db.Timestamptz(6)
   key_signature_url        String?
   return_status            String?   @default("PENDING") @db.VarChar(20)
-  nights_count             Int?
   overnight_required       Boolean   @default(false)
+  nights_count             Int?
   trip_fee_status          String?   @db.VarChar(20)
   assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
@@ -1367,6 +1369,51 @@ model job_running_numbers {
   lastNumber Int    @default(0)
 
   @@unique([yearBe, month])
+}
+
+model wheel_events {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(200)
+  description String?
+  start_date  DateTime?      @db.Timestamptz(6)
+  end_date    DateTime?      @db.Timestamptz(6)
+  is_active   Boolean        @default(true)
+  created_at  DateTime       @default(now()) @db.Timestamptz(6)
+  prizes      wheel_prizes[]
+}
+
+model wheel_prizes {
+  id           Int             @id @default(autoincrement())
+  event_id     Int
+  name         String          @db.VarChar(200)
+  bonus_amount Int             @default(0)
+  quantity     Int             @default(1)
+  is_active    Boolean         @default(true)
+  event        wheel_events    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  tickets      wheel_tickets[]
+  winners      wheel_winners[]
+}
+
+model wheel_tickets {
+  id             Int          @id @default(autoincrement())
+  emp_id         String       @db.VarChar(20)
+  prize_id       Int
+  coin_type_used String       @db.VarChar(20)
+  coins_spent    Int
+  ticket_count   Int          @default(1)
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  employee       employees    @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  prize          wheel_prizes @relation(fields: [prize_id], references: [id], onDelete: Cascade)
+}
+
+model wheel_winners {
+  id       Int          @id @default(autoincrement())
+  emp_id   String       @db.VarChar(20)
+  prize_id Int
+  drawn_at DateTime     @default(now()) @db.Timestamptz(6)
+  status   String       @default("pending")
+  employee employees    @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  prize    wheel_prizes @relation(fields: [prize_id], references: [id], onDelete: Cascade)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
