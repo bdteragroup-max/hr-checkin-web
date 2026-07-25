@@ -152,10 +152,22 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ ok: true, data: result });
     } catch (error: any) {
-        console.error("Coin Transfer Error:", error);
+        const isValidation = error.message && (
+            error.message.includes("Insufficient") || 
+            error.message.includes("not found") || 
+            error.message.includes("limit") ||
+            error.message.includes("exceeded")
+        );
+        
+        if (!isValidation) {
+            console.error("Coin Transfer Error:", error);
+        } else {
+            console.warn(`Coin Transfer Validation: ${error.message}`);
+        }
+        
         return NextResponse.json(
             { error: error.message || "Failed to transfer coins" },
-            { status: (error.message.includes("Insufficient") || error.message.includes("not found")) ? 400 : 500 }
+            { status: isValidation ? 400 : 500 }
         );
     }
 }
