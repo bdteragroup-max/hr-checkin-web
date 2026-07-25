@@ -12,6 +12,7 @@ type PayrollResult = {
     department: string;
     division: string;
     position: string;
+    service_duration?: string;
     base_salary: number;
     hourly_wage: number;
     is_ot_eligible: boolean;

@@ -166,9 +166,9 @@ export async function GET(request: Request) {
 
             // --- Proration Logic ---
             const hireDateForProration = emp.hire_date ? new Date(emp.hire_date) : null;
-            if (hireDateForProration) hireDateForProration.setHours(0,0,0,0);
+            if (hireDateForProration) hireDateForProration.setHours(0, 0, 0, 0);
             const empResignationDateForProration = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
-            if (empResignationDateForProration) empResignationDateForProration.setHours(0,0,0,0);
+            if (empResignationDateForProration) empResignationDateForProration.setHours(0, 0, 0, 0);
 
             let activeDaysInCycle = 0;
             let tempDate = new Date(startDate);
@@ -182,7 +182,7 @@ export async function GET(request: Request) {
             }
 
             const isEmployedFullCycle = (!hireDateForProration || hireDateForProration <= startDate) && (!empResignationDateForProration || empResignationDateForProration >= endDate);
-            
+
             let unworkedDaysDueToResignationOrHire = 0;
             if (!isEmployedFullCycle && !isDaily) {
                 unworkedDaysDueToResignationOrHire = Math.max(0, 30 - activeDaysInCycle);
@@ -346,7 +346,7 @@ export async function GET(request: Request) {
                 else if (yrs < 5) accommodation_allowance = 2700;
                 else accommodation_allowance = 3000;
             }
-            
+
             // Zero out if company provides accommodation
             if ((emp as any).company_accommodation) {
                 accommodation_allowance = 0;
@@ -359,7 +359,7 @@ export async function GET(request: Request) {
             let maxWorkdays = 0;
 
             const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
-            if (hireDate) hireDate.setHours(0,0,0,0);
+            if (hireDate) hireDate.setHours(0, 0, 0, 0);
 
             let curr = new Date(startDate);
             while (curr <= endDate) {
@@ -387,7 +387,7 @@ export async function GET(request: Request) {
                 const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
                 const empTravels = travelClaims.filter((t: any) => t.emp_id === emp.emp_id);
                 const isOnTravel = empTravels.some((t: any) => dateStr >= fmt(t.date) && dateStr <= fmt(t.end_date || t.date));
-                
+
                 if (hasValidAttendance || (isExempt && !isHoliday) || isOnTravel) {
                     totalPaidDays++;
                 }
@@ -463,7 +463,7 @@ export async function GET(request: Request) {
                     travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
                 }
             }
-            
+
             // Zero out if company provides a car
             if ((emp as any).company_car) {
                 travel_allowance = 0;
@@ -612,10 +612,10 @@ export async function GET(request: Request) {
                     uniqueClaimsMap.set(c.id, Number(c.per_person_commission || 0));
                 }
             };
-            
+
             empCommissionClaimsAsMain.forEach(addClaim);
             empCommissionClaimsAsCompanion.forEach(addClaim);
-            
+
             const calculatedCommissions = Array.from(uniqueClaimsMap.values()).reduce((a, b) => a + b, 0);
 
             // 4.7 Truck Trip Fee
@@ -623,10 +623,10 @@ export async function GET(request: Request) {
             let truck_hotel_allowance_max = 0;
             const posTitle = (emp.job_positions?.title || "").toLowerCase();
             const isDriver = posTitle.includes("driver") || posTitle.includes("ขับรถ") || posTitle.includes("warehouse") || posTitle.includes("transport");
-            
+
             if (isDriver) {
-                const empBorrowings = assetBorrowings.filter((b: any) => 
-                    b.emp_id === emp.emp_id && 
+                const empBorrowings = assetBorrowings.filter((b: any) =>
+                    b.emp_id === emp.emp_id &&
                     b.overnight_required === true &&
                     b.trip_fee_status === "APPROVED"
                 );
@@ -690,7 +690,7 @@ export async function GET(request: Request) {
 
             const adjCommissions = adj?.commissions ? Number(adj.commissions) : 0;
             const commissions = adjCommissions !== 0 ? adjCommissions : calculatedCommissions;
-            
+
             const insurance = Number(adj?.insurance || 0);
 
             const pvdAmt = Number((emp as any).provident_fund_amt || 0);
@@ -703,7 +703,7 @@ export async function GET(request: Request) {
             // Identify Fixed vs Variable Taxable Income for current month
             const bonus = Number(adj?.bonus || 0);
             // Note: travel_allowance and travel_site_allowance are considered tax-exempt per requirements
-            const fixedTaxableIncome = baseSalary + position_allowance + general_allowance + telephone_allowance + accommodation_allowance + housing_benefit + car_benefit; 
+            const fixedTaxableIncome = baseSalary + position_allowance + general_allowance + telephone_allowance + accommodation_allowance + housing_benefit + car_benefit;
             const variableTaxableIncome = totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + long_service_allowance + welfare_amount + commissions + bonus;
             const currentMonthTaxable = fixedTaxableIncome + variableTaxableIncome;
 
@@ -717,17 +717,17 @@ export async function GET(request: Request) {
             const projectedRemainingIncome = fixedTaxableIncome * remainingMonths;
 
             const annualizedIncome = ytdTaxableIncome + currentMonthTaxable + projectedRemainingIncome;
-            
+
             // Apply Deductions
             const configExpenseRate = taxConfig ? Number((taxConfig as any).expense_deduct_rate) / 100 : 0.5;
             const configExpenseMax = taxConfig ? Number((taxConfig as any).expense_deduct_max) : 100000;
             const configPersonal = taxConfig ? Number((taxConfig as any).personal_allowance) : 60000;
-            
+
             const expenseDeduction = Math.min(annualizedIncome * configExpenseRate, configExpenseMax);
             const annualizedSso = ytdSsoPaid + social_security + (social_security * remainingMonths);
             const cappedSso = taxConfig ? Math.min(annualizedSso, Number((taxConfig as any).sso_max_yearly)) : Math.min(annualizedSso, 9000);
             const annualizedPvd = ytdPvdPaid + provident_fund + (provident_fund * remainingMonths);
-            
+
             const netAnnualIncome = Math.max(0, annualizedIncome - expenseDeduction - configPersonal - cappedSso - annualizedPvd);
 
             // Calculate Progressive Tax
@@ -760,8 +760,8 @@ export async function GET(request: Request) {
 
             // Use manual override if entered (> 0), otherwise use fixed profile deduction override, otherwise progressive tax
             const overrideTax = Number((emp as any).tax_deduction_override || 0);
-            const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0) 
-                ? Number(adj.tax) 
+            const tax = (adj?.tax !== null && adj?.tax !== undefined && Number(adj.tax) > 0)
+                ? Number(adj.tax)
                 : (overrideTax > 0 ? overrideTax : calculatedProgressiveTax);
 
             if (emp.emp_id === "TP02211") {
@@ -773,6 +773,22 @@ export async function GET(request: Request) {
 
             const grossPay = netPayCalculated + commissions + bonus + other_benefits + truck_trip_fee;
             const finalNetPay = grossPay - social_security - student_loan - insurance - other_deductions - unpaid_absenteeism - tax;
+
+            let service_years = 0;
+            let service_months = 0;
+            if (emp.hire_date) {
+                const hDate = new Date(emp.hire_date);
+                const eDate = new Date(endDate);
+                let diffMonths = (eDate.getFullYear() - hDate.getFullYear()) * 12 + (eDate.getMonth() - hDate.getMonth());
+                if (eDate.getDate() < hDate.getDate()) {
+                    diffMonths--;
+                }
+                if (diffMonths > 0) {
+                    service_years = Math.floor(diffMonths / 12);
+                    service_months = diffMonths % 12;
+                }
+            }
+            const service_duration = emp.hire_date ? `${service_years} ปี ${service_months} เดือน` : "-";
 
             return {
                 emp_id: emp.emp_id,
@@ -839,6 +855,7 @@ export async function GET(request: Request) {
                 meal_deduction,
                 max_travel_allowance,
                 travel_deduction,
+                service_duration,
             };
         });
 

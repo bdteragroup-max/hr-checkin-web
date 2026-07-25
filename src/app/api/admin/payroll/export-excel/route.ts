@@ -18,6 +18,7 @@ export async function POST(req: Request) {
             { header: "ชื่อ-นามสกุล", key: "name", width: 25 },
             { header: "ตำแหน่ง", key: "position", width: 20 },
             { header: "แผนก/ฝ่าย", key: "department", width: 20 },
+            { header: "อายุงาน", key: "service_duration", width: 15 },
             { header: "ฐานเงินเดือน", key: "base_salary", width: 15 },
             { header: "เงินประจำตำแหน่ง", key: "position_allowance", width: 15 },
             { header: "เบี้ยเลี้ยง/สวัสดิการ", key: "general_allowance", width: 15 },
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
                 name: emp.name,
                 position: emp.position,
                 department: `${emp.department} / ${emp.division}`,
+                service_duration: emp.service_duration,
                 base_salary: emp.base_salary,
                 position_allowance: emp.position_allowance,
                 general_allowance: emp.general_allowance,
@@ -162,9 +164,10 @@ export async function POST(req: Request) {
                 empSheet.addRow(["ชื่อ-นามสกุล:", emp.name]);
                 empSheet.addRow(["ตำแหน่ง:", emp.position]);
                 empSheet.addRow(["แผนก/ฝ่าย:", `${emp.department || '-'} / ${emp.division || '-'}`]);
+                empSheet.addRow(["อายุงาน:", emp.service_duration || '-']);
                 empSheet.addRow([]); // Empty row
                 
-                for (let i = 1; i <= 4; i++) {
+                for (let i = 1; i <= 5; i++) {
                     empSheet.getCell(`A${i}`).font = { bold: true };
                 }
 
