@@ -76,7 +76,6 @@ export async function POST(req: Request) {
                 travel_allowance: emp.travel_allowance,
                 accommodation_allowance: emp.accommodation_allowance,
                 travel_site_allowance: emp.travel_site_allowance,
-                travel_accommodation: emp.travel_accommodation,
                 telephone_allowance: emp.telephone_allowance,
                 long_service_allowance: emp.long_service_allowance,
                 commissions: emp.commissions,
@@ -102,7 +101,7 @@ export async function POST(req: Request) {
             "base_salary", "position_allowance", "general_allowance", "normal_1_5x_hours", "normal_ot_pay",
             "holiday_1x_hours", "holiday_1x_pay", "holiday_3x_hours", "holiday_3x_pay", "diligence_allowance",
             "meal_allowance", "travel_allowance", "accommodation_allowance", "travel_site_allowance",
-            "travel_accommodation", "telephone_allowance", "long_service_allowance", "commissions", "bonus",
+            "telephone_allowance", "long_service_allowance", "commissions", "bonus",
             "other_benefits", "truck_trip_fee", "welfare_amount", "gross_pay", "social_security", "student_loan",
             "insurance", "unpaid_absenteeism", "tax", "other_deductions", "net_pay"
         ];
