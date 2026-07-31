@@ -201,7 +201,7 @@ export async function GET(req: Request) {
 
             for (const r of checkinsAll) {
                 if (!stats[r.emp_id]) continue;
-                const d = new Date(r.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+                const d = r.date_key.toISOString().split("T")[0];
                 if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
                     stats[r.emp_id].present_dates.add(d);
                     if (r.late_status === "late") {
@@ -347,7 +347,7 @@ function processEmployeeSheet(
         const leaveData = leaveDaysMap.get(dateStr);
         const isTravel = travelDaysMap.has(dateStr);
 
-        const dayCheckins = checkins.filter(c => new Date(c.timestamp).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" }) === dateStr);
+        const dayCheckins = checkins.filter(c => c.date_key.toISOString().split("T")[0] === dateStr);
         const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
         const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
 

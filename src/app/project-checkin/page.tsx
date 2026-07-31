@@ -615,7 +615,10 @@ export default function ProjectCheckinPage() {
         capturePhoto(targetType, true);
 
         try {
-            const blob = await new Promise<Blob>((res, rej) => canvasRef.current?.toBlob(b => b ? res(b) : rej(), "image/jpeg", 0.88));
+            const blob = await new Promise<Blob>((res, rej) => {
+                if (!canvasRef.current) return rej(new Error("Canvas missing"));
+                canvasRef.current.toBlob(b => b ? res(b) : rej(new Error("Failed to create blob")), "image/jpeg", 0.88);
+            });
             const fd = new FormData();
             fd.append("file", blob, "checkin.jpg");
             const up = await fetch("/api/upload", { method: "POST", body: fd });

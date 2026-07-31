@@ -735,7 +735,10 @@ export default function AppPage() {
 
         let photoUrl = "";
         try {
-            const blob = await new Promise<Blob>((res, rej) => canvasRef.current?.toBlob(b => b ? res(b) : rej(), "image/jpeg", 0.88));
+            const blob = await new Promise<Blob>((res, rej) => {
+                if (!canvasRef.current) return rej(new Error("Canvas missing"));
+                canvasRef.current.toBlob(b => b ? res(b) : rej(new Error("Failed to create blob")), "image/jpeg", 0.88);
+            });
             const fd = new FormData();
             fd.append("file", blob, "checkin.jpg");
             const up = await fetch("/api/upload", { method: "POST", body: fd });
@@ -826,7 +829,7 @@ export default function AppPage() {
         function onKey(e: KeyboardEvent) {
             if (e.code !== "Space" || e.repeat) return;
             const tag = (document.activeElement as HTMLElement)?.tagName?.toLowerCase();
-            if (["input", "select", "textarea"].includes(tag)) return;
+            if (["input", "select", "textarea", "button"].includes(tag)) return;
             e.preventDefault();
             if (!hasIn) doCheck("Check-in");
             else if (!hasOut) doCheck("Check-out");

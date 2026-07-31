@@ -34,7 +34,6 @@ export async function GET(req: Request) {
                     some: {
                         OR: [
                             { status: "borrowed" },
-                            { status: "returned", return_status: "PENDING_KEY" },
                             {
                                 status: "reserved",
                                 borrow_date: { lte: now },

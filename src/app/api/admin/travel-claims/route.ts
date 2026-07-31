@@ -92,6 +92,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, data: claim });
     } catch (e: any) {
         console.error("Admin travel claim error:", e);
+        if (e.code === 'P2025') {
+            return NextResponse.json({ ok: false, error: "ไม่พบข้อมูลที่ต้องการอัปเดต หรือสถานะถูกเปลี่ยนแปลงไปแล้ว" }, { status: 400 });
+        }
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
     }
 }
