@@ -314,19 +314,21 @@ export async function GET(req: Request) {
 
             const leaves = await prisma.leave_requests.findMany({
                 where: { emp_id: { in: empIds }, start_date: { lte: end }, end_date: { gte: start } },
-                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true },
+                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true, minutes: true, start_at: true },
             });
             
             rows = adjustCheckinsForLeaves(rows, leaves);
 
-            // const holidaysFetch = await prisma.holidays.findMany({
-            //     where: { date: { gte: start, lte: end } }
-            // });
-            // const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
+            const holidaysFetch = await prisma.holidays.findMany({
+                where: { date: { gte: start, lte: end } }
+            });
+            const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
             let totalWorkDays = 0;
-            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+            for (let dt = new Date(start); dt <= end; dt.setUTCDate(dt.getUTCDate() + 1)) {
                 if (dt.getUTCDay() === 0) continue;
+                const dStr = dt.toISOString().split("T")[0];
+                if (holidayDates.has(dStr)) continue;
                 totalWorkDays++;
             }
 
@@ -338,8 +340,34 @@ export async function GET(req: Request) {
 
             for (const l of leaves) {
                 if (!stats[l.emp_id]) continue;
-                if (l.status === "approved") stats[l.emp_id].leave_days += l.days || 0;
-                else if (l.status === "pending") stats[l.emp_id].pending_leave_days += l.days || 0;
+
+                let daysInPeriod = 0;
+                const lStart = new Date(l.start_date);
+                const lEnd = new Date(l.end_date);
+                const actualStart = lStart < start ? start : lStart;
+                const actualEnd = lEnd > end ? end : lEnd;
+
+                if (actualStart <= actualEnd) {
+                    for (let dt = new Date(actualStart); dt <= actualEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
+                        const dStr = dt.toISOString().split("T")[0];
+                        if (dt.getUTCDay() !== 0 && !holidayDates.has(dStr)) {
+                            daysInPeriod++;
+                        }
+                    }
+                }
+                
+                let trueLeaveDuration = l.days || 0;
+                if (l.days === 1 && l.minutes > 0 && l.minutes < 480) {
+                    trueLeaveDuration = 0.5;
+                }
+
+                let finalDaysToAdd = daysInPeriod;
+                if (trueLeaveDuration && finalDaysToAdd > trueLeaveDuration) {
+                    finalDaysToAdd = trueLeaveDuration; 
+                }
+
+                if (l.status === "approved") stats[l.emp_id].leave_days += finalDaysToAdd;
+                else if (l.status === "pending") stats[l.emp_id].pending_leave_days += finalDaysToAdd;
             }
 
             for (const r of rows) {
@@ -356,7 +384,16 @@ export async function GET(req: Request) {
 
             for (const e of emps) {
                 const s = stats[e.emp_id];
-                let absences = totalWorkDays - s.present_dates.size - s.leave_days;
+                
+                let attendedWorkDatesCount = 0;
+                for (const d of s.present_dates) {
+                    const dt = new Date(d + 'T00:00:00Z');
+                    if (dt.getUTCDay() !== 0 && !holidayDates.has(d)) {
+                        attendedWorkDatesCount++;
+                    }
+                }
+
+                let absences = totalWorkDays - attendedWorkDatesCount - s.leave_days;
                 if (absences < 0) absences = 0;
 
                 drawPortrait(`-------------------------------------------------------------------------`, 10);

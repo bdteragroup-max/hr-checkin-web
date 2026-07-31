@@ -167,7 +167,7 @@ export async function GET(req: Request) {
                 },
             });
 
-            // const holidayDates = new Set(Array.from(holidayMap.keys()));
+            const holidayDates = new Set(Array.from(holidayMap.keys()));
 
             const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string>, total_work_days: number }> = {};
             
@@ -186,6 +186,8 @@ export async function GET(req: Request) {
                 if (empStartDate <= empEndDate) {
                     for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
                         if (dt.getUTCDay() === 0) continue;
+                        const dStr = dt.toISOString().split("T")[0];
+                        if (holidayDates.has(dStr)) continue;
                         empTotalWorkDays++;
                     }
                 }
@@ -195,8 +197,34 @@ export async function GET(req: Request) {
 
             for (const l of leavesAll) {
                 if (!stats[l.emp_id]) continue;
-                if (l.status === "approved") stats[l.emp_id].leave_days += l.days || 0;
-                else if (l.status === "pending") stats[l.emp_id].pending_leave_days += l.days || 0;
+
+                let daysInPeriod = 0;
+                const lStart = new Date(l.start_date);
+                const lEnd = new Date(l.end_date);
+                const actualStart = lStart < start ? start : lStart;
+                const actualEnd = lEnd > end ? end : lEnd;
+
+                if (actualStart <= actualEnd) {
+                    for (let dt = new Date(actualStart); dt <= actualEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
+                        const dStr = dt.toISOString().split("T")[0];
+                        if (dt.getUTCDay() !== 0 && !holidayDates.has(dStr)) {
+                            daysInPeriod++;
+                        }
+                    }
+                }
+                
+                let trueLeaveDuration = l.days || 0;
+                if (l.days === 1 && l.minutes > 0 && l.minutes < 480) {
+                    trueLeaveDuration = 0.5;
+                }
+
+                let finalDaysToAdd = daysInPeriod;
+                if (trueLeaveDuration && finalDaysToAdd > trueLeaveDuration) {
+                    finalDaysToAdd = trueLeaveDuration; 
+                }
+
+                if (l.status === "approved") stats[l.emp_id].leave_days += finalDaysToAdd;
+                else if (l.status === "pending") stats[l.emp_id].pending_leave_days += finalDaysToAdd;
             }
 
             for (const r of checkinsAll) {
@@ -213,7 +241,16 @@ export async function GET(req: Request) {
 
             for (const e of emps) {
                 const s = stats[e.emp_id];
-                let absences = s.total_work_days - s.present_dates.size - s.leave_days;
+                
+                let attendedWorkDatesCount = 0;
+                for (const d of s.present_dates) {
+                    const dt = new Date(d + 'T00:00:00Z');
+                    if (dt.getUTCDay() !== 0 && !holidayDates.has(d)) {
+                        attendedWorkDatesCount++;
+                    }
+                }
+
+                let absences = s.total_work_days - attendedWorkDatesCount - s.leave_days;
                 if (absences < 0) absences = 0;
 
                 summarySheet.addRow({

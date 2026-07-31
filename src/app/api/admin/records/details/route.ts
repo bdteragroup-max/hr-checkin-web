@@ -31,13 +31,13 @@ export async function GET(req: Request) {
         if (paramStartDate && paramEndDate) {
             const [sy, sm, sd] = paramStartDate.split("-").map(Number);
             const [ey, em, ed] = paramEndDate.split("-").map(Number);
-            startDate = new Date(Date.UTC(sy, sm - 1, sd));
-            endDate = new Date(Date.UTC(ey, em - 1, ed));
+            startDate = new Date(Date.UTC(sy, sm - 1, sd, 0, 0, 0));
+            endDate = new Date(Date.UTC(ey, em - 1, ed, 23, 59, 59, 999));
         } else if (startMonth && endMonth) {
             const [sy, sm] = startMonth.split("-").map(Number);
             const [ey, em] = endMonth.split("-").map(Number);
-            startDate = new Date(Date.UTC(sy, sm - 1, 1));
-            endDate = new Date(Date.UTC(ey, em, 0));
+            startDate = new Date(Date.UTC(sy, sm - 1, 1, 0, 0, 0));
+            endDate = new Date(Date.UTC(ey, em, 0, 23, 59, 59, 999));
         } else {
             return NextResponse.json({ ok: false, error: "MISSING_DATE_RANGE" }, { status: 400 });
         }
@@ -174,8 +174,11 @@ export async function GET(req: Request) {
             // Calculate Status
             let status = "ขาด"; // Default Absent
             const empResignStr = emp.resignation_date ? emp.resignation_date.toISOString().split("T")[0] : null;
+            const empHireStr = emp.hire_date ? emp.hire_date.toISOString().split("T")[0] : null;
 
-            if (empResignStr && dateStr > empResignStr) {
+            if (empHireStr && dateStr < empHireStr) {
+                status = "ก่อนเริ่มงาน";
+            } else if (empResignStr && dateStr > empResignStr) {
                 status = "ลาออก";
             } else if (isSunday) {
                 status = "วันหยุด";

@@ -59,7 +59,7 @@ export async function GET(req: Request) {
             ];
         }
 
-        const [emps] = await Promise.all([
+        const [emps, holidaysFetch] = await Promise.all([
             prisma.employees.findMany({
                 where: employeeWhere,
                 select: {
@@ -94,7 +94,7 @@ export async function GET(req: Request) {
                     start_date: { lte: endDate },
                     end_date: { gte: startDate },
                 },
-                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true },
+                select: { emp_id: true, days: true, status: true, start_date: true, end_date: true, leave_type: true, minutes: true, start_at: true },
             }),
             prisma.travel_claims.findMany({
                 where: {
@@ -109,7 +109,7 @@ export async function GET(req: Request) {
             })
         ]);
 
-        // const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
+        const holidayDates = new Set(holidaysFetch.map(h => new Date(h.date).toISOString().split("T")[0]));
 
         // Guard: Today's date in Bangkok
         const nowBKK = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
@@ -144,6 +144,7 @@ export async function GET(req: Request) {
                 for (let dt = new Date(empStartDate); dt <= empEndDate; dt.setUTCDate(dt.getUTCDate() + 1)) {
                     if (dt.getUTCDay() === 0) continue; // skip sunday
                     const dStr = dt.toISOString().split("T")[0];
+                    if (holidayDates.has(dStr)) continue; // skip public holidays
                     empTotalWorkDays++;
                 }
             }
@@ -162,10 +163,36 @@ export async function GET(req: Request) {
         // Process leaves
         for (const l of leaves) {
             if (!stats[l.emp_id]) continue;
+
+            let daysInPeriod = 0;
+            const lStart = new Date(l.start_date);
+            const lEnd = new Date(l.end_date);
+            const actualStart = lStart < startDate ? startDate : lStart;
+            const actualEnd = lEnd > endDate ? endDate : lEnd;
+
+            if (actualStart <= actualEnd) {
+                for (let dt = new Date(actualStart); dt <= actualEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
+                    const dStr = dt.toISOString().split("T")[0];
+                    if (dt.getUTCDay() !== 0 && !holidayDates.has(dStr)) {
+                        daysInPeriod++;
+                    }
+                }
+            }
+            
+            let trueLeaveDuration = l.days || 0;
+            if (l.days === 1 && l.minutes > 0 && l.minutes < 480) {
+                trueLeaveDuration = 0.5;
+            }
+
+            let finalDaysToAdd = daysInPeriod;
+            if (trueLeaveDuration && finalDaysToAdd > trueLeaveDuration) {
+                finalDaysToAdd = trueLeaveDuration; 
+            }
+
             if (l.status === "approved") {
-                stats[l.emp_id].leave_days += l.days || 0;
+                stats[l.emp_id].leave_days += finalDaysToAdd;
             } else if (l.status === "pending") {
-                stats[l.emp_id].pending_leave_days += l.days || 0;
+                stats[l.emp_id].pending_leave_days += finalDaysToAdd;
             }
         }
 
@@ -216,7 +243,15 @@ export async function GET(req: Request) {
             const attendedDates = new Set([...Array.from(s.present_dates), ...Array.from(s.travel_dates)]);
             const travelDays = s.travel_dates.size;
 
-            let absences = s.total_work_days - attendedDates.size - s.leave_days;
+            let attendedWorkDatesCount = 0;
+            for (const d of attendedDates) {
+                const dt = new Date(d + 'T00:00:00Z');
+                if (dt.getUTCDay() !== 0 && !holidayDates.has(d)) {
+                    attendedWorkDatesCount++;
+                }
+            }
+
+            let absences = s.total_work_days - attendedWorkDatesCount - s.leave_days;
             if (absences < 0) absences = 0;
 
             let finalName = e.name;
