@@ -53,9 +53,13 @@ export async function GET(req: Request) {
         } else if (status === "inactive") {
             employeeWhere.is_active = false;
         } else {
-            employeeWhere.OR = [
-                { is_active: true },
-                { resignation_date: { gte: startDate, lte: endDate } }
+            employeeWhere.AND = [
+                {
+                    OR: [
+                        { is_active: true },
+                        { resignation_date: { gte: startDate, lte: endDate } }
+                    ]
+                }
             ];
         }
 
@@ -279,6 +283,8 @@ export async function GET(req: Request) {
 
     } catch (e: any) {
         console.error("ADMIN_RECORDS_ERROR:", e);
-        return NextResponse.json({ ok: false, error: "ERROR", msg: e.message, stack: e.stack }, { status: 500 });
+        const msg = e instanceof Error ? e.message : "ERROR";
+        const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : 500;
+        return NextResponse.json({ ok: false, error: msg, msg: e.message, stack: e.stack }, { status });
     }
 }
