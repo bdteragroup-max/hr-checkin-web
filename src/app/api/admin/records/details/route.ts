@@ -155,10 +155,25 @@ export async function GET(req: Request) {
             const leaveType = leaveDaysMap.get(dateStr);
             const isTravelDay = travelDaysMap.has(dateStr);
 
-            // Match by date_key string comparison
+            // Match by date_key, but retroactively fix misattributed early morning checkouts
             const dayCheckins = checkins.filter(c => {
                 const checkInDateStr = c.date_key.toISOString().split("T")[0];
-                return checkInDateStr === dateStr;
+                const bkkDate = new Date(c.timestamp.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+                const isEarlyMorning = bkkDate.getHours() < 6;
+                const isOut = c.type.toLowerCase().includes("-out") || c.type === "Check-out";
+                const physicalBkkDateStr = bkkDate.getFullYear() + "-" + String(bkkDate.getMonth()+1).padStart(2,'0') + "-" + String(bkkDate.getDate()).padStart(2,'0');
+                const isMisattributed = isOut && isEarlyMorning && checkInDateStr === physicalBkkDateStr;
+
+                if (checkInDateStr === dateStr) {
+                    if (isMisattributed) return false;
+                    return true;
+                }
+                
+                const nextDateStr = new Date(dt.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+                if (checkInDateStr === nextDateStr) {
+                    if (isMisattributed) return true;
+                }
+                return false;
             });
 
             const workPlan = workPlans.find(wp => wp.date.toISOString().split("T")[0] === dateStr);

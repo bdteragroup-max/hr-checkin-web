@@ -274,10 +274,12 @@ export async function POST(req: Request) {
 
     // For midnight shifts (00:00–06:00), the checkout record should be stored
     // under the same date_key as the check-in (yesterday), so the shift stays together.
+    const isAnyOut = type.endsWith("-Out") || type === "Check-out";
+    
     const effective_date_key = 
-        isPostMidnight && (type === "Check-out") && 
-        todaysCheckins.every(c => c.type !== "Check-in" && c.type !== "Trip-Update") && 
-        yesterdaysCheckins.some(c => c.type === "Check-in" || c.type === "Trip-Update")
+        isPostMidnight && isAnyOut && 
+        todaysCheckins.every(c => !c.type.endsWith("-In") && c.type !== "Check-in" && c.type !== "Trip-Update") && 
+        yesterdaysCheckins.some(c => c.type.endsWith("-In") || c.type === "Check-in" || c.type === "Trip-Update")
             ? yesterday_date_key
             : date_key;
 

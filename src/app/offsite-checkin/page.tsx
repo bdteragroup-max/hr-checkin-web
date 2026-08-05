@@ -358,7 +358,8 @@ export default function OffsiteCheckinPage() {
         const v = videoRef.current, c = canvasRef.current, raw = rawCanvasRef.current;
         if (!v || !c || !raw) return null;
         const currentType = overrideType || checkType;
-        const w = v.videoWidth, h = v.videoHeight;
+        const w = useRaw ? raw.width : v.videoWidth;
+        const h = useRaw ? raw.height : v.videoHeight;
         if (!w || !h) return null;
 
         c.width = w; c.height = h;
@@ -600,7 +601,6 @@ export default function OffsiteCheckinPage() {
                             placeholder="เช่น บ้าน, ร้านกาแฟ, ไซต์งานชั่วคราว"
                             value={locationName}
                             onChange={e => setLocationName(e.target.value)}
-                            disabled={!!preview} // Lock input once photo is taken
                         />
                         {!locationName.trim() && (
                             <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>
@@ -628,7 +628,6 @@ export default function OffsiteCheckinPage() {
                             placeholder="ระบุสิ่งที่ทำ เช่น ซ่อมอุปกร์, ติดตั้งระบบ"
                             value={remark}
                             onChange={e => setRemark(e.target.value)}
-                            disabled={!!preview}
                         />
                         {!remark.trim() && (
                             <div style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>

@@ -40,7 +40,10 @@ export async function POST(request: Request) {
         // --- NEW: VALIDATION AGAINST ACTUAL CHECK-IN/OUT ---
         // Use date_key to accurately get check-ins for the specified shift date
         const dateForObj = new Date(date_for);
-        const shiftCheckins = await prisma.checkins.findMany({
+        const nextDate = new Date(dateForObj);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        const baseCheckins = await prisma.checkins.findMany({
             where: {
                 emp_id: decoded.emp_id,
                 date_key: dateForObj
@@ -48,12 +51,31 @@ export async function POST(request: Request) {
             orderBy: { timestamp: "asc" }
         });
 
+        // Also fetch any checkouts on the next day before 06:00 AM 
+        // to retroactively fix Offsite-Out/Project-Out records that were saved on the wrong date_key due to a previous bug
+        const nextDayCheckins = await prisma.checkins.findMany({
+            where: {
+                emp_id: decoded.emp_id,
+                date_key: nextDate,
+                timestamp: { lt: new Date(nextDate.getTime() + 6 * 60 * 60 * 1000) }
+            },
+            orderBy: { timestamp: "asc" }
+        });
+
+        const shiftCheckins = [...baseCheckins, ...nextDayCheckins.filter(c => c.type.endsWith("-Out") || c.type === "Check-out")];
+
         if (shiftCheckins.length === 0) {
             return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในกะที่คุณเลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT" }, { status: 400 });
         }
 
         const earliestIn = shiftCheckins[0].timestamp;
-        const latestOut = shiftCheckins[shiftCheckins.length - 1].timestamp;
+        const lastAction = shiftCheckins[shiftCheckins.length - 1];
+        const latestOut = lastAction.timestamp;
+
+        // Ensure the user has actually checked out
+        if (lastAction.type.endsWith("-In") || lastAction.type === "Check-in" || lastAction.type === "Trip-Update") {
+            return NextResponse.json({ error: "คุณต้องทำการ 'บันทึกออก (Check-out)' ให้เรียบร้อยก่อน จึงจะสามารถส่งคำขอ OT ได้" }, { status: 400 });
+        }
 
         // Check window (Strict Rejection)
         if (start < earliestIn || end > latestOut) {
