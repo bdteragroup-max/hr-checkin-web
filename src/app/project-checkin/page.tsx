@@ -759,7 +759,7 @@ export default function ProjectCheckinPage() {
                             {showDropdown && (
                                 <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "white", zIndex: 50, border: "1px solid #e5e7eb", borderRadius: 8, marginTop: 4, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", padding: "4px 0" }}>
                                     <div style={{ maxHeight: 240, overflowY: "auto" }}>
-                                        {filteredProjects.map(p => (
+                                        {filteredProjects.slice(0, 50).map(p => (
                                             <div key={p.id} style={{ padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f3f4f6" }}
                                                 onClick={() => selectCustomer(p)}>
                                                 <div style={{ fontWeight: 600, color: "#1f2937", fontSize: 15 }}>{p.name}</div>
@@ -1171,6 +1171,16 @@ export default function ProjectCheckinPage() {
                     </div>
                 </div>
             )}
+
+            <WorkPlanModal 
+                isOpen={showWorkPlan} 
+                onClose={() => {
+                    setShowWorkPlan(false);
+                    setPendingAction(null);
+                }} 
+                onSubmit={handleWorkPlanSubmit}
+                employeeName={me?.name || ""}
+            />
 
             <AlertModal alert={alert} onClose={closeAlert} />
         </div>
