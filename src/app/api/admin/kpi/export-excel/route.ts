@@ -13,6 +13,10 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const yearParam = url.searchParams.get('year');
         const sessionParam = url.searchParams.get('session');
+        const startDateParam = url.searchParams.get('startDate');
+        const endDateParam = url.searchParams.get('endDate');
+        const probationStartDateParam = url.searchParams.get('probationStartDate');
+        const probationEndDateParam = url.searchParams.get('probationEndDate');
         const evalYear = yearParam ? parseInt(yearParam) : new Date().getFullYear();
         
         // 1. Fetch All Active Employees (Excluding Interns and Probationary)
@@ -35,6 +39,28 @@ export async function GET(req: Request) {
                 { name: 'asc' }
             ]
         });
+
+        let filteredEmployees = employees;
+        if (probationStartDateParam || probationEndDateParam) {
+            filteredEmployees = employees.filter((emp: any) => {
+                if (!emp.hire_date) return false;
+                let probationEnd = new Date(emp.hire_date);
+                probationEnd.setDate(probationEnd.getDate() + 90);
+                
+                let inRange = true;
+                if (probationStartDateParam) {
+                    const ps = new Date(probationStartDateParam);
+                    ps.setHours(0,0,0,0);
+                    if (probationEnd < ps) inRange = false;
+                }
+                if (probationEndDateParam) {
+                    const pe = new Date(probationEndDateParam);
+                    pe.setHours(23,59,59,999);
+                    if (probationEnd > pe) inRange = false;
+                }
+                return inRange;
+            });
+        }
 
         // 2. Fetch Evaluations based on filter
         const whereClause: any = { category: "ANNUAL", year: evalYear };
@@ -68,50 +94,51 @@ export async function GET(req: Request) {
         sheet.getRow(1).values = [
             "ลำดับ", // A: 1
             "บริษัท", // B: 2
-            "สังกัด", // C: 3
-            "ชื่อ - นามสกุล", // D: 4
-            "ชื่อเล่น", // E: 5
-            "ตำแหน่ง", // F: 6
-            "ฝ่าย", // G: 7
-            "วันที่เริ่มงาน", // H: 8
-            "อายุงานนับจากวันเริ่มงาน", // I: 9
-            "อายุงานเป็นวัน", // J: 10
-            "วันที่พ้นทดลองงาน", // K: 11
-            "อายุงานนับจากวันพ้นทดลองงาน", // L: 12
-            "ฐานเงินเดือน", // M: 13
-            "ใบเตือน (กี่ใบ) / เรื่องอะไร", // N: 14
-            "ผลประเมิน", // O: 15
-            "รอบการประเมิน", // P: 16
-            "มาสาย", // Q: 17 (Times/Minutes Late group)
-            "", // R: 18
-            "จำนวนวันที่มาสาย", // S: 19
-            "ขาดลา", // T: 20 (Leave group)
-            "", // U: 21
+            "รหัสพนักงาน", // C: 3
+            "สังกัด", // D: 4
+            "ชื่อ - นามสกุล", // E: 5
+            "ชื่อเล่น", // F: 6
+            "ตำแหน่ง", // G: 7
+            "ฝ่าย", // H: 8
+            "วันที่เริ่มงาน", // I: 9
+            "อายุงานนับจากวันเริ่มงาน", // J: 10
+            "อายุงานเป็นวัน", // K: 11
+            "วันที่พ้นทดลองงาน", // L: 12
+            "อายุงานนับจากวันพ้นทดลองงาน", // M: 13
+            "ฐานเงินเดือน", // N: 14
+            "ใบเตือน (กี่ใบ) / เรื่องอะไร", // O: 15
+            "ผลประเมิน", // P: 16
+            "รอบการประเมิน", // Q: 17
+            "มาสาย", // R: 18 (Times/Minutes Late group)
+            "", // S: 19
+            "จำนวนวันที่มาสาย", // T: 20
+            "ขาดลา", // U: 21 (Leave group)
             "", // V: 22
             "", // W: 23
-            "จำนวนวันทำงาน", // X: 24
-            "จำนวนชั่วโมงทำงาน", // Y: 25
-            "จำนวนชั่วโมงที่ลางาน" // Z: 26
+            "", // X: 24
+            "จำนวนวันทำงาน", // Y: 25
+            "จำนวนชั่วโมงทำงาน", // Z: 26
+            "จำนวนชั่วโมงที่ลางาน" // AA: 27
         ];
 
         // Row 2: Sub-headers
         sheet.getRow(2).values = [
-            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-            "จำนวนครั้ง", "นาที", "", // Under มาสาย (Q, R), S is separated
-            "ป่วย", "กิจ", "พักร้อน", "รวม", // Under ขาดลา (T, U, V, W)
-            "", "", "" // X, Y, Z
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+            "จำนวนครั้ง", "นาที", "", // Under มาสาย (R, S), T is separated
+            "ป่วย", "กิจ", "พักร้อน", "รวม", // Under ขาดลา (U, V, W, X)
+            "", "", "" // Y, Z, AA
         ];
 
         // Merge cells for group headers
-        const colsToMerge = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'S', 'X', 'Y', 'Z'];
+        const colsToMerge = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'T', 'Y', 'Z', 'AA'];
         colsToMerge.forEach(col => {
             sheet.mergeCells(`${col}1:${col}2`);
         });
 
-        // Merge Q1:R1 (มาสาย)
-        sheet.mergeCells('Q1:R1');
-        // Merge T1:W1 (ขาดลา)
-        sheet.mergeCells('T1:W1');
+        // Merge R1:S1 (มาสาย)
+        sheet.mergeCells('R1:S1');
+        // Merge U1:X1 (ขาดลา)
+        sheet.mergeCells('U1:X1');
 
         // Style the headers
         const headerRows = [sheet.getRow(1), sheet.getRow(2)];
@@ -137,34 +164,35 @@ export async function GET(req: Request) {
         sheet.getColumn('A').width = 8;
         sheet.getColumn('B').width = 15;
         sheet.getColumn('C').width = 15;
-        sheet.getColumn('D').width = 25;
-        sheet.getColumn('E').width = 10;
-        sheet.getColumn('F').width = 20;
-        sheet.getColumn('G').width = 15;
-        sheet.getColumn('H').width = 12;
-        sheet.getColumn('I').width = 18;
-        sheet.getColumn('J').width = 12;
+        sheet.getColumn('D').width = 15;
+        sheet.getColumn('E').width = 25;
+        sheet.getColumn('F').width = 10;
+        sheet.getColumn('G').width = 20;
+        sheet.getColumn('H').width = 15;
+        sheet.getColumn('I').width = 12;
+        sheet.getColumn('J').width = 18;
         sheet.getColumn('K').width = 12;
-        sheet.getColumn('L').width = 18;
-        sheet.getColumn('M').width = 12;
-        sheet.getColumn('N').width = 20;
-        sheet.getColumn('O').width = 15;
-        sheet.getColumn('P').width = 15; // Increased for "ยังไม่ประเมิน"
-        sheet.getColumn('Q').width = 10;
+        sheet.getColumn('L').width = 12;
+        sheet.getColumn('M').width = 18;
+        sheet.getColumn('N').width = 12;
+        sheet.getColumn('O').width = 20;
+        sheet.getColumn('P').width = 15; 
+        sheet.getColumn('Q').width = 15; 
         sheet.getColumn('R').width = 10;
         sheet.getColumn('S').width = 10;
-        sheet.getColumn('T').width = 8;
+        sheet.getColumn('T').width = 10;
         sheet.getColumn('U').width = 8;
         sheet.getColumn('V').width = 8;
         sheet.getColumn('W').width = 8;
-        sheet.getColumn('X').width = 12;
+        sheet.getColumn('X').width = 8;
         sheet.getColumn('Y').width = 12;
-        sheet.getColumn('Z').width = 15;
+        sheet.getColumn('Z').width = 12;
+        sheet.getColumn('AA').width = 15;
 
         // Color specific header cells like in screenshot
-        sheet.getCell('Q1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } }; 
-        sheet.getCell('T1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE5CD' } }; 
-        sheet.getCell('X1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCFE2F3' } }; 
+        sheet.getCell('R1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } }; 
+        sheet.getCell('U1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE5CD' } }; 
+        sheet.getCell('Y1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCFE2F3' } }; 
 
         // Fetch all holidays for working days calculation
         const allHolidays = await (prisma as any).holidays.findMany({ select: { date: true } });
@@ -173,7 +201,7 @@ export async function GET(req: Request) {
         // Process data
         let rowIndex = 3;
 
-        for (const emp of employees) {
+        for (const emp of filteredEmployees) {
             const ev = evalMap.get(emp.emp_id);
             
             // Determine Default Period Start/End based on session
@@ -190,6 +218,16 @@ export async function GET(req: Request) {
             // If the DB evaluation explicitly has dates, use those instead
             if (ev?.period_start) periodStart = new Date(ev.period_start);
             if (ev?.period_end) periodEnd = new Date(ev.period_end);
+
+            // Override with explicit date filters if provided
+            if (startDateParam) {
+                periodStart = new Date(startDateParam);
+                periodStart.setHours(0, 0, 0, 0);
+            }
+            if (endDateParam) {
+                periodEnd = new Date(endDateParam);
+                periodEnd.setHours(23, 59, 59, 999);
+            }
 
             // Calculate Working Days (excluding Sundays and Holidays)
             let effectiveStart = periodStart;
@@ -329,6 +367,7 @@ export async function GET(req: Request) {
             row.values = [
                 rowIndex - 2,
                 company,
+                emp.emp_id,
                 emp.departments?.name || "-",
                 emp.name,
                 emp.nickname || "-",

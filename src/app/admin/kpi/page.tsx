@@ -33,12 +33,18 @@ export default function AdminKPIPage() {
     // Approval Modal State
     const [showApproveConfirmModal, setShowApproveConfirmModal] = useState<number | null>(null);
 
-    // Export Modal State
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportYear, setExportYear] = useState(new Date().getFullYear().toString());
+    const [exportStartDate, setExportStartDate] = useState("");
+    const [exportEndDate, setExportEndDate] = useState("");
+    const [isExporting, setIsExporting] = useState(false);
 
     const handleConfirmExport = () => {
-        window.open(`/api/admin/kpi/export-excel${exportYear ? `?year=${exportYear}` : ''}`, "_blank");
+        let url = `/api/admin/kpi/export-excel?`;
+        if (exportYear) url += `year=${exportYear}&`;
+        if (exportStartDate) url += `startDate=${exportStartDate}&`;
+        if (exportEndDate) url += `endDate=${exportEndDate}&`;
+        window.open(url, "_blank");
         setShowExportModal(false);
     };
 
@@ -521,7 +527,7 @@ export default function AdminKPIPage() {
                 <div className={styles.modalOverlay} onClick={() => setShowExportModal(false)}>
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
                         <div className={styles.modalHeader}>
-                            <h2>ระบุปีที่ต้องการ Export</h2>
+                            <h2>ระบุข้อมูลที่ต้องการ Export</h2>
                             <button className={styles.btnAction} onClick={() => setShowExportModal(false)}>
                                 <XMarkIcon width={24} />
                             </button>
@@ -543,28 +549,77 @@ export default function AdminKPIPage() {
                             </p>
                             <select 
                                 onChange={e => {
-                                    // Save the selected session. We will just use a global or state variable.
-                                    // Wait, we don't have a state for exportSession yet. Let's just use window.exportSession.
                                     (window as any).exportSession = e.target.value;
                                 }}
-                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none' }}
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none', marginBottom: '15px' }}
                                 defaultValue=""
                             >
                                 <option value="">ทั้งหมด (All)</option>
                                 <option value="Mid-Year">Mid-Year Assessment</option>
                                 <option value="Year-End">Year-End Assessment</option>
                             </select>
+
+                            <p style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+                                วันที่เริ่มต้น (Start Date) - สำหรับคำนวณวันลา/มาสาย
+                            </p>
+                            <input 
+                                type="date" 
+                                value={exportStartDate} 
+                                onChange={e => setExportStartDate(e.target.value)} 
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none', marginBottom: '15px' }}
+                            />
+
+                            <p style={{ marginBottom: '10px', fontSize: '14px', color: '#666' }}>
+                                วันที่สิ้นสุด (End Date) - สำหรับคำนวณวันลา/มาสาย และ กรองวันที่พ้นโปร
+                            </p>
+                            <input 
+                                type="date" 
+                                value={exportEndDate} 
+                                onChange={e => setExportEndDate(e.target.value)} 
+                                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px', outline: 'none', marginBottom: '15px' }}
+                            />
                         </div>
                         <div className={styles.modalFooter}>
-                            <button className={styles.btnCancel} onClick={() => setShowExportModal(false)}>ยกเลิก</button>
-                            <button className={styles.btnSave} onClick={() => {
+                            <button className={styles.btnCancel} disabled={isExporting} onClick={() => setShowExportModal(false)}>ยกเลิก</button>
+                            <button className={styles.btnSave} disabled={isExporting} onClick={async () => {
                                 const session = (window as any).exportSession || '';
                                 let url = `/api/admin/kpi/export-excel?`;
                                 if (exportYear) url += `year=${exportYear}&`;
-                                if (session) url += `session=${session}`;
-                                window.open(url, "_blank");
-                                setShowExportModal(false);
-                            }}>ยืนยัน</button>
+                                if (session) url += `session=${session}&`;
+                                if (exportStartDate) url += `startDate=${exportStartDate}&`;
+                                if (exportEndDate) url += `endDate=${exportEndDate}&probationEndDate=${exportEndDate}&`;
+                                
+                                setIsExporting(true);
+                                try {
+                                    const response = await fetch(url);
+                                    if (!response.ok) throw new Error("Export failed");
+                                    const blob = await response.blob();
+                                    const downloadUrl = window.URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = downloadUrl;
+                                    const contentDisposition = response.headers.get("Content-Disposition");
+                                    let filename = `KPI_Export_${new Date().getTime()}.xlsx`;
+                                    if (contentDisposition) {
+                                        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                                        if (filenameMatch && filenameMatch.length === 2) {
+                                            filename = filenameMatch[1];
+                                        }
+                                    }
+                                    a.download = filename;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    window.URL.revokeObjectURL(downloadUrl);
+                                    setShowExportModal(false);
+                                } catch (error) {
+                                    console.error("Error exporting file:", error);
+                                    alert("เกิดข้อผิดพลาดในการดึงข้อมูล");
+                                } finally {
+                                    setIsExporting(false);
+                                }
+                            }}>
+                                {isExporting ? "กำลังประมวลผล..." : "ยืนยัน"}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -728,12 +728,12 @@ model BusinessType {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Company {
-  id                    String               @id
+  id                    String                 @id
   companyName           String
   taxId                 String?
   address               String?
-  createdAt             DateTime             @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime             @db.Timestamptz(6)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @db.Timestamptz(6)
   area                  String?
   branchOrHeadOffice    String?
   businessType          String?
@@ -759,9 +759,11 @@ model Company {
   region                String?
   segment               String?
   tags                  String[]
-  User                  User?                @relation(fields: [assignedUserId], references: [id])
+  User                  User?                  @relation(fields: [assignedUserId], references: [id])
   CompanyInteraction    CompanyInteraction[]
   Contact               Contact[]
+  CustomerSatisfaction  CustomerSatisfaction[]
+  GoodsReturn           GoodsReturn[]
   Order                 Order[]
   Quotation             Quotation[]
   Schedule              Schedule[]
@@ -889,33 +891,46 @@ model MonthlyTarget {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Order {
-  id                 String              @id
-  orderNumber        String              @unique
-  companyId          String?
-  quotationId        String?
-  salespersonId      String?
-  status             String              @default("รอยืนยัน")
-  value              Float               @default(0)
-  priority           String              @default("Normal")
-  targetDeliveryDate DateTime?           @db.Timestamptz(6)
-  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime            @db.Timestamptz(6)
-  estimatedDays      Int?
-  materialReady      Boolean             @default(false)
-  prFulfilledAt      DateTime?           @db.Timestamptz(6)
-  prNote             String?
-  prRequired         Boolean             @default(false)
-  productionDeadline DateTime?           @db.Timestamptz(6)
-  qcAt               DateTime?           @db.Timestamptz(6)
-  qcBy               String?
-  qcImages           String[]            @default([])
-  qcNote             String?
-  qcStatus           String?             @default("PENDING")
-  Company            Company?            @relation(fields: [companyId], references: [id])
-  Quotation          Quotation?          @relation(fields: [quotationId], references: [id])
-  User               User?               @relation(fields: [salespersonId], references: [id])
-  OrderStatusLog     OrderStatusLog[]
-  purchase_requests  purchase_requests[]
+  id                    String                 @id
+  orderNumber           String                 @unique
+  companyId             String?
+  quotationId           String?
+  salespersonId         String?
+  status                String                 @default("รอยืนยัน")
+  value                 Float                  @default(0)
+  priority              String                 @default("Normal")
+  targetDeliveryDate    DateTime?              @db.Timestamptz(6)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @db.Timestamptz(6)
+  estimatedDays         Int?
+  materialReady         Boolean                @default(false)
+  prFulfilledAt         DateTime?              @db.Timestamptz(6)
+  prNote                String?
+  prRequired            Boolean                @default(false)
+  productionDeadline    DateTime?              @db.Timestamptz(6)
+  qcAt                  DateTime?              @db.Timestamptz(6)
+  qcBy                  String?
+  qcImages              String[]               @default([])
+  qcNote                String?
+  qcStatus              String?                @default("PENDING")
+  isProduceToStock      Boolean                @default(false)
+  stockItems            Json?
+  cabinetCount          Int                    @default(1)
+  technicianWorkload    Json?
+  contractorCount       Int?                   @default(0)
+  productionStaffCount  Int?                   @default(0)
+  progressPct           Float?
+  workerCount           Int?
+  CabinetAssemblyJob    CabinetAssemblyJob[]
+  Company               Company?               @relation(fields: [companyId], references: [id])
+  Quotation             Quotation?             @relation(fields: [quotationId], references: [id])
+  User                  User?                  @relation(fields: [salespersonId], references: [id])
+  OrderStatusLog        OrderStatusLog[]
+  ProductionAssignment  ProductionAssignment[]
+  ProductionStep        ProductionStep[]
+  ProductionTimeLog     ProductionTimeLog[]
+  purchase_requests     purchase_requests[]
+  User_OrderTechnicians User[]                 @relation("OrderTechnicians")
 
   @@index([companyId])
   @@index([quotationId])
@@ -932,8 +947,10 @@ model OrderStatusLog {
   toStatus   String
   createdAt  DateTime @default(now()) @db.Timestamptz(6)
   Order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  User       User?    @relation(fields: [userId], references: [id])
 
   @@index([orderId])
+  @@index([userId])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1024,12 +1041,27 @@ model Project {
   deliveryDate              DateTime?          @db.Timestamptz(6)
   paymentDate               DateTime?          @db.Timestamptz(6)
   depositCollectionSchedule DateTime?          @db.Timestamptz(6)
+  checklistImages           Json?
+  customerSignUrl           String?
+  hvChecklist               Json?
+  isHighVoltage             Boolean            @default(false)
+  photoChecklist            Json?
+  preChecklist              Json?
+  remainingWork             String?
+  siteCheckInTime           DateTime?          @db.Timestamptz(6)
+  siteCheckOutTime          DateTime?          @db.Timestamptz(6)
+  siteProblems              Json?
+  siteSupervisor            String?
+  siteTeamMembers           String?
+  supervisorSignUrl         String?
+  workSummary               Json?
   jobs                      jobs?              @relation(fields: [jobId], references: [id])
   User                      User?              @relation(fields: [managerId], references: [id])
   ProjectDailyLog           ProjectDailyLog[]
   ProjectEquipment          ProjectEquipment[]
   ProjectMember             ProjectMember[]
   ProjectTask               ProjectTask[]
+  TechnicianTask            TechnicianTask[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1142,6 +1174,7 @@ model Quotation {
   subject              String?
   winLossReason        String?
   siteSurveyId         String?
+  GoodsReturn          GoodsReturn[]
   MarketingLead        MarketingLead?
   Order                Order[]
   Company              Company        @relation(fields: [companyId], references: [id])
@@ -1304,30 +1337,39 @@ model TelesalesKPI {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model User {
-  id                                                              String                @id
-  employeeId                                                      String                @unique
-  email                                                           String?               @unique
+  id                                                              String                 @id
+  employeeId                                                      String                 @unique
+  email                                                           String?                @unique
   fullName                                                        String
   phoneNumber                                                     String?
-  role                                                            String                @default("Sales Representative")
+  role                                                            String                 @default("Sales Representative")
   position                                                        String?
   password                                                        String
-  createdAt                                                       DateTime              @default(now()) @db.Timestamptz(6)
-  updatedAt                                                       DateTime              @default(now()) @db.Timestamptz(6)
+  createdAt                                                       DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt                                                       DateTime               @default(now()) @db.Timestamptz(6)
   otpCode                                                         String?
-  otpExpiresAt                                                    DateTime?             @db.Timestamptz(6)
-  isActive                                                        Boolean               @default(true)
+  otpExpiresAt                                                    DateTime?              @db.Timestamptz(6)
+  isActive                                                        Boolean                @default(true)
+  BDActivity                                                      BDActivity[]
+  BDProject_BDProject_ownerIdToUser                               BDProject[]            @relation("BDProject_ownerIdToUser")
+  BDProject_BDProject_requesterIdToUser                           BDProject[]            @relation("BDProject_requesterIdToUser")
+  BDTask                                                          BDTask[]
+  CabinetAssemblyJob                                              CabinetAssemblyJob[]
   Company                                                         Company[]
   CompanyInteraction                                              CompanyInteraction[]
-  CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[] @relation("CustomerRequirement_estimatedByUserIdToUser")
+  CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[]  @relation("CustomerRequirement_estimatedByUserIdToUser")
   CustomerRequirement                                             CustomerRequirement[]
+  CustomerSatisfaction                                            CustomerSatisfaction[]
   InstallationOrder                                               InstallationOrder[]
   JobDocument                                                     JobDocument[]
-  MarketingLead_MarketingLead_assignedToIdToUser                  MarketingLead[]       @relation("MarketingLead_assignedToIdToUser")
-  MarketingLead_MarketingLead_createdByUserIdToUser               MarketingLead[]       @relation("MarketingLead_createdByUserIdToUser")
+  MarketingLead_MarketingLead_assignedToIdToUser                  MarketingLead[]        @relation("MarketingLead_assignedToIdToUser")
+  MarketingLead_MarketingLead_createdByUserIdToUser               MarketingLead[]        @relation("MarketingLead_createdByUserIdToUser")
   MonthlyTarget                                                   MonthlyTarget[]
   Notification                                                    Notification[]
   Order                                                           Order[]
+  OrderStatusLog                                                  OrderStatusLog[]
+  ProductionAssignment                                            ProductionAssignment[]
+  ProductionTimeLog                                               ProductionTimeLog[]
   Project                                                         Project[]
   ProjectDailyLog                                                 ProjectDailyLog[]
   ProjectMember                                                   ProjectMember[]
@@ -1336,12 +1378,15 @@ model User {
   Quotation                                                       Quotation[]
   Schedule                                                        Schedule[]
   ServiceSchedule                                                 ServiceSchedule[]
-  SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]          @relation("SiteSurvey_estimatedByUserIdToUser")
+  SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]           @relation("SiteSurvey_estimatedByUserIdToUser")
   SiteSurvey                                                      SiteSurvey[]
+  TechnicianTask                                                  TechnicianTask[]
   Telesale                                                        Telesale[]
   TelesalesKPI                                                    TelesalesKPI[]
   employee_sales                                                  employee_sales?
   job_step_logs                                                   job_step_logs[]
+  BDProject_BDProjectMembers                                      BDProject[]            @relation("BDProjectMembers")
+  Order_OrderTechnicians                                          Order[]                @relation("OrderTechnicians")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -1465,12 +1510,14 @@ model jobs {
   billingDocsUrl        String?
   additionalInformation String?
   requiredDeliveryDate  DateTime?
+  GoodsReturn           GoodsReturn[]
   InstallationOrder     InstallationOrder[]
   JobDocument           JobDocument[]
   OutsourceRepair       OutsourceRepair[]
   Project               Project?
   RepairDelivery        RepairDelivery[]
   RepairOrder           RepairOrder?
+  TechnicianTask        TechnicianTask[]
   job_step_logs         job_step_logs[]
   Quotation             Quotation?          @relation(fields: [quotationId], references: [id])
   payment_tasks         payment_tasks[]
@@ -1480,7 +1527,7 @@ model jobs {
 model payment_tasks {
   id                String    @id
   jobId             String
-  status            String    @default("เธฃเธญเธ”เธณเน€เธเธดเธเธเธฒเธฃ")
+  status            String    @default("รอดำเนินการ")
   assignedTo        String?
   dueDate           DateTime? @db.Timestamptz(6)
   paidAmount        Float?
@@ -1492,6 +1539,8 @@ model payment_tasks {
   installmentNo     Int?
   installmentTotal  Int?
   creditType        String?
+  invoiceDate       DateTime? @db.Timestamptz(6)
+  invoiceNumber     String?
   jobs              jobs      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
@@ -2208,4 +2257,419 @@ model order_running_numbers {
   lastNumber Int    @default(0)
 
   @@unique([yearBe, month])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model AssemblyTimeLog {
+  id                   String             @id
+  cabinetAssemblyJobId String
+  action               String
+  reason               String?
+  timestamp            DateTime           @default(now()) @db.Timestamptz(6)
+  CabinetAssemblyJob   CabinetAssemblyJob @relation(fields: [cabinetAssemblyJobId], references: [id], onDelete: Cascade)
+
+  @@index([cabinetAssemblyJobId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model AuditLog {
+  id         String   @id
+  userId     String
+  action     String
+  resource   String?
+  resourceId String?
+  details    String?
+  timestamp  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([action])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDActivity {
+  id        String    @id
+  projectId String
+  userId    String
+  action    String
+  details   String?
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  BDProject BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User      User      @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDProject {
+  id                               String       @id
+  name                             String
+  objective                        String?
+  workTypeId                       String
+  urgency                          String       @default("Normal")
+  deadline                         DateTime?    @db.Timestamptz(6)
+  status                           String       @default("PENDING_REVIEW")
+  requesterId                      String
+  ownerId                          String?
+  blockedReason                    String?
+  waitingOn                        String?
+  createdAt                        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt                        DateTime     @default(now()) @db.Timestamptz(6)
+  parentId                         String?
+  intakeDate                       DateTime?    @db.Timestamptz(6)
+  color                            String?
+  completedAt                      DateTime?    @db.Timestamptz(6)
+  tags                             String[]     @default([])
+  BDActivity                       BDActivity[]
+  User_BDProject_ownerIdToUser     User?        @relation("BDProject_ownerIdToUser", fields: [ownerId], references: [id])
+  BDProject                        BDProject?   @relation("BDProjectToBDProject", fields: [parentId], references: [id])
+  other_BDProject                  BDProject[]  @relation("BDProjectToBDProject")
+  User_BDProject_requesterIdToUser User         @relation("BDProject_requesterIdToUser", fields: [requesterId], references: [id])
+  BDWorkType                       BDWorkType   @relation(fields: [workTypeId], references: [id])
+  BDTask                           BDTask[]
+  User_BDProjectMembers            User[]       @relation("BDProjectMembers")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDTask {
+  id             String    @id
+  projectId      String
+  name           String
+  status         String    @default("PENDING")
+  dueDate        DateTime? @db.Timestamptz(6)
+  orderIndex     Int
+  checklistState Json?
+  assigneeId     String?
+  blockedReason  String?
+  waitingOn      String?
+  completedAt    DateTime? @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  blockedAt      DateTime? @db.Timestamptz(6)
+  User           User?     @relation(fields: [assigneeId], references: [id])
+  BDProject      BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDWorkType {
+  id                 String              @id
+  name               String              @unique
+  description        String?
+  defaultTemplateId  String?
+  BDProject          BDProject[]
+  BDWorkflowTemplate BDWorkflowTemplate? @relation(fields: [defaultTemplateId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDWorkflowStepTemplate {
+  id                 String             @id
+  templateId         String
+  name               String
+  orderIndex         Int
+  checklist          Json?
+  BDWorkflowTemplate BDWorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BDWorkflowTemplate {
+  id                     String                   @id
+  name                   String
+  description            String?
+  BDWorkType             BDWorkType[]
+  BDWorkflowStepTemplate BDWorkflowStepTemplate[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CabinetAssemblyJob {
+  id                String            @id
+  orderId           String
+  technicianId      String
+  jobNumber         String            @unique
+  cabinetIndex      Int
+  status            String            @default("PENDING")
+  createdAt         DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime          @db.Timestamptz(6)
+  normalTimeMinutes Int?
+  overtimeMinutes   Int?
+  AssemblyTimeLog   AssemblyTimeLog[]
+  Order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  User              User              @relation(fields: [technicianId], references: [id])
+  CabinetFATReport  CabinetFATReport?
+  CabinetQCReport   CabinetQCReport?
+
+  @@index([orderId])
+  @@index([technicianId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CabinetFATReport {
+  id                   String             @id
+  cabinetAssemblyJobId String             @unique
+  testerName           String?
+  panelFunctionalTest  Boolean            @default(false)
+  acInputVoltage       Float?
+  dcInputVoltage       Float?
+  outputVoltage        Float?
+  protectionSystemTest Boolean            @default(false)
+  testDetails          String?
+  displaySystemCheck   Boolean            @default(false)
+  remarks              String?
+  fatStatus            String             @default("Pending")
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @db.Timestamptz(6)
+  CabinetAssemblyJob   CabinetAssemblyJob @relation(fields: [cabinetAssemblyJobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CabinetQCReport {
+  id                    String             @id
+  cabinetAssemblyJobId  String             @unique
+  inverterCorrect       Boolean            @default(false)
+  cabinetKey            Boolean            @default(false)
+  cabinetType           String
+  confirmationPhotos    String[]           @default([])
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @db.Timestamptz(6)
+  cabinetBody           Boolean            @default(false)
+  frontPanelEquipment   Boolean            @default(false)
+  groundingSystem       Boolean            @default(false)
+  overallEquipmentCheck Boolean            @default(false)
+  qcCorrections         String?
+  qcInspectorName       String?
+  qcNotes               String?
+  qcStatus              String             @default("Pending Inspection")
+  electricalSystem      Boolean            @default(false)
+  fanStatus             String?
+  internalWiring        Boolean            @default(false)
+  magicMarks            Boolean            @default(false)
+  nameplate             String?
+  noMarks               Boolean            @default(false)
+  screwsTightened       Boolean            @default(false)
+  serialNumber          String?
+  terminals             Boolean            @default(false)
+  warningLabels         Boolean            @default(false)
+  wireDucting           Boolean            @default(false)
+  wiringConnections     Boolean            @default(false)
+  CabinetAssemblyJob    CabinetAssemblyJob @relation(fields: [cabinetAssemblyJobId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model CustomerSatisfaction {
+  id              String    @id
+  surveyRound     Int
+  surveyYear      Int
+  surveyMethod    String
+  surveyBy        String
+  surveyDate      DateTime  @default(now())
+  companyId       String
+  province        String
+  phone           String
+  quotationIds    String[]
+  scorePrice      Int
+  scoreQuality    Int
+  scoreDelivery   Int
+  scoreSales      Int
+  scoreSupport    Int
+  scoreAfterSales Int
+  scoreAverage    Float
+  purchaseReasons String[]
+  suggestions     String?
+  analysisNote    String?
+  actionPlan      String?
+  sharedToSales   Boolean   @default(false)
+  sharedToService Boolean   @default(false)
+  sharedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  Company         Company   @relation(fields: [companyId], references: [id])
+  User            User      @relation(fields: [surveyBy], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model GoodsReturn {
+  id               String     @id
+  documentNo       String     @unique
+  date             DateTime   @default(now()) @db.Timestamptz(6)
+  customer         String?
+  deliveryLocation String?
+  reference        String?
+  items            Json?
+  receiverName     String?
+  receiverDate     DateTime?  @db.Timestamptz(6)
+  senderName       String?
+  senderDate       DateTime?  @db.Timestamptz(6)
+  status           String     @default("Draft")
+  returnType       String     @default("DEFECT")
+  createdAt        DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime   @db.Timestamptz(6)
+  jobId            String?
+  quotationId      String?
+  companyId        String?
+  Company          Company?   @relation(fields: [companyId], references: [id])
+  jobs             jobs?      @relation(fields: [jobId], references: [id])
+  Quotation        Quotation? @relation(fields: [quotationId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanActivityLog {
+  id         String     @id
+  cardId     String
+  userId     String?
+  actionType String
+  details    String?
+  timestamp  DateTime   @default(now()) @db.Timestamptz(6)
+  KanbanCard KanbanCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanAttachment {
+  id             String     @id
+  cardId         String
+  userId         String?
+  fileName       String
+  fileUrl        String
+  fileType       String?
+  fileSize       Int?
+  attachmentType String?
+  uploadedAt     DateTime   @default(now()) @db.Timestamptz(6)
+  KanbanCard     KanbanCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanBoard {
+  id         String       @id
+  name       String
+  ownerId    String?
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime     @db.Timestamptz(6)
+  colorTheme String       @default("brandRed")
+  KanbanList KanbanList[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanCard {
+  id                   String              @id
+  listId               String
+  title                String
+  description          String?
+  assignedToId         String?
+  dueDate              DateTime?           @db.Timestamptz(6)
+  revisionStatus       String?
+  position             Float
+  checklist            Json?
+  createdAt            DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime            @db.Timestamptz(6)
+  color                String?
+  startDate            DateTime?           @db.Timestamptz(6)
+  engineeringReviewers String[]            @default([])
+  isCompleted          Boolean             @default(false)
+  salespersonId        String?
+  KanbanActivityLog    KanbanActivityLog[]
+  KanbanAttachment     KanbanAttachment[]
+  KanbanList           KanbanList          @relation(fields: [listId], references: [id], onDelete: Cascade)
+  KanbanComment        KanbanComment[]
+
+  @@index([assignedToId])
+  @@index([listId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanComment {
+  id         String     @id
+  cardId     String
+  userId     String?
+  message    String
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime   @db.Timestamptz(6)
+  KanbanCard KanbanCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model KanbanList {
+  id          String       @id
+  boardId     String
+  name        String
+  position    Float
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime     @db.Timestamptz(6)
+  color       String?
+  KanbanCard  KanbanCard[]
+  KanbanBoard KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProductionAssignment {
+  id             String   @id
+  orderId        String
+  userId         String?
+  contractorName String?
+  workerType     String
+  role           String?
+  assignedAt     DateTime @default(now())
+  assignedBy     String
+  Order          Order    @relation(fields: [orderId], references: [id])
+  User           User?    @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProductionStep {
+  id          String    @id
+  orderId     String
+  stepIndex   Int
+  stepName    String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  completedBy String?
+  Order       Order     @relation(fields: [orderId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ProductionTimeLog {
+  id           String    @id
+  orderId      String
+  userId       String
+  stepName     String?
+  startTime    DateTime
+  endTime      DateTime?
+  durationMins Int?
+  note         String?
+  createdAt    DateTime  @default(now())
+  Order        Order     @relation(fields: [orderId], references: [id])
+  User         User      @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TechnicianTask {
+  id             String    @id
+  taskType       String
+  title          String
+  description    String?
+  scheduledDate  DateTime  @db.Timestamptz(6)
+  startTime      String?
+  endTime        String?
+  assignedBy     String
+  assignedByRole String
+  technicianIds  String[]
+  jobId          String?
+  projectId      String?
+  panelCount     Int?
+  location       String?
+  locationLat    Decimal?
+  locationLon    Decimal?
+  status         String    @default("ASSIGNED")
+  photosBefore   String[]
+  photosAfter    String[]
+  completedAt    DateTime? @db.Timestamptz(6)
+  completedNote  String?
+  isWarranty     Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @db.Timestamptz(6)
+  User           User      @relation(fields: [assignedBy], references: [id])
+  jobs           jobs?     @relation(fields: [jobId], references: [id])
+  Project        Project?  @relation(fields: [projectId], references: [id])
 }
