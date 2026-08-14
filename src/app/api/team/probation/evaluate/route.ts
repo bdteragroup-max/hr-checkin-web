@@ -117,51 +117,69 @@ export async function POST(req: Request) {
             }, { status: 400 });
         }
 
-        // 5. Save to DB
-        const result = await (prisma.probation_evaluations as any).create({
-            data: {
+        // 5. Save to DB (Check if exists first for editing returned evaluations)
+        const evalData = {
+            emp_id,
+            supervisor_id,
+            evaluation_no: Number(evaluation_no || 1),
+            period_start: new Date(period_start),
+            period_end: new Date(period_end),
+            
+            score_work_quality: scores.work_quality || 0,
+            score_work_quantity: scores.work_quantity || 0,
+            score_dedication: scores.dedication || 0,
+            score_knowledge: scores.knowledge || 0,
+            score_learning: scores.learning || 0,
+            score_obedience: scores.obedience || 0,
+            score_responsibility: scores.responsibility || 0,
+            score_creativity: scores.creativity || 0,
+            score_teamwork: scores.teamwork || 0,
+            score_discipline: scores.discipline || 0,
+            score_tool_maintenance: scores.tool_maintenance || 0,
+            score_participation: scores.participation || 0,
+            
+            score_late: finalScores.late || 0,
+            score_sick_leave: finalScores.sick_leave || 0,
+            score_personal_leave: finalScores.personal_leave || 0,
+            
+            count_late: Math.round(attendance_counts?.late || 0),
+            count_sick_leave: Math.round(attendance_counts?.sick || 0),
+            count_personal_leave: Math.round(attendance_counts?.personal || 0),
+            
+            total_score: totalScore,
+            grade: grade,
+            
+            comment_supervisor: finalCommentSupervisor,
+            comment_improvement,
+            comment_praise,
+            score_comments: score_comments || {},
+            
+            decision,
+            salary_adjust_from: salary_adjust_from ? Number(salary_adjust_from) : null,
+            salary_adjust_to: salary_adjust_to ? Number(salary_adjust_to) : null,
+            
+            status: "submitted",
+            return_reason: null // Clear return reason on submit
+        };
+
+        const existing = await prisma.probation_evaluations.findFirst({
+            where: {
                 emp_id,
-                supervisor_id,
-                evaluation_no: Number(evaluation_no || 1),
-                period_start: new Date(period_start),
-                period_end: new Date(period_end),
-                
-                score_work_quality: scores.work_quality || 0,
-                score_work_quantity: scores.work_quantity || 0,
-                score_dedication: scores.dedication || 0,
-                score_knowledge: scores.knowledge || 0,
-                score_learning: scores.learning || 0,
-                score_obedience: scores.obedience || 0,
-                score_responsibility: scores.responsibility || 0,
-                score_creativity: scores.creativity || 0,
-                score_teamwork: scores.teamwork || 0,
-                score_discipline: scores.discipline || 0,
-                score_tool_maintenance: scores.tool_maintenance || 0,
-                score_participation: scores.participation || 0,
-                
-                score_late: finalScores.late || 0,
-                score_sick_leave: finalScores.sick_leave || 0,
-                score_personal_leave: finalScores.personal_leave || 0,
-                
-                count_late: Math.round(attendance_counts?.late || 0),
-                count_sick_leave: Math.round(attendance_counts?.sick || 0),
-                count_personal_leave: Math.round(attendance_counts?.personal || 0),
-                
-                total_score: totalScore,
-                grade: grade,
-                
-                comment_supervisor: finalCommentSupervisor,
-                comment_improvement,
-                comment_praise,
-                score_comments: score_comments || {},
-                
-                decision,
-                salary_adjust_from: salary_adjust_from ? Number(salary_adjust_from) : null,
-                salary_adjust_to: salary_adjust_to ? Number(salary_adjust_to) : null,
-                
-                status: "submitted"
+                evaluation_no: Number(evaluation_no || 1)
             }
         });
+
+        let result;
+        if (existing) {
+            result = await prisma.probation_evaluations.update({
+                where: { id: existing.id },
+                data: evalData
+            });
+        } else {
+            result = await (prisma.probation_evaluations as any).create({
+                data: evalData
+            });
+        }
 
         // 6. Notify HR via LINE
         await sendProbationEvaluationHrAlert({

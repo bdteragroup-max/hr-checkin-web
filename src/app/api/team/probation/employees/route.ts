@@ -72,7 +72,7 @@ export async function GET() {
                 departments: { select: { name: true } },
                 salary_type: true,
                 probation_evaluations: {
-                    select: { evaluation_no: true, evaluation_date: true, total_score: true, grade: true, supervisor_id: true },
+                    select: { id: true, evaluation_no: true, evaluation_date: true, total_score: true, grade: true, supervisor_id: true, status: true, return_reason: true },
                     orderBy: { evaluation_no: "asc" }
                 }
             }
@@ -136,7 +136,8 @@ export async function GET() {
                 unlock_date: unlockDate ? unlockDate.toISOString() : null,
                 is_unlocked: isUnlocked,
                 evaluation_history: emp.probation_evaluations,
-                is_other_manager: isOtherManager
+                is_other_manager: isOtherManager,
+                returned_evaluation: lastEval?.status === "returned" ? lastEval : null
             };
         });
 

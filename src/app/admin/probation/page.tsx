@@ -53,6 +53,11 @@ export default function AdminProbationPage() {
     const [showBreakdown, setShowBreakdown] = useState<string | null>(null); 
     const [saving, setSaving] = useState(false);
 
+    // -- SEND BACK STATE --
+    const [returnReason, setReturnReason] = useState("");
+    const [showReturnInput, setShowReturnInput] = useState(false);
+    const [sendingBack, setSendingBack] = useState(false);
+
     const { data, isLoading: loading } = useQuery({
         queryKey: ['admin-probation'],
         queryFn: async () => {
@@ -157,6 +162,38 @@ export default function AdminProbationPage() {
             .then(data => {
                 if (data.ok) setRealtimeStats(data);
             });
+    };
+
+    const handleSendBack = async () => {
+        if (!selectedId || sendingBack) return;
+        if (!returnReason.trim()) {
+            alert("กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข");
+            return;
+        }
+
+        setSendingBack(true);
+        try {
+            const res = await fetch(`/api/admin/probation/evaluations/${selectedId}/send-back`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ return_reason: returnReason.trim() })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert("ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว");
+                setSelectedId(null);
+                setReturnReason("");
+                setShowReturnInput(false);
+                queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
+            } else {
+                alert(`เกิดข้อผิดพลาด: ${data.message || data.error}`);
+            }
+        } catch (e) {
+            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+        } finally {
+            setSendingBack(false);
+        }
     };
 
     const handleSaveReview = async () => {
@@ -611,8 +648,36 @@ export default function AdminProbationPage() {
                              <div style={{ marginRight: 'auto' }}>
                                 <span style={{ fontWeight:900, fontSize:24 }}>{currentTotal} / 300 ({currentGrade})</span>
                              </div>
+                             
+                             <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={() => setShowReturnInput(true)}>
+                                 ส่งกลับให้แก้ไข
+                             </button>
                              <button className={styles.btnCancel} onClick={() => setSelectedId(null)}>ยกเลิก</button>
                              <button className={styles.btnSave} onClick={handleSaveReview} disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกผล"}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SEND BACK REVISION DIALOG */}
+            {showReturnInput && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ExclamationTriangleIcon width={24} style={{ color: '#DC2626' }} /> ยืนยันการส่งกลับให้แก้ไข
+                        </h3>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#4b5563' }}>กรุณาระบุเหตุผลที่ต้องส่งกลับ เพื่อให้หัวหน้างานทราบถึงสิ่งที่ต้องแก้ไข</p>
+                        <textarea 
+                            style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'none', marginBottom: '24px', outline: 'none', fontSize: '14px', color: '#1f2937' }}
+                            placeholder="ระบุเหตุผลที่ต้องส่งกลับ..."
+                            value={returnReason}
+                            onChange={e => setReturnReason(e.target.value)}
+                        />
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => { setShowReturnInput(false); setReturnReason(""); }} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} disabled={sendingBack}>ยกเลิก</button>
+                            <button onClick={handleSendBack} style={{ padding: '8px 16px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} disabled={sendingBack}>
+                                {sendingBack ? "กำลังส่ง..." : "ยืนยันส่งกลับ"}
+                            </button>
                         </div>
                     </div>
                 </div>

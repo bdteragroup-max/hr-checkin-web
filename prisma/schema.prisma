@@ -469,51 +469,67 @@ model asset_borrowings {
 }
 
 model probation_evaluations {
-  id                     Int       @id @default(autoincrement())
-  emp_id                 String    @db.VarChar(20)
-  supervisor_id          String    @db.VarChar(20)
-  evaluation_no          Int       @default(1)
-  evaluation_date        DateTime  @default(now()) @db.Date
-  period_start           DateTime  @db.Date
-  period_end             DateTime  @db.Date
-  score_work_quality     Int       @default(0)
-  score_work_quantity    Int       @default(0)
-  score_dedication       Int       @default(0)
-  score_knowledge        Int       @default(0)
-  score_learning         Int       @default(0)
-  score_obedience        Int       @default(0)
-  score_responsibility   Int       @default(0)
-  score_creativity       Int       @default(0)
-  score_teamwork         Int       @default(0)
-  score_discipline       Int       @default(0)
-  score_tool_maintenance Int       @default(0)
-  score_participation    Int       @default(0)
-  score_late             Int       @default(0)
-  score_sick_leave       Int       @default(0)
-  score_personal_leave   Int       @default(0)
-  count_late             Int       @default(0)
-  count_sick_leave       Int       @default(0)
-  count_personal_leave   Int       @default(0)
-  count_activity         Int       @default(0)
-  total_score            Int       @default(0)
-  grade                  String?   @db.VarChar(2)
+  id                     Int                              @id @default(autoincrement())
+  emp_id                 String                           @db.VarChar(20)
+  supervisor_id          String                           @db.VarChar(20)
+  evaluation_no          Int                              @default(1)
+  evaluation_date        DateTime                         @default(now()) @db.Date
+  period_start           DateTime                         @db.Date
+  period_end             DateTime                         @db.Date
+  score_work_quality     Int                              @default(0)
+  score_work_quantity    Int                              @default(0)
+  score_dedication       Int                              @default(0)
+  score_knowledge        Int                              @default(0)
+  score_learning         Int                              @default(0)
+  score_obedience        Int                              @default(0)
+  score_responsibility   Int                              @default(0)
+  score_creativity       Int                              @default(0)
+  score_teamwork         Int                              @default(0)
+  score_discipline       Int                              @default(0)
+  score_tool_maintenance Int                              @default(0)
+  score_participation    Int                              @default(0)
+  score_late             Int                              @default(0)
+  score_sick_leave       Int                              @default(0)
+  score_personal_leave   Int                              @default(0)
+  count_late             Int                              @default(0)
+  count_sick_leave       Int                              @default(0)
+  count_personal_leave   Int                              @default(0)
+  count_activity         Int                              @default(0)
+  total_score            Int                              @default(0)
+  grade                  String?                          @db.VarChar(2)
   comment_supervisor     String?
   comment_improvement    String?
   comment_praise         String?
-  decision               String    @db.VarChar(50)
-  salary_adjust_from     Decimal?  @db.Decimal(12, 2)
-  salary_adjust_to       Decimal?  @db.Decimal(12, 2)
-  status                 String    @default("submitted") @db.VarChar(20)
+  decision               String                           @db.VarChar(50)
+  salary_adjust_from     Decimal?                         @db.Decimal(12, 2)
+  salary_adjust_to       Decimal?                         @db.Decimal(12, 2)
+  status                 String                           @default("submitted") @db.VarChar(20)
   hr_remark              String?
-  is_sent_to_management  Boolean   @default(false)
-  created_at             DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime  @default(now()) @db.Timestamptz(6)
+  is_sent_to_management  Boolean                          @default(false)
+  created_at             DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                         @default(now()) @db.Timestamptz(6)
   score_comments         Json?
-  employee               employees @relation("EmployeeToProbation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  supervisor             employees @relation("SupervisorToProbation", fields: [supervisor_id], references: [emp_id])
+  return_reason          String?
+  revisions              probation_evaluation_revisions[]
+  employee               employees                        @relation("EmployeeToProbation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor             employees                        @relation("SupervisorToProbation", fields: [supervisor_id], references: [emp_id])
 
   @@index([emp_id])
   @@index([supervisor_id])
+}
+
+model probation_evaluation_revisions {
+  id            Int                   @id @default(autoincrement())
+  evaluation_id Int
+  emp_id        String                @db.VarChar(20)
+  supervisor_id String                @db.VarChar(20)
+  revision_date DateTime              @default(now()) @db.Timestamptz(6)
+  return_reason String?
+  returned_by   String?               @db.VarChar(20)
+  snapshot      Json
+  evaluation    probation_evaluations @relation(fields: [evaluation_id], references: [id], onDelete: Cascade)
+
+  @@index([evaluation_id])
 }
 
 model kpi_evaluations {
@@ -1380,9 +1396,13 @@ model User {
   ServiceSchedule                                                 ServiceSchedule[]
   SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]           @relation("SiteSurvey_estimatedByUserIdToUser")
   SiteSurvey                                                      SiteSurvey[]
+  SupportTicket_SupportTicket_assigneeIdToUser                    SupportTicket[]        @relation("SupportTicket_assigneeIdToUser")
+  SupportTicket_SupportTicket_reporterIdToUser                    SupportTicket[]        @relation("SupportTicket_reporterIdToUser")
   TechnicianTask                                                  TechnicianTask[]
   Telesale                                                        Telesale[]
   TelesalesKPI                                                    TelesalesKPI[]
+  TicketComment                                                   TicketComment[]
+  TicketLog                                                       TicketLog[]
   employee_sales                                                  employee_sales?
   job_step_logs                                                   job_step_logs[]
   BDProject_BDProjectMembers                                      BDProject[]            @relation("BDProjectMembers")
@@ -2317,6 +2337,7 @@ model BDProject {
   color                            String?
   completedAt                      DateTime?    @db.Timestamptz(6)
   tags                             String[]     @default([])
+  supportTicketId                  String?
   BDActivity                       BDActivity[]
   User_BDProject_ownerIdToUser     User?        @relation("BDProject_ownerIdToUser", fields: [ownerId], references: [id])
   BDProject                        BDProject?   @relation("BDProjectToBDProject", fields: [parentId], references: [id])
@@ -2329,22 +2350,23 @@ model BDProject {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model BDTask {
-  id             String    @id
-  projectId      String
-  name           String
-  status         String    @default("PENDING")
-  dueDate        DateTime? @db.Timestamptz(6)
-  orderIndex     Int
-  checklistState Json?
-  assigneeId     String?
-  blockedReason  String?
-  waitingOn      String?
-  completedAt    DateTime? @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime  @default(now()) @db.Timestamptz(6)
-  blockedAt      DateTime? @db.Timestamptz(6)
-  User           User?     @relation(fields: [assigneeId], references: [id])
-  BDProject      BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String    @id
+  projectId       String
+  name            String
+  status          String    @default("PENDING")
+  dueDate         DateTime? @db.Timestamptz(6)
+  orderIndex      Int
+  checklistState  Json?
+  assigneeId      String?
+  blockedReason   String?
+  waitingOn       String?
+  completedAt     DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  blockedAt       DateTime? @db.Timestamptz(6)
+  supportTicketId String?
+  User            User?     @relation(fields: [assigneeId], references: [id])
+  BDProject       BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2672,4 +2694,60 @@ model TechnicianTask {
   User           User      @relation(fields: [assignedBy], references: [id])
   jobs           jobs?     @relation(fields: [jobId], references: [id])
   Project        Project?  @relation(fields: [projectId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SupportTicket {
+  id                                  String          @id
+  ticketNumber                        String          @unique
+  title                               String
+  description                         String
+  attachments                         String[]        @default([])
+  urgency                             String          @default("MEDIUM")
+  status                              String          @default("SUBMITTED")
+  reporterId                          String
+  assigneeId                          String?
+  resolutionPlan                      String?
+  progressPercent                     Int             @default(0)
+  resolvedAt                          DateTime?       @db.Timestamptz(6)
+  createdAt                           DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt                           DateTime        @default(now()) @db.Timestamptz(6)
+  category                            String          @default("OTHER")
+  User_SupportTicket_assigneeIdToUser User?           @relation("SupportTicket_assigneeIdToUser", fields: [assigneeId], references: [id])
+  User_SupportTicket_reporterIdToUser User            @relation("SupportTicket_reporterIdToUser", fields: [reporterId], references: [id])
+  TicketComment                       TicketComment[]
+  TicketLog                           TicketLog[]
+
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@index([reporterId])
+  @@index([status])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TicketComment {
+  id            String        @id
+  ticketId      String
+  userId        String
+  message       String
+  attachments   String[]      @default([])
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  SupportTicket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TicketLog {
+  id            String        @id
+  ticketId      String
+  userId        String
+  action        String
+  details       String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  SupportTicket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
 }

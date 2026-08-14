@@ -108,7 +108,7 @@ export default function EvaluatePage() {
                             setPeriodEnd(lastDayStr);
                             setDecision("acknowledge"); // Default decision for regular
                         } else {
-                            const evalNo = found.last_evaluation_no + 1;
+                            const evalNo = found.returned_evaluation ? found.returned_evaluation.evaluation_no : (found.last_evaluation_no + 1);
                             const dates = calculateProbationDates(found.hire_date, evalNo);
                             setPeriodStart(dates.start);
                             setPeriodEnd(dates.end);
@@ -118,6 +118,42 @@ export default function EvaluatePage() {
             })
             .finally(() => setLoading(false));
     }, [emp_id]);
+
+    useEffect(() => {
+        if (!empInfo?.returned_evaluation?.id) return;
+        
+        fetch(`/api/team/probation/evaluations/${empInfo.returned_evaluation.id}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok && data.evaluation) {
+                    const ev = data.evaluation;
+                    setScores({
+                        work_quality: ev.score_work_quality,
+                        work_quantity: ev.score_work_quantity,
+                        dedication: ev.score_dedication,
+                        knowledge: ev.score_knowledge,
+                        learning: ev.score_learning,
+                        obedience: ev.score_obedience,
+                        responsibility: ev.score_responsibility,
+                        creativity: ev.score_creativity,
+                        teamwork: ev.score_teamwork,
+                        discipline: ev.score_discipline,
+                        tool_maintenance: ev.score_tool_maintenance,
+                        participation: ev.score_participation
+                    });
+                    
+                    setDecision(ev.decision);
+                    if (ev.salary_adjust_from) setSalaryFrom(ev.salary_adjust_from.toString());
+                    if (ev.salary_adjust_to) setSalaryTo(ev.salary_adjust_to.toString());
+                    
+                    if (ev.comment_supervisor) setCommentSupervisor(ev.comment_supervisor);
+                    if (ev.comment_improvement) setCommentImprovement(ev.comment_improvement);
+                    if (ev.comment_praise) setCommentPraise(ev.comment_praise);
+                    if (ev.score_comments) setScoreComments(ev.score_comments);
+                }
+            })
+            .catch(console.error);
+    }, [empInfo]);
 
     useEffect(() => {
         if (!emp_id || !periodStart || !periodEnd) return;
@@ -232,6 +268,18 @@ export default function EvaluatePage() {
                         <ChevronLeftIcon width={14} /> ย้อนกลับ
                     </button>
                 </div>
+
+                {empInfo?.returned_evaluation && (
+                    <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', padding: '16px', borderRadius: '12px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <ExclamationTriangleIcon width={24} style={{ color: '#DC2626', flexShrink: 0 }} />
+                        <div>
+                            <div style={{ color: '#991B1B', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>แบบประเมินนี้ถูกตีกลับเพื่อให้แก้ไข</div>
+                            <div style={{ color: '#7F1D1D', fontSize: 14 }}>
+                                <strong>เหตุผลจากฝ่ายบุคคล:</strong> {empInfo.returned_evaluation.return_reason || 'ไม่มีการระบุเหตุผล'}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ── SECTION 1: INFO ── */}
                 <div className={styles.card}>
