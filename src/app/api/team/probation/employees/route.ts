@@ -85,7 +85,8 @@ export async function GET() {
             
             const myEvals = emp.probation_evaluations;
             const lastEval = myEvals[myEvals.length - 1];
-            const nextRound = (lastEval?.evaluation_no || 0) + 1;
+            const isReturned = lastEval?.status === "returned";
+            const nextRound = isReturned ? lastEval.evaluation_no : (lastEval?.evaluation_no || 0) + 1;
             
             let dueDate = null;
             let unlockDate = null;
@@ -105,7 +106,7 @@ export async function GET() {
                     unlockDate = new Date(dueDate);
                     unlockDate.setDate(unlockDate.getDate() - 14); // Allow evaluation 14 days in advance instead of 7
                     
-                    isUnlocked = now >= unlockDate;
+                    isUnlocked = isReturned || (now >= unlockDate);
                 }
             } else {
                 const currentMonth = now.getMonth();
@@ -117,9 +118,10 @@ export async function GET() {
                 const lastEvalDate = lastEval ? new Date(lastEval.evaluation_date) : null;
                 const evaluatedThisMonth = lastEvalDate && 
                                           lastEvalDate.getMonth() === currentMonth && 
-                                          lastEvalDate.getFullYear() === currentYear;
+                                          lastEvalDate.getFullYear() === currentYear &&
+                                          !isReturned;
                 
-                isUnlocked = (now >= unlockDate) && !evaluatedThisMonth;
+                isUnlocked = isReturned || ((now >= unlockDate) && !evaluatedThisMonth);
             }
 
             return {

@@ -55,8 +55,6 @@ export default function AdminProbationPage() {
     const [saving, setSaving] = useState(false);
 
     // -- SEND BACK STATE --
-    const [returnReason, setReturnReason] = useState("");
-    const [showReturnInput, setShowReturnInput] = useState(false);
     const [sendingBack, setSendingBack] = useState(false);
 
     const { data, isLoading: loading } = useQuery({
@@ -165,36 +163,57 @@ export default function AdminProbationPage() {
             });
     };
 
-    const handleSendBack = async () => {
+    const handleReturnClick = async () => {
         if (!selectedId || sendingBack) return;
-        if (!returnReason.trim()) {
-            Swal.fire({ icon: 'warning', title: 'กรุณาระบุข้อมูล', text: 'กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข', confirmButtonColor: '#DC2626' });
-            return;
-        }
-
-        setSendingBack(true);
-        try {
-            const res = await fetch(`/api/admin/probation/evaluations/${selectedId}/send-back`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ return_reason: returnReason.trim() })
-            });
-            const data = await res.json();
-            
-            if (res.ok) {
-                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว', confirmButtonColor: '#16a34a' });
+        
+        await Swal.fire({
+            title: 'ยืนยันการส่งกลับให้แก้ไข',
+            input: 'textarea',
+            inputLabel: 'กรุณาระบุเหตุผลที่ต้องส่งกลับ เพื่อให้หัวหน้างานทราบถึงสิ่งที่ต้องแก้ไข',
+            inputPlaceholder: 'ระบุเหตุผลที่ต้องส่งกลับ...',
+            showCancelButton: true,
+            confirmButtonColor: '#DC2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'ยืนยันส่งกลับ',
+            cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,
+            preConfirm: async (reason) => {
+                if (!reason || !reason.trim()) {
+                    Swal.showValidationMessage('กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข');
+                    return false;
+                }
+                
+                try {
+                    const res = await fetch(`/api/admin/probation/evaluations/${selectedId}/send-back`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ return_reason: reason.trim() })
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                        throw new Error(data.message || data.error || 'เกิดข้อผิดพลาดในการส่งกลับ');
+                    }
+                    return true;
+                } catch (error: any) {
+                    Swal.showValidationMessage(`เกิดข้อผิดพลาด: ${error.message}`);
+                    return false;
+                }
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'สำเร็จ!', 
+                    text: 'ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว', 
+                    timer: 2000, 
+                    showConfirmButton: false 
+                });
                 setSelectedId(null);
-                setReturnReason("");
-                setShowReturnInput(false);
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
-            } else {
-                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: `เกิดข้อผิดพลาด: ${data.message || data.error}` });
             }
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
-        } finally {
-            setSendingBack(false);
-        }
+        });
     };
 
     const handleSaveReview = async () => {
@@ -207,6 +226,7 @@ export default function AdminProbationPage() {
                 body: JSON.stringify(editData)
             });
             if (res.ok) {
+                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
                 setSelectedId(null);
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
@@ -662,35 +682,11 @@ export default function AdminProbationPage() {
                                 <span style={{ fontWeight:900, fontSize:24 }}>{currentTotal} / 300 ({currentGrade})</span>
                              </div>
                              
-                             <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={() => setShowReturnInput(true)}>
-                                 ส่งกลับให้แก้ไข
+                             <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={handleReturnClick} disabled={sendingBack}>
+                                 {sendingBack ? "กำลังส่ง..." : "ส่งกลับให้แก้ไข"}
                              </button>
                              <button className={styles.btnCancel} onClick={() => setSelectedId(null)}>ยกเลิก</button>
                              <button className={styles.btnSave} onClick={handleSaveReview} disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกผล"}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* SEND BACK REVISION DIALOG */}
-            {showReturnInput && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ExclamationTriangleIcon width={24} style={{ color: '#DC2626' }} /> ยืนยันการส่งกลับให้แก้ไข
-                        </h3>
-                        <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#4b5563' }}>กรุณาระบุเหตุผลที่ต้องส่งกลับ เพื่อให้หัวหน้างานทราบถึงสิ่งที่ต้องแก้ไข</p>
-                        <textarea 
-                            style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', resize: 'none', marginBottom: '24px', outline: 'none', fontSize: '14px', color: '#1f2937' }}
-                            placeholder="ระบุเหตุผลที่ต้องส่งกลับ..."
-                            value={returnReason}
-                            onChange={e => setReturnReason(e.target.value)}
-                        />
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setShowReturnInput(false); setReturnReason(""); }} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} disabled={sendingBack}>ยกเลิก</button>
-                            <button onClick={handleSendBack} style={{ padding: '8px 16px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} disabled={sendingBack}>
-                                {sendingBack ? "กำลังส่ง..." : "ยืนยันส่งกลับ"}
-                            </button>
                         </div>
                     </div>
                 </div>
