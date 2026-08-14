@@ -68,7 +68,7 @@ export async function POST(req: Request) {
                     nights_count: nights_count ?? null,
                     trip_fee_status: overnight_required ? "PENDING" : null,
                     status: "returned",
-                    return_status: "PENDING_KEY"
+                    return_status: borrowing.assets.category === "Car" ? "PENDING_KEY" : "COMPLETE"
                 } as any,
                 include: {
                     employee: { include: { supervisor: true } }

@@ -50,7 +50,8 @@ export async function POST(req: Request) {
                     actual_return_date: safeParseDate(actual_return_date),
                     condition_at_return: condition_at_return || null,
                     is_damaged: is_damaged || false,
-                    status: "returned"
+                    status: "returned",
+                    return_status: "COMPLETE"
                 }
             });
 

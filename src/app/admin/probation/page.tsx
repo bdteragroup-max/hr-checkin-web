@@ -4,8 +4,8 @@ import { useState, useMemo } from "react";
 import Swal from "sweetalert2";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
-import { 
-    DocumentArrowDownIcon, 
+import {
+    DocumentArrowDownIcon,
     PaperAirplaneIcon,
     CheckCircleIcon,
     MagnifyingGlassIcon,
@@ -18,10 +18,10 @@ import {
     EyeIcon,
     ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
-import { 
-    calculateTotalScore, 
-    calculateGrade, 
-    calculateAttendanceScore 
+import {
+    calculateTotalScore,
+    calculateGrade,
+    calculateAttendanceScore
 } from "@/utils/probationCalculations";
 import * as XLSX from "xlsx";
 
@@ -51,7 +51,7 @@ export default function AdminProbationPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [editData, setEditData] = useState<any>(null);
     const [realtimeStats, setRealtimeStats] = useState<any>(null);
-    const [showBreakdown, setShowBreakdown] = useState<string | null>(null); 
+    const [showBreakdown, setShowBreakdown] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     // -- SEND BACK STATE --
@@ -72,8 +72,8 @@ export default function AdminProbationPage() {
 
     const filtered = (list || []).filter(item => {
         const matchesSearch = (item.employee?.name || "").toLowerCase().includes(search.toLowerCase()) ||
-                              (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
-        
+            (item.employee?.emp_id || "").toLowerCase().includes(search.toLowerCase());
+
         if (staffType === 'trial') return matchesSearch && item.employee?.is_on_trial;
         if (staffType === 'regular') return matchesSearch && !item.employee?.is_on_trial;
         return matchesSearch;
@@ -81,8 +81,8 @@ export default function AdminProbationPage() {
 
     const filteredPending = (pendingList || []).filter(item => {
         const matchesSearch = (item.name || "").toLowerCase().includes(search.toLowerCase()) ||
-                              (item.emp_id || "").toLowerCase().includes(search.toLowerCase());
-                              
+            (item.emp_id || "").toLowerCase().includes(search.toLowerCase());
+
         if (staffType === 'regular') return false; // Backend currently only sends trial employees for upcoming
         return matchesSearch;
     });
@@ -100,7 +100,7 @@ export default function AdminProbationPage() {
     const getRoundHistory = (empId: string, hireDate: string) => {
         if (!hireDate) return [];
         const empEvals = list.filter(it => it.emp_id === empId).sort((a, b) => a.evaluation_no - b.evaluation_no);
-        
+
         return [1, 2, 3].map(round => {
             const evaluation = empEvals.find(it => it.evaluation_no === round);
             if (!evaluation) return { round, status: 'pending' };
@@ -108,7 +108,7 @@ export default function AdminProbationPage() {
             const hire = new Date(hireDate);
             const target = new Date(hire);
             target.setDate(hire.getDate() + (round * 30));
-            
+
             const actual = new Date(evaluation.evaluation_date);
             const diff = actual.getTime() - target.getTime();
             const delayDays = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -165,7 +165,7 @@ export default function AdminProbationPage() {
 
     const handleReturnClick = async () => {
         if (!selectedId || sendingBack) return;
-        
+
         await Swal.fire({
             title: 'ยืนยันการส่งกลับให้แก้ไข',
             input: 'textarea',
@@ -182,7 +182,7 @@ export default function AdminProbationPage() {
                     Swal.showValidationMessage('กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข');
                     return false;
                 }
-                
+
                 try {
                     const res = await fetch(`/api/admin/probation/evaluations/${selectedId}/send-back`, {
                         method: "POST",
@@ -190,7 +190,7 @@ export default function AdminProbationPage() {
                         body: JSON.stringify({ return_reason: reason.trim() })
                     });
                     const data = await res.json();
-                    
+
                     if (!res.ok) {
                         throw new Error(data.message || data.error || 'เกิดข้อผิดพลาดในการส่งกลับ');
                     }
@@ -203,12 +203,12 @@ export default function AdminProbationPage() {
             allowOutsideClick: () => !Swal.isLoading()
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire({ 
-                    icon: 'success', 
-                    title: 'สำเร็จ!', 
-                    text: 'ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว', 
-                    timer: 2000, 
-                    showConfirmButton: false 
+                Swal.fire({
+                    icon: 'success',
+                    title: 'สำเร็จ!',
+                    text: 'ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว',
+                    timer: 2000,
+                    showConfirmButton: false
                 });
                 setSelectedId(null);
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
@@ -261,7 +261,7 @@ export default function AdminProbationPage() {
             confirmButtonText: 'ใช่, ส่งเลย!',
             cancelButtonText: 'ยกเลิก'
         });
-        
+
         if (!result.isConfirmed) return;
 
         setSendingId(id);
@@ -309,7 +309,7 @@ export default function AdminProbationPage() {
         // 2. Upcoming Sheet
         const upcomingData = filteredPending.map(emp => {
             const info = getDaysInfo(emp.probation_end_date);
-            
+
             const getTargetDate = (round: number) => {
                 if (!emp.hire_date) return "-";
                 const dueDays = round === 1 ? 30 : round === 2 ? 60 : round === 3 ? 90 : 119;
@@ -347,20 +347,20 @@ export default function AdminProbationPage() {
                     <h1 className={styles.title}>ประเมินผลพนักงานทดลองงาน</h1>
                     <div className={styles.subtitle}>รายการประเมินทั้งหมดที่หัวหน้างานส่งเข้ามาเพื่อขออนุมัติ</div>
                     <div className={styles.legend}>
-                        <b>เกณฑ์คะแนน:</b> A (280-300), B (260-279), C (240-259), D (220-239), E (&lt;220) 
+                        <b>เกณฑ์คะแนน:</b> A (280-300), B (260-279), C (240-259), D (220-239), E (&lt;220)
                         <span style={{ color: '#dc2626', marginLeft: 12, fontWeight: 800 }}>* ต้องได้เกรด C ขึ้นไปเพื่อผ่านการประเมิน</span>
                     </div>
                 </div>
             </div>
 
             <div className={styles.tabs}>
-                <div 
+                <div
                     className={`${styles.tab} ${activeTab === 'to_action' ? styles.tabActive : ''}`}
                     onClick={() => setActiveTab('to_action')}
                 >
                     To Action (รอตรวจสอบ)
                 </div>
-                <div 
+                <div
                     className={`${styles.tab} ${activeTab === 'upcoming' ? styles.tabActive : ''}`}
                     onClick={() => setActiveTab('upcoming')}
                 >
@@ -371,7 +371,7 @@ export default function AdminProbationPage() {
             {/* --- CONTENT CARD --- */}
             <div className={styles.card}>
                 <div className={styles.cardTopAccent} />
-                
+
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle}>
                         <DocumentCheckIcon width={20} /> {activeTab === 'to_action' ? 'รายการส่งประเมินที่รอตรวจสอบ' : 'พนักงานที่ใกล้ถึงกำหนดประเมิน'}
@@ -389,7 +389,7 @@ export default function AdminProbationPage() {
                 <div className={styles.filterBar}>
                     <div className={styles.searchWrap}>
                         <MagnifyingGlassIcon width={18} className={styles.searchIcon} />
-                        <input 
+                        <input
                             className={styles.searchInput}
                             placeholder="ค้นหาชื่อหรือรหัสพนักงาน..."
                             value={search}
@@ -397,7 +397,7 @@ export default function AdminProbationPage() {
                         />
                     </div>
                     <div className={styles.filterGroup}>
-                        <select 
+                        <select
                             className={styles.filterSelect}
                             value={staffType}
                             onChange={e => setStaffType(e.target.value as any)}
@@ -453,19 +453,19 @@ export default function AdminProbationPage() {
                                                             const hire = new Date(emp.hire_date);
                                                             const target = new Date(hire);
                                                             target.setDate(hire.getDate() + dueDays);
-                                                            
+
                                                             const isCompleted = round < emp.next_round;
                                                             const isPending = round === emp.next_round;
-                                                            
+
                                                             const now = new Date();
-                                                            now.setHours(0,0,0,0);
+                                                            now.setHours(0, 0, 0, 0);
                                                             const diff = now.getTime() - target.getTime();
                                                             const delayDays = isPending && diff > 0 ? Math.floor(diff / (1000 * 60 * 60 * 24)) : 0;
 
                                                             return (
-                                                                <div key={round} style={{ 
-                                                                    display: 'flex', gap: 12, alignItems: 'center', 
-                                                                    padding: '6px 0', 
+                                                                <div key={round} style={{
+                                                                    display: 'flex', gap: 12, alignItems: 'center',
+                                                                    padding: '6px 0',
                                                                     borderBottom: idx < 3 ? '1px dashed #e2e8f0' : 'none',
                                                                     opacity: isCompleted ? 0.5 : 1
                                                                 }}>
@@ -618,11 +618,11 @@ export default function AdminProbationPage() {
                                                 จากระบบ: <b>{realtimeStats ? (realtimeStats.stats as any)[att.statsKey] || 0 : '...'}</b>
                                             </div>
                                         </div>
-                                        <input 
-                                            type="number" 
-                                            className={styles.attInput} 
-                                            value={editData.attendance_counts[att.key]} 
-                                            onChange={e => setEditData({...editData, attendance_counts: {...editData.attendance_counts, [att.key]: Number(e.target.value)}})} 
+                                        <input
+                                            type="number"
+                                            className={styles.attInput}
+                                            value={editData.attendance_counts[att.key]}
+                                            onChange={e => setEditData({ ...editData, attendance_counts: { ...editData.attendance_counts, [att.key]: Number(e.target.value) } })}
                                         />
                                     </div>
                                 ))}
@@ -639,25 +639,25 @@ export default function AdminProbationPage() {
                                             <div className={styles.scoreCatLabel}>
                                                 {cat.label} <span className={styles.scoreWeight}>(น้ำหนัก {cat.weight})</span>
                                             </div>
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 className={styles.scoreCommentInput}
                                                 placeholder="เพิ่มความคิดเห็น (ถ้ามี)..."
                                                 value={editData.score_comments[cat.key] || ""}
                                                 onChange={e => setEditData({
-                                                    ...editData, 
+                                                    ...editData,
                                                     score_comments: { ...editData.score_comments, [cat.key]: e.target.value }
                                                 })}
                                             />
                                         </div>
                                         <div className={styles.scoreInputWrap}>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                max="5" 
-                                                className={styles.scoreInput} 
-                                                value={editData.scores[cat.key]} 
-                                                onChange={e => setEditData({...editData, scores: {...editData.scores, [cat.key]: Number(e.target.value)}})} 
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="5"
+                                                className={styles.scoreInput}
+                                                value={editData.scores[cat.key]}
+                                                onChange={e => setEditData({ ...editData, scores: { ...editData.scores, [cat.key]: Number(e.target.value) } })}
                                             />
                                             <span className={styles.scoreMax}>/ 5</span>
                                         </div>
@@ -669,24 +669,24 @@ export default function AdminProbationPage() {
                             <div className={styles.reviewSectionTitle} style={{ marginTop: 32 }}>
                                 <ChatBubbleLeftEllipsisIcon width={18} /> ความเห็นเพิ่มเติมของ HR (Remark)
                             </div>
-                            <textarea 
+                            <textarea
                                 className={styles.remarkArea}
                                 placeholder="ระบุความเห็นหรือหมายเหตุสำหรับการพิจารณา..."
                                 value={editData.hr_remark}
-                                onChange={e => setEditData({...editData, hr_remark: e.target.value})}
+                                onChange={e => setEditData({ ...editData, hr_remark: e.target.value })}
                             />
                         </div>
 
                         <div className={styles.modalFooter}>
-                             <div style={{ marginRight: 'auto' }}>
-                                <span style={{ fontWeight:900, fontSize:24 }}>{currentTotal} / 300 ({currentGrade})</span>
-                             </div>
-                             
-                             <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={handleReturnClick} disabled={sendingBack}>
-                                 {sendingBack ? "กำลังส่ง..." : "ส่งกลับให้แก้ไข"}
-                             </button>
-                             <button className={styles.btnCancel} onClick={() => setSelectedId(null)}>ยกเลิก</button>
-                             <button className={styles.btnSave} onClick={handleSaveReview} disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกผล"}</button>
+                            <div style={{ marginRight: 'auto' }}>
+                                <span style={{ fontWeight: 900, fontSize: 24 }}>{currentTotal} / 300 ({currentGrade})</span>
+                            </div>
+
+                            <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={handleReturnClick} disabled={sendingBack}>
+                                {sendingBack ? "กำลังส่ง..." : "ส่งกลับให้แก้ไข"}
+                            </button>
+                            <button className={styles.btnCancel} onClick={() => setSelectedId(null)}>ยกเลิก</button>
+                            <button className={styles.btnSave} onClick={handleSaveReview} disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกผล"}</button>
                         </div>
                     </div>
                 </div>
