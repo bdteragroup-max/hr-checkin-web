@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Swal from "sweetalert2";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import { 
@@ -167,7 +168,7 @@ export default function AdminProbationPage() {
     const handleSendBack = async () => {
         if (!selectedId || sendingBack) return;
         if (!returnReason.trim()) {
-            alert("กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข");
+            Swal.fire({ icon: 'warning', title: 'กรุณาระบุข้อมูล', text: 'กรุณาระบุเหตุผลที่ต้องส่งกลับให้แก้ไข', confirmButtonColor: '#DC2626' });
             return;
         }
 
@@ -181,16 +182,16 @@ export default function AdminProbationPage() {
             const data = await res.json();
             
             if (res.ok) {
-                alert("ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว");
+                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'ส่งกลับสำเร็จ และระบบได้แจ้งเตือนหัวหน้างานผ่าน LINE แล้ว', confirmButtonColor: '#16a34a' });
                 setSelectedId(null);
                 setReturnReason("");
                 setShowReturnInput(false);
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
-                alert(`เกิดข้อผิดพลาด: ${data.message || data.error}`);
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: `เกิดข้อผิดพลาด: ${data.message || data.error}` });
             }
         } catch (e) {
-            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
         } finally {
             setSendingBack(false);
         }
@@ -209,10 +210,10 @@ export default function AdminProbationPage() {
                 setSelectedId(null);
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
-                alert("เกิดข้อผิดพลาดในการบันทึก");
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'เกิดข้อผิดพลาดในการบันทึก' });
             }
         } catch (e) {
-            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
         } finally {
             setSaving(false);
         }
@@ -230,18 +231,30 @@ export default function AdminProbationPage() {
     const currentGrade = useMemo(() => calculateGrade(currentTotal), [currentTotal]);
 
     async function sendToManagement(id: number) {
-        if (!confirm("ต้องการส่งสรุปผลการประเมินนี้ไปยัง LINE ฝ่ายบริหารใช่หรือไม่?")) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการส่ง?',
+            text: "ต้องการส่งสรุปผลการประเมินนี้ไปยัง LINE ฝ่ายบริหารใช่หรือไม่?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'ใช่, ส่งเลย!',
+            cancelButtonText: 'ยกเลิก'
+        });
+        
+        if (!result.isConfirmed) return;
+
         setSendingId(id);
         try {
             const res = await fetch(`/api/admin/probation/evaluations/${id}/send-summary`, { method: "POST" });
             if (res.ok) {
-                alert("ส่งเรียบร้อยแล้ว");
+                Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'ส่งเรียบร้อยแล้ว', timer: 2000, showConfirmButton: false });
                 queryClient.invalidateQueries({ queryKey: ['admin-probation'] });
             } else {
-                alert("เกิดข้อผิดพลาดในการส่ง");
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'เกิดข้อผิดพลาดในการส่ง' });
             }
         } catch (e) {
-            alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+            Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
         } finally {
             setSendingId(null);
         }
