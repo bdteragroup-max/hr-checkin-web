@@ -2705,7 +2705,7 @@ model SupportTicket {
   attachments                         String[]        @default([])
   urgency                             String          @default("MEDIUM")
   status                              String          @default("SUBMITTED")
-  reporterId                          String
+  reporterId                          String?
   assigneeId                          String?
   resolutionPlan                      String?
   progressPercent                     Int             @default(0)
@@ -2713,8 +2713,11 @@ model SupportTicket {
   createdAt                           DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt                           DateTime        @default(now()) @db.Timestamptz(6)
   category                            String          @default("OTHER")
+  sourceModule                        String?         @default("general")
+  reporterEmail                       String?
+  reporterName                        String?
   User_SupportTicket_assigneeIdToUser User?           @relation("SupportTicket_assigneeIdToUser", fields: [assigneeId], references: [id])
-  User_SupportTicket_reporterIdToUser User            @relation("SupportTicket_reporterIdToUser", fields: [reporterId], references: [id])
+  User_SupportTicket_reporterIdToUser User?           @relation("SupportTicket_reporterIdToUser", fields: [reporterId], references: [id])
   TicketComment                       TicketComment[]
   TicketLog                           TicketLog[]
 
@@ -2742,12 +2745,26 @@ model TicketComment {
 model TicketLog {
   id            String        @id
   ticketId      String
-  userId        String
+  userId        String?
   action        String
   details       String?
   createdAt     DateTime      @default(now()) @db.Timestamptz(6)
   SupportTicket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  User          User          @relation(fields: [userId], references: [id])
+  User          User?         @relation(fields: [userId], references: [id])
 
   @@index([ticketId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ExternalApiKey {
+  id         String    @id
+  name       String
+  hashedKey  String    @unique
+  scope      String[]  @default(["ticket:create"])
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  createdBy  String?
+  lastUsedAt DateTime? @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+
+  @@index([hashedKey])
 }

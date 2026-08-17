@@ -682,7 +682,7 @@ export default function AdminProbationPage() {
                                 <span style={{ fontWeight: 900, fontSize: 24 }}>{currentTotal} / 300 ({currentGrade})</span>
                             </div>
 
-                            <button className={styles.btnSave} style={{ background: '#fff', color: '#DC2626', borderColor: '#DC2626', marginRight: 'auto', marginLeft: 16 }} onClick={handleReturnClick} disabled={sendingBack}>
+                            <button className={styles.btnReject} style={{ marginRight: 'auto', marginLeft: 16 }} onClick={handleReturnClick} disabled={sendingBack}>
                                 {sendingBack ? "กำลังส่ง..." : "ส่งกลับให้แก้ไข"}
                             </button>
                             <button className={styles.btnCancel} onClick={() => setSelectedId(null)}>ยกเลิก</button>

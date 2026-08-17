@@ -1,0 +1,65 @@
+/* ══════════════════════════════════════════════
+   TERA GROUP — Admin Dashboard
+   Premium Refined UI · CSS Module
+══════════════════════════════════════════════ */
+
+/* ── TOKENS ── */
+.wrapper {
+  --red: #c8291e;
+  --red2: #a31f16;
+  --red3: #e03428;
+  --red-lt: #fdf2f1;
+  --red-glow: rgba(200, 41, 30, 0.14);
+
+  --sidebar-bg: #0d1117;
+  --sidebar-bdr: rgba(255, 255, 255, 0.06);
+  --sidebar-text: rgba(255, 255, 255, 0.55);
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #f8f9fb;
+  --surface3: #f1f3f7;
+  --surface4: #e8ecf2;
+  --line: #e4e8ef;
+  --line2: #d0d6e0;
+
+  --text: #0b1120;
+  --text2: #2d3748;
+  --text3: #5a6478;
+  --text4: #8f9ab0;
+  --text5: #bcc5d4;
+
+  --ok: #0f9b58;
+  --ok-bg: #edfbf4;
+  --ok-bdr: #a7f3d0;
+  --warn: #c07b0c;
+  --warn-bg: #fefaed;
+  --warn-bdr: #fde68a;
+  --bad: #c92020;
+  --bad-bg: #fef2f2;
+  --bad-bdr: #fecaca;
+  --late: #d4590a;
+  --late-bg: #fff7ed;
+  --late-bdr: #fed7aa;
+  --ot: #6d28d9;
+  --ot-bg: #f5f3ff;
+  --ot-bdr: #ddd6fe;
+  --blue: #1d4ed8;
+  --blue-lt: #eff6ff;
+  --blue-bdr: #bfdbfe;
+
+  --radius: 16px;
+  --radius-sm: 9px;
+  --radius-xs: 6px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.07), 0 6px 20px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.09), 0 12px 32px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.14), 0 20px 60px rgba(0, 0, 0, 0.08);
+  --shadow-red: 0 4px 18px rgba(200, 41, 30, 0.25);
+  --blue-glow: 0 0 0 3px rgba(29, 78, 216, 0.14);
+
+  font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  background: var(--bg);

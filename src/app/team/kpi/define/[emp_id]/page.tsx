@@ -79,15 +79,15 @@ export default function KPIDefinePage() {
                     const isLeader = (data.employee._count?.subordinates || 0) > 0;
 
                     // Find the most relevant evaluation (ongoing or specified)
-                    const ongoing = data.employee.kpi_evaluations?.find((ev: any) => 
+                    const ongoing = data.employee.kpi_evaluations?.find((ev: any) =>
                         ev.category === category && (ev.status === 'draft' || ev.status === 'pending_employee' || ev.status === 'pending_supervisor')
                     );
 
                     const completedRounds = data.employee.kpi_evaluations?.filter((ev: any) => ev.category === category && (ev.status === 'completed' || ev.status === 'APPROVED')).length || 0;
                     const targetRound = round ? Number(round) : (
                         ongoing ? ongoing.evaluation_no : (
-                            category === "MONTHLY" ? new Date().getMonth() + 1 : 
-                            category === "PROBATION" ? completedRounds + 1 : 1
+                            category === "MONTHLY" ? new Date().getMonth() + 1 :
+                                category === "PROBATION" ? completedRounds + 1 : 1
                         )
                     );
                     const targetYear = searchParams.get("year") ? Number(searchParams.get("year")) : (ongoing ? ongoing.year : new Date().getUTCFullYear());
@@ -95,7 +95,7 @@ export default function KPIDefinePage() {
                     const existing = data.employee.kpi_evaluations?.find((ev: any) => {
                         const isMatch = ev.category === category;
                         if (!isMatch) return false;
-                        
+
                         if (category === "MONTHLY" || category === "PROBATION") {
                             return ev.evaluation_no === targetRound && ev.year === targetYear;
                         }
@@ -182,7 +182,7 @@ export default function KPIDefinePage() {
                         } else if (category === "MONTHLY") {
                             const monthNo = round ? Number(round) : new Date().getMonth() + 1;
                             setCurrentRound(monthNo);
-                            
+
                             // Try to find the most recent previous monthly evaluation to use as a template
                             const previousMonthly = data.employee.kpi_evaluations
                                 ?.filter((ev: any) => ev.category === "MONTHLY")
@@ -203,7 +203,7 @@ export default function KPIDefinePage() {
                                         target_5: it.target_5,
                                         section: it.section
                                     }));
-                                
+
                                 if (templateItems.length > 0) {
                                     setItems(templateItems);
                                 } else {
@@ -214,12 +214,12 @@ export default function KPIDefinePage() {
                             }
                         } else if (category === "ANNUAL") {
                             // Logic to auto-detect if we should start Year-End
-                            const midYear = data.employee.kpi_evaluations?.find((ev: any) => 
-                                ev.category === 'ANNUAL' && 
-                                (ev.session_name?.includes('Mid-Year')) && 
+                            const midYear = data.employee.kpi_evaluations?.find((ev: any) =>
+                                ev.category === 'ANNUAL' &&
+                                (ev.session_name?.includes('Mid-Year')) &&
                                 ev.year === year
                             );
-                            
+
                             if (midYear) {
                                 if (midYear.status === 'completed') {
                                     setSessionName("Year-End Assessment");
@@ -415,6 +415,12 @@ export default function KPIDefinePage() {
                                 </span>
                             </div>
 
+                            {sec === "CORE_VALUE" && (
+                                <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16, marginTop: -8, paddingLeft: 12 }}>
+                                    * หมายเหตุ: หัวหน้างานไม่ต้องดำเนินการใดๆ ในส่วนนี้
+                                </div>
+                            )}
+
                             {items.map((item, index) => {
                                 if (item.section !== sec) return null;
                                 return (
@@ -487,7 +493,7 @@ export default function KPIDefinePage() {
                                 );
                             })}
 
-                             {(sec === 'KPI' && !isReadOnly) && (
+                            {(sec === 'KPI' && !isReadOnly) && (
                                 <button onClick={() => addItem(sec)} className={styles.btnAddFull}>
                                     <PlusIcon width={16} /> เพิ่มหัวข้อใหม่
                                 </button>
@@ -514,7 +520,7 @@ export default function KPIDefinePage() {
                             </div>
                         )}
                     </div>
-                     {!isReadOnly && (
+                    {!isReadOnly && (
                         <button
                             className={styles.btnSubmit}
                             onClick={handleSubmit}
@@ -524,10 +530,10 @@ export default function KPIDefinePage() {
                         </button>
                     )}
                     {isReadOnly && (
-                         <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text3)', fontSize: '13px', fontWeight: 600 }}>
+                        <div style={{ textAlign: 'center', padding: '10px', color: 'var(--text3)', fontSize: '13px', fontWeight: 600 }}>
                             <CheckCircleIcon width={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4, color: 'var(--ok)' }} />
                             รายการนี้ถูกบันทึกแล้วและไม่สามารถแก้ไขได้
-                         </div>
+                        </div>
                     )}
                 </div>
             </div>

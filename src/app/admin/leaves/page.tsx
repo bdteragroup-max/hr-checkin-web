@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css"; // ✅ ใช้ CSS admin ใหญ่
-import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, InboxIcon, ChartBarIcon, ClipboardDocumentListIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, InboxIcon, ChartBarIcon, ClipboardDocumentListIcon, ArrowDownTrayIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { formatTime24h, formatDateThai } from "@/utils/time";
 
 type LeaveRow = {
@@ -85,6 +86,8 @@ export default function AdminLeavesPage() {
     const queryClient = useQueryClient();
     const [mutationErr, setMutationErr] = useState("");
     const [processingId, setProcessingId] = useState<string | null>(null); // ✅ Track which row is being processed
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, type: "approved" | "rejected", leaveId: string } | null>(null);
+    const [rejectReason, setRejectReason] = useState("");
     const [viewMode, setViewMode] = useState<"list" | "report">("list");
     const [showEmployeeDetail, setShowEmployeeDetail] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<string>(""); // YYYY-MM
@@ -297,48 +300,30 @@ export default function AdminLeavesPage() {
         document.body.removeChild(link);
     }
 
-    async function approveLeave(id: string, nextStatus: "approved" | "rejected") {
-        if (processingId) return; // ✅ Block if already processing another row
+    function approveLeave(id: string, nextStatus: "approved" | "rejected") {
+        if (processingId) return;
+        setRejectReason("");
+        setConfirmModal({ isOpen: true, type: nextStatus, leaveId: id });
+    }
 
-        if (nextStatus === "approved") {
-            if (!confirm("ยืนยันอนุมัติใบลานี้?")) return;
-            setProcessingId(id);
-            setMutationErr("");
-            try {
-                const res = await fetch(`/api/admin/leaves/${id}/approve`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                });
-                const data = await res.json().catch(() => null);
-                if (!res.ok) {
-                    if (data?.error === "ALREADY_PROCESSED") {
-                        setMutationErr("คำขอนี้ดำเนินการไปแล้ว");
-                    } else {
-                        setMutationErr(data?.error || `HTTP_${res.status}`);
-                    }
-                    queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
-                    return;
-                }
-                queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
-            } catch (e: any) {
-                setMutationErr(e?.message || "APPROVE_FAILED");
-            } finally {
-                setProcessingId(null);
-            }
-            return;
-        }
+    async function executeApproveLeave() {
+        if (!confirmModal) return;
+        const { type, leaveId } = confirmModal;
+        
+        if (type === "rejected" && !rejectReason.trim()) return;
 
-        // rejected
-        const reason = prompt("ระบุเหตุผลที่ไม่อนุมัติ (Reject reason):") || "";
-        if (!reason.trim()) return;
-
-        setProcessingId(id);
+        setProcessingId(leaveId);
         setMutationErr("");
+        setConfirmModal(null);
+
         try {
-            const res = await fetch(`/api/admin/leaves/${id}/reject`, {
+            const endpoint = type === "approved" ? "approve" : "reject";
+            const body = type === "rejected" ? JSON.stringify({ reason: rejectReason }) : undefined;
+
+            const res = await fetch(`/api/admin/leaves/${leaveId}/${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reason }),
+                body
             });
             const data = await res.json().catch(() => null);
             if (!res.ok) {
@@ -352,7 +337,7 @@ export default function AdminLeavesPage() {
             }
             queryClient.invalidateQueries({ queryKey: ['admin-leaves'] });
         } catch (e: any) {
-            setMutationErr(e?.message || "REJECT_FAILED");
+            setMutationErr(e?.message || "ACTION_FAILED");
         } finally {
             setProcessingId(null);
         }
@@ -800,6 +785,52 @@ export default function AdminLeavesPage() {
     return (
         <div className={styles.content} style={{ padding: 0 }}>
             {renderLeave()}
+            {confirmModal && typeof document !== 'undefined' && createPortal(
+                <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setConfirmModal(null); }}>
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                {confirmModal.type === 'approved' ? <CheckCircleIcon width={20} style={{ color: 'var(--ok)' }}/> : <XCircleIcon width={20} style={{ color: 'var(--bad)' }}/>} 
+                                {confirmModal.type === 'approved' ? "ยืนยันการอนุมัติ" : "ระบุเหตุผลที่ไม่อนุมัติ"}
+                            </span>
+                            <button className={styles.modalClose} onClick={() => setConfirmModal(null)}><XMarkIcon width={24} /></button>
+                        </div>
+                        
+                        <div className={styles.modalBody}>
+                            {confirmModal.type === 'approved' ? (
+                                <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16 }}>
+                                    คุณแน่ใจหรือไม่ว่าต้องการอนุมัติใบลานี้?
+                                </div>
+                            ) : (
+                                <div style={{ marginBottom: 16 }}>
+                                    <label className={styles.formLabel}>เหตุผล (Reject reason):</label>
+                                    <textarea 
+                                        className={styles.formTextarea} 
+                                        style={{ width: '100%', minHeight: 80, marginTop: 8 }}
+                                        value={rejectReason} 
+                                        onChange={e => setRejectReason(e.target.value)} 
+                                        placeholder="ระบุเหตุผลที่ไม่อนุมัติ"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={styles.modalFooter} style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                            <button className={styles.btnLogout} style={{ height: 36, padding: '0 16px' }} onClick={() => setConfirmModal(null)}>ยกเลิก</button>
+                            <button 
+                                className={confirmModal.type === 'approved' ? styles.btnApprove : styles.btnReject} 
+                                style={{ height: 36, padding: '0 16px' }} 
+                                onClick={executeApproveLeave}
+                                disabled={confirmModal.type === 'rejected' && !rejectReason.trim()}
+                            >
+                                {confirmModal.type === 'approved' ? "ยืนยันอนุมัติ" : "ยืนยันไม่อนุมัติ"}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 }

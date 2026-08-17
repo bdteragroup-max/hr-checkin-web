@@ -40,7 +40,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             setLoading(false);
             return;
         }
-        
+
         setLoading(true);
         fetch("/api/admin/me")
             .then(res => {
@@ -68,7 +68,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         if (!role || role === 'ERROR' || role === 'GUEST') return false;
         const upRole = role.toUpperCase();
         if (upRole === "SUPER_ADMIN" || upRole === "ADMIN") return true;
-        
+
         if (upRole === "SUPERVISOR") {
             // Supervisor can ONLY see records page
             return path === "/admin/records" || path.startsWith("/admin/records/");
@@ -82,10 +82,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 "/admin/reports/vehicles",
                 "/admin/clothing"
             ];
-            
+
             // Allow exact match for /admin (Dashboard)
             if (path === "/admin") return true;
-            
+
             // Allow specific sub-paths
             return allowedPaths.some(p => path === p || path.startsWith(p + "/"));
         }
@@ -287,55 +287,55 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
-                             {/* ✅ Travel & Off-Site Claims */}
+                            {/* ✅ Travel & Off-Site Claims */}
                             {hasAccess("/admin/travel-claims") && (
-                              <Link
-                                  href="/admin/travel-claims"
-                                  className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
-                              >
-                                  <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
-                              </Link>
+                                <Link
+                                    href="/admin/travel-claims"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/travel-claims") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><TruckIcon width={20} /></span>ค่าเดินทาง / ที่พัก
+                                </Link>
                             )}
 
-                              {/* ✅ Commission Claims */}
-                              {hasAccess("/admin/commission-claims") && (
+                            {/* ✅ Commission Claims */}
+                            {hasAccess("/admin/commission-claims") && (
                                 <Link
                                     href="/admin/commission-claims"
                                     className={`${styles.navItem} ${pathname.startsWith("/admin/commission-claims") ? styles.active : ""}`}
                                 >
                                     <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ค่าคอมมิชชั่น
                                 </Link>
-                              )}
- 
-                             {/* ✅ Equipment Management */}
-                             {hasAccess("/admin/assets") && (
-                                 <Link
-                                     href="/admin/assets?type=equipment"
-                                     className={`${styles.navItem} ${pathname === "/admin/assets" && searchParams.get("type") === "equipment" ? styles.active : ""}`}
-                                 >
-                                     <span className={styles.navIcon}><CubeIcon width={20} /></span>ยืมอุปกรณ์ (Equipment)
-                                 </Link>
-                             )}
+                            )}
 
-                             {/* ✅ Item/Inventory Management */}
-                             {hasAccess("/admin/assets") && (
-                                 <Link
-                                     href="/admin/assets?type=item"
-                                     className={`${styles.navItem} ${pathname === "/admin/assets" && searchParams.get("type") === "item" ? styles.active : ""}`}
-                                 >
-                                     <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>ยืมสินค้า (Borrow Item)
-                                 </Link>
-                             )}
+                            {/* ✅ Equipment Management */}
+                            {hasAccess("/admin/assets") && (
+                                <Link
+                                    href="/admin/assets?type=equipment"
+                                    className={`${styles.navItem} ${pathname === "/admin/assets" && searchParams.get("type") === "equipment" ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><CubeIcon width={20} /></span>ยืมอุปกรณ์ (Equipment)
+                                </Link>
+                            )}
 
-                             {/* ✅ Clothing/Uniform Management */}
-                             {hasAccess("/admin/clothing") && (
-                                 <Link
-                                     href="/admin/clothing"
-                                     className={`${styles.navItem} ${pathname.startsWith("/admin/clothing") ? styles.active : ""}`}
-                                 >
-                                     <span className={styles.navIcon}><ArchiveBoxIcon width={20} /></span>ชุดยูนิฟอร์ม (Clothing)
-                                 </Link>
-                             )}
+                            {/* ✅ Item/Inventory Management */}
+                            {hasAccess("/admin/assets") && (
+                                <Link
+                                    href="/admin/assets?type=item"
+                                    className={`${styles.navItem} ${pathname === "/admin/assets" && searchParams.get("type") === "item" ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>ยืมสินค้า (Borrow Item)
+                                </Link>
+                            )}
+
+                            {/* ✅ Clothing/Uniform Management */}
+                            {hasAccess("/admin/clothing") && (
+                                <Link
+                                    href="/admin/clothing"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/clothing") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><ArchiveBoxIcon width={20} /></span>ชุดยูนิฟอร์ม (Clothing)
+                                </Link>
+                            )}
 
                             {hasAccess("/admin/cars") && (
                                 <Link
@@ -357,7 +357,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                             )}
 
 
-                             {/* ✅ Meeting Room Management */}
+                            {/* ✅ Meeting Room Management */}
                             {hasAccess("/admin/meeting-rooms") && (
                                 <Link
                                     href="/admin/meeting-rooms"
@@ -367,8 +367,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
-                             {/* ✅ Training & Development */}
-                             {hasAccess("/admin/employees") && (
+                            {/* ✅ Training & Development */}
+                            {hasAccess("/admin/employees") && (
                                 <Link
                                     href="/admin/trainings"
                                     className={`${styles.navItem} ${pathname.startsWith("/admin/trainings") ? styles.active : ""}`}
@@ -410,7 +410,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
                             {/* ✅ HR Coin System */}
                             {hasAccess("/admin/rewards") && <div className={styles.navSection}>ระบบเหรียญรางวัล</div>}
-                            
+
                             {hasAccess("/admin/rewards") && (
                                 <Link
                                     href="/admin/rewards"

@@ -903,8 +903,7 @@ export default function AdminEmployeesPage() {
                 CREATE MODAL
             ══════════════════════════════════════════ */}
             {createModalOpen && (
-                <div className={styles.modalOverlay}
-                    onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}>
+                <div className={styles.modalOverlay}>
                     <div className={styles.modal} style={{ maxWidth: 700 }}>
 
                         <div className={styles.modalHeader}>
@@ -1162,8 +1161,7 @@ export default function AdminEmployeesPage() {
                 EDIT MODAL
             ══════════════════════════════════════════ */}
             {editDraft && (
-                <div className={styles.modalOverlay}
-                    onClick={(e) => { if (e.target === e.currentTarget) setEditDraft(null); }}>
+                <div className={styles.modalOverlay}>
                     <div className={styles.modal} style={{ maxWidth: 700 }}>
 
                         <div className={styles.modalHeader}>

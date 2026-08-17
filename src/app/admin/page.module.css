@@ -4,7 +4,7 @@
 ══════════════════════════════════════════════ */
 
 /* ── TOKENS ── */
-.wrapper {
+:global(:root) {
   --red: #c8291e;
   --red2: #a31f16;
   --red3: #e03428;
@@ -60,7 +60,9 @@
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.14), 0 20px 60px rgba(0, 0, 0, 0.08);
   --shadow-red: 0 4px 18px rgba(200, 41, 30, 0.25);
   --blue-glow: 0 0 0 3px rgba(29, 78, 216, 0.14);
+}
 
+.wrapper {
   font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -207,11 +209,9 @@
 }
 
 .navItem.active {
-  background: linear-gradient(
-    90deg,
-    rgba(200, 41, 30, 0.9) 0%,
-    rgba(163, 31, 22, 0.75) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(200, 41, 30, 0.9) 0%,
+      rgba(163, 31, 22, 0.75) 100%);
   color: #fff;
   box-shadow: 0 2px 14px rgba(200, 41, 30, 0.3);
 }
@@ -234,6 +234,7 @@
   flex-shrink: 0;
   transition: transform 0.18s;
 }
+
 .navItem:hover .navIcon {
   transform: scale(1.12);
 }
@@ -269,6 +270,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -376,8 +378,15 @@
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -441,30 +450,39 @@
 .statCard.green::before {
   background: linear-gradient(90deg, var(--ok), #34d399);
 }
+
 .statCard.green::after {
   background: var(--ok);
 }
+
 .statCard.red::before {
   background: linear-gradient(90deg, var(--red), var(--red3));
 }
+
 .statCard.red::after {
   background: var(--red);
 }
+
 .statCard.orange::before {
   background: linear-gradient(90deg, var(--late), #fb923c);
 }
+
 .statCard.orange::after {
   background: var(--late);
 }
+
 .statCard.blue::before {
   background: linear-gradient(90deg, var(--blue), #60a5fa);
 }
+
 .statCard.blue::after {
   background: var(--blue);
 }
+
 .statCard.purple::before {
   background: linear-gradient(90deg, var(--ot), #a78bfa);
 }
+
 .statCard.purple::after {
   background: var(--ot);
 }
@@ -490,15 +508,19 @@
 .statCard.green .statIconBox {
   background: var(--ok-bg);
 }
+
 .statCard.red .statIconBox {
   background: var(--red-lt);
 }
+
 .statCard.orange .statIconBox {
   background: var(--late-bg);
 }
+
 .statCard.blue .statIconBox {
   background: var(--blue-lt);
 }
+
 .statCard.purple .statIconBox {
   background: var(--ot-bg);
 }
@@ -576,6 +598,7 @@
 .filterBar input[type="text"] {
   min-width: 200px;
 }
+
 .filterBar select {
   min-width: 155px;
   cursor: pointer;
@@ -701,6 +724,7 @@
 .table tr.clickableRow:hover {
   background-color: var(--surface2) !important;
 }
+
 .btnPrimary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -724,6 +748,7 @@
   white-space: nowrap;
   transition: all 0.15s;
 }
+
 .btnExcelSm:hover {
   background: var(--ok);
   color: #fff;
@@ -748,6 +773,7 @@
   white-space: nowrap;
   transition: all 0.15s;
 }
+
 .btnPdfSm:hover {
   background: var(--red);
   color: #fff;
@@ -771,6 +797,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .btnLogout:hover {
   background: var(--bad-bg);
   border-color: var(--bad-bdr);
@@ -795,6 +822,7 @@
   transition: all 0.18s;
   box-shadow: var(--shadow-red);
 }
+
 .btnAdd:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 24px rgba(200, 41, 30, 0.35);
@@ -811,14 +839,17 @@
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s;
 }
+
 .tableWrap:hover {
   box-shadow: var(--shadow);
 }
+
 .modalBody {
   padding: 18px 24px 26px;
   overflow-y: auto;
   max-height: calc(90vh - 120px);
 }
+
 .modalFooter {
   padding: 16px 24px;
   background: var(--surface2);
@@ -835,6 +866,7 @@
   gap: 16px;
   margin-bottom: 18px;
 }
+
 .formRow:last-child {
   margin-bottom: 0;
 }
@@ -844,6 +876,7 @@
   flex-direction: column;
   gap: 6px;
 }
+
 .formLabel {
   font-size: 12.5px;
   font-weight: 700;
@@ -851,6 +884,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
 .formInput {
   height: 42px;
   padding: 0 14px;
@@ -862,11 +896,13 @@
   color: var(--text);
   transition: all 0.15s;
 }
+
 .formInput:focus {
   border-color: var(--red);
   box-shadow: var(--red-glow);
   outline: none;
 }
+
 .formTextarea {
   padding: 12px 14px;
   border: 1.5px solid var(--line2);
@@ -878,6 +914,7 @@
   transition: all 0.15s;
   resize: vertical;
 }
+
 .formTextarea:focus {
   border-color: var(--red);
   box-shadow: var(--red-glow);
@@ -952,9 +989,11 @@
 .table tbody tr:last-child td {
   border-bottom: none;
 }
+
 .table tbody tr:hover td {
   background: var(--surface2);
 }
+
 .table tbody tr {
   transition: background 0.1s;
 }
@@ -968,18 +1007,21 @@
   font-size: 13px;
   line-height: 1.3;
 }
+
 .empId {
   font-size: 11px;
   color: var(--text5);
   font-family: "JetBrains Mono", monospace;
   margin-top: 2px;
 }
+
 .monoText {
   font-family: "JetBrains Mono", monospace;
   font-weight: 500;
   font-size: 12.5px;
   color: var(--text2);
 }
+
 .timestamp {
   font-family: "JetBrains Mono", monospace;
   font-size: 13px;
@@ -987,6 +1029,7 @@
   color: var(--text2);
   white-space: nowrap;
 }
+
 .timestampSub {
   font-size: 11px;
   color: var(--text5);
@@ -1015,51 +1058,62 @@
   color: var(--ok);
   border-color: var(--ok-bdr);
 }
+
 .badge.late {
   background: var(--late-bg);
   color: var(--late);
   border-color: var(--late-bdr);
 }
+
 .badge.ot {
   background: var(--ot-bg);
   color: var(--ot);
   border-color: var(--ot-bdr);
 }
+
 .badge.early {
-  background: #fef08a; /* Soft warning yellow */
+  background: #fef08a;
+  /* Soft warning yellow */
   color: #ca8a04;
   border-color: #fef08a;
 }
+
 .badge.leave {
   background: var(--blue-lt);
   color: var(--blue);
   border-color: var(--blue-bdr);
 }
+
 .badge.absent {
   background: var(--bad-bg);
   color: var(--bad);
   border-color: var(--bad-bdr);
 }
+
 .badge.holiday {
   background: var(--ok-bg);
   color: #0a7a42;
   border-color: var(--ok-bdr);
 }
+
 .badge.pending {
   background: var(--warn-bg);
   color: var(--warn);
   border-color: var(--warn-bdr);
 }
+
 .badge.approved {
   background: var(--ok-bg);
   color: var(--ok);
   border-color: var(--ok-bdr);
 }
+
 .badge.rejected {
   background: var(--bad-bg);
   color: var(--bad);
   border-color: var(--bad-bdr);
 }
+
 .badge.cancelled {
   background: var(--surface2);
   color: var(--text4);
@@ -1075,11 +1129,13 @@
   padding: 3px 10px;
   border-radius: 999px;
 }
+
 .typeBadge.checkin {
   background: var(--ok-bg);
   color: var(--ok);
   border: 1px solid var(--ok-bdr);
 }
+
 .typeBadge.checkout {
   background: var(--warn-bg);
   color: var(--warn);
@@ -1100,6 +1156,7 @@
     box-shadow 0.2s,
     border-color 0.2s;
 }
+
 .photoThumb:hover {
   transform: scale(1.06);
   box-shadow: var(--shadow-lg);
@@ -1117,11 +1174,13 @@
   border-top: 1px solid var(--line);
   background: var(--surface2);
 }
+
 .paginationInfo {
   font-size: 12px;
   color: var(--text4);
   font-weight: 500;
 }
+
 .pageButtons {
   display: flex;
   gap: 3px;
@@ -1142,17 +1201,20 @@
   justify-content: center;
   color: var(--text3);
 }
+
 .pageBtn:hover:not(:disabled) {
   border-color: var(--red);
   color: var(--red);
   background: var(--red-lt);
 }
+
 .pageBtn.active {
   background: var(--red);
   border-color: var(--red);
   color: #fff;
   box-shadow: 0 2px 8px rgba(200, 41, 30, 0.3);
 }
+
 .pageBtn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -1176,6 +1238,7 @@
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s;
 }
+
 .leaveCard:hover {
   box-shadow: var(--shadow);
 }
@@ -1220,6 +1283,7 @@
     border-color 0.15s,
     background 0.15s;
 }
+
 .leaveTypeItem:hover {
   border-color: var(--line2);
   background: var(--surface3);
@@ -1231,12 +1295,14 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+
 .leaveTypeName {
   flex: 1;
   font-size: 13px;
   font-weight: 500;
   color: var(--text2);
 }
+
 .leaveTypeDays {
   font-size: 12px;
   color: var(--text4);
@@ -1253,6 +1319,7 @@
     border-color 0.15s,
     box-shadow 0.15s;
 }
+
 .leavePendingItem:hover {
   border-color: var(--line2);
   box-shadow: var(--shadow-sm);
@@ -1264,11 +1331,13 @@
   justify-content: space-between;
   margin-bottom: 5px;
 }
+
 .leavePendingName {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
+
 .leavePendingMeta {
   font-size: 12px;
   color: var(--text4);
@@ -1294,11 +1363,13 @@
   border: 1px solid var(--ok-bdr);
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
+
 .btnApprove:hover:not(:disabled) {
   background: var(--ok);
   color: #fff;
   box-shadow: 0 3px 10px rgba(15, 155, 88, 0.3);
 }
+
 .btnApprove:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1317,11 +1388,13 @@
   border: 1px solid var(--bad-bdr);
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
+
 .btnReject:hover:not(:disabled) {
   background: var(--bad);
   color: #fff;
   box-shadow: 0 3px 10px rgba(201, 32, 32, 0.3);
 }
+
 .btnReject:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1338,11 +1411,13 @@
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.18s;
 }
+
 .pendingTable {
   width: 100%;
   border-collapse: collapse;
   background: transparent;
 }
+
 .pendingTable thead th {
   text-align: left;
   font-weight: 700;
@@ -1353,39 +1428,51 @@
   background: var(--surface3);
   white-space: nowrap;
 }
+
 .pendingTable tbody td {
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(0,0,0,0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
   vertical-align: middle;
   font-size: 13px;
   color: var(--text2);
 }
-.pendingTable tbody tr:last-child td { border-bottom: none; }
+
+.pendingTable tbody tr:last-child td {
+  border-bottom: none;
+}
 
 /* keep approve/reject buttons visually prominent like screenshot */
-.pendingTable .btnApprove, .pendingTable .btnReject {
+.pendingTable .btnApprove,
+.pendingTable .btnReject {
   padding: 6px 12px;
   font-size: 13px;
   border-radius: 8px;
 }
 
 /* Make action buttons inside tables solid, pill-shaped and color-accurate */
-.table .btnApprove, .pendingTable .btnApprove {
+.table .btnApprove,
+.pendingTable .btnApprove {
   background: var(--ok);
   color: #fff;
   border: none;
-  box-shadow: 0 6px 14px rgba(15,155,88,0.12);
+  box-shadow: 0 6px 14px rgba(15, 155, 88, 0.12);
 }
-.table .btnApprove:hover, .pendingTable .btnApprove:hover {
+
+.table .btnApprove:hover,
+.pendingTable .btnApprove:hover {
   transform: translateY(-1px);
 }
-.table .btnReject, .pendingTable .btnReject {
+
+.table .btnReject,
+.pendingTable .btnReject {
   background: var(--bad);
   color: #fff;
   border: none;
-  box-shadow: 0 6px 14px rgba(201,32,32,0.12);
+  box-shadow: 0 6px 14px rgba(201, 32, 32, 0.12);
 }
-.table .btnReject:hover, .pendingTable .btnReject:hover {
+
+.table .btnReject:hover,
+.pendingTable .btnReject:hover {
   transform: translateY(-1px);
 }
 
@@ -1433,6 +1520,7 @@
     border-color 0.15s,
     box-shadow 0.15s;
 }
+
 .holidayAddRow input:focus {
   border-color: var(--red);
   box-shadow: 0 0 0 3px var(--red-glow);
@@ -1450,6 +1538,7 @@
   gap: 12px;
   transition: all 0.15s;
 }
+
 .holidayItem:hover {
   background: var(--surface);
   border-color: var(--line2);
@@ -1463,6 +1552,7 @@
   color: var(--text);
   flex-shrink: 0;
 }
+
 .holidayName {
   flex: 1;
   font-size: 13px;
@@ -1484,6 +1574,7 @@
   transition: all 0.15s;
   flex-shrink: 0;
 }
+
 .btnDelete:hover {
   color: var(--bad);
   background: var(--bad-bg);
@@ -1510,6 +1601,7 @@
     box-shadow 0.18s,
     transform 0.18s;
 }
+
 .sumCard:hover {
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
@@ -1522,6 +1614,7 @@
   letter-spacing: -0.5px;
   font-family: "Syne", "DM Sans", sans-serif;
 }
+
 .sumLabel {
   font-size: 10.5px;
   color: var(--text5);
@@ -1572,6 +1665,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1595,6 +1689,7 @@
     opacity: 0;
     transform: translateY(18px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1607,6 +1702,7 @@
   justify-content: space-between;
   margin-bottom: 16px;
 }
+
 .modalTitle {
   font-size: 15px;
   font-weight: 700;
@@ -1628,6 +1724,7 @@
   color: var(--text3);
   transition: all 0.15s;
 }
+
 .modalClose:hover {
   background: var(--bad-bg);
   border-color: var(--bad-bdr);
@@ -1650,11 +1747,13 @@
   margin-top: 14px;
   font-size: 13px;
 }
+
 .modalKey {
   color: var(--text5);
   font-weight: 600;
   font-size: 12px;
 }
+
 .modalValue {
   color: var(--text2);
   font-weight: 500;
@@ -1689,11 +1788,13 @@
   border: 1px solid;
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
+
 .toast.ok {
   background: #fff;
   color: var(--ok);
   border-color: var(--ok-bdr);
 }
+
 .toast.bad {
   background: #fff;
   color: var(--bad);
@@ -1705,6 +1806,7 @@
     opacity: 0;
     transform: translateY(14px) scale(0.94);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1745,6 +1847,7 @@
   font-size: 13px;
   font-weight: 500;
 }
+
 .emptyIcon {
   font-size: 34px;
   margin-bottom: 10px;
@@ -1796,6 +1899,7 @@
   scrollbar-width: none;
   padding: 14px 10px;
 }
+
 .nav::-webkit-scrollbar {
   display: none;
 }
@@ -1832,12 +1936,14 @@
   white-space: nowrap;
   transition: all 0.15s;
 }
+
 .btnPayrollSm:hover:not(:disabled) {
   background: #b45309;
   color: #fff;
   border-color: #b45309;
   box-shadow: 0 3px 12px rgba(180, 83, 9, 0.3);
 }
+
 .btnPayrollSm:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1881,6 +1987,7 @@
     opacity: 0;
     transform: scale(0.95) translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1957,10 +2064,12 @@
   font-family: "IBM Plex Sans Thai", sans-serif;
   transition: all 0.15s ease;
 }
+
 .settingsNavItem:hover {
   background: var(--surface3);
   color: var(--text);
 }
+
 .settingsNavActive {
   background: var(--surface) !important;
   color: var(--red) !important;
@@ -1976,9 +2085,11 @@
   scrollbar-width: thin;
   scrollbar-color: var(--line2) transparent;
 }
+
 .settingsContent::-webkit-scrollbar {
   width: 5px;
 }
+
 .settingsContent::-webkit-scrollbar-thumb {
   background: var(--line2);
   border-radius: 3px;
@@ -2044,10 +2155,12 @@
     box-shadow 0.15s,
     background 0.15s;
 }
+
 .settingsFieldInput:hover {
   border-color: #b0bac8;
   background: var(--surface);
 }
+
 .settingsFieldInput:focus {
   border-color: var(--red);
   box-shadow: 0 0 0 3px var(--red-glow);
@@ -2122,10 +2235,12 @@
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-red);
 }
+
 .btnSettingsSave:hover {
   box-shadow: 0 6px 20px rgba(200, 41, 30, 0.38);
   transform: translateY(-1px);
 }
+
 .btnSettingsSave:active {
   transform: scale(0.98);
   box-shadow: none;
@@ -2147,6 +2262,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .btnSettingsCancel:hover {
   background: var(--surface3);
   border-color: var(--line2);
@@ -2189,30 +2305,33 @@
   position: relative;
   overflow: hidden;
 }
+
 .btnPayrollModal::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.15) 50%,
-    transparent 65%
-  );
+  background: linear-gradient(105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.15) 50%,
+      transparent 65%);
   transform: translateX(-100%);
   transition: transform 0.5s ease;
 }
+
 .btnPayrollModal:hover:not(:disabled)::before {
   transform: translateX(100%);
 }
+
 .btnPayrollModal:hover:not(:disabled) {
   box-shadow: 0 6px 24px rgba(200, 41, 30, 0.38);
   transform: translateY(-1px);
 }
+
 .btnPayrollModal:active:not(:disabled) {
   transform: scale(0.98);
   box-shadow: none;
 }
+
 .btnPayrollModal:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -2227,38 +2346,48 @@
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .summaryGrid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
 @media (max-width: 900px) {
   .leaveGrid {
     grid-template-columns: 1fr;
   }
 }
+
 @media (max-width: 768px) {
   .sidebar {
     display: none;
   }
+
   .content {
     padding: 16px;
   }
+
   .filterBar {
     flex-direction: column;
   }
+
   .statsGrid {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
+
   .summaryGrid {
     grid-template-columns: 1fr 1fr;
   }
+
   .holidayAddRow {
     grid-template-columns: 1fr;
   }
+
   .topbar {
     padding: 0 16px 0 0;
   }
+
   .topbarBrand {
     width: 180px;
   }
@@ -2284,6 +2413,7 @@
     border-color 0.15s,
     box-shadow 0.15s;
 }
+
 .tableSearchInput:focus {
   border-color: var(--red);
   box-shadow: 0 0 0 3px var(--red-glow);
@@ -2305,9 +2435,11 @@
   cursor: pointer;
   transition: background 0.12s;
 }
+
 .empRow:hover td {
   background: #eef4ff !important;
 }
+
 .empRow:hover td:first-child {
   border-left: 3px solid var(--red);
   padding-left: 13px;
@@ -2330,6 +2462,7 @@
   white-space: nowrap;
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
+
 .btnEmpExcel:hover {
   background: var(--ok);
   color: #fff;
@@ -2351,6 +2484,7 @@
   white-space: nowrap;
   font-family: "IBM Plex Sans Thai", sans-serif;
 }
+
 .btnEmpPdf:hover {
   background: var(--red);
   color: #fff;
@@ -2363,6 +2497,7 @@
   background: var(--surface2);
   border-bottom: 2px solid var(--line);
 }
+
 .expandedRowBoundary td {
   padding: 0;
   border-bottom: none !important;
@@ -2381,6 +2516,7 @@
     transform: translateY(-8px);
     max-height: 0;
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2428,6 +2564,7 @@
   border-bottom: 1px solid var(--line2);
   transition: background 0.15s;
 }
+
 .dropdownStatItem:hover {
   background: var(--surface2);
 }
@@ -2479,10 +2616,12 @@
   scrollbar-width: thin;
   scrollbar-color: var(--line2) transparent;
 }
+
 .dropdownInnerTableScroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 .dropdownInnerTableScroll::-webkit-scrollbar-thumb {
   background: var(--line2);
   border-radius: 3px;
@@ -2516,6 +2655,7 @@
   color: var(--text2);
   vertical-align: middle;
 }
+
 .innerTable tbody tr:hover td {
   background: #fdfdfd;
 }
@@ -2524,15 +2664,18 @@
   .dropdownGrid {
     flex-direction: column;
   }
+
   .dropdownSidebar {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
+
   .dropdownStats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
   }
+
   .dropdownStatItem {
     border-bottom: none;
     border-right: 1px solid var(--line2);
@@ -2542,19 +2685,24 @@
     gap: 4px;
     padding: 12px 10px;
   }
+
   .dropdownStatItem:nth-child(3n) {
     border-right: none;
   }
+
   .dropdownStatItem:nth-child(n+4) {
     border-top: 1px solid var(--line2);
   }
+
   .dropdownExportBox {
     display: flex;
     gap: 10px;
   }
+
   .dropdownExportBox button {
     margin-top: 0 !important;
   }
+
   .tableSearchInput {
     width: 140px;
   }
@@ -2579,6 +2727,7 @@
   margin-top: 4px;
   width: fit-content;
 }
+
 .gpsBadge:hover {
   background: var(--blue);
   color: #fff;
@@ -2586,6 +2735,7 @@
   box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
   transform: translateY(-1px);
 }
+
 .gpsBadge i {
   font-size: 13px;
   color: inherit;
@@ -2692,8 +2842,15 @@
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.98) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .toggleGroup {
@@ -2758,4 +2915,3 @@
   font-weight: 500;
   color: var(--text2);
 }
-

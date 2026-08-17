@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../page.module.css";
 import localStyles from "./page.module.css";
@@ -39,10 +40,10 @@ export default function AdminOtPage() {
     // Modal State
     const [showModal, setShowModal] = useState(false);
     const [selectedReq, setSelectedReq] = useState<OtRequest | null>(null);
-    const [modalData, setModalData] = useState({ 
-        status: "approved" as "approved" | "rejected", 
-        hours: "", 
-        remark: "" 
+    const [modalData, setModalData] = useState({
+        status: "approved" as "approved" | "rejected",
+        hours: "",
+        remark: ""
     });
     const [saving, setSaving] = useState(false);
 
@@ -67,7 +68,7 @@ export default function AdminOtPage() {
 
     async function submitAdjustment() {
         if (!selectedReq) return;
-        
+
         const { status, hours, remark } = modalData;
         const approved_hours = status === "approved" ? Number(hours) : undefined;
 
@@ -81,11 +82,11 @@ export default function AdminOtPage() {
             const res = await fetch("/api/admin/ot", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    id: selectedReq.id, 
-                    status, 
-                    approved_hours, 
-                    remark 
+                body: JSON.stringify({
+                    id: selectedReq.id,
+                    status,
+                    approved_hours,
+                    remark
                 })
             });
             const data = await res.json();
@@ -130,27 +131,27 @@ export default function AdminOtPage() {
             const matchesSearch = !searchQuery ||
                 req.employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 req.emp_id.toLowerCase().includes(searchQuery.toLowerCase());
-            
+
             let matchesDate = true;
             if (startDate || endDate) {
                 const reqDate = new Date(req.date_for).toISOString().split('T')[0];
                 if (startDate && reqDate < startDate) matchesDate = false;
                 if (endDate && reqDate > endDate) matchesDate = false;
             }
-            
+
             return matchesStatus && matchesSearch && matchesDate;
         });
     }, [requests, statusFilter, searchQuery, startDate, endDate]);
 
     const pendingCount = requests.filter(r => r.status === "pending_hr").length;
-    
+
     const availableMonths = useMemo(() => {
         const months = new Set<string>();
         requests.forEach(r => {
             const date = new Date(r.date_for);
             let cycleMonth = date.getMonth() + 1;
             let cycleYear = date.getFullYear();
-            
+
             if (date.getDate() > 25) {
                 cycleMonth += 1;
                 if (cycleMonth > 12) {
@@ -164,18 +165,18 @@ export default function AdminOtPage() {
     }, [requests]);
 
     const reportData = useMemo(() => {
-        const groups: Record<string, Record<string, { 
-            approved_hours: number, 
-            total_hours: number, 
+        const groups: Record<string, Record<string, {
+            approved_hours: number,
+            total_hours: number,
             emp_ids: Set<string>,
             employees: Record<string, { name: string, emp_id: string, total_hours: number, approved_hours: number }>
         }>> = {};
-        
+
         requests.forEach(req => {
             const date = new Date(req.date_for);
             let cycleMonth = date.getMonth() + 1;
             let cycleYear = date.getFullYear();
-            
+
             if (date.getDate() > 25) {
                 cycleMonth += 1;
                 if (cycleMonth > 12) {
@@ -185,51 +186,51 @@ export default function AdminOtPage() {
             }
             const monthKey = `${cycleYear}-${String(cycleMonth).padStart(2, '0')}`;
             if (selectedMonth && monthKey !== selectedMonth) return;
-            
+
             const reqDate = date.toISOString().split('T')[0];
             if (startDate && reqDate < startDate) return;
             if (endDate && reqDate > endDate) return;
 
             const deptName = req.employee.departments?.name || "ไม่ระบุแผนก";
-            
+
             if (!groups[monthKey]) groups[monthKey] = {};
             if (!groups[monthKey][deptName]) {
-                groups[monthKey][deptName] = { 
-                    approved_hours: 0, 
-                    total_hours: 0, 
+                groups[monthKey][deptName] = {
+                    approved_hours: 0,
+                    total_hours: 0,
                     emp_ids: new Set(),
                     employees: {}
                 };
             }
-            
+
             const g = groups[monthKey][deptName];
             g.total_hours += Number(req.total_hours);
             if (req.status === "approved") {
                 g.approved_hours += Number(req.approved_hours || req.total_hours);
             }
             g.emp_ids.add(req.emp_id);
-            
+
             if (!g.employees[req.emp_id]) {
                 g.employees[req.emp_id] = { name: req.employee.name, emp_id: req.emp_id, total_hours: 0, approved_hours: 0 };
             }
-            
+
             const emp = g.employees[req.emp_id];
             emp.total_hours += Number(req.total_hours);
             if (req.status === "approved") {
                 emp.approved_hours += Number(req.approved_hours || req.total_hours);
             }
         });
-        
+
         // Convert to sorted array
-        const result: { 
-            month: string, 
-            depts: { 
-                name: string, 
-                approved_hours: number, 
-                total_hours: number, 
-                emp_count: number, 
-                employees: { name: string, emp_id: string, total_hours: number, approved_hours: number }[] 
-            }[] 
+        const result: {
+            month: string,
+            depts: {
+                name: string,
+                approved_hours: number,
+                total_hours: number,
+                emp_count: number,
+                employees: { name: string, emp_id: string, total_hours: number, approved_hours: number }[]
+            }[]
         }[] = [];
 
         Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(month => {
@@ -239,10 +240,10 @@ export default function AdminOtPage() {
                 emp_count: groups[month][name].emp_ids.size,
                 employees: Object.values(groups[month][name].employees).sort((a, b) => b.approved_hours - a.approved_hours)
             })).sort((a, b) => b.approved_hours - a.approved_hours);
-            
+
             result.push({ month, depts });
         });
-        
+
         return result;
     }, [requests, selectedMonth]);
 
@@ -258,7 +259,7 @@ export default function AdminOtPage() {
                 csvContent += `${m.month},"${d.name} TOTAL",-,-,${d.approved_hours.toFixed(2)},${d.total_hours.toFixed(2)}\n`;
             });
         });
-        
+
         const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -273,14 +274,14 @@ export default function AdminOtPage() {
     function exportListToCSV() {
         const BOM = "\uFEFF";
         let csvContent = "Employee Name,Employee ID,Department,Date,Start,End,Requested Hours,Reason,Status\n";
-        
+
         filteredRequests.forEach(req => {
             const rowStatus = getStatusText(req.status);
             const dept = req.employee.departments?.name || "-";
             const dateStr = formatDateThai(req.date_for);
             const startTime = formatTime24h(req.start_time);
             const endTime = formatTime24h(req.end_time);
-            
+
             csvContent += `"${req.employee.name}","${req.emp_id}","${dept}","${dateStr}","${startTime}","${endTime}",${req.total_hours},"${req.reason || ""}","${rowStatus}"\n`;
         });
 
@@ -448,22 +449,22 @@ export default function AdminOtPage() {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: "flex", gap: 6 }}>
-                                                        <button 
-                                                            onClick={() => openAdjustment(req)} 
-                                                            className={localStyles.btnApprove} 
+                                                        <button
+                                                            onClick={() => openAdjustment(req)}
+                                                            className={localStyles.btnApprove}
                                                             disabled={saving}
                                                             title="อนุมัติ/จัดการ"
                                                         >
-                                                            { (req.status === "approved" || req.status === "rejected") ? (
+                                                            {(req.status === "approved" || req.status === "rejected") ? (
                                                                 <>
                                                                     <PencilSquareIcon width={14} style={{ marginRight: 4 }} />
                                                                     แก้ไข
                                                                 </>
-                                                            ) : "จัดการ" }
+                                                            ) : "จัดการ"}
                                                         </button>
-                                                        <button 
-                                                            onClick={() => deleteOt(req.id)} 
-                                                            className={styles.btnDangerGhost} 
+                                                        <button
+                                                            onClick={() => deleteOt(req.id)}
+                                                            className={styles.btnDangerGhost}
                                                             disabled={saving}
                                                             style={{ padding: '0 10px', height: 32, fontSize: 11 }}
                                                             title="ลบรายการ"
@@ -490,8 +491,8 @@ export default function AdminOtPage() {
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                             <div className={styles.filterGroup}>
                                 <div className={styles.filterLabel}>MONTH</div>
-                                <select 
-                                    className={styles.filterInput} 
+                                <select
+                                    className={styles.filterInput}
                                     style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6, minWidth: 140 }}
                                     value={selectedMonth}
                                     onChange={e => setSelectedMonth(e.target.value)}
@@ -504,9 +505,9 @@ export default function AdminOtPage() {
                             </div>
                             <div className={styles.filterGroup}>
                                 <div className={styles.filterLabel}>FROM</div>
-                                <input 
-                                    type="date" 
-                                    className={styles.filterInput} 
+                                <input
+                                    type="date"
+                                    className={styles.filterInput}
                                     style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
                                     value={startDate}
                                     onChange={e => setStartDate(e.target.value)}
@@ -514,9 +515,9 @@ export default function AdminOtPage() {
                             </div>
                             <div className={styles.filterGroup}>
                                 <div className={styles.filterLabel}>TO</div>
-                                <input 
-                                    type="date" 
-                                    className={styles.filterInput} 
+                                <input
+                                    type="date"
+                                    className={styles.filterInput}
                                     style={{ height: 32, fontSize: 13, padding: '0 8px', borderRadius: 6 }}
                                     value={endDate}
                                     onChange={e => setEndDate(e.target.value)}
@@ -525,10 +526,10 @@ export default function AdminOtPage() {
 
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
                                 <label className={localStyles.toggleDetail} title="แสดงรายบุคคล">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={showEmployeeDetail} 
-                                        onChange={e => setShowEmployeeDetail(e.target.checked)} 
+                                    <input
+                                        type="checkbox"
+                                        checked={showEmployeeDetail}
+                                        onChange={e => setShowEmployeeDetail(e.target.checked)}
                                     />
                                     <span className={localStyles.toggleDetailLabel}>แสดงรายละเอียดรายบุคคล</span>
                                 </label>
@@ -565,7 +566,7 @@ export default function AdminOtPage() {
                                         <td colSpan={5} className={styles.emptyState}>ไม่มีข้อมูลสำหรับรายงาน</td>
                                     </tr>
                                 ) : (
-                                    reportData.flatMap((m, mIdx) => 
+                                    reportData.flatMap((m, mIdx) =>
                                         m.depts.flatMap((d, dIdx) => [
                                             // Department Header Row
                                             <tr key={`${m.month}-${d.name}`} style={{ background: 'var(--surface2)' }}>
@@ -610,8 +611,8 @@ export default function AdminOtPage() {
                 </div>
             )}
 
-            {showModal && selectedReq && (
-                <div className={localStyles.modalOverlay}>
+            {showModal && selectedReq && typeof document !== 'undefined' && createPortal(
+                <div className={localStyles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
                     <div className={localStyles.modalContent}>
                         <div className={localStyles.modalHeader}>
                             <h2>จัดการคำขอ OT</h2>
@@ -620,15 +621,15 @@ export default function AdminOtPage() {
                             <div className={localStyles.inputField}>
                                 <label className={localStyles.inputLabel}>สถานะการตัดสินใจ</label>
                                 <div className={localStyles.statusOptions}>
-                                    <div 
+                                    <div
                                         className={`${localStyles.statusOption} ${localStyles.approved} ${modalData.status === "approved" ? localStyles.active : ""}`}
-                                        onClick={() => setModalData({...modalData, status: "approved"})}
+                                        onClick={() => setModalData({ ...modalData, status: "approved" })}
                                     >
                                         <CheckCircleIcon width={18} /> อนุมัติ
                                     </div>
-                                    <div 
+                                    <div
                                         className={`${localStyles.statusOption} ${localStyles.rejected} ${modalData.status === "rejected" ? localStyles.active : ""}`}
-                                        onClick={() => setModalData({...modalData, status: "rejected"})}
+                                        onClick={() => setModalData({ ...modalData, status: "rejected" })}
                                     >
                                         <XCircleIcon width={18} /> ไม่อนุมัติ
                                     </div>
@@ -639,12 +640,12 @@ export default function AdminOtPage() {
                                 <div className={localStyles.inputField}>
                                     <label className={localStyles.inputLabel}>จำนวนชั่วโมงที่อนุมัติ (Requested: {formatDecimalHoursToHHMM(selectedReq.total_hours)})</label>
                                     <div style={{ position: 'relative' }}>
-                                        <input 
-                                            className={localStyles.inputElement} 
-                                            type="number" 
+                                        <input
+                                            className={localStyles.inputElement}
+                                            type="number"
                                             step="0.5"
-                                            value={modalData.hours} 
-                                            onChange={e => setModalData({...modalData, hours: e.target.value})}
+                                            value={modalData.hours}
+                                            onChange={e => setModalData({ ...modalData, hours: e.target.value })}
                                         />
                                         <ClockIcon width={18} style={{ position: 'absolute', right: 12, top: 11, color: 'var(--text4)' }} />
                                     </div>
@@ -653,11 +654,11 @@ export default function AdminOtPage() {
 
                             <div className={localStyles.inputField}>
                                 <label className={localStyles.inputLabel}>บันทึก / ความเห็นของแอดมิน</label>
-                                <textarea 
+                                <textarea
                                     className={`${localStyles.inputElement} ${localStyles.textAreaElement}`}
                                     placeholder="ระบุเหตุผลหรือข้อความเพิ่มเติม..."
                                     value={modalData.remark}
-                                    onChange={e => setModalData({...modalData, remark: e.target.value})}
+                                    onChange={e => setModalData({ ...modalData, remark: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -670,7 +671,8 @@ export default function AdminOtPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

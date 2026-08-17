@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
@@ -1301,7 +1302,7 @@ function AdminPageInner() {
                     </div>
                 </div>
 
-                {showProjectModal && (
+                {showProjectModal && typeof document !== 'undefined' && createPortal(
                     <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowProjectModal(false); }}>
                         <div className={styles.modal} style={{ maxWidth: 640 }}>
                             <div className={styles.modalHeader}>
@@ -1388,7 +1389,8 @@ function AdminPageInner() {
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         );
@@ -1417,7 +1419,7 @@ function AdminPageInner() {
             {activeTab === "holiday" && renderHoliday()}
             {activeTab === "projects" && renderProjects()}
 
-            {photoModal && (
+            {photoModal && typeof document !== 'undefined' && createPortal(
                 <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setPhotoModal(null); }}>
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
@@ -1433,10 +1435,11 @@ function AdminPageInner() {
                             <span className={styles.modalKey}>สถานะ</span>  <span className={styles.modalValue}>{photoModal.lateLabel || "—"}</span>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {showSettings && (
+            {showSettings && typeof document !== 'undefined' && createPortal(
                 <div className={styles.settingsOverlay} onClick={e => { if (e.target === e.currentTarget) closeSettings(); }}>
                     <div className={styles.settingsModal}>
                         <div className={styles.settingsModalHeader}>
@@ -1560,7 +1563,8 @@ function AdminPageInner() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {renderMapModal()}

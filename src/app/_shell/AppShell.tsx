@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, type ReactNode } from "react";
 import styles from "./layout.module.css";
+import FloatingTicketButton from "@/components/tickets/FloatingTicketButton";
 import {
     ClockIcon,
     BuildingOfficeIcon,
@@ -51,6 +52,7 @@ const NAV_MAIN_BASE = [
     { id: "coins", href: "/coins", icon: SparklesIcon, label: "คลังเหรียญ", sub: "My Coins" },
     { id: "rewards", href: "/rewards", icon: GiftIcon, label: "แลกของรางวัล", sub: "Redeem Rewards" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
+    { id: "tickets", href: "/tickets", icon: ClipboardDocumentListIcon, label: "ติดตามปัญหา", sub: "Reported Issues" },
 ];
 
 const NAV_BOTTOM = [{ href: "/api/auth/logout", icon: LockClosedIcon, label: "ออกจากระบบ", sub: "Logout" }];
@@ -250,6 +252,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     <span className={styles.mobileLabel}>Logout</span>
                 </a>
             </nav>
+
+            {/* Floating Ticket Button */}
+            <FloatingTicketButton />
         </div>
     );
 }
