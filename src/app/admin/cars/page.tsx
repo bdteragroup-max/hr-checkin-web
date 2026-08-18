@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
-import { 
-    PlusIcon, 
-    ArrowPathRoundedSquareIcon, 
-    TrashIcon, 
+import {
+    PlusIcon,
+    ArrowPathRoundedSquareIcon,
+    TrashIcon,
     PencilSquareIcon,
     ExclamationTriangleIcon,
     CheckCircleIcon,
@@ -56,7 +56,7 @@ export default function AdminAssetsPage() {
             return data;
         }
     });
-    
+
     // Deletion Modal state
     const [pendingDelete, setPendingDelete] = useState<{ id: number, name: string } | null>(null);
 
@@ -95,7 +95,7 @@ export default function AdminAssetsPage() {
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [assetHistory, setAssetHistory] = useState<any[]>([]);
-    
+
     // Filtering State
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -104,31 +104,31 @@ export default function AdminAssetsPage() {
 
     function openAddModal() {
         setIsEditing(false);
-        setAssetForm({ 
-            id: undefined, 
-            asset_id: "", 
-            name: "", 
-            avg_category: "Car", 
-            category: "Car", 
-            description: "", 
+        setAssetForm({
+            id: undefined,
+            asset_id: "",
+            name: "",
+            avg_category: "Car",
+            category: "Car",
+            description: "",
             company_owner: "",
             vehicle_type: "",
             brand: "",
             vehicle_model: "",
             main_user: "",
             usage_remark: "",
-            status: "available" 
+            status: "available"
         });
         setShowAssetModal(true);
     }
 
     function openEditModal(asset: Asset) {
         setIsEditing(true);
-        setAssetForm({ 
-            id: asset.id, 
-            asset_id: asset.asset_id, 
-            name: asset.name, 
-            category: asset.category || "", 
+        setAssetForm({
+            id: asset.id,
+            asset_id: asset.asset_id,
+            name: asset.name,
+            category: asset.category || "",
             avg_category: "Car",
             description: "", // internal placeholder if needed
             company_owner: asset.company_owner || "",
@@ -137,7 +137,7 @@ export default function AdminAssetsPage() {
             vehicle_model: asset.vehicle_model || "",
             main_user: asset.main_user || "",
             usage_remark: asset.usage_remark || "",
-            status: asset.status 
+            status: asset.status
         });
         setShowAssetModal(true);
     }
@@ -178,10 +178,10 @@ export default function AdminAssetsPage() {
 
     async function handleDelete(id: number, name: string) {
         setPendingDelete({ id, name });
-        setAlert({ 
-            visible: true, 
-            message: `คุณแน่ใจหรือไม่ที่จะลบอุปกรณ์ "${name}"?`, 
-            type: "error" 
+        setAlert({
+            visible: true,
+            message: `คุณแน่ใจหรือไม่ที่จะลบอุปกรณ์ "${name}"?`,
+            type: "error"
         });
     }
 
@@ -277,13 +277,13 @@ export default function AdminAssetsPage() {
                 }
                 if (Array.isArray(parsed)) return parsed.filter(v => !!v);
             }
-        } catch (e) {}
+        } catch (e) { }
         return [photoUrl];
     }
 
     const now = new Date();
     const filteredAssets = assets.filter(asset => {
-        const matchesSearch = 
+        const matchesSearch =
             asset.asset_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (asset.main_user || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -294,8 +294,7 @@ export default function AdminAssetsPage() {
         // Determine effective status for filtering
         const currentBorrow = asset.asset_borrowings.find(b => {
             const start = new Date(b.borrow_date);
-            const end = new Date(b.expected_return_date);
-            return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+            return b.status === "borrowed" || (b.status === "reserved" && start <= now);
         });
         const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
 
@@ -308,7 +307,7 @@ export default function AdminAssetsPage() {
             const ExcelJS = (await import('exceljs')).default;
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Cars');
-            
+
             worksheet.columns = [
                 { header: 'เจ้าของรถ (Company)', key: 'company', width: 25 },
                 { header: 'ประเภทรถ', key: 'type', width: 15 },
@@ -327,11 +326,10 @@ export default function AdminAssetsPage() {
                 const now = new Date();
                 const currentBorrow = asset.asset_borrowings.find(b => {
                     const start = new Date(b.borrow_date);
-                    const end = new Date(b.expected_return_date);
-                    return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+                    return b.status === "borrowed" || (b.status === "reserved" && start <= now);
                 });
                 const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
-                
+
                 let statusText = "";
                 if (effectiveStatus === "available") statusText = "พร้อมใช้งาน";
                 else if (effectiveStatus === "borrowed") statusText = "ถูกยืม";
@@ -370,17 +368,17 @@ export default function AdminAssetsPage() {
 
     return (
         <div className={styles.container}>
-            <AlertModal 
-                alert={alert} 
+            <AlertModal
+                alert={alert}
                 onClose={() => {
                     setAlert({ ...alert, visible: false });
                     setPendingDelete(null);
-                }} 
+                }}
                 onConfirm={pendingDelete ? confirmDelete : undefined}
                 confirmText={pendingDelete ? "ยืนยันการลบ" : "ตกลง"}
                 cancelText="ยกเลิก"
             />
-            
+
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>จัดการรถยนต์ (Cars)</h1>
@@ -389,9 +387,9 @@ export default function AdminAssetsPage() {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div className={styles.searchWrapper}>
                         <MagnifyingGlassIcon width={18} className={styles.searchIcon} />
-                        <input 
-                            type="text" 
-                            placeholder="ค้นหาทะเบียน, รุ่น, ผู้ใช้งาน..." 
+                        <input
+                            type="text"
+                            placeholder="ค้นหาทะเบียน, รุ่น, ผู้ใช้งาน..."
                             className={styles.searchInput}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -410,14 +408,14 @@ export default function AdminAssetsPage() {
             </div>
 
             <div className={styles.statsBar}>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "all" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("all")}
                 >
                     <span className={styles.statLabel}>ทั้งหมด</span>
                     <span className={styles.statVal}>{assets.length}</span>
                 </div>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "available" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("available")}
                 >
@@ -426,14 +424,13 @@ export default function AdminAssetsPage() {
                         {assets.filter(a => {
                             const currentBorrow = a.asset_borrowings.find(b => {
                                 const start = new Date(b.borrow_date);
-                                const end = new Date(b.expected_return_date);
-                                return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+                                return b.status === "borrowed" || (b.status === "reserved" && start <= now);
                             });
                             return !currentBorrow && a.status === "available";
                         }).length}
                     </span>
                 </div>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "borrowed" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("borrowed")}
                 >
@@ -442,28 +439,27 @@ export default function AdminAssetsPage() {
                         {assets.filter(a => {
                             const currentBorrow = a.asset_borrowings.find(b => {
                                 const start = new Date(b.borrow_date);
-                                const end = new Date(b.expected_return_date);
-                                return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+                                return b.status === "borrowed" || (b.status === "reserved" && start <= now);
                             });
                             return !!currentBorrow;
                         }).length}
                     </span>
                 </div>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "maintenance" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("maintenance")}
                 >
                     <span className={styles.statLabel}>ซ่อมบำรุง</span>
                     <span className={styles.statVal} style={{ color: "var(--late)" }}>{assets.filter(a => a.status === "maintenance").length}</span>
                 </div>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "damaged" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("damaged")}
                 >
                     <span className={styles.statLabel}>ชำรุด</span>
                     <span className={styles.statVal} style={{ color: "var(--bad)" }}>{assets.filter(a => a.status === "damaged").length}</span>
                 </div>
-                <div 
+                <div
                     className={`${styles.statCard} ${filterStatus === "unavailable" ? styles.active : ""}`}
                     onClick={() => setFilterStatus("unavailable")}
                 >
@@ -493,16 +489,17 @@ export default function AdminAssetsPage() {
                                 const now = new Date();
                                 const currentBorrow = asset.asset_borrowings.find(b => {
                                     const start = new Date(b.borrow_date);
-                                    const end = new Date(b.expected_return_date);
-                                    return b.status === "borrowed" || (b.status === "reserved" && start <= now && end >= now);
+                                    return b.status === "borrowed" || (b.status === "reserved" && start <= now);
                                 });
                                 const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
+
+                                const isOverdue = currentBorrow ? now > new Date(currentBorrow.expected_return_date) : false;
 
                                 return (
                                     <tr key={asset.id}>
                                         <td>
-                                            <div style={{fontWeight: 500, color: "#1e293b"}}>{asset.company_owner || "—"}</div>
-                                            <div style={{fontSize: "0.80rem", color: "#64748b"}}>{asset.vehicle_type || "—"}</div>
+                                            <div style={{ fontWeight: 500, color: "#1e293b" }}>{asset.company_owner || "—"}</div>
+                                            <div style={{ fontSize: "0.80rem", color: "#64748b" }}>{asset.vehicle_type || "—"}</div>
                                         </td>
                                         <td>
                                             <div className={styles.assetName}>{asset.asset_id}</div>
@@ -512,19 +509,20 @@ export default function AdminAssetsPage() {
                                             <div className={styles.assetName}>{asset.main_user || "—"}</div>
                                         </td>
                                         <td>
-                                            <div style={{display: "flex", flexDirection: "column", gap: "4px"}}>
-                                                <span className={`${styles.statusBadge} ${styles[effectiveStatus]}`}>
-                                                    {effectiveStatus === "available" ? "พร้อมใช้งาน" : 
-                                                     effectiveStatus === "borrowed" ? "ถูกยืม" : 
-                                                     effectiveStatus === "damaged" ? "ชำรุด" : 
-                                                     effectiveStatus === "unavailable" ? "ไม่พร้อมใช้งาน" : "ซ่อมบำรุง"}
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <span className={`${styles.statusBadge} ${isOverdue ? styles.damaged : styles[effectiveStatus]}`}>
+                                                    {isOverdue ? "เลยกำหนดคืน" :
+                                                        effectiveStatus === "available" ? "พร้อมใช้งาน" :
+                                                            effectiveStatus === "borrowed" ? "ถูกยืม" :
+                                                                effectiveStatus === "damaged" ? "ชำรุด" :
+                                                                    effectiveStatus === "unavailable" ? "ไม่พร้อมใช้งาน" : "ซ่อมบำรุง"}
                                                 </span>
                                                 {currentBorrow && (
-                                                    <div className={styles.borrowerInfo} style={{fontSize: "0.8rem", marginTop: 4}}>
-                                                        <div style={{display: "flex", alignItems: "center", gap: "4px"}}>
+                                                    <div className={styles.borrowerInfo} style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                                                             <UserIcon width={12} /> {currentBorrow.employee.name}
                                                         </div>
-                                                        <div style={{color: "var(--bad)", fontWeight: 500, marginTop: "2px"}}>
+                                                        <div style={{ color: "var(--bad)", fontWeight: 500, marginTop: "2px" }}>
                                                             คืน: {new Date(currentBorrow.expected_return_date).toLocaleString("th-TH", {
                                                                 day: "2-digit", month: "2-digit", year: "2-digit",
                                                                 hour: "2-digit", minute: "2-digit"
@@ -537,21 +535,21 @@ export default function AdminAssetsPage() {
                                         <td>
                                             <div className={styles.actions}>
                                                 {effectiveStatus === "borrowed" && (
-                                                    <button 
+                                                    <button
                                                         className={styles.returnBtn}
                                                         onClick={() => openReturnModal(asset)}
                                                     >
                                                         <ArrowPathRoundedSquareIcon width={16} /> รับคืน
                                                     </button>
                                                 )}
-                                                <button 
+                                                <button
                                                     className={styles.historyBtn}
                                                     onClick={() => openHistoryModal(asset)}
                                                     title="ดูประวัติการยืม"
                                                 >
                                                     <ClipboardDocumentListIcon width={16} />
                                                 </button>
-                                                <button 
+                                                <button
                                                     className={styles.editBtn}
                                                     onClick={() => openEditModal(asset)}
                                                     title="แก้ไข"
@@ -559,7 +557,7 @@ export default function AdminAssetsPage() {
                                                     <PencilSquareIcon width={16} />
                                                 </button>
                                                 {effectiveStatus !== "borrowed" && (
-                                                    <button 
+                                                    <button
                                                         className={styles.deleteBtn}
                                                         onClick={() => handleDelete(asset.id, asset.name)}
                                                         title="ลบ"
@@ -589,10 +587,10 @@ export default function AdminAssetsPage() {
                             <div className={styles.modalBody}>
                                 <div className={styles.formRow}>
                                     <div className={styles.inputGroup}>
-                                        <label>เจ้าของรถ (Company) <span style={{color: "#ef4444"}}>*</span></label>
-                                        <select 
+                                        <label>เจ้าของรถ (Company) <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <select
                                             value={assetForm.company_owner}
-                                            onChange={e => setAssetForm({...assetForm, company_owner: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, company_owner: e.target.value })}
                                             required
                                         >
                                             <option value="">เลือกบริษัท...</option>
@@ -602,10 +600,10 @@ export default function AdminAssetsPage() {
                                         </select>
                                     </div>
                                     <div className={styles.inputGroup}>
-                                        <label>ประเภทรถ <span style={{color: "#ef4444"}}>*</span></label>
-                                        <select 
+                                        <label>ประเภทรถ <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <select
                                             value={assetForm.vehicle_type}
-                                            onChange={e => setAssetForm({...assetForm, vehicle_type: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, vehicle_type: e.target.value })}
                                             required
                                         >
                                             <option value="">เลือกประเภท...</option>
@@ -618,63 +616,63 @@ export default function AdminAssetsPage() {
                                 </div>
                                 <div className={styles.formRow}>
                                     <div className={styles.inputGroup}>
-                                        <label>ยี่ห้อ (Brand) <span style={{color: "#ef4444"}}>*</span></label>
-                                        <input 
-                                            type="text" 
+                                        <label>ยี่ห้อ (Brand) <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input
+                                            type="text"
                                             placeholder="เช่น MITSUBISHI, ISUZU"
                                             value={assetForm.brand}
-                                            onChange={e => setAssetForm({...assetForm, brand: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, brand: e.target.value })}
                                             required
                                         />
                                     </div>
                                     <div className={styles.inputGroup}>
-                                        <label>รุ่น (Model) <span style={{color: "#ef4444"}}>*</span></label>
-                                        <input 
-                                            type="text" 
+                                        <label>รุ่น (Model) <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input
+                                            type="text"
                                             placeholder="เช่น XPANDER, D-Cab"
                                             value={assetForm.vehicle_model}
-                                            onChange={e => setAssetForm({...assetForm, vehicle_model: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, vehicle_model: e.target.value })}
                                             required
                                         />
                                     </div>
                                 </div>
                                 <div className={styles.formRow}>
                                     <div className={styles.inputGroup}>
-                                        <label>ทะเบียนรถ <span style={{color: "#ef4444"}}>*</span></label>
-                                        <input 
-                                            type="text" 
+                                        <label>ทะเบียนรถ <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input
+                                            type="text"
                                             placeholder="เช่น กท 1234"
                                             value={assetForm.asset_id}
-                                            onChange={e => setAssetForm({...assetForm, asset_id: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, asset_id: e.target.value })}
                                             required
                                             disabled={isEditing}
                                         />
                                     </div>
                                     <div className={styles.inputGroup}>
-                                        <label>ผู้ใช้งานหลัก <span style={{color: "#ef4444"}}>*</span></label>
-                                        <input 
-                                            type="text" 
+                                        <label>ผู้ใช้งานหลัก <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input
+                                            type="text"
                                             placeholder="เช่น เอกชัย (เอก)"
                                             value={assetForm.main_user}
-                                            onChange={e => setAssetForm({...assetForm, main_user: e.target.value})}
+                                            onChange={e => setAssetForm({ ...assetForm, main_user: e.target.value })}
                                             required
                                         />
                                     </div>
                                 </div>
                                 <div className={styles.inputGroup}>
                                     <label>หมายเหตุ</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="เช่น ใช้เมื่อออกไปหน้างาน, รถผู้บริหาร"
                                         value={assetForm.usage_remark}
-                                        onChange={e => setAssetForm({...assetForm, usage_remark: e.target.value})}
+                                        onChange={e => setAssetForm({ ...assetForm, usage_remark: e.target.value })}
                                     />
                                 </div>
                                 <div className={styles.inputGroup}>
                                     <label>สถานะ</label>
-                                    <select 
+                                    <select
                                         value={assetForm.status}
-                                        onChange={e => setAssetForm({...assetForm, status: e.target.value as any})}
+                                        onChange={e => setAssetForm({ ...assetForm, status: e.target.value as any })}
                                     >
                                         <option value="available">พร้อมใช้งาน (แสดงในหน้าจอง)</option>
                                         <option value="unavailable">ไม่พร้อมใช้งาน (ไม่แสดงในหน้าจอง)</option>
@@ -706,37 +704,37 @@ export default function AdminAssetsPage() {
                             <div className={styles.inputGroup}>
                                 <label>วันที่คืนจริง</label>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         value={returnData.actual_return_date}
-                                        onChange={e => setReturnData({...returnData, actual_return_date: e.target.value})}
+                                        onChange={e => setReturnData({ ...returnData, actual_return_date: e.target.value })}
                                         style={{ flex: 1 }}
                                     />
-                                    <input 
-                                        type="time" 
+                                    <input
+                                        type="time"
                                         value={returnData.actual_return_time}
-                                        onChange={e => setReturnData({...returnData, actual_return_time: e.target.value})}
+                                        onChange={e => setReturnData({ ...returnData, actual_return_time: e.target.value })}
                                         style={{ flex: 1 }}
                                     />
                                 </div>
                             </div>
                             <div className={styles.inputGroup}>
                                 <label>สภาพอุปกรณ์เมื่อคืน</label>
-                                <textarea 
+                                <textarea
                                     placeholder="ระบุความเสียหาย หรือ สภาพหลังการใช้งาน..."
                                     value={returnData.condition_at_return}
-                                    onChange={e => setReturnData({...returnData, condition_at_return: e.target.value})}
+                                    onChange={e => setReturnData({ ...returnData, condition_at_return: e.target.value })}
                                 />
                             </div>
                             <div className={styles.checkboxGroup}>
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     id="is_damaged"
                                     checked={returnData.is_damaged}
-                                    onChange={e => setReturnData({...returnData, is_damaged: e.target.checked})}
+                                    onChange={e => setReturnData({ ...returnData, is_damaged: e.target.checked })}
                                 />
                                 <label htmlFor="is_damaged">
-                                    <ExclamationTriangleIcon width={18} style={{ color: "#dc2626" }} /> 
+                                    <ExclamationTriangleIcon width={18} style={{ color: "#dc2626" }} />
                                     อุปกรณ์ชำรุด / เสียหาย
                                 </label>
                             </div>
@@ -828,7 +826,7 @@ export default function AdminAssetsPage() {
                                                     )}
                                                 </div>
                                             )}
-                                            
+
                                             {(borrowPhotos.length > 0 || returnPhotos.length > 0) && (
                                                 <div style={{ marginTop: 12 }}>
                                                     <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text3)' }}>

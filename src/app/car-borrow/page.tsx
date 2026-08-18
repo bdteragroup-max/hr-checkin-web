@@ -114,7 +114,7 @@ export default function CarBorrowPage() {
     const [showKeyReturnModal, setShowKeyReturnModal] = useState<any | null>(null);
     const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
     const [returnData, setReturnData] = useState({
-        actual_return_date: new Date().toISOString().slice(0,10),
+        actual_return_date: new Date().toISOString().slice(0, 10),
         actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
         is_damaged: false,
@@ -124,7 +124,7 @@ export default function CarBorrowPage() {
 
     const nowRounded = (() => { const d = new Date(); d.setSeconds(0, 0); return d; })();
     const [formData, setFormData] = useState({
-        borrow_date: nowRounded.toISOString().slice(0,10),
+        borrow_date: nowRounded.toISOString().slice(0, 10),
         borrow_time: nowRounded.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         expected_return_date: "",
         expected_return_time: "17:00",
@@ -147,7 +147,7 @@ export default function CarBorrowPage() {
             const hour = now.getHours().toString().padStart(2, "0");
             const minute = (Math.floor(now.getMinutes() / 5) * 5).toString().padStart(2, "0");
             const timeStr = `${hour}:${minute}`;
-            
+
             setFormData(prev => ({
                 ...prev,
                 borrow_date: dateStr,
@@ -209,7 +209,7 @@ export default function CarBorrowPage() {
         if (!file) return;
 
         setUploading(`${type}-${slot}`);
-        
+
         try {
             // Compress image before upload
             const processedFile = file.type.startsWith("image/") ? await compressImage(file) : file;
@@ -287,7 +287,7 @@ export default function CarBorrowPage() {
                 setBorrowPhotos({ front: null, back: null, left: null, right: null, mileage: null });
                 setFormData(prev => ({
                     ...prev,
-                    borrow_date: new Date().toISOString().slice(0,10),
+                    borrow_date: new Date().toISOString().slice(0, 10),
                     borrow_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     expected_return_date: "",
                     expected_return_time: "17:00",
@@ -303,11 +303,11 @@ export default function CarBorrowPage() {
                 }));
                 queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
-                const errMsg = 
+                const errMsg =
                     data.error === "TIME_OVERLAP" ? data.message :
-                    data.error === "INVALID_DATE_RANGE" ? "กรุณากำหนดเวลาคืนให้หลังเวลายืม" :
-                    data.error === "INVALID_DATE" ? data.message || "วันที่ไม่ถูกต้อง" :
-                    data.error || "เกิดข้อผิดพลาด";
+                        data.error === "INVALID_DATE_RANGE" ? "กรุณากำหนดเวลาคืนให้หลังเวลายืม" :
+                            data.error === "INVALID_DATE" ? data.message || "วันที่ไม่ถูกต้อง" :
+                                data.error || "เกิดข้อผิดพลาด";
                 setAlert({ visible: true, message: errMsg, type: "error" });
             }
         } catch (err: any) {
@@ -321,7 +321,7 @@ export default function CarBorrowPage() {
         setSelectedReturn(borrowing);
         setReturnPhotos({ front: null, back: null, left: null, right: null, mileage: null });
         setReturnData({
-            actual_return_date: new Date().toISOString().slice(0,10),
+            actual_return_date: new Date().toISOString().slice(0, 10),
             actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
             condition_at_return: "",
             is_damaged: false,
@@ -457,18 +457,18 @@ export default function CarBorrowPage() {
                             <div className={styles.assetGrid}>
                                 {filteredAssets.map(asset => (
                                     <div key={asset.id} className={styles.card}>
-                                        <div style={{display: "flex", justifyContent: "space-between", marginBottom: "8px"}}>
-                                            <span className={styles.assetId} style={{backgroundColor: "#f1f5f9", color: "#334155", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600}}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                                            <span className={styles.assetId} style={{ backgroundColor: "#f1f5f9", color: "#334155", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: 600 }}>
                                                 ทะเบียน: {asset.asset_id}
                                             </span>
                                             {asset.company_owner && (
-                                                <span style={{fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase"}}>
+                                                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
                                                     {asset.company_owner}
                                                 </span>
                                             )}
                                         </div>
                                         <h3 className={styles.assetName}>
-                                            {asset.brand && <span style={{opacity: 0.7, marginRight: "4px"}}>{asset.brand}</span>}
+                                            {asset.brand && <span style={{ opacity: 0.7, marginRight: "4px" }}>{asset.brand}</span>}
                                             {asset.vehicle_model || asset.name}
                                         </h3>
                                         {asset.main_user && (
@@ -485,22 +485,47 @@ export default function CarBorrowPage() {
                                         )}
 
                                         {asset.asset_borrowings && asset.asset_borrowings.length > 0 && (
-                                            <div style={{ marginTop: 12, padding: "10px", backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "10px" }}>
-                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9a3412", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                    <CalendarIcon width={14} /> รายการจองล่วงหน้า / จองต่อ:
+                                            <div style={{ marginTop: 12, padding: "10px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                    <CalendarIcon width={14} /> คิวการใช้งานรถยนต์:
                                                 </div>
-                                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                    {asset.asset_borrowings.map((b: any) => (
-                                                        <div key={b.id} style={{ fontSize: "10px", color: "#c2410c", lineHeight: "1.4" }}>
-                                                            <span style={{ fontWeight: 600 }}>
-                                                                {new Date(b.borrow_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                                                {" - "}
-                                                                {new Date(b.expected_return_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                                            </span>
-                                                            <br />
-                                                            โดย: {b.employee.name} {b.employee.nickname ? `(${b.employee.nickname})` : ""}
-                                                        </div>
-                                                    ))}
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                                    {asset.asset_borrowings.map((b: any) => {
+                                                        const isPendingKey = b.status === "returned" && b.return_status === "PENDING_KEY";
+                                                        const now = new Date();
+                                                        const expectedReturn = new Date(b.expected_return_date);
+                                                        const borrowDate = new Date(b.borrow_date);
+                    
+                                                        const isOverdue = !isPendingKey && b.status !== "returned" && now > expectedReturn;
+                                                        const isCurrentlyUsing = !isPendingKey && b.status !== "returned" && !isOverdue && now >= borrowDate;
+                    
+                                                        const displayStatus = isPendingKey ? "รอคืนกุญแจ" :
+                                                            isOverdue ? "เลยกำหนดคืน" :
+                                                                isCurrentlyUsing ? "กำลังใช้งาน" :
+                                                                    b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งาน";
+                                                                    
+                                                        const badgeStyle = isOverdue ? { bg: "#fee2e2", text: "#b91c1c" } : 
+                                                                           displayStatus === "จองล่วงหน้า" ? { bg: "#fef3c7", text: "#92400e" } :
+                                                                           isPendingKey ? { bg: "#ffedd5", text: "#ea580c" } : { bg: "#eff6ff", text: "#1d4ed8" };
+                                                                           
+                                                        return (
+                                                            <div key={b.id} style={{ fontSize: "11px", color: "#334155", lineHeight: "1.4", paddingBottom: "6px", borderBottom: "1px solid #f1f5f9" }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
+                                                                    <span style={{ fontWeight: 600 }}>
+                                                                        {new Date(b.borrow_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                                        {" - "}
+                                                                        {new Date(b.expected_return_date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                                    </span>
+                                                                    <span style={{ padding: "2px 6px", borderRadius: "8px", fontSize: "9px", fontWeight: 700, backgroundColor: badgeStyle.bg, color: badgeStyle.text, whiteSpace: "nowrap" }}>
+                                                                        {displayStatus}
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ fontSize: "10px", color: "#64748b" }}>
+                                                                    ผู้ยืม: {b.employee.name} {b.employee.nickname ? `(${b.employee.nickname})` : ""}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         )}
@@ -533,66 +558,87 @@ export default function CarBorrowPage() {
                             <div className={styles.assetGrid}>
                                 {myBorrowings.map(b => {
                                     const isPendingKey = b.status === "returned" && b.return_status === "PENDING_KEY";
+                                    const now = new Date();
+                                    const expectedReturn = new Date(b.expected_return_date);
+                                    const borrowDate = new Date(b.borrow_date);
+
+                                    const isOverdue = !isPendingKey && b.status !== "returned" && now > expectedReturn;
+                                    const isCurrentlyUsing = !isPendingKey && b.status !== "returned" && !isOverdue && now >= borrowDate;
+
+                                    const displayStatus = isPendingKey ? "รอคืนกุญแจ" :
+                                        isOverdue ? "เลยกำหนดคืน" :
+                                            isCurrentlyUsing ? "กำลังใช้งานรถยนต์" :
+                                                b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งานรถยนต์";
+
+                                    const statusBg = isOverdue ? "#fee2e2" :
+                                        displayStatus === "จองล่วงหน้า" ? "#fef3c7" :
+                                            isPendingKey ? "#ffedd5" : "#eff6ff";
+
+                                    const statusColor = isOverdue ? "#b91c1c" :
+                                        displayStatus === "จองล่วงหน้า" ? "#92400e" :
+                                            isPendingKey ? "#ea580c" : "#1d4ed8";
+
                                     return (
-                                    <div key={b.id} className={styles.card}>
-                                        <div className={styles.myHeader}>
-                                            <div className={styles.assetId}>{b.assets.asset_id}</div>
-                                            <div className={styles.myStatus} style={{ 
-                                                backgroundColor: b.status === "reserved" ? "#fef3c7" : isPendingKey ? "#ffedd5" : "#eff6ff", 
-                                                color: b.status === "reserved" ? "#92400e" : isPendingKey ? "#ea580c" : "#1d4ed8", 
-                                                padding: "2px 8px", 
-                                                borderRadius: "12px", 
-                                                fontSize: "11px", 
-                                                fontWeight: 600 
-                                            }}>
-                                                {b.status === "reserved" ? "จองล่วงหน้า" : isPendingKey ? "รอคืนกุญแจ" : "กำลังใช้งานรถยนต์"}
+                                        <div key={b.id} className={styles.card}>
+                                            <div className={styles.myHeader}>
+                                                <div className={styles.assetId}>{b.assets.asset_id}</div>
+                                                <div className={styles.myStatus} style={{
+                                                    backgroundColor: statusBg,
+                                                    color: statusColor,
+                                                    padding: "2px 8px",
+                                                    borderRadius: "12px",
+                                                    fontSize: "11px",
+                                                    fontWeight: 600
+                                                }}>
+                                                    {displayStatus}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <h3 className={styles.assetName}>{b.assets.name}</h3>
+                                            <h3 className={styles.assetName}>{b.assets.name}</h3>
 
-                                        <div className={styles.myDetails}>
-                                            <div className={styles.myDetailItem}>
-                                                <span>เวลายืม:</span> {new Date(b.borrow_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                            <div className={styles.myDetails}>
+                                                <div className={styles.myDetailItem}>
+                                                    <span>เวลายืม:</span> {new Date(b.borrow_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                </div>
+                                                <div className={styles.myDetailItem}>
+                                                    <span>กำหนดคืน:</span> {new Date(b.expected_return_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                </div>
+                                                <div className={styles.myDetailItem}>
+                                                    <span>สถานที่/ผู้ติดต่อ:</span> {b.location || "-"}
+                                                </div>
                                             </div>
-                                            <div className={styles.myDetailItem}>
-                                                <span>กำหนดคืน:</span> {new Date(b.expected_return_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                            </div>
-                                            <div className={styles.myDetailItem}>
-                                                <span>สถานที่/ผู้ติดต่อ:</span> {b.location || "-"}
-                                            </div>
-                                        </div>
 
-                                        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
-                                            {isPendingKey ? (
-                                                <button
-                                                    className={styles.btn}
-                                                    onClick={() => setShowKeyReturnModal(b)}
-                                                    style={{ flex: 1, backgroundColor: "#fff7ed", color: "#ea580c", border: "1px solid #fdba74" }}
-                                                >
-                                                    ดำเนินการคืนกุญแจ
-                                                </button>
-                                            ) : (
-                                                <>
+                                            <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                                                {isPendingKey ? (
                                                     <button
                                                         className={styles.btn}
-                                                        onClick={() => openReturnModal(b)}
-                                                        style={{ flex: 1, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
+                                                        onClick={() => setShowKeyReturnModal(b)}
+                                                        style={{ flex: 1, backgroundColor: "#fff7ed", color: "#ea580c", border: "1px solid #fdba74" }}
                                                     >
-                                                        ดำเนินการคืนรถ
+                                                        ดำเนินการคืนกุญแจ
                                                     </button>
-                                                    <button
-                                                        className={styles.btn}
-                                                        onClick={() => handleCancelBooking(b.id)}
-                                                        style={{ flex: 1, backgroundColor: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}
-                                                        disabled={submitting}
-                                                    >
-                                                        ยกเลิกการจอง
-                                                    </button>
-                                                </>
-                                            )}
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            className={styles.btn}
+                                                            onClick={() => openReturnModal(b)}
+                                                            style={{ flex: 1, backgroundColor: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1" }}
+                                                        >
+                                                            ดำเนินการคืนรถ
+                                                        </button>
+                                                        <button
+                                                            className={styles.btn}
+                                                            onClick={() => handleCancelBooking(b.id)}
+                                                            style={{ flex: 1, backgroundColor: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3" }}
+                                                            disabled={submitting}
+                                                        >
+                                                            ยกเลิกการจอง
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )})}
+                                    )
+                                })}
                             </div>
                         )}
                     </>
@@ -615,7 +661,7 @@ export default function CarBorrowPage() {
                                     <input
                                         type="date"
                                         value={formData.borrow_date}
-                                        min={new Date().toISOString().slice(0,10)}
+                                        min={new Date().toISOString().slice(0, 10)}
                                         onChange={e => setFormData({ ...formData, borrow_date: e.target.value })}
                                         required
                                     />
@@ -631,7 +677,7 @@ export default function CarBorrowPage() {
                                     <input
                                         type="date"
                                         value={formData.expected_return_date}
-                                        min={formData.borrow_date || new Date().toISOString().slice(0,10)}
+                                        min={formData.borrow_date || new Date().toISOString().slice(0, 10)}
                                         onChange={e => setFormData({ ...formData, expected_return_date: e.target.value })}
                                         required
                                     />
@@ -668,7 +714,7 @@ export default function CarBorrowPage() {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                     {/* 1. Status */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สถานะ <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สถานะ <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                                             {["รถอยู่ Tera", "รถอยู่หน้างาน", "รถไม่อยู่ส่งซ่อม"].map(opt => (
                                                 <button
@@ -691,7 +737,7 @@ export default function CarBorrowPage() {
 
                                     {/* 2. Cleanliness */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>การตรวจเช็คความสะอาด ภายนอก/ภายใน <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>การตรวจเช็คความสะอาด ภายนอก/ภายใน <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {[
                                                 { label: "สะอาด", val: true },
@@ -716,7 +762,7 @@ export default function CarBorrowPage() {
 
                                     {/* 3. Lights */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ไฟหน้า ไฟท้าย ไฟเลี้ยว หน้าจอแสดงผล <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ไฟหน้า ไฟท้าย ไฟเลี้ยว หน้าจอแสดงผล <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {[
                                                 { label: "ปกติ", val: true },
@@ -741,7 +787,7 @@ export default function CarBorrowPage() {
 
                                     {/* 4. Tires */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพยาง และลมยางล้อรถ <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพยาง และลมยางล้อรถ <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {[
                                                 { label: "ปกติ", val: true },
@@ -766,7 +812,7 @@ export default function CarBorrowPage() {
 
                                     {/* 5. Body */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพรถ สีรถ และอุปกรณ์อื่นๆ <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>สภาพรถ สีรถ และอุปกรณ์อื่นๆ <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {[
                                                 { label: "ปกติ", val: true },
@@ -791,7 +837,7 @@ export default function CarBorrowPage() {
 
                                     {/* 6. Insurance */}
                                     <div className={styles.checkItem}>
-                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ประกัน พรบ. ภาษี มีอายุมากกว่า 1 เดือน <span style={{color:"red"}}>*</span></label>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "8px", display: "block" }}>ประกัน พรบ. ภาษี มีอายุมากกว่า 1 เดือน <span style={{ color: "red" }}>*</span></label>
                                         <div style={{ display: "flex", gap: "8px" }}>
                                             {[
                                                 { label: "มากกว่า 1 เดือน", val: true },
@@ -837,8 +883,8 @@ export default function CarBorrowPage() {
                                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting || !!uploading}>
                                     {submitting ? "ระบบกำลังดำเนินการ..." : (
                                         formData.borrow_date && new Date(`${formData.borrow_date}T${formData.borrow_time}`) > new Date()
-                                        ? "ยืนยันการจองล่วงหน้า"
-                                        : "ยืนยันการยืมรถยนต์"
+                                            ? "ยืนยันการจองล่วงหน้า"
+                                            : "ยืนยันการยืมรถยนต์"
                                     )}
                                 </button>
                             </div>
@@ -861,7 +907,7 @@ export default function CarBorrowPage() {
                                 <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                                     <span>ถ่ายภาพความเรียบร้อยก่อนส่งคืน (5 จุด) <span style={{ color: "#dc2626" }}>*</span></span>
                                 </label>
-                                
+
                                 <div className={styles.photoGrid}>
                                     {[
                                         { id: "front", name: "ด้านหน้า" },
@@ -937,7 +983,7 @@ export default function CarBorrowPage() {
                                         <TruckIcon width={20} />
                                         ค่าเที่ยวขับรถ (Trip Fee)
                                     </h4>
-                                    
+
                                     <label className={styles.checkboxLabel} style={{ marginBottom: "12px" }}>
                                         <input
                                             type="checkbox"
