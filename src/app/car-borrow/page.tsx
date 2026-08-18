@@ -500,7 +500,7 @@ export default function CarBorrowPage() {
                                                         const isCurrentlyUsing = !isPendingKey && b.status !== "returned" && !isOverdue && now >= borrowDate;
                     
                                                         const displayStatus = isPendingKey ? "รอคืนกุญแจ" :
-                                                            isOverdue ? "เลยกำหนดคืน" :
+                                                            isOverdue ? "ยังไม่คืนรถ" :
                                                                 isCurrentlyUsing ? "กำลังใช้งาน" :
                                                                     b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งาน";
                                                                     
@@ -566,7 +566,7 @@ export default function CarBorrowPage() {
                                     const isCurrentlyUsing = !isPendingKey && b.status !== "returned" && !isOverdue && now >= borrowDate;
 
                                     const displayStatus = isPendingKey ? "รอคืนกุญแจ" :
-                                        isOverdue ? "เลยกำหนดคืน" :
+                                        isOverdue ? "ยังไม่คืนรถ" :
                                             isCurrentlyUsing ? "กำลังใช้งานรถยนต์" :
                                                 b.status === "reserved" ? "จองล่วงหน้า" : "กำลังใช้งานรถยนต์";
 

@@ -36,8 +36,7 @@ export async function GET(req: Request) {
                             { status: "borrowed" },
                             {
                                 status: "reserved",
-                                borrow_date: { lte: now },
-                                expected_return_date: { gte: now }
+                                borrow_date: { lte: now }
                             }
                         ]
                     }

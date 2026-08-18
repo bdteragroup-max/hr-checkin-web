@@ -19,6 +19,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                 completion_percentage: body.completion_percentage ? parseFloat(body.completion_percentage) : null,
                 effectiveness_result: body.effectiveness_result,
                 certificate_file_url: body.certificate_file_url,
+                training_evaluation_result: body.training_evaluation_result,
+                instructor_evaluation_result: body.instructor_evaluation_result,
+                training_fee: body.training_fee ? parseFloat(body.training_fee) : null,
+                certificate_expiry_date: body.certificate_expiry_date ? new Date(body.certificate_expiry_date) : null,
+                requires_refresher: body.requires_refresher === true || body.requires_refresher === 'true',
+                refresher_date: body.refresher_date ? new Date(body.refresher_date) : null,
                 assessor_id: body.assessor_id || null,
                 updated_at: new Date()
             }

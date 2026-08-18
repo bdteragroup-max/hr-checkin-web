@@ -53,6 +53,7 @@ const NAV_MAIN_BASE = [
     { id: "rewards", href: "/rewards", icon: GiftIcon, label: "แลกของรางวัล", sub: "Redeem Rewards" },
     { id: "birthday", href: "/birthday-benefit", icon: CakeIcon, label: "รางวัลวันเกิด", sub: "Birthday" },
     { id: "tickets", href: "/tickets", icon: ClipboardDocumentListIcon, label: "ติดตามปัญหา", sub: "Reported Issues" },
+    { id: "training-history", href: "/training-history", icon: ClipboardDocumentCheckIcon, label: "ประวัติการอบรม", sub: "Training History" },
 ];
 
 const NAV_BOTTOM = [{ href: "/api/auth/logout", icon: LockClosedIcon, label: "ออกจากระบบ", sub: "Logout" }];

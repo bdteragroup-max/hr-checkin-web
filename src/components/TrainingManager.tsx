@@ -31,7 +31,9 @@ export default function TrainingManager() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     id: '', emp_id: '', course_name: '', institution_name: '',
-    training_date_start: '', training_date_end: '', completion_percentage: '', effectiveness_result: ''
+    training_date_start: '', training_date_end: '', completion_percentage: '', effectiveness_result: '',
+    training_evaluation_result: '', instructor_evaluation_result: '', training_fee: '', 
+    certificate_file_url: '', certificate_expiry_date: '', requires_refresher: false, refresher_date: ''
   });
   
   // Custom Select State
@@ -78,7 +80,7 @@ export default function TrainingManager() {
         <button 
           className={styles.addBtn}
           onClick={() => {
-            setFormData({id: '', emp_id: '', course_name: '', institution_name: '', training_date_start: '', training_date_end: '', completion_percentage: '', effectiveness_result: ''});
+            setFormData({id: '', emp_id: '', course_name: '', institution_name: '', training_date_start: '', training_date_end: '', completion_percentage: '', effectiveness_result: '', training_evaluation_result: '', instructor_evaluation_result: '', training_fee: '', certificate_file_url: '', certificate_expiry_date: '', requires_refresher: false, refresher_date: ''});
             setShowModal(true);
           }}
         >
@@ -138,10 +140,10 @@ export default function TrainingManager() {
                     {t.training_date_end && t.training_date_end !== t.training_date_start ? ` ถึง ${new Date(t.training_date_end).toLocaleDateString('th-TH')}` : ''}
                   </td>
                   <td className={t.completion_percentage >= 80 ? styles.successText : styles.warningText}>
-                    {t.completion_percentage ? `${t.completion_percentage}%` : '-'}
+                    {t.completion_percentage != null ? `${t.completion_percentage}%` : '-'}
                   </td>
                   <td>
-                    {t.effectiveness_result || '-'}
+                    {t.training_evaluation_result || t.instructor_evaluation_result || '-'}
                   </td>
                   <td>
                     <div className={styles.actions}>
@@ -152,7 +154,14 @@ export default function TrainingManager() {
                             training_date_start: t.training_date_start ? t.training_date_start.split('T')[0] : '',
                             training_date_end: t.training_date_end ? t.training_date_end.split('T')[0] : '',
                             completion_percentage: t.completion_percentage || '',
-                            effectiveness_result: t.effectiveness_result || ''
+                            effectiveness_result: t.effectiveness_result || '',
+                            training_evaluation_result: t.training_evaluation_result || '',
+                            instructor_evaluation_result: t.instructor_evaluation_result || '',
+                            training_fee: t.training_fee || '',
+                            certificate_file_url: t.certificate_file_url || '',
+                            certificate_expiry_date: t.certificate_expiry_date ? t.certificate_expiry_date.split('T')[0] : '',
+                            requires_refresher: t.requires_refresher || false,
+                            refresher_date: t.refresher_date ? t.refresher_date.split('T')[0] : ''
                           });
                           setEmpSearch('');
                           setShowModal(true);
@@ -241,8 +250,62 @@ export default function TrainingManager() {
               </div>
 
               <div className={styles.formGroup}>
-                <label>ผลการประเมิน / ข้อเสนอแนะ</label>
-                <textarea rows={3} value={formData.effectiveness_result} onChange={e => setFormData({...formData, effectiveness_result: e.target.value})} style={{resize: 'vertical'}} />
+                <label>ผลการประเมิน / ข้อเสนอแนะ (ผู้บันทึกเดิม)</label>
+                <textarea rows={2} value={formData.effectiveness_result} onChange={e => setFormData({...formData, effectiveness_result: e.target.value})} style={{resize: 'vertical'}} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>ค่าใช้จ่ายในการอบรม (บาท)</label>
+                <input type="number" min="0" value={formData.training_fee} onChange={e => setFormData({...formData, training_fee: e.target.value})} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>แนบไฟล์ใบประกาศ (URL หรือแนบไฟล์)</label>
+                <input type="file" accept="image/*,.pdf" onChange={async e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 10 * 1024 * 1024) return alert("ขนาดไฟล์ต้องไม่เกิน 10MB");
+                  
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  
+                  try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.url) setFormData({...formData, certificate_file_url: data.url});
+                    else alert("อัปโหลดไม่สำเร็จ");
+                  } catch (err) {
+                    alert("เกิดข้อผิดพลาดในการอัปโหลด");
+                  }
+                }} />
+                {formData.certificate_file_url && <div style={{marginTop: 8}}><a href={formData.certificate_file_url} target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6'}}>ดูไฟล์ที่แนบไว้</a></div>}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>วันที่ใบประกาศหมดอายุ</label>
+                <input type="date" value={formData.certificate_expiry_date} onChange={e => setFormData({...formData, certificate_expiry_date: e.target.value})} />
+              </div>
+
+              <div className={styles.formGroup} style={{flexDirection: 'row', alignItems: 'center', gap: 8, display: 'flex'}}>
+                <input type="checkbox" id="req_refresher" checked={formData.requires_refresher} onChange={e => setFormData({...formData, requires_refresher: e.target.checked})} style={{width: 'auto'}} />
+                <label htmlFor="req_refresher" style={{marginBottom: 0}}>ต้องมีการทบทวนการอบรม (Refresher)</label>
+              </div>
+
+              {formData.requires_refresher && (
+                <div className={styles.formGroup}>
+                  <label>กำหนดการทบทวน (วันที่)</label>
+                  <input type="date" value={formData.refresher_date} onChange={e => setFormData({...formData, refresher_date: e.target.value})} />
+                </div>
+              )}
+
+              <div className={styles.formGroup}>
+                <label>ผลการประเมินการอบรม (จากพนักงาน)</label>
+                <textarea rows={3} value={formData.training_evaluation_result} readOnly style={{resize: 'vertical', backgroundColor: '#f3f4f6'}} placeholder="ส่วนนี้พนักงานเป็นผู้กรอก" />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>ผลการประเมินวิทยากร (จาก HR/Admin)</label>
+                <textarea rows={3} value={formData.instructor_evaluation_result} onChange={e => setFormData({...formData, instructor_evaluation_result: e.target.value})} style={{resize: 'vertical'}} />
               </div>
 
               <div className={styles.modalActions}>

@@ -511,7 +511,7 @@ export default function AdminAssetsPage() {
                                         <td>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                                 <span className={`${styles.statusBadge} ${isOverdue ? styles.damaged : styles[effectiveStatus]}`}>
-                                                    {isOverdue ? "เลยกำหนดคืน" :
+                                                    {isOverdue ? "ยังไม่คืนรถ" :
                                                         effectiveStatus === "available" ? "พร้อมใช้งาน" :
                                                             effectiveStatus === "borrowed" ? "ถูกยืม" :
                                                                 effectiveStatus === "damaged" ? "ชำรุด" :
