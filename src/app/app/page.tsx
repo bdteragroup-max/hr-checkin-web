@@ -773,6 +773,7 @@ export default function AppPage() {
                 DUPLICATE_TODAY: "วันนี้ทำรายการแล้ว",
                 MUST_CHECKIN_FIRST: "ต้อง Check-in ก่อน",
                 WORK_PLAN_REQUIRED: "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ",
+                LATE_CHECKIN_BLOCKED: "ไม่อนุญาตให้เช็คอินหลัง 12:00 น. หากไม่มีการยื่นใบลาช่วงเช้า",
             };
             const errMsg = errMap[data?.error] || data?.error || "เกิดข้อผิดพลาด";
             showAlert(errMsg);

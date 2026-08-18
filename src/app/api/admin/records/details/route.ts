@@ -224,7 +224,7 @@ export async function GET(req: Request) {
                     status += ` (ตจว.)`;
                 }
             } else if (outRecord) {
-                status = "ไม่เช็คอิน";
+                status = "ไม่เช็คอิน (ขาดช่วงเช้า)";
             }
 
             const inLocs = new Set<string>();

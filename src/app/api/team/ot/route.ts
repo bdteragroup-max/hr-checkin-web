@@ -75,7 +75,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { id, status, approved_hours } = body;
+        const { id, status, approved_hours, approved_start_time, approved_end_time } = body;
 
         if (!id || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
@@ -101,8 +101,10 @@ export async function PUT(request: Request) {
             supervisor_id: (decoded as any).emp_id
         };
 
-        if (status === "approved" && approved_hours !== undefined) {
-            updateData.approved_hours = Number(approved_hours);
+        if (status === "approved") {
+            if (approved_hours !== undefined) updateData.approved_hours = Number(approved_hours);
+            if (approved_start_time) updateData.approved_start_time = new Date(approved_start_time);
+            if (approved_end_time) updateData.approved_end_time = new Date(approved_end_time);
         }
 
         const supervisor = await prisma.employees.findUnique({

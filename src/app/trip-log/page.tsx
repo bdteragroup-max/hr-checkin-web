@@ -295,7 +295,9 @@ export default function TripLogPage() {
             await refreshHistory();
         } catch (e: any) {
             let msg = e.message || "เกิดข้อผิดพลาดในการบันทึก";
+            if (msg === "MUST_CHECKIN_FIRST") msg = "ต้องลงเวลาเข้างาน (Check-in) ประจำวันก่อน";
             if (msg === "WORK_PLAN_REQUIRED") msg = "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ";
+            if (msg === "LATE_CHECKIN_BLOCKED") msg = "ไม่อนุญาตให้เช็คอินหลัง 12:00 น. หากไม่มีการยื่นใบลาช่วงเช้า";
             setAlert({ visible: true, message: msg, type: "error" });
             setStep('log');
         }

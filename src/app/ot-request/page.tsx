@@ -51,6 +51,52 @@ function AlertModalComponent({ alert, onClose }: { alert: AlertModal; onClose: (
     );
 }
 
+interface ConfirmModal { visible: boolean; message: string; onConfirm: () => void; }
+
+function ConfirmModalComponent({ confirmState, onClose }: { confirmState: ConfirmModal; onClose: () => void }) {
+    useEffect(() => {
+        if (!confirmState.visible) return;
+        function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [confirmState.visible, onClose]);
+
+    if (!confirmState.visible) return null;
+
+    return (
+        <div className={styles.alertOverlay} onClick={onClose} role="dialog" aria-modal="true">
+            <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
+                <div className={`${styles.alertIcon} ${styles.alertIconErr}`} style={{ color: "var(--text3)", background: "var(--surface3)" }}>
+                    <ExclamationTriangleIcon width={48} />
+                </div>
+                <div className={styles.alertTitle} style={{ color: "var(--text)", fontSize: "20px" }}>
+                    ยืนยันการทำรายการ
+                </div>
+                <div className={styles.alertMsg} style={{ marginBottom: "24px" }}>{confirmState.message}</div>
+                <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+                    <button
+                        className={styles.alertBtn}
+                        style={{ background: "var(--surface3)", color: "var(--text2)", border: "1px solid var(--line)" }}
+                        onClick={onClose}
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        className={`${styles.alertBtn} ${styles.alertBtnErr}`}
+                        onClick={() => {
+                            confirmState.onConfirm();
+                            onClose();
+                        }}
+                        autoFocus
+                    >
+                        ตกลง
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function EmployeeOtPage() {
     const [dateFor, setDateFor] = useState("");
     const [startHour, setStartHour] = useState("17");
@@ -58,9 +104,14 @@ export default function EmployeeOtPage() {
     const [endHour, setEndHour] = useState("20");
     const [endMin, setEndMin] = useState("00");
     const [reason, setReason] = useState("");
+    const [isForgotClock, setIsForgotClock] = useState(false);
+    const [forgotReason, setForgotReason] = useState("");
+    const [proofFile, setProofFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState<AlertModal>({ visible: false, message: "", type: "error" });
     const closeAlert = () => setAlert(p => ({ ...p, visible: false }));
+    const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ visible: false, message: "", onConfirm: () => {} });
+    const closeConfirm = () => setConfirmModal(p => ({ ...p, visible: false }));
 
     function showAlert(message: string, type: "error" | "ok" = "error") {
         setAlert({ visible: true, message, type });
@@ -74,6 +125,9 @@ export default function EmployeeOtPage() {
         total_hours: number;
         reason: string;
         status: string;
+        is_forgot_clock: boolean;
+        forgot_reason: string | null;
+        proof_url: string | null;
     }[]>([]);
 
     async function loadHistory() {
@@ -90,23 +144,27 @@ export default function EmployeeOtPage() {
         loadHistory();
     }, []);
 
-    async function handleDelete(id: number) {
-        if (!confirm("คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่?")) return;
-
-        try {
-            const res = await fetch(`/api/employee/ot?id=${id}`, {
-                method: "DELETE"
-            });
-            if (res.ok) {
-                loadHistory();
-                showAlert("ยกเลิกคำขอสำเร็จ", "ok");
-            } else {
-                const d = await res.json();
-                showAlert(d.error || "ลบไม่สำเร็จ", "error");
+    function handleDelete(id: number) {
+        setConfirmModal({
+            visible: true,
+            message: "คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่?",
+            onConfirm: async () => {
+                try {
+                    const res = await fetch(`/api/employee/ot?id=${id}`, {
+                        method: "DELETE"
+                    });
+                    if (res.ok) {
+                        loadHistory();
+                        showAlert("ยกเลิกคำขอสำเร็จ", "ok");
+                    } else {
+                        const d = await res.json();
+                        showAlert(d.error || "ลบไม่สำเร็จ", "error");
+                    }
+                } catch (e) {
+                    showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
+                }
             }
-        } catch (e) {
-            showAlert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์", "error");
-        }
+        });
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -126,6 +184,46 @@ export default function EmployeeOtPage() {
 
         setLoading(true);
 
+        let proofUrl = null;
+        if (isForgotClock) {
+            if (!forgotReason.trim()) {
+                showAlert("กรุณาระบุเหตุผลที่ลืมลงเวลา", "error");
+                setLoading(false);
+                return;
+            }
+            if (proofFile) {
+                if (proofFile.size > 5 * 1024 * 1024) {
+                    showAlert("ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB", "error");
+                    setLoading(false);
+                    return;
+                }
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (!allowedTypes.includes(proofFile.type)) {
+                    showAlert("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP)", "error");
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    const fd = new FormData();
+                    fd.append("file", proofFile);
+                    const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+                    if (uploadRes.ok) {
+                        const upData = await uploadRes.json();
+                        proofUrl = upData.url;
+                    } else {
+                        showAlert("อัพโหลดรูปภาพไม่สำเร็จ", "error");
+                        setLoading(false);
+                        return;
+                    }
+                } catch (e) {
+                    showAlert("เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ", "error");
+                    setLoading(false);
+                    return;
+                }
+            }
+        }
+
         try {
             const res = await fetch("/api/employee/ot", {
                 method: "POST",
@@ -136,7 +234,10 @@ export default function EmployeeOtPage() {
                     date_for: dateFor,
                     start_time: startDT.toISOString(),
                     end_time: endDT.toISOString(),
-                    reason
+                    reason,
+                    is_forgot_clock: isForgotClock,
+                    forgot_reason: isForgotClock ? forgotReason : null,
+                    proof_url: proofUrl
                 })
             });
 
@@ -144,6 +245,9 @@ export default function EmployeeOtPage() {
                 showAlert("ส่งคำขออนุมัติ OT สำเร็จ!", "ok");
                 setDateFor("");
                 setReason("");
+                setIsForgotClock(false);
+                setForgotReason("");
+                setProofFile(null);
                 loadHistory(); // refresh history
             } else {
                 const data = await res.json();
@@ -247,6 +351,67 @@ export default function EmployeeOtPage() {
                             />
                         </div>
 
+                        <div style={{ marginTop: 16 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 600 }}>
+                                <input
+                                    type="checkbox"
+                                    checked={isForgotClock}
+                                    onChange={e => setIsForgotClock(e.target.checked)}
+                                    style={{ width: 18, height: 18 }}
+                                />
+                                ลืมลงเวลาเข้า/ออกงาน (Forgot Check-in/out)
+                            </label>
+                        </div>
+
+                        {isForgotClock && (
+                            <div style={{ marginTop: 16, padding: 16, backgroundColor: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca' }}>
+                                <div style={{ marginBottom: 12 }}>
+                                    <label className={styles.label}>เหตุผลที่ลืมลงเวลา *</label>
+                                    <textarea
+                                        className={styles.textarea}
+                                        placeholder="ระบุเหตุผล เช่น โทรศัพท์แบตหมด, ออกไปพบลูกค้า..."
+                                        value={forgotReason}
+                                        onChange={e => setForgotReason(e.target.value)}
+                                        required={isForgotClock}
+                                        style={{ borderColor: '#fca5a5' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={styles.label}>รูปถ่ายหลักฐาน (ถ้ามี)</label>
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                if (file.size > 5 * 1024 * 1024) {
+                                                    showAlert("ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB", "error");
+                                                    e.target.value = "";
+                                                    setProofFile(null);
+                                                    return;
+                                                }
+                                                const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                                                if (!allowedTypes.includes(file.type)) {
+                                                    showAlert("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP)", "error");
+                                                    e.target.value = "";
+                                                    setProofFile(null);
+                                                    return;
+                                                }
+                                                setProofFile(file);
+                                            } else {
+                                                setProofFile(null);
+                                            }
+                                        }}
+                                        className={styles.input}
+                                        style={{ borderColor: '#fca5a5', backgroundColor: '#fff' }}
+                                    />
+                                    <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>
+                                        * ขนาดไฟล์ไม่เกิน 5MB รองรับ JPG, PNG, WEBP เท่านั้น
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             className={styles.submitBtn}
@@ -279,6 +444,17 @@ export default function EmployeeOtPage() {
                                             <span className={styles.historyHours}>{formatDecimalHoursToHHMM(item.total_hours)}</span>
                                         </div>
                                         <div className={styles.historyReason}><InformationCircleIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />เหตุผล: {item.reason}</div>
+                                        {item.is_forgot_clock && (
+                                            <div style={{ marginTop: 4, fontSize: 13, color: '#dc2626' }}>
+                                                <InformationCircleIcon width={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
+                                                ลืมลงเวลา: {item.forgot_reason}
+                                                {item.proof_url ? (
+                                                    <a href={item.proof_url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, textDecoration: 'underline', color: '#2563eb' }}>ดูรูปหลักฐาน</a>
+                                                ) : (
+                                                    <span style={{ marginLeft: 8, color: '#9ca3af' }}>(ไม่มีภาพแนบ)</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={styles.historyRight}>
                                         {item.status === "pending_supervisor" && <span className={styles.statusBadgePending} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon width={14} /> รอหัวหน้าอนุมัติ</span>}
@@ -302,6 +478,7 @@ export default function EmployeeOtPage() {
                     </div>
                 )}
             </div>
+            <ConfirmModalComponent confirmState={confirmModal} onClose={closeConfirm} />
         </div>
     );
 }

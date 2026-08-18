@@ -5,6 +5,35 @@ import { cookies } from "next/headers";
 import { getTodayBangkokISO, getNowBangkok, getBangkokWallClock } from "@/utils/time";
 import { calcLateOT } from "@/utils/checkin";
 
+// Helper to determine if a check-in should be blocked
+async function isCheckinBlockedAfterNoon(empId: string, dateKey: Date, prismaClient: any): Promise<boolean> {
+    const bkkNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    if (bkkNow.getHours() < 12) return false;
+
+    // Check company holidays first
+    const holiday = await prismaClient.holidays.findFirst({ where: { date: dateKey } });
+    if (holiday) return false;
+
+    // Check morning leave requests
+    const y = bkkNow.getFullYear();
+    const m = String(bkkNow.getMonth() + 1).padStart(2, '0');
+    const d = String(bkkNow.getDate()).padStart(2, '0');
+    // 12:00 PM Bangkok is 05:00 AM UTC
+    const noonTodayUTC = new Date(`${y}-${m}-${d}T05:00:00.000Z`);
+
+    const morningLeave = await prismaClient.leave_requests.findFirst({
+        where: {
+            emp_id: empId,
+            status: { not: "rejected" },
+            start_date: { lte: dateKey },
+            end_date: { gte: dateKey },
+            start_at: { lt: noonTodayUTC },
+        }
+    });
+
+    return !morningLeave; // If no morning leave, block
+}
+
 type CheckType = "Check-in" | "Check-out" | "Project-In" | "Project-Out" | "Offsite-In" | "Offsite-Out" | "Trip-Update";
 
 // Haversine
@@ -197,8 +226,8 @@ export async function POST(req: Request) {
             include: { job_positions: { select: { is_ot_eligible: true } } }
         }),
         prisma.daily_work_plans.findFirst({
-            where: { 
-                emp_id: auth.emp.emp_id, 
+            where: {
+                emp_id: auth.emp.emp_id,
                 date: {
                     gte: new Date(`${getTodayBangkokISO()}T00:00:00.000Z`),
                     lte: new Date(`${getTodayBangkokISO()}T23:59:59.999Z`)
@@ -218,6 +247,30 @@ export async function POST(req: Request) {
     if (isInAction && !dailyPlan && !auth.emp.is_checkin_exempt) {
         console.log(`[CHECKIN_403] Missing plan for ${auth.emp.emp_id} on ${getTodayBangkokISO()} (${date_key.toISOString()}). Action: ${type}`);
         return NextResponse.json({ error: "WORK_PLAN_REQUIRED", message: "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ" }, { status: 403 });
+    }
+
+    // Block Late Check-ins after 12:00 PM without morning leave
+    if (isInAction && type !== "Trip-Update") {
+        const isBlocked = await isCheckinBlockedAfterNoon(auth.emp.emp_id, date_key, prisma);
+        if (isBlocked) {
+            console.log(`[CHECKIN_403] Check-in blocked after 12:00 PM for ${auth.emp.emp_id}. No morning leave.`);
+            return NextResponse.json({
+                error: "LATE_CHECKIN_BLOCKED",
+                message: "ไม่อนุญาตให้เช็คอินหลัง 12:00 น. หากไม่มีการยื่นใบลาช่วงเช้า"
+            }, { status: 403 });
+        }
+    }
+
+    // Block Late Check-ins after 12:00 PM without morning leave
+    if (isInAction && type !== "Trip-Update") {
+        const isBlocked = await isCheckinBlockedAfterNoon(auth.emp.emp_id, date_key, prisma);
+        if (isBlocked) {
+            console.log(`[CHECKIN_403] Check-in blocked after 12:00 PM for ${auth.emp.emp_id}. No morning leave.`);
+            return NextResponse.json({
+                error: "LATE_CHECKIN_BLOCKED",
+                message: "ไม่อนุญาตให้เช็คอินหลัง 12:00 น. หากไม่มีการยื่นใบลาช่วงเช้า"
+            }, { status: 403 });
+        }
     }
 
     const isProject = type.startsWith("Project");
@@ -246,8 +299,8 @@ export async function POST(req: Request) {
 
     // Time-based calculations
     const time_key = getBangkokWallClock();
-    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") || type === "Trip-Update" 
-        ? { status: "ontime", min: 0, label: "ตรงเวลา" } 
+    const lateInfo = type.startsWith("Project") || type.startsWith("Offsite") || type === "Trip-Update"
+        ? { status: "ontime", min: 0, label: "ตรงเวลา" }
         : calcLateOT(type as "Check-in" | "Check-out");
 
     // 🔥 OPTIMIZATION: Validation Logic in-memory using todaysCheckins
@@ -275,11 +328,11 @@ export async function POST(req: Request) {
     // For midnight shifts (00:00–06:00), the checkout record should be stored
     // under the same date_key as the check-in (yesterday), so the shift stays together.
     const isAnyOut = type.endsWith("-Out") || type === "Check-out";
-    
-    const effective_date_key = 
-        isPostMidnight && isAnyOut && 
-        todaysCheckins.every(c => !c.type.endsWith("-In") && c.type !== "Check-in" && c.type !== "Trip-Update") && 
-        yesterdaysCheckins.some(c => c.type.endsWith("-In") || c.type === "Check-in" || c.type === "Trip-Update")
+
+    const effective_date_key =
+        isPostMidnight && isAnyOut &&
+            todaysCheckins.every(c => !c.type.endsWith("-In") && c.type !== "Check-in" && c.type !== "Trip-Update") &&
+            yesterdaysCheckins.some(c => c.type.endsWith("-In") || c.type === "Check-in" || c.type === "Trip-Update")
             ? yesterday_date_key
             : date_key;
 
@@ -330,7 +383,7 @@ export async function POST(req: Request) {
                 const m = String(effective_date_key.getMonth() + 1).padStart(2, '0');
                 const d = String(effective_date_key.getDate()).padStart(2, '0');
                 const sourceKey = `checkin:${auth.emp.emp_id}:${y}-${m}-${d}`;
-                
+
                 const existingLedger = await tx.coin_ledgers.findUnique({
                     where: { source_key: sourceKey }
                 });
@@ -352,8 +405,8 @@ export async function POST(req: Request) {
 
                         // Check if they were on time on prevWorkingDay
                         const prevCheckin = await tx.checkins.findFirst({
-                            where: { 
-                                emp_id: auth.emp.emp_id, 
+                            where: {
+                                emp_id: auth.emp.emp_id,
                                 date_key: prevWorkingDay,
                                 type: { in: ["Check-in", "Project-In", "Offsite-In"] }
                             },
@@ -392,7 +445,7 @@ export async function POST(req: Request) {
                         let milestoneBonus = 0;
                         let milestoneSourceKey = "";
                         let milestoneDesc = "";
-                        
+
                         if (newStreak === 7) {
                             milestoneBonus = 3;
                             milestoneSourceKey = `streak_milestone:${auth.emp.emp_id}:7:${y}-${m}-${d}`;
@@ -560,7 +613,7 @@ export async function POST(req: Request) {
                     if (approvedOt) {
                         const actualOut = new Date();
                         const requestedEnd = new Date(approvedOt.end_time);
-                        
+
                         // Calculate diff in minutes
                         const diffMins = Math.floor((actualOut.getTime() - requestedEnd.getTime()) / 60000);
                         const hasDiscrepancy = diffMins < -5; // Left more than 5 mins early
@@ -604,13 +657,13 @@ export async function POST(req: Request) {
                     const now = getBangkokWallClock();
                     const workEndH = 17;
                     const workEndM = 0;
-                    
+
                     const otThresholdH = 17;
                     const otThresholdM = 30; // OT eligibility starts after 17:30
-                    
+
                     const nowMin = now.getHours() * 60 + now.getMinutes();
                     const thresholdMin = otThresholdH * 60 + otThresholdM;
-                    
+
                     if (nowMin >= thresholdMin) {
                         // Check if OT request already exists for today
                         const existingOt = await prisma.ot_requests.findFirst({
@@ -620,7 +673,7 @@ export async function POST(req: Request) {
                                 status: { not: "rejected" }
                             }
                         });
-                        
+
                         if (!existingOt) {
                             const y = effective_date_key.getFullYear();
                             const m = String(effective_date_key.getMonth() + 1).padStart(2, '0');
@@ -628,9 +681,9 @@ export async function POST(req: Request) {
                             const bkkDateStr = `${y}-${m}-${d}`;
                             const startTime = new Date(`${bkkDateStr}T${String(workEndH).padStart(2, '0')}:${String(workEndM).padStart(2, '0')}:00+07:00`);
                             const actualEndTime = new Date(); // Current UTC time
-                            
+
                             const totalHours = (actualEndTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-                            
+
                             await prisma.ot_requests.create({
                                 data: {
                                     emp_id: auth.emp.emp_id,

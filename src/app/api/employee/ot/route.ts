@@ -22,7 +22,11 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { date_for, start_time, end_time, reason } = body;
+        const { date_for, start_time, end_time, reason, is_forgot_clock, forgot_reason, proof_url } = body;
+
+        if (is_forgot_clock && (!forgot_reason || forgot_reason.trim() === "")) {
+            return NextResponse.json({ error: "คุณเลือกลืมลงเวลา กรุณาระบุเหตุผลที่ลืมลงเวลา" }, { status: 400 });
+        }
 
         // Calculate hours
         const start = new Date(start_time);
@@ -64,34 +68,44 @@ export async function POST(request: Request) {
 
         const shiftCheckins = [...baseCheckins, ...nextDayCheckins.filter(c => c.type.endsWith("-Out") || c.type === "Check-out")];
 
-        if (shiftCheckins.length === 0) {
-            return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในกะที่คุณเลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT" }, { status: 400 });
-        }
-
-        const earliestIn = shiftCheckins[0].timestamp;
-        const lastAction = shiftCheckins[shiftCheckins.length - 1];
-        const latestOut = lastAction.timestamp;
-
-        // Ensure the user has actually checked out
-        if (lastAction.type.endsWith("-In") || lastAction.type === "Check-in" || lastAction.type === "Trip-Update") {
-            return NextResponse.json({ error: "คุณต้องทำการ 'บันทึกออก (Check-out)' ให้เรียบร้อยก่อน จึงจะสามารถส่งคำขอ OT ได้" }, { status: 400 });
-        }
-
-        // Check window (Strict Rejection)
-        if (start < earliestIn || end > latestOut) {
-            const rangeStr = `${new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })} - ${new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })}`;
-            return NextResponse.json({ 
-                error: `เวลา OT ต้องอยู่ระหว่างเวลาที่เช็คอินและเช็คเอาท์จริงเท่านั้น (เวลาบันทึกจริงของคุณคือ: ${rangeStr})`
-            }, { status: 400 });
-        }
-
-        // Check Discrepancy (Warning for supervisor)
-        // If OT hours > 5 OR (OT hours / Total stay duration) > 0.7
-        const stayMs = latestOut.getTime() - earliestIn.getTime();
-        const stayHrs = stayMs / (1000 * 60 * 60);
+        let earliestIn = null;
+        let latestOut = null;
         let hasDiscrepancy = false;
-        if (diffHrs > 5) hasDiscrepancy = true;
-        else if (stayHrs > 0 && (diffHrs / stayHrs) > 0.75) hasDiscrepancy = true;
+
+        if (!is_forgot_clock) {
+            if (shiftCheckins.length === 0) {
+                return NextResponse.json({ error: "ไม่พบข้อมูลการลงเวลาในกะที่คุณเลือก กรุณาเช็คอิน-เช็คเอาท์ให้เรียบร้อยก่อนส่งคำขอ OT หรือทำเครื่องหมาย 'ลืมลงเวลาเข้า/ออกงาน'" }, { status: 400 });
+            }
+
+            earliestIn = shiftCheckins[0].timestamp;
+            const lastAction = shiftCheckins[shiftCheckins.length - 1];
+            latestOut = lastAction.timestamp;
+
+            // Ensure the user has actually checked out
+            if (lastAction.type.endsWith("-In") || lastAction.type === "Check-in" || lastAction.type === "Trip-Update") {
+                return NextResponse.json({ error: "คุณต้องทำการ 'บันทึกออก (Check-out)' ให้เรียบร้อยก่อน จึงจะสามารถส่งคำขอ OT ได้ หรือทำเครื่องหมาย 'ลืมลงเวลาเข้า/ออกงาน'" }, { status: 400 });
+            }
+
+            // Check window (Strict Rejection)
+            if (start < earliestIn || end > latestOut) {
+                const rangeStr = `${new Date(earliestIn).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })} - ${new Date(latestOut).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit', timeZone: "Asia/Bangkok" })}`;
+                return NextResponse.json({ 
+                    error: `เวลา OT ต้องอยู่ระหว่างเวลาที่เช็คอินและเช็คเอาท์จริงเท่านั้น (เวลาบันทึกจริงของคุณคือ: ${rangeStr})`
+                }, { status: 400 });
+            }
+
+            // Check Discrepancy (Warning for supervisor)
+            const stayMs = latestOut.getTime() - earliestIn.getTime();
+            const stayHrs = stayMs / (1000 * 60 * 60);
+            if (diffHrs > 5) hasDiscrepancy = true;
+            else if (stayHrs > 0 && (diffHrs / stayHrs) > 0.75) hasDiscrepancy = true;
+        } else {
+            if (shiftCheckins.length > 0) {
+                earliestIn = shiftCheckins[0].timestamp;
+                latestOut = shiftCheckins[shiftCheckins.length - 1].timestamp;
+            }
+            hasDiscrepancy = true;
+        }
 
         // Get employee info
         const emp = await prisma.employees.findUnique({
@@ -121,8 +135,11 @@ export async function POST(request: Request) {
                 supervisor_id: emp.supervisor_id,
                 actual_start_at: earliestIn,
                 actual_end_at: latestOut,
-                has_discrepancy: hasDiscrepancy
-            }
+                has_discrepancy: hasDiscrepancy,
+                is_forgot_clock: Boolean(is_forgot_clock),
+                forgot_reason: is_forgot_clock ? forgot_reason : null,
+                proof_url: is_forgot_clock ? proof_url : null
+            } as any
         });
 
         if (emp.supervisor?.line_user_id) {
@@ -136,8 +153,10 @@ export async function POST(request: Request) {
                 totalHours: Number(diffHrs),
                 reason: reason || "",
                 hasDiscrepancy: hasDiscrepancy,
-                actualIn: formatTime24h(earliestIn),
-                actualOut: formatTime24h(latestOut)
+                actualIn: earliestIn ? formatTime24h(earliestIn) : "-",
+                actualOut: latestOut ? formatTime24h(latestOut) : "-",
+                isForgotClock: Boolean(is_forgot_clock),
+                forgotReason: is_forgot_clock ? forgot_reason : ""
             }).catch(console.error);
         }
 

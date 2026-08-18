@@ -32,28 +32,26 @@ model branches {
 }
 
 model checkins {
-  id                      BigInt   @id @default(autoincrement())
-  timestamp               DateTime @default(now()) @db.Timestamptz(6)
-  date_key                DateTime @db.Date
-  time_key                DateTime @db.Time(6)
-  emp_id                  String   @db.VarChar(50)
-  name                    String   @db.VarChar(200)
-  type                    String   @db.VarChar(50)
-  branch_name             String   @db.VarChar(200)
-  lat                     Decimal? @db.Decimal(10, 8)
-  lon                     Decimal? @db.Decimal(11, 8)
-  accuracy                Int?
-  distance                Int?
-  capture_mode            String   @default("webrtc") @db.VarChar(50)
-  late_status             String?  @db.VarChar(50)
-  late_min                Int?
-  photo_url               String?
-  project_name            String?  @db.VarChar(200)
-  remark                  String?
-  customer_id             Int?
-  is_trip                 Boolean? @default(false)
-  line_pay_channel_id     String?  @db.VarChar(50)
-  line_pay_channel_secret String?  @db.VarChar(100)
+  id           BigInt   @id @default(autoincrement())
+  timestamp    DateTime @default(now()) @db.Timestamptz(6)
+  date_key     DateTime @db.Date
+  time_key     DateTime @db.Time(6)
+  emp_id       String   @db.VarChar(50)
+  name         String   @db.VarChar(200)
+  type         String   @db.VarChar(50)
+  branch_name  String   @db.VarChar(200)
+  lat          Decimal? @db.Decimal(10, 8)
+  lon          Decimal? @db.Decimal(11, 8)
+  accuracy     Int?
+  distance     Int?
+  capture_mode String   @default("webrtc") @db.VarChar(50)
+  late_status  String?  @db.VarChar(50)
+  late_min     Int?
+  photo_url    String?
+  project_name String?  @db.VarChar(200)
+  remark       String?
+  customer_id  Int?
+  is_trip      Boolean? @default(false)
 
   @@index([branch_name], map: "idx_checkins_branch")
   @@index([date_key], map: "idx_checkins_date")
@@ -61,29 +59,29 @@ model checkins {
 }
 
 model ot_requests {
-  id                  Int       @id @default(autoincrement())
-  emp_id              String    @db.VarChar(20)
-  date_for            DateTime  @db.Date
-  start_time          DateTime  @db.Timestamptz(6)
-  end_time            DateTime  @db.Timestamptz(6)
-  total_hours         Decimal   @db.Decimal(5, 2)
-  reason              String?
-  status              String    @default("pending") @db.VarChar(20)
-  supervisor_id       String?   @db.VarChar(20)
-  approved_at         DateTime? @db.Timestamptz(6)
-  created_at          DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
-  approved_hours      Decimal?  @db.Decimal(5, 2)
-  supervisor_remark   String?
-  actual_end_at       DateTime? @db.Timestamptz(6)
-  actual_start_at     DateTime? @db.Timestamptz(6)
-  has_discrepancy     Boolean   @default(false)
-  approved_end_time   DateTime? @db.Timestamptz(6)
+  id                Int       @id @default(autoincrement())
+  emp_id            String    @db.VarChar(20)
+  date_for          DateTime  @db.Date
+  start_time        DateTime  @db.Timestamptz(6)
+  end_time          DateTime  @db.Timestamptz(6)
+  total_hours       Decimal   @db.Decimal(5, 2)
+  reason            String?
+  status            String    @default("pending") @db.VarChar(20)
+  supervisor_id     String?   @db.VarChar(20)
+  approved_at       DateTime? @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  approved_hours    Decimal?  @db.Decimal(5, 2)
+  supervisor_remark String?
+  actual_end_at     DateTime? @db.Timestamptz(6)
+  actual_start_at   DateTime? @db.Timestamptz(6)
+  has_discrepancy   Boolean   @default(false)
+  is_forgot_clock   Boolean   @default(false)
+  forgot_reason     String?
+  proof_url         String?
   approved_start_time DateTime? @db.Timestamptz(6)
-  forgot_reason       String?
-  is_forgot_clock     Boolean   @default(false)
-  proof_url           String?
-  employee            employees @relation("EmployeeToOtRequests", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  approved_end_time   DateTime? @db.Timestamptz(6)
+  employee          employees @relation("EmployeeToOtRequests", fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
   @@index([emp_id, date_for])
   @@index([status])
@@ -1400,8 +1398,6 @@ model User {
   PushSubscription                                                PushSubscription[]
   Quotation                                                       Quotation[]
   Schedule                                                        Schedule[]
-  ServiceCallLog_ServiceCallLog_createdByToUser                   ServiceCallLog[]       @relation("ServiceCallLog_createdByToUser")
-  ServiceCallLog_ServiceCallLog_responsibleIdToUser               ServiceCallLog[]       @relation("ServiceCallLog_responsibleIdToUser")
   ServiceSchedule                                                 ServiceSchedule[]
   SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]           @relation("SiteSurvey_estimatedByUserIdToUser")
   SiteSurvey                                                      SiteSurvey[]
@@ -2347,7 +2343,6 @@ model BDProject {
   completedAt                      DateTime?    @db.Timestamptz(6)
   tags                             String[]     @default([])
   supportTicketId                  String?
-  deadlineNotifiedAt               DateTime?    @db.Timestamptz(6)
   BDActivity                       BDActivity[]
   User_BDProject_ownerIdToUser     User?        @relation("BDProject_ownerIdToUser", fields: [ownerId], references: [id])
   BDProject                        BDProject?   @relation("BDProjectToBDProject", fields: [parentId], references: [id])
@@ -2360,24 +2355,23 @@ model BDProject {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model BDTask {
-  id                 String    @id
-  projectId          String
-  name               String
-  status             String    @default("PENDING")
-  dueDate            DateTime? @db.Timestamptz(6)
-  orderIndex         Int
-  checklistState     Json?
-  assigneeId         String?
-  blockedReason      String?
-  waitingOn          String?
-  completedAt        DateTime? @db.Timestamptz(6)
-  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @db.Timestamptz(6)
-  blockedAt          DateTime? @db.Timestamptz(6)
-  supportTicketId    String?
-  deadlineNotifiedAt DateTime? @db.Timestamptz(6)
-  User               User?     @relation(fields: [assigneeId], references: [id])
-  BDProject          BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String    @id
+  projectId       String
+  name            String
+  status          String    @default("PENDING")
+  dueDate         DateTime? @db.Timestamptz(6)
+  orderIndex      Int
+  checklistState  Json?
+  assigneeId      String?
+  blockedReason   String?
+  waitingOn       String?
+  completedAt     DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  blockedAt       DateTime? @db.Timestamptz(6)
+  supportTicketId String?
+  User            User?     @relation(fields: [assigneeId], references: [id])
+  BDProject       BDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2485,36 +2479,34 @@ model CabinetQCReport {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model CustomerSatisfaction {
-  id               String    @id
-  surveyRound      Int
-  surveyYear       Int
-  surveyMethod     String
-  surveyBy         String
-  surveyDate       DateTime  @default(now())
-  companyId        String
-  province         String
-  phone            String
-  quotationIds     String[]
-  scorePrice       Int
-  scoreQuality     Int
-  scoreDelivery    Int
-  scoreSales       Int
-  scoreSupport     Int
-  scoreAfterSales  Int
-  scoreAverage     Float
-  purchaseReasons  String[]
-  suggestions      String?
-  analysisNote     String?
-  actionPlan       String?
-  sharedToSales    Boolean   @default(false)
-  sharedToService  Boolean   @default(false)
-  sharedAt         DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime
-  callNotes        String?
-  criteriaComments Json?
-  Company          Company   @relation(fields: [companyId], references: [id])
-  User             User      @relation(fields: [surveyBy], references: [id])
+  id              String    @id
+  surveyRound     Int
+  surveyYear      Int
+  surveyMethod    String
+  surveyBy        String
+  surveyDate      DateTime  @default(now())
+  companyId       String
+  province        String
+  phone           String
+  quotationIds    String[]
+  scorePrice      Int
+  scoreQuality    Int
+  scoreDelivery   Int
+  scoreSales      Int
+  scoreSupport    Int
+  scoreAfterSales Int
+  scoreAverage    Float
+  purchaseReasons String[]
+  suggestions     String?
+  analysisNote    String?
+  actionPlan      String?
+  sharedToSales   Boolean   @default(false)
+  sharedToService Boolean   @default(false)
+  sharedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  Company         Company   @relation(fields: [companyId], references: [id])
+  User            User      @relation(fields: [surveyBy], references: [id])
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2780,34 +2772,4 @@ model ExternalApiKey {
   revokedAt  DateTime? @db.Timestamptz(6)
 
   @@index([hashedKey])
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model ServiceCallLog {
-  id                                      String    @id
-  caseNumber                              String    @unique
-  legacyNo                                Int?
-  receivedDate                            DateTime  @db.Date
-  companyName                             String
-  contactName                             String
-  contactPhone                            String?
-  inverterModel                           String
-  reportedIssue                           String
-  analyzedCause                           String?
-  recommendedSolution                     String?
-  status                                  String    @default("Received notification")
-  followUpDate                            DateTime? @db.Date
-  followUpNotifiedAt                      DateTime? @db.Timestamptz(6)
-  responsibleId                           String?
-  responsibleName                         String?
-  notes                                   String?
-  createdBy                               String
-  createdAt                               DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt                               DateTime  @default(now()) @db.Timestamptz(6)
-  User_ServiceCallLog_createdByToUser     User      @relation("ServiceCallLog_createdByToUser", fields: [createdBy], references: [id])
-  User_ServiceCallLog_responsibleIdToUser User?     @relation("ServiceCallLog_responsibleIdToUser", fields: [responsibleId], references: [id])
-
-  @@index([followUpDate])
-  @@index([responsibleId])
-  @@index([status])
 }

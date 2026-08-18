@@ -366,6 +366,8 @@ export async function sendOtApprovalFlexMessage(
     actualOut?: string;
     supervisorName?: string;
     approvedBy?: string;
+    isForgotClock?: boolean;
+    forgotReason?: string;
   },
   isProcessed: boolean = false,
   replyToken?: string
@@ -719,6 +721,8 @@ export async function sendEmployeeOtStatusNotification(
     status: "pending_supervisor" | "pending_hr" | "approved" | "rejected";
     approvedBy?: string;
     rejectionReason?: string;
+    isForgotClock?: boolean;
+    forgotReason?: string;
   }
 ) {
   // Format names with nicknames
