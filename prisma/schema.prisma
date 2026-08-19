@@ -793,6 +793,7 @@ model Company {
   Contact               Contact[]
   CustomerSatisfaction  CustomerSatisfaction[]
   GoodsReturn           GoodsReturn[]
+  MarketingLead         MarketingLead[]
   Order                 Order[]
   Quotation             Quotation[]
   Schedule              Schedule[]
@@ -817,16 +818,17 @@ model Competitor {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Contact {
-  id             String      @id
+  id             String          @id
   companyId      String
   contactName    String
   position       String?
   mobilePhone    String?
   email          String?
-  isETaxReceiver Boolean     @default(false)
-  createdAt      DateTime    @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime    @db.Timestamptz(6)
-  Company        Company     @relation(fields: [companyId], references: [id])
+  isETaxReceiver Boolean         @default(false)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime        @db.Timestamptz(6)
+  Company        Company         @relation(fields: [companyId], references: [id])
+  MarketingLead  MarketingLead[]
   Quotation      Quotation[]
 
   @@index([companyId])
@@ -1866,8 +1868,17 @@ model MarketingLead {
   updatedAt                                DateTime   @default(now()) @db.Timestamptz(6)
   assignedToId                             String?
   isContacted                              Boolean    @default(false)
+  campaignSource                           String?
+  companyName                              String?
+  email                                    String?
+  leadSource                               String?
+  matchedCompanyId                         String?
+  matchedContactId                         String?
+  taxId                                    String?
   User_MarketingLead_assignedToIdToUser    User?      @relation("MarketingLead_assignedToIdToUser", fields: [assignedToId], references: [id])
   User_MarketingLead_createdByUserIdToUser User       @relation("MarketingLead_createdByUserIdToUser", fields: [createdByUserId], references: [id])
+  Company                                  Company?   @relation(fields: [matchedCompanyId], references: [id])
+  Contact                                  Contact?   @relation(fields: [matchedContactId], references: [id])
   Quotation                                Quotation? @relation(fields: [quotationId], references: [id])
 }
 
@@ -2606,6 +2617,8 @@ model KanbanCard {
   engineeringReviewers String[]            @default([])
   isCompleted          Boolean             @default(false)
   salespersonId        String?
+  postingChannels      String[]            @default([])
+  scheduledPostDate    DateTime?           @db.Timestamptz(6)
   KanbanActivityLog    KanbanActivityLog[]
   KanbanAttachment     KanbanAttachment[]
   KanbanList           KanbanList          @relation(fields: [listId], references: [id], onDelete: Cascade)
@@ -2816,4 +2829,14 @@ model ServiceCallLog {
   @@index([followUpDate])
   @@index([responsibleId])
   @@index([status])
+}
+
+model training_topics {
+  id               Int      @id @default(autoincrement())
+  topic_name       String   @unique @db.VarChar(255)
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+  course_name      String?  @db.VarChar(255)
+  institution_name String?  @db.VarChar(255)
 }

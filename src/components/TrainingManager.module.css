@@ -8,8 +8,10 @@
     padding: 1.75rem 2rem;
     font-family: "Sarabun", sans-serif;
     min-height: 100vh;
-    background: #f7f8fa; /* var(--bg) */
-    color: #1a1a2e; /* var(--text) */
+    background: #f7f8fa;
+    /* var(--bg) */
+    color: #1a1a2e;
+    /* var(--text) */
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -20,6 +22,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.tabContainer {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e8eaed;
+}
+
+.tab {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #9aa3b2;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tabActive {
+    color: #d93025;
+    border-bottom: 2px solid #d93025;
 }
 
 .titleSection h1 {
@@ -36,11 +59,13 @@
 }
 
 .addBtn {
-    background: #d93025; /* var(--red) */
+    background: #d93025;
+    /* var(--red) */
     color: #fff;
     border: none;
     padding: 0.55rem 1.1rem;
-    border-radius: 7px; /* var(--radius-sm) */
+    border-radius: 7px;
+    /* var(--radius-sm) */
     font-weight: 600;
     font-size: 0.82rem;
     cursor: pointer;
@@ -48,7 +73,10 @@
     transition: background 0.18s;
     white-space: nowrap;
 }
-.addBtn:hover { background: #b71c1c; }
+
+.addBtn:hover {
+    background: #b71c1c;
+}
 
 /* ── KPI Section ── */
 .kpiGrid {
@@ -60,14 +88,16 @@
 .kpiCard {
     background: #ffffff;
     padding: 1.5rem;
-    border-radius: 10px; /* var(--radius) */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 10px;
+    /* var(--radius) */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
     flex: 1;
     border: 1px solid #e8eaed;
 }
 
 .kpiLabel {
-    color: #4a5568; /* var(--text2) */
+    color: #4a5568;
+    /* var(--text2) */
     font-size: 0.875rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
@@ -88,7 +118,8 @@
 }
 
 .kpiValueHighlight {
-    color: #10b981; /* Keep green for percentage as it signifies success */
+    color: #10b981;
+    /* Keep green for percentage as it signifies success */
 }
 
 /* ── Table Card ── */
@@ -98,7 +129,7 @@
     border-radius: 10px;
     overflow: hidden;
     flex: 1;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .tableHeader {
@@ -116,7 +147,9 @@
     color: #1a1a2e;
 }
 
-.tableWrapper { overflow-x: auto; }
+.tableWrapper {
+    overflow-x: auto;
+}
 
 .table {
     width: 100%;
@@ -144,13 +177,33 @@
     color: #4a5568;
 }
 
-.table tbody tr:last-child td { border-bottom: none; }
-.table tbody tr:hover td { background: #fafbfc; }
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
 
-.primaryCell { font-weight: 600; color: #1a1a2e; }
-.secondaryCell { font-size: 0.75rem; color: #9aa3b2; }
-.successText { color: #10b981; font-weight: 600; }
-.warningText { color: #f59e0b; font-weight: 600; }
+.table tbody tr:hover td {
+    background: #fafbfc;
+}
+
+.primaryCell {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.secondaryCell {
+    font-size: 0.75rem;
+    color: #9aa3b2;
+}
+
+.successText {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.warningText {
+    color: #f59e0b;
+    font-weight: 600;
+}
 
 .emptyState {
     text-align: center;
@@ -181,7 +234,10 @@
     text-decoration: underline;
     font-weight: 600;
 }
-.editBtn:hover { color: #d93025; }
+
+.editBtn:hover {
+    color: #d93025;
+}
 
 .deleteBtn {
     background: transparent;
@@ -194,13 +250,16 @@
     text-decoration: underline;
     font-weight: 600;
 }
-.deleteBtn:hover { color: #7f1d1d; }
+
+.deleteBtn:hover {
+    color: #7f1d1d;
+}
 
 /* ── Modal ── */
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.38);
+    background: rgba(0, 0, 0, 0.38);
     backdrop-filter: blur(3px);
     display: flex;
     justify-content: center;
@@ -216,7 +275,7 @@
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     border: 1px solid #e8eaed;
 }
 
@@ -255,11 +314,12 @@
     transition: border-color 0.18s;
     width: 100%;
 }
+
 .formGroup input:focus,
 .formGroup textarea:focus {
     border-color: #d93025;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(217,48,37,0.08);
+    box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.08);
 }
 
 .formRow {
@@ -280,7 +340,7 @@
     max-height: 200px;
     overflow-y: auto;
     z-index: 10;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .dropdownItem {
@@ -290,7 +350,10 @@
     font-size: 0.875rem;
     color: #4a5568;
 }
-.dropdownItem:hover { background: #fafbfc; }
+
+.dropdownItem:hover {
+    background: #fafbfc;
+}
 
 .modalActions {
     display: flex;
@@ -311,7 +374,10 @@
     font-size: 0.875rem;
     transition: background 0.18s;
 }
-.submitBtn:hover { background: #b71c1c; }
+
+.submitBtn:hover {
+    background: #b71c1c;
+}
 
 .cancelBtn {
     flex: 1;
@@ -325,4 +391,7 @@
     font-family: "Sarabun", sans-serif;
     font-size: 0.875rem;
 }
-.cancelBtn:hover { background: #e2e8f0; }
+
+.cancelBtn:hover {
+    background: #e2e8f0;
+}

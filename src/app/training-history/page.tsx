@@ -55,6 +55,15 @@ export default function TrainingHistoryPage() {
         }
     });
 
+    const { data: topics = [] } = useQuery({
+        queryKey: ["training-topics"],
+        queryFn: async () => {
+            const r = await fetch("/api/training-topics");
+            const data = await r.json();
+            return (data.data || []) as { id: number, topic_name: string }[];
+        }
+    });
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -143,10 +152,28 @@ export default function TrainingHistoryPage() {
                                 className={styles.input}
                                 required
                                 type="text"
+                                list="trainingTopics"
                                 value={formData.course_name}
-                                onChange={e => setFormData({ ...formData, course_name: e.target.value })}
-                                placeholder="เช่น อบรมความปลอดภัยในการทำงาน"
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    const matchedTopic = topics.find((t: any) => t.topic_name === val);
+                                    if (matchedTopic) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            course_name: val,
+                                            institution_name: matchedTopic.institution_name || prev.institution_name
+                                        }));
+                                    } else {
+                                        setFormData(prev => ({ ...prev, course_name: val }));
+                                    }
+                                }}
+                                placeholder="เลือกหรือพิมพ์หัวข้อการอบรม"
                             />
+                            <datalist id="trainingTopics">
+                                {topics.map((t: any) => (
+                                    <option key={t.id} value={t.topic_name} />
+                                ))}
+                            </datalist>
 
                             <label className={styles.label}>สถาบัน/หน่วยงานที่จัดอบรม</label>
                             <input
