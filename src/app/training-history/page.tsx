@@ -60,7 +60,7 @@ export default function TrainingHistoryPage() {
         queryFn: async () => {
             const r = await fetch("/api/training-topics");
             const data = await r.json();
-            return (data.data || []) as { id: number, topic_name: string }[];
+            return (data.data || []) as { id: number, topic_name: string, course_name?: string, institution_name?: string }[];
         }
     });
 
