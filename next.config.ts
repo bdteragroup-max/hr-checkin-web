@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '15mb',
     },
   },
-  serverExternalPackages: ['@prisma/client', 'prisma'],
+  serverExternalPackages: ['@prisma/client', 'prisma', '@sparticuz/chromium'],
   images: {
     remotePatterns: [
       {

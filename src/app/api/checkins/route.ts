@@ -21,6 +21,18 @@ async function isCheckinBlockedAfterNoon(empId: string, dateKey: Date, prismaCli
     // 12:00 PM Bangkok is 05:00 AM UTC
     const noonTodayUTC = new Date(`${y}-${m}-${d}T05:00:00.000Z`);
 
+    // First, check if there is an Offsite-In or Project-In in the morning session
+    const morningOffsiteOrProjectIn = await prismaClient.checkins.findFirst({
+        where: {
+            emp_id: empId,
+            date_key: dateKey,
+            type: { in: ["Project-In", "Offsite-In"] },
+            timestamp: { lt: noonTodayUTC }
+        }
+    });
+
+    if (morningOffsiteOrProjectIn) return false;
+
     const morningLeave = await prismaClient.leave_requests.findFirst({
         where: {
             emp_id: empId,
@@ -249,20 +261,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "WORK_PLAN_REQUIRED", message: "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ" }, { status: 403 });
     }
 
-    // Block Late Check-ins after 12:00 PM without morning leave
-    if (isInAction && type !== "Trip-Update") {
-        const isBlocked = await isCheckinBlockedAfterNoon(auth.emp.emp_id, date_key, prisma);
-        if (isBlocked) {
-            console.log(`[CHECKIN_403] Check-in blocked after 12:00 PM for ${auth.emp.emp_id}. No morning leave.`);
-            return NextResponse.json({
-                error: "LATE_CHECKIN_BLOCKED",
-                message: "ไม่อนุญาตให้เช็คอินหลัง 12:00 น. หากไม่มีการยื่นใบลาช่วงเช้า"
-            }, { status: 403 });
-        }
-    }
-
-    // Block Late Check-ins after 12:00 PM without morning leave
-    if (isInAction && type !== "Trip-Update") {
+    // Block Late Check-ins after 12:00 PM without morning leave (Allowed for Offsite and Project check-ins)
+    if (type === "Check-in") {
         const isBlocked = await isCheckinBlockedAfterNoon(auth.emp.emp_id, date_key, prisma);
         if (isBlocked) {
             console.log(`[CHECKIN_403] Check-in blocked after 12:00 PM for ${auth.emp.emp_id}. No morning leave.`);
