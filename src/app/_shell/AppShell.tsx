@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, type ReactNode } from "react";
 import styles from "./layout.module.css";
 import FloatingTicketButton from "@/components/tickets/FloatingTicketButton";
+import FloatingRepairButton from "@/components/tickets/FloatingRepairButton";
 import {
     ClockIcon,
     BuildingOfficeIcon,
@@ -256,6 +257,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
             {/* Floating Ticket Button */}
             <FloatingTicketButton />
+            <FloatingRepairButton />
         </div>
     );
 }

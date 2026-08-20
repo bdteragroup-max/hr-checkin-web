@@ -1368,33 +1368,36 @@ model TelesalesKPI {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model User {
-  id                                                              String                 @id
-  employeeId                                                      String                 @unique
-  email                                                           String?                @unique
+  id                                                              String                  @id
+  employeeId                                                      String                  @unique
+  email                                                           String?                 @unique
   fullName                                                        String
   phoneNumber                                                     String?
-  role                                                            String                 @default("Sales Representative")
+  role                                                            String                  @default("Sales Representative")
   position                                                        String?
   password                                                        String
-  createdAt                                                       DateTime               @default(now()) @db.Timestamptz(6)
-  updatedAt                                                       DateTime               @default(now()) @db.Timestamptz(6)
+  createdAt                                                       DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                                                       DateTime                @default(now()) @db.Timestamptz(6)
   otpCode                                                         String?
-  otpExpiresAt                                                    DateTime?              @db.Timestamptz(6)
-  isActive                                                        Boolean                @default(true)
+  otpExpiresAt                                                    DateTime?               @db.Timestamptz(6)
+  isActive                                                        Boolean                 @default(true)
   BDActivity                                                      BDActivity[]
-  BDProject_BDProject_ownerIdToUser                               BDProject[]            @relation("BDProject_ownerIdToUser")
-  BDProject_BDProject_requesterIdToUser                           BDProject[]            @relation("BDProject_requesterIdToUser")
+  BDProject_BDProject_ownerIdToUser                               BDProject[]             @relation("BDProject_ownerIdToUser")
+  BDProject_BDProject_requesterIdToUser                           BDProject[]             @relation("BDProject_requesterIdToUser")
   BDTask                                                          BDTask[]
   CabinetAssemblyJob                                              CabinetAssemblyJob[]
   Company                                                         Company[]
   CompanyInteraction                                              CompanyInteraction[]
-  CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[]  @relation("CustomerRequirement_estimatedByUserIdToUser")
+  CustomerRequirement_CustomerRequirement_estimatedByUserIdToUser CustomerRequirement[]   @relation("CustomerRequirement_estimatedByUserIdToUser")
   CustomerRequirement                                             CustomerRequirement[]
   CustomerSatisfaction                                            CustomerSatisfaction[]
+  FacilityRepairLog                                               FacilityRepairLog[]
+  FacilityRepairRequest_FacilityRepairRequest_assigneeIdToUser    FacilityRepairRequest[] @relation("FacilityRepairRequest_assigneeIdToUser")
+  FacilityRepairRequest_FacilityRepairRequest_reporterIdToUser    FacilityRepairRequest[] @relation("FacilityRepairRequest_reporterIdToUser")
   InstallationOrder                                               InstallationOrder[]
   JobDocument                                                     JobDocument[]
-  MarketingLead_MarketingLead_assignedToIdToUser                  MarketingLead[]        @relation("MarketingLead_assignedToIdToUser")
-  MarketingLead_MarketingLead_createdByUserIdToUser               MarketingLead[]        @relation("MarketingLead_createdByUserIdToUser")
+  MarketingLead_MarketingLead_assignedToIdToUser                  MarketingLead[]         @relation("MarketingLead_assignedToIdToUser")
+  MarketingLead_MarketingLead_createdByUserIdToUser               MarketingLead[]         @relation("MarketingLead_createdByUserIdToUser")
   MonthlyTarget                                                   MonthlyTarget[]
   Notification                                                    Notification[]
   Order                                                           Order[]
@@ -1408,13 +1411,13 @@ model User {
   PushSubscription                                                PushSubscription[]
   Quotation                                                       Quotation[]
   Schedule                                                        Schedule[]
-  ServiceCallLog_ServiceCallLog_createdByToUser                   ServiceCallLog[]       @relation("ServiceCallLog_createdByToUser")
-  ServiceCallLog_ServiceCallLog_responsibleIdToUser               ServiceCallLog[]       @relation("ServiceCallLog_responsibleIdToUser")
+  ServiceCallLog_ServiceCallLog_createdByToUser                   ServiceCallLog[]        @relation("ServiceCallLog_createdByToUser")
+  ServiceCallLog_ServiceCallLog_responsibleIdToUser               ServiceCallLog[]        @relation("ServiceCallLog_responsibleIdToUser")
   ServiceSchedule                                                 ServiceSchedule[]
-  SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]           @relation("SiteSurvey_estimatedByUserIdToUser")
+  SiteSurvey_SiteSurvey_estimatedByUserIdToUser                   SiteSurvey[]            @relation("SiteSurvey_estimatedByUserIdToUser")
   SiteSurvey                                                      SiteSurvey[]
-  SupportTicket_SupportTicket_assigneeIdToUser                    SupportTicket[]        @relation("SupportTicket_assigneeIdToUser")
-  SupportTicket_SupportTicket_reporterIdToUser                    SupportTicket[]        @relation("SupportTicket_reporterIdToUser")
+  SupportTicket_SupportTicket_assigneeIdToUser                    SupportTicket[]         @relation("SupportTicket_assigneeIdToUser")
+  SupportTicket_SupportTicket_reporterIdToUser                    SupportTicket[]         @relation("SupportTicket_reporterIdToUser")
   TechnicianTask                                                  TechnicianTask[]
   Telesale                                                        Telesale[]
   TelesalesKPI                                                    TelesalesKPI[]
@@ -1422,8 +1425,8 @@ model User {
   TicketLog                                                       TicketLog[]
   employee_sales                                                  employee_sales?
   job_step_logs                                                   job_step_logs[]
-  BDProject_BDProjectMembers                                      BDProject[]            @relation("BDProjectMembers")
-  Order_OrderTechnicians                                          Order[]                @relation("OrderTechnicians")
+  BDProject_BDProjectMembers                                      BDProject[]             @relation("BDProjectMembers")
+  Order_OrderTechnicians                                          Order[]                 @relation("OrderTechnicians")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -2831,12 +2834,54 @@ model ServiceCallLog {
   @@index([status])
 }
 
-model training_topics {
-  id               Int      @id @default(autoincrement())
-  topic_name       String   @unique @db.VarChar(255)
-  is_active        Boolean  @default(true)
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime @default(now()) @db.Timestamptz(6)
-  course_name      String?  @db.VarChar(255)
-  institution_name String?  @db.VarChar(255)
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model DepartmentLineConfig {
+  id               String    @id
+  department       String    @unique
+  lineGroupId      String
+  isActive         Boolean   @default(true)
+  lastDigestSentAt DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model FacilityRepairLog {
+  id                    String                @id
+  requestId             String
+  userId                String?
+  action                String
+  details               String?
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  FacilityRepairRequest FacilityRepairRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  User                  User?                 @relation(fields: [userId], references: [id])
+
+  @@index([requestId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model FacilityRepairRequest {
+  id                                          String              @id
+  requestNumber                               String              @unique
+  equipmentName                               String
+  issueDetail                                 String
+  location                                    String
+  photoUrl                                    String?
+  status                                      String              @default("REPORTED")
+  reportedDate                                DateTime            @default(now()) @db.Timestamptz(6)
+  expectedCompletionDate                      DateTime?           @db.Date
+  completedAt                                 DateTime?           @db.Timestamptz(6)
+  reporterId                                  String?
+  reporterName                                String?
+  reporterEmail                               String?
+  assigneeId                                  String?
+  sourceModule                                String              @default("general")
+  createdAt                                   DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt                                   DateTime            @default(now()) @db.Timestamptz(6)
+  FacilityRepairLog                           FacilityRepairLog[]
+  User_FacilityRepairRequest_assigneeIdToUser User?               @relation("FacilityRepairRequest_assigneeIdToUser", fields: [assigneeId], references: [id])
+  User_FacilityRepairRequest_reporterIdToUser User?               @relation("FacilityRepairRequest_reporterIdToUser", fields: [reporterId], references: [id])
+
+  @@index([assigneeId])
+  @@index([reporterId])
+  @@index([status])
 }

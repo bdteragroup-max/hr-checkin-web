@@ -34,44 +34,45 @@ export async function getMyTickets() {
         throw new Error('ไม่พบอีเมลในระบบ ไม่สามารถดึงข้อมูลปัญหาได้');
     }
 
-    const crmUrl = process.env.CRM_API_URL || 'https://sales-crm-web.vercel.app';
-    const apiKey = process.env.CRM_TICKET_API_KEY;
+    let tickets: any[] = [];
+    let repairs: any[] = [];
 
-    if (!apiKey) {
-        throw new Error('ระบบไม่พร้อมใช้งาน: ไม่พบการตั้งค่า CRM API Key');
+    try {
+        tickets = await prisma.supportTicket.findMany({
+            where: { reporterEmail: email },
+            orderBy: { createdAt: 'desc' },
+            include: { User_SupportTicket_assigneeIdToUser: true }
+        });
+    } catch (e) {
+        console.error('DB Fetch Tickets Failed:', e);
     }
 
-    const res = await fetch(`${crmUrl}/api/external/tickets?email=${encodeURIComponent(email)}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-        },
-        cache: 'no-store' // Always fetch latest
-    });
-
-    if (!res.ok) {
-        let errorText = 'Unknown error';
-        try {
-            const errorJson = await res.json();
-            errorText = errorJson.error || errorJson.message || JSON.stringify(errorJson);
-        } catch (e) {
-            errorText = await res.text().catch(() => 'Unknown error');
-        }
-
-        console.error('CRM Fetch Tickets Failed:', res.status, errorText);
-
-        if (res.status === 401) {
-            throw new Error('ไม่ได้รับอนุญาตให้เชื่อมต่อกับระบบ CRM');
-        } else if (res.status === 404) {
-            // If the endpoint is strictly returning 404 when no tickets found, we could return empty array.
-            // But if it means the endpoint doesn't exist, it's different.
-            // Assuming 404 here means no tickets or user not found, we can return empty array.
-            return { tickets: [] };
-        } else {
-            throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล (CRM Failed)');
-        }
+    try {
+        repairs = await prisma.facilityRepairRequest.findMany({
+            where: { reporterEmail: email },
+            orderBy: { reportedDate: 'desc' },
+            include: { User_FacilityRepairRequest_assigneeIdToUser: true }
+        });
+    } catch (e) {
+        console.error('DB Fetch Repairs Failed:', e);
     }
+
+    // Map them to a unified format so the frontend can display both easily
+    const unified = [
+        ...tickets.map((t: any) => ({ 
+            ...t, 
+            _type: 'TICKET',
+            assigneeName: t.User_SupportTicket_assigneeIdToUser?.fullName || null
+        })),
+        ...repairs.map((r: any) => ({ 
+            ...r, 
+            _type: 'FACILITY_REPAIR',
+            assigneeName: r.User_FacilityRepairRequest_assigneeIdToUser?.fullName || null
+        }))
+    ];
+
+    // Sort by createdAt descending
+    unified.sort((a, b) => new Date(b.createdAt || b.reportedDate).getTime() - new Date(a.createdAt || a.reportedDate).getTime());
     
-    return res.json();
+    return { tickets: unified };
 }

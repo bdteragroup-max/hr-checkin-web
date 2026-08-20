@@ -57,14 +57,20 @@ export default async function MyTicketsPage() {
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         {tickets.map((ticket: any, index: number) => {
+                            const isRepair = ticket._type === 'FACILITY_REPAIR';
                             const badge = getStatusBadge(ticket.status);
-                            const progress = ticket.progress || 0;
+                            const progress = ticket.progress || (ticket.status === 'COMPLETED' || ticket.status === 'RESOLVED' ? 100 : ticket.status === 'IN_PROGRESS' ? 50 : 0);
 
                             return (
                                 <div key={ticket.ticketId || ticket.id || index} className={styles.card}>
                                     <div className={styles.cardHeader} style={{ marginBottom: '8px' }}>
-                                        <h3 className={styles.cardTitle} style={{ textTransform: 'none', fontSize: '15px', color: 'var(--text)' }}>
-                                            {ticket.title}
+                                        <h3 className={styles.cardTitle} style={{ textTransform: 'none', fontSize: '15px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            {isRepair ? (
+                                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fff7ed', color: '#ea580c', border: '1px solid #fdba74' }}>ซ่อมสาธารณูปโภค</span>
+                                            ) : (
+                                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>ระบบ IT</span>
+                                            )}
+                                            {isRepair ? ticket.equipmentName : ticket.title}
                                         </h3>
                                         <span className={styles.cardBadge} style={{ backgroundColor: badge.bg, color: badge.color, borderColor: badge.borderColor }}>
                                             {badge.label}
@@ -73,13 +79,13 @@ export default async function MyTicketsPage() {
 
                                     <div className={styles.kv}>
                                         <div className={styles.kvKey}>รหัสอ้างอิง</div>
-                                        <div className={styles.kvVal}>{ticket.ticketId || ticket.id}</div>
+                                        <div className={styles.kvVal}>{ticket.ticketId || ticket.requestNumber || ticket.id}</div>
                                         <div className={styles.kvKey}>วันที่แจ้ง</div>
-                                        <div className={styles.kvVal}>{new Date(ticket.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                                        <div className={styles.kvVal}>{new Date(ticket.createdAt || ticket.reportedDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                                         <div className={styles.kvKey}>ผู้รับผิดชอบ</div>
                                         <div className={styles.kvVal}>
-                                            {ticket.assigneeName || (ticket.assignee && ticket.assignee.name) ? (
-                                                <span style={{ color: 'var(--text)' }}>{ticket.assigneeName || ticket.assignee?.name}</span>
+                                            {ticket.assigneeName || (ticket.assignee && (ticket.assignee.name || ticket.assignee.fullName)) ? (
+                                                <span style={{ color: 'var(--text)' }}>{ticket.assigneeName || ticket.assignee?.name || ticket.assignee?.fullName}</span>
                                             ) : (
                                                 <span style={{ color: 'var(--text4)' }}>ยังไม่มีผู้รับเรื่อง</span>
                                             )}
@@ -98,10 +104,17 @@ export default async function MyTicketsPage() {
                                         </div>
                                     </div>
 
-                                    {ticket.solutionPlan && (
+                                    {ticket.solutionPlan && !isRepair && (
                                         <div className={`${styles.statusBox} ${styles.status_ok}`} style={{ marginTop: '16px', background: 'var(--gray-50)', borderColor: 'var(--gray-200)', color: 'var(--text2)' }}>
                                             <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--text)' }}>แผนการแก้ไข (Solution Plan):</strong>
                                             {ticket.solutionPlan}
+                                        </div>
+                                    )}
+
+                                    {isRepair && ticket.expectedCompletionDate && (
+                                        <div className={`${styles.statusBox} ${styles.status_ok}`} style={{ marginTop: '16px', background: 'var(--gray-50)', borderColor: 'var(--gray-200)', color: 'var(--text2)' }}>
+                                            <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--text)' }}>กำหนดเสร็จ:</strong>
+                                            {new Date(ticket.expectedCompletionDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
                                         </div>
                                     )}
 
