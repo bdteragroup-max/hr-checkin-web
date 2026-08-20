@@ -83,7 +83,7 @@ export async function GET() {
             const isDirectSubordinate = emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId;
             const isOtherManager = !isDirectSubordinate;
             
-            const myEvals = emp.probation_evaluations;
+            const myEvals = emp.probation_evaluations.filter((ev: any) => ev.supervisor_id === supervisorId);
             const lastEval = myEvals[myEvals.length - 1];
             const isReturned = lastEval?.status === "returned";
             const nextRound = isReturned ? lastEval.evaluation_no : (lastEval?.evaluation_no || 0) + 1;

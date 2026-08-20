@@ -165,6 +165,7 @@ export async function POST(req: Request) {
         const existing = await prisma.probation_evaluations.findFirst({
             where: {
                 emp_id,
+                supervisor_id,
                 evaluation_no: Number(evaluation_no || 1)
             }
         });
