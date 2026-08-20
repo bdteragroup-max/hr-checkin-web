@@ -2885,3 +2885,13 @@ model FacilityRepairRequest {
   @@index([reporterId])
   @@index([status])
 }
+
+model training_topics {
+  id               Int      @id @default(autoincrement())
+  topic_name       String   @db.VarChar(255)
+  course_name      String?  @db.VarChar(255)
+  institution_name String?  @db.VarChar(255)
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+}
