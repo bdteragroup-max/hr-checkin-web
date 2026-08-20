@@ -251,8 +251,8 @@ export default function KPISelfRatePage() {
                                                                     <strong style={{ marginLeft: 8, color: '#1e293b' }}>
                                                                         — สถิติ: {
                                                                             item.objective.includes("มาสาย") ? `${attendance.latenessCount} ครั้ง` :
-                                                                            item.objective.includes("ลาป่วย") ? `${attendance.sickLeaveCount} วัน` :
-                                                                            item.objective.includes("ลากิจ") ? `${attendance.personalLeaveCount} วัน` : ""
+                                                                            item.objective.includes("ลาป่วย") ? `${attendance.sickLeaveCount} ครั้ง` :
+                                                                            item.objective.includes("ลากิจ") ? `${attendance.personalLeaveCount} ครั้ง` : ""
                                                                         }
                                                                     </strong>
                                                                 )}

@@ -21,7 +21,6 @@ export async function calculateAttendanceStats(emp_id: string, start: Date, end:
         }
     });
 
-    // 2. Count Leaves (Sick & Personal)
     const leaves = await prisma.leave_requests.findMany({
         where: {
             emp_id,
@@ -29,11 +28,18 @@ export async function calculateAttendanceStats(emp_id: string, start: Date, end:
             start_date: { lte: end },
             end_date: { gte: start }
         },
-        select: { leave_type_id: true }
+        select: { leave_type_id: true, leave_type: true }
     });
 
-    const sickLeaveCount = leaves.filter((l: any) => l.leave_type_id === "SICK" || l.leave_type_id === "ลาป่วย").length;
-    const personalLeaveCount = leaves.filter((l: any) => l.leave_type_id === "PERSONAL" || l.leave_type_id === "ลากิจ").length;
+    const sickLeaveCount = leaves.filter((l: any) => 
+        (l.leave_type_id && l.leave_type_id.toLowerCase() === "sick") || 
+        (l.leave_type && l.leave_type.includes("ลาป่วย"))
+    ).length;
+
+    const personalLeaveCount = leaves.filter((l: any) => 
+        (l.leave_type_id && l.leave_type_id.toLowerCase() === "personal") || 
+        (l.leave_type && l.leave_type.includes("ลากิจ"))
+    ).length;
 
     return {
         latenessCount: lateCheckins,

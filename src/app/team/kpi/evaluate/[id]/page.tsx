@@ -60,11 +60,11 @@ export default function KPISupervisorEvaluatePage() {
                             }
                             else if (it.objective.includes("ลาป่วย")) {
                                 autoScore = attendanceStats.sickLeaveScore;
-                                if (!autoRes) autoRes = `${attendanceStats.sickLeaveCount} วัน`;
+                                if (!autoRes) autoRes = `${attendanceStats.sickLeaveCount} ครั้ง`;
                             }
                             else if (it.objective.includes("ลากิจ")) {
                                 autoScore = attendanceStats.personalLeaveScore;
-                                if (!autoRes) autoRes = `${attendanceStats.personalLeaveCount} วัน`;
+                                if (!autoRes) autoRes = `${attendanceStats.personalLeaveCount} ครั้ง`;
                             }
                         }
                         return { ...it, supervisor_score: autoScore, result_description: autoRes };
@@ -294,8 +294,8 @@ export default function KPISupervisorEvaluatePage() {
                         <div className={styles.inputGroup}>
                             <label>รอบการประเมิน (Session)</label>
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#D93025' }}>
-                                {evaluation.category === 'ANNUAL' ? (evaluation.session_name === 'Mid-Year' ? 'Mid-Year Assessment' : evaluation.session_name) : 
-                                 evaluation.category === 'MONTHLY' ? `KPI เดือน ${evaluation.evaluation_no}/${evaluation.year || ''}` : `ครั้งที่ ${evaluation.evaluation_no}`}
+                                {evaluation.category === 'ANNUAL' ? (evaluation.session_name === 'Mid-Year' ? 'Mid-Year Assessment' : evaluation.session_name) :
+                                    evaluation.category === 'MONTHLY' ? `KPI เดือน ${evaluation.evaluation_no}/${evaluation.year || ''}` : `ครั้งที่ ${evaluation.evaluation_no}`}
                                 {evaluation.category === 'ANNUAL' && <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>({evaluation.year})</span>}
                             </div>
                         </div>
@@ -352,13 +352,13 @@ export default function KPISupervisorEvaluatePage() {
                                                     <div className={styles.lockedBadge}>
                                                         <CheckBadgeIcon width={14} />
                                                         <span>
-                                                            คะแนนคำนวณจากระบบอัตโนมัติ (Locked) 
+                                                            คะแนนคำนวณจากระบบอัตโนมัติ (Locked)
                                                             {attendance && (
                                                                 <strong style={{ marginLeft: 8, color: '#1e293b' }}>
                                                                     — สถิติ: {
                                                                         item.objective.includes("มาสาย") ? `${attendance.latenessCount} ครั้ง` :
-                                                                        item.objective.includes("ลาป่วย") ? `${attendance.sickLeaveCount} วัน` :
-                                                                        item.objective.includes("ลากิจ") ? `${attendance.personalLeaveCount} วัน` : ""
+                                                                            item.objective.includes("ลาป่วย") ? `${attendance.sickLeaveCount} ครั้ง` :
+                                                                                item.objective.includes("ลากิจ") ? `${attendance.personalLeaveCount} ครั้ง` : ""
                                                                     }
                                                                 </strong>
                                                             )}
@@ -435,26 +435,26 @@ export default function KPISupervisorEvaluatePage() {
                                                     <div className={styles.editForm}>
                                                         <div className={styles.inputGroup}>
                                                             <label>วัตถุประสงค์ (Objective)</label>
-                                                            <textarea 
-                                                                rows={2} 
-                                                                value={editBuffer.objective} 
-                                                                onChange={e => setEditBuffer({...editBuffer, objective: e.target.value})}
+                                                            <textarea
+                                                                rows={2}
+                                                                value={editBuffer.objective}
+                                                                onChange={e => setEditBuffer({ ...editBuffer, objective: e.target.value })}
                                                             />
                                                         </div>
                                                         <div className={styles.inputGroup}>
                                                             <label>ตัวชี้วัด (Indicator)</label>
-                                                            <textarea 
-                                                                rows={2} 
-                                                                value={editBuffer.indicator} 
-                                                                onChange={e => setEditBuffer({...editBuffer, indicator: e.target.value})}
+                                                            <textarea
+                                                                rows={2}
+                                                                value={editBuffer.indicator}
+                                                                onChange={e => setEditBuffer({ ...editBuffer, indicator: e.target.value })}
                                                             />
                                                         </div>
                                                         <div className={styles.inputGroup}>
                                                             <label>น้ำหนัก (%)</label>
-                                                            <input 
-                                                                type="number" 
-                                                                value={editBuffer.weight} 
-                                                                onChange={e => setEditBuffer({...editBuffer, weight: Number(e.target.value)})}
+                                                            <input
+                                                                type="number"
+                                                                value={editBuffer.weight}
+                                                                onChange={e => setEditBuffer({ ...editBuffer, weight: Number(e.target.value) })}
                                                             />
                                                         </div>
                                                         <div className={styles.indicatorLabel} style={{ marginTop: 8 }}>ระดับคะแนน (Rubric)</div>
@@ -462,10 +462,10 @@ export default function KPISupervisorEvaluatePage() {
                                                             {[1, 2, 3, 4, 5].map(r => (
                                                                 <div key={r} className={styles.inputGroup}>
                                                                     <label>Rating {r}</label>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={editBuffer[`target_${r}`] || ""} 
-                                                                        onChange={e => setEditBuffer({...editBuffer, [`target_${r}`]: e.target.value})}
+                                                                    <input
+                                                                        type="text"
+                                                                        value={editBuffer[`target_${r}`] || ""}
+                                                                        onChange={e => setEditBuffer({ ...editBuffer, [`target_${r}`]: e.target.value })}
                                                                     />
                                                                 </div>
                                                             ))}
@@ -486,40 +486,40 @@ export default function KPISupervisorEvaluatePage() {
                 })}
 
                 {(evaluation.category === 'ANNUAL') && (
-                <div key="DEVELOPMENT">
-                    <div className={styles.sectionLabel} style={{ marginTop: 32, marginBottom: 16 }}>
-                        <div className={styles.dot} />
-                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            ส่วนที่ 4 เป้าหมายการพัฒนาตนเอง  (Personal Development Goals)
-                        </span>
-                    </div>
-
-                    {items.filter(it => it.section === "DEVELOPMENT").length === 0 ? (
-                        <div className={styles.card} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
-                            พนักงานไม่ได้ระบุเป้าหมายการพัฒนา
+                    <div key="DEVELOPMENT">
+                        <div className={styles.sectionLabel} style={{ marginTop: 32, marginBottom: 16 }}>
+                            <div className={styles.dot} />
+                            <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                ส่วนที่ 4 เป้าหมายการพัฒนาตนเอง  (Personal Development Goals)
+                            </span>
                         </div>
-                    ) : (
-                        items.filter(it => it.section === "DEVELOPMENT").map((item, index) => (
-                            <div key={item.id || index} className={styles.card}>
-                                <div className={styles.itemHeader}>
-                                    <div className={styles.itemTitle}>หัวข้อการพัฒนาที่ {index + 1}: {item.objective}</div>
-                                </div>
-                                <div className={styles.indicatorGrid} style={{ marginTop: 12 }}>
-                                    <div className={styles.indicatorLabel}>เป้าหมายและวิธีการพัฒนา:</div>
-                                    <div className={styles.indicatorVal}>{item.indicator || "-"}</div>
-                                </div>
-                                <div className={styles.indicatorGrid}>
-                                    <div className={styles.indicatorLabel}>ระยะเวลาการพัฒนา:</div>
-                                    <div className={styles.indicatorVal}>{item.target_1 || "-"}</div>
-                                </div>
-                                <div className={styles.indicatorGrid}>
-                                    <div className={styles.indicatorLabel}>ผลลัพธ์การพัฒนา:</div>
-                                    <div className={styles.indicatorVal} style={{ color: '#059669', fontWeight: 600 }}>{item.result_description || "ยังไม่มีข้อมูล"}</div>
-                                </div>
+
+                        {items.filter(it => it.section === "DEVELOPMENT").length === 0 ? (
+                            <div className={styles.card} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                พนักงานไม่ได้ระบุเป้าหมายการพัฒนา
                             </div>
-                        ))
-                    )}
-                </div>
+                        ) : (
+                            items.filter(it => it.section === "DEVELOPMENT").map((item, index) => (
+                                <div key={item.id || index} className={styles.card}>
+                                    <div className={styles.itemHeader}>
+                                        <div className={styles.itemTitle}>หัวข้อการพัฒนาที่ {index + 1}: {item.objective}</div>
+                                    </div>
+                                    <div className={styles.indicatorGrid} style={{ marginTop: 12 }}>
+                                        <div className={styles.indicatorLabel}>เป้าหมายและวิธีการพัฒนา:</div>
+                                        <div className={styles.indicatorVal}>{item.indicator || "-"}</div>
+                                    </div>
+                                    <div className={styles.indicatorGrid}>
+                                        <div className={styles.indicatorLabel}>ระยะเวลาการพัฒนา:</div>
+                                        <div className={styles.indicatorVal}>{item.target_1 || "-"}</div>
+                                    </div>
+                                    <div className={styles.indicatorGrid}>
+                                        <div className={styles.indicatorLabel}>ผลลัพธ์การพัฒนา:</div>
+                                        <div className={styles.indicatorVal} style={{ color: '#059669', fontWeight: 600 }}>{item.result_description || "ยังไม่มีข้อมูล"}</div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 )}
 
                 <div className={styles.card}>
@@ -565,14 +565,14 @@ export default function KPISupervisorEvaluatePage() {
                                 <td>{(s1Supervisor * (w1Pct / 100)).toFixed(2)}</td>
                             </tr>
                             {(evaluation.category !== 'PROBATION' && evaluation.category !== 'MONTHLY') && (
-                            <tr>
-                                <td className={styles.colTitle}>ส่วนที่ 2 & 3: Attributes</td>
-                                <td>{s23Employee.toFixed(2)}</td>
-                                <td>{s23Supervisor.toFixed(2)}</td>
-                                <td>{w23Pct}%</td>
-                                <td>{(s23Employee * (w23Pct / 100)).toFixed(2)}</td>
-                                <td>{(s23Supervisor * (w23Pct / 100)).toFixed(2)}</td>
-                            </tr>
+                                <tr>
+                                    <td className={styles.colTitle}>ส่วนที่ 2 & 3: Attributes</td>
+                                    <td>{s23Employee.toFixed(2)}</td>
+                                    <td>{s23Supervisor.toFixed(2)}</td>
+                                    <td>{w23Pct}%</td>
+                                    <td>{(s23Employee * (w23Pct / 100)).toFixed(2)}</td>
+                                    <td>{(s23Supervisor * (w23Pct / 100)).toFixed(2)}</td>
+                                </tr>
                             )}
                             <tr className={styles.totalRow}>
                                 <td className={styles.colTitle}>รวมคะแนนทั้งหมด</td>
