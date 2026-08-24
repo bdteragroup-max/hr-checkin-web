@@ -50,7 +50,8 @@ export async function GET(req: Request) {
             "SALARY_TYPE", 
             "BASE_SALARY",
             "STATUS",
-            "HIRE_DATE"
+            "HIRE_DATE",
+            "RESIGNATION_DATE"
         ].map(csvEscape).join(","));
 
         for (const e of emps) {
@@ -64,7 +65,8 @@ export async function GET(req: Request) {
                 e.salary_type || "",
                 e.base_salary ? Number(e.base_salary) : 0,
                 e.is_active ? "Active" : "Inactive",
-                e.hire_date ? e.hire_date.toISOString().split("T")[0] : ""
+                e.hire_date ? e.hire_date.toISOString().split("T")[0] : "",
+                e.resignation_date ? e.resignation_date.toISOString().split("T")[0] : ""
             ].map(csvEscape).join(","));
         }
 

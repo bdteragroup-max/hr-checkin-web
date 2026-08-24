@@ -89,7 +89,7 @@ export async function submitFacilityRepair(data: {
                     type: 'FACILITY_REPAIR_CREATED',
                     title: 'แจ้งซ่อมใหม่',
                     message: `มีการแจ้งซ่อมอุปกรณ์: ${data.equipmentName}`,
-                    linkUrl: `/facility-repairs/${repair.id}`
+                    linkUrl: null
                 }))
             });
         }

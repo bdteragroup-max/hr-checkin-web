@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         let currentYear = now.getFullYear();
         let startOfRange = new Date(currentYear, 0, 1);
         let endOfRange = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-        let activeCondition: any = { is_active: true };
+        let activeCondition: any = {};
 
         if (startParam && endParam) {
             startOfRange = new Date(startParam);
@@ -29,24 +29,39 @@ export async function GET(req: Request) {
             endOfRange.setHours(23, 59, 59, 999);
             now = endOfRange;
             currentYear = endOfRange.getFullYear();
-
-            activeCondition = {
-                AND: [
-                    {
-                        OR: [
-                            { hire_date: { lte: endOfRange } },
-                            { hire_date: null }
-                        ]
-                    },
-                    {
-                        OR: [
-                            { is_active: true },
-                            { resignation_date: { gt: endOfRange } }
-                        ]
-                    }
-                ]
-            };
         }
+
+        activeCondition = {
+            AND: [
+                {
+                    OR: [
+                        { hire_date: { lte: endOfRange } },
+                        { hire_date: null }
+                    ]
+                },
+                {
+                    OR: [
+                        { 
+                            AND: [
+                                { is_active: true },
+                                { 
+                                    OR: [
+                                        { resignation_date: null },
+                                        { resignation_date: { gt: endOfRange } }
+                                    ]
+                                }
+                            ] 
+                        },
+                        {
+                            AND: [
+                                { is_active: false },
+                                { resignation_date: { gt: endOfRange } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
 
         const startOfLastYear = new Date(startOfRange);
         startOfLastYear.setFullYear(startOfLastYear.getFullYear() - 1);
@@ -55,13 +70,40 @@ export async function GET(req: Request) {
 
         // --- Fetch Data (same as HR Dashboard) ---
         const totalEmployees = await prisma.employees.count({ where: activeCondition });
+        const totalLastYearCondition: any = {
+            AND: [
+                {
+                    OR: [
+                        { hire_date: { lte: endOfLastYear } },
+                        { hire_date: null }
+                    ]
+                },
+                {
+                    OR: [
+                        { 
+                            AND: [
+                                { is_active: true },
+                                { 
+                                    OR: [
+                                        { resignation_date: null },
+                                        { resignation_date: { gt: endOfLastYear } }
+                                    ]
+                                }
+                            ] 
+                        },
+                        {
+                            AND: [
+                                { is_active: false },
+                                { resignation_date: { gt: endOfLastYear } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
         const totalLastYear = await prisma.employees.count({
-            where: {
-                AND: [
-                    { OR: [{ hire_date: { lte: endOfLastYear } }, { hire_date: null }] },
-                    { OR: [{ is_active: true }, { resignation_date: { gt: endOfLastYear } }] }
-                ]
-            }
+            where: totalLastYearCondition
         });
 
         const permanentEmployees = await prisma.employees.count({ where: { ...activeCondition, is_on_trial: false } });
@@ -201,11 +243,32 @@ export async function GET(req: Request) {
         });
 
         // KPI
+        const latestAnnualKPI = await prisma.kpi_evaluations.findFirst({
+            where: { category: 'ANNUAL', status: { in: ['completed', 'APPROVED'] } },
+            orderBy: { updated_at: 'desc' },
+            select: { year: true, session_name: true }
+        });
+
+        const kpiWhereClause: any = {
+            category: 'ANNUAL',
+            status: { in: ['completed', 'APPROVED'] },
+            employee: {
+                is_active: true,
+                is_on_trial: false
+            }
+        };
+
+        if (latestAnnualKPI) {
+            kpiWhereClause.year = latestAnnualKPI.year;
+            if (latestAnnualKPI.session_name) {
+                kpiWhereClause.session_name = latestAnnualKPI.session_name;
+            }
+        } else {
+            kpiWhereClause.year = currentYear;
+        }
+
         const annualKPIs = await prisma.kpi_evaluations.findMany({
-            where: {
-                category: 'ANNUAL', status: 'completed', year: currentYear,
-                employee: { is_active: true, is_on_trial: false }
-            },
+            where: kpiWhereClause,
             select: { grade: true }
         });
         const kpiCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
