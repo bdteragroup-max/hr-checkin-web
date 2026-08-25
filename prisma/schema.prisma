@@ -176,6 +176,8 @@ model employees {
   processed_redemptions             reward_redemptions[]        @relation("ProcessedBy")
   booking_attendees                 room_booking_attendees[]
   room_bookings                     room_bookings[]
+  depreciation_claims               sales_depreciation_claims[] @relation("EmployeeToDepreciation")
+  submitted_claims                  sales_depreciation_claims[] @relation("SupervisorToDepreciation")
   task_assignments                  task_assignments[]
   task_coin_budget                  task_coin_budgets?
   tasks_created                     tasks[]
@@ -1878,6 +1880,13 @@ model MarketingLead {
   matchedCompanyId                         String?
   matchedContactId                         String?
   taxId                                    String?
+  address                                  String?
+  businessType                             String?
+  customerType                             String?
+  district                                 String?
+  postalCode                               String?
+  province                                 String?
+  subDistrict                              String?
   User_MarketingLead_assignedToIdToUser    User?      @relation("MarketingLead_assignedToIdToUser", fields: [assignedToId], references: [id])
   User_MarketingLead_createdByUserIdToUser User       @relation("MarketingLead_createdByUserIdToUser", fields: [createdByUserId], references: [id])
   Company                                  Company?   @relation(fields: [matchedCompanyId], references: [id])
@@ -2886,12 +2895,32 @@ model FacilityRepairRequest {
   @@index([status])
 }
 
-model training_topics {
-  id               Int      @id @default(autoincrement())
-  topic_name       String   @db.VarChar(255)
-  course_name      String?  @db.VarChar(255)
-  institution_name String?  @db.VarChar(255)
-  is_active        Boolean  @default(true)
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+model sales_depreciation_claims {
+  id            Int                                  @id @default(autoincrement())
+  emp_id        String                               @db.VarChar(20)
+  submitted_by  String                               @db.VarChar(20)
+  amount        Decimal                              @db.Decimal(10, 2)
+  receipt_url   String
+  status        String                               @default("PENDING")
+  return_reason String?
+  approved_by   String?                              @db.VarChar(20)
+  approved_at   DateTime?                            @db.Timestamptz(6)
+  claim_month   DateTime                             @db.Date
+  created_at    DateTime                             @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime                             @default(now()) @db.Timestamptz(6)
+  revisions     sales_depreciation_claim_revisions[]
+  employee      employees                            @relation("EmployeeToDepreciation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor    employees                            @relation("SupervisorToDepreciation", fields: [submitted_by], references: [emp_id], onDelete: Cascade)
+}
+
+model sales_depreciation_claim_revisions {
+  id            Int                       @id @default(autoincrement())
+  claim_id      Int
+  return_reason String?
+  returned_by   String?                   @db.VarChar(20)
+  snapshot      Json
+  revision_date DateTime                  @default(now()) @db.Timestamptz(6)
+  claim         sales_depreciation_claims @relation(fields: [claim_id], references: [id], onDelete: Cascade)
+
+  @@index([claim_id])
 }

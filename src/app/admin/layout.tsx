@@ -307,6 +307,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
+                            {/* ✅ Depreciation Claims */}
+                            {hasAccess("/admin/depreciation-claims") && (
+                                <Link
+                                    href="/admin/depreciation-claims"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/depreciation-claims") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ค่าเสื่อม / ค่าน้ำมัน
+                                </Link>
+                            )}
+
                             {/* ✅ Equipment Management */}
                             {hasAccess("/admin/assets") && (
                                 <Link

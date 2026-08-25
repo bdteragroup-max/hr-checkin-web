@@ -35,8 +35,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "FILE_REQUIRED" }, { status: 400 });
     }
 
-    // validate type/size
-    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+    const allowed = new Set([
+        "image/jpeg", 
+        "image/png", 
+        "image/webp", 
+        "application/pdf",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ]);
     if (!allowed.has(file.type)) {
         return NextResponse.json({ error: "INVALID_FILE_TYPE" }, { status: 400 });
     }
@@ -52,9 +58,11 @@ export async function POST(req: Request) {
 
     const ext =
         file.type === "image/png" ? "png" :
-            file.type === "image/webp" ? "webp" :
-                file.type === "application/pdf" ? "pdf" :
-                    "jpg";
+        file.type === "image/webp" ? "webp" :
+        file.type === "application/pdf" ? "pdf" :
+        file.type === "application/vnd.ms-excel" ? "xls" :
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? "xlsx" :
+        "jpg";
 
     const ms = now.getTime();
     const fileName = safeFileName(

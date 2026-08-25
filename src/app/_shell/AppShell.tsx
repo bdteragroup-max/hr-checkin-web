@@ -119,6 +119,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-ot", href: "/team-ot", icon: CalendarDaysIcon, label: "อนุมัติ OT", sub: "Team OT" });
         navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
         navMain.push({ id: "team-commission", href: "/team/commission-claims", icon: BanknotesIcon, label: "อนุมัติค่าคอมทีม", sub: "Team Commission" });
+        navMain.push({ id: "team-depreciation", href: "/team/depreciation-claims", icon: BanknotesIcon, label: "อนุมัติค่าเสื่อม", sub: "Depreciation Claims" });
         navMain.push({ id: "team-probation", href: "/team/probation", icon: ClipboardDocumentListIcon, label: "ประเมินพนักงาน", sub: "Assessment" });
         navMain.push({ id: "team-kpi", href: "/team/kpi", icon: PresentationChartLineIcon, label: "จัดการ KPI ทีม", sub: "KPI Management" });
         navMain.push({ id: "team-welfare", href: "/team/welfare", icon: BanknotesIcon, label: "อนุมัติสวัสดิการทีม", sub: "Team Welfare" });
