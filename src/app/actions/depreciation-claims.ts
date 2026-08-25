@@ -47,8 +47,8 @@ export async function createDepreciationClaim(data: {
         select: { supervisor_id: true, name: true }
     });
 
-    if (!targetEmployee || targetEmployee.supervisor_id !== currentUser.emp_id) {
-        throw new Error('This employee is not eligible to submit a claim — only the employee\'s direct supervisor is eligible.');
+    if (!targetEmployee || (targetEmployee.supervisor_id !== currentUser.emp_id && data.emp_id !== currentUser.emp_id)) {
+        throw new Error('This employee is not eligible to submit a claim — only the employee\'s direct supervisor or the employee themselves is eligible.');
     }
 
     const claim = await prisma.sales_depreciation_claims.create({
@@ -276,10 +276,21 @@ export async function resubmitClaim(id: number, newData: { amount: number; recei
 
 export async function getMyTeamMembers() {
     const currentUser = await getUser();
+    
+    const self = await prisma.employees.findUnique({
+        where: { emp_id: currentUser.emp_id },
+        select: { emp_id: true, name: true, nickname: true, supervisor: { select: { name: true } } }
+    });
+
     const members = await prisma.employees.findMany({
         where: { supervisor_id: currentUser.emp_id }, // Direct supervisor only
-        select: { emp_id: true, name: true, nickname: true },
+        select: { emp_id: true, name: true, nickname: true, supervisor: { select: { name: true } } },
         orderBy: { name: 'asc' }
     });
-    return members;
+    
+    const allMembers = [];
+    if (self) allMembers.push(self);
+    allMembers.push(...members);
+    
+    return allMembers;
 }

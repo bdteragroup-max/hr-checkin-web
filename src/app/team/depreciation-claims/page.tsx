@@ -194,7 +194,7 @@ export default function TeamDepreciationClaimsPage() {
                                     <option value="">-- เลือกพนักงานในทีม --</option>
                                     {members.map(m => (
                                         <option key={m.emp_id} value={m.emp_id}>
-                                            {m.name} {m.nickname ? `(${m.nickname})` : ""}
+                                            {m.name} {m.nickname ? `(${m.nickname})` : ""} {m.supervisor?.name ? `- หัวหน้า: ${m.supervisor.name}` : ""}
                                         </option>
                                     ))}
                                 </select>

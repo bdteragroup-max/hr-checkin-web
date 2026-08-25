@@ -1427,6 +1427,8 @@ model User {
   TicketLog                                                       TicketLog[]
   employee_sales                                                  employee_sales?
   job_step_logs                                                   job_step_logs[]
+  material_requisitions_material_requisitions_approverIdToUser    material_requisitions[] @relation("material_requisitions_approverIdToUser")
+  material_requisitions_material_requisitions_requesterIdToUser   material_requisitions[] @relation("material_requisitions_requesterIdToUser")
   BDProject_BDProjectMembers                                      BDProject[]             @relation("BDProjectMembers")
   Order_OrderTechnicians                                          Order[]                 @relation("OrderTechnicians")
 }
@@ -2925,12 +2927,30 @@ model sales_depreciation_claim_revisions {
   @@index([claim_id])
 }
 
-model training_topics {
-  id               Int       @id @default(autoincrement())
-  topic_name       String    @db.VarChar(255)
-  course_name      String?   @db.VarChar(255)
-  institution_name String?   @db.VarChar(255)
-  is_active        Boolean   @default(true)
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model material_requisitions {
+  id                                           String   @id
+  requisitionNumber                            String   @unique
+  date                                         DateTime @db.Timestamptz(6)
+  company                                      String
+  items                                        Json
+  requesterId                                  String?
+  approverId                                   String?
+  requesterSignatureUrl                        String?
+  approverSignatureUrl                         String?
+  status                                       String   @default("PENDING_APPROVAL")
+  createdAt                                    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt                                    DateTime @db.Timestamptz(6)
+  User_material_requisitions_approverIdToUser  User?    @relation("material_requisitions_approverIdToUser", fields: [approverId], references: [id])
+  User_material_requisitions_requesterIdToUser User?    @relation("material_requisitions_requesterIdToUser", fields: [requesterId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model requisition_running_numbers {
+  id         String @id
+  yearBe     Int
+  month      Int
+  lastNumber Int    @default(0)
+
+  @@unique([yearBe, month])
 }
