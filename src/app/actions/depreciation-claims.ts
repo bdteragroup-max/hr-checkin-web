@@ -111,7 +111,7 @@ export async function getMyTeamClaims(filters: { status?: string; month?: string
     }));
 }
 
-export async function getAllClaims(filters: { status?: string; month?: string; supervisor_id?: string } = {}) {
+export async function getAllClaims(filters: { status?: string; month?: string; startDate?: string; endDate?: string; supervisor_id?: string } = {}) {
     const where: any = {};
     
     if (filters.status) {
@@ -122,7 +122,12 @@ export async function getAllClaims(filters: { status?: string; month?: string; s
         where.submitted_by = filters.supervisor_id;
     }
     
-    if (filters.month) {
+    if (filters.startDate && filters.endDate) {
+        where.claim_month = {
+            gte: new Date(filters.startDate),
+            lte: new Date(filters.endDate)
+        };
+    } else if (filters.month) {
         const date = new Date(filters.month);
         const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
         const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);

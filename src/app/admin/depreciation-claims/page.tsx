@@ -12,7 +12,8 @@ import {
     FolderOpenIcon,
     MagnifyingGlassIcon,
     CheckIcon,
-    PaperClipIcon
+    PaperClipIcon,
+    ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 import {
     getAllClaims,
@@ -34,20 +35,22 @@ export default function AdminDepreciationClaimsPage() {
     // Filters
     const [filters, setFilters] = useState({
         status: "all",
-        month: "",
+        startDate: "",
+        endDate: "",
         supervisor_id: "all"
     });
 
     useEffect(() => {
         fetchClaims();
-    }, [filters.status, filters.month, filters.supervisor_id]);
+    }, [filters.status, filters.startDate, filters.endDate, filters.supervisor_id]);
 
     async function fetchClaims() {
         setLoading(true);
         try {
             const data = await getAllClaims({
                 status: filters.status === "all" ? undefined : filters.status,
-                month: filters.month || undefined,
+                startDate: filters.startDate || undefined,
+                endDate: filters.endDate || undefined,
                 supervisor_id: filters.supervisor_id === "all" ? undefined : filters.supervisor_id
             });
             setClaims(data || []);
@@ -130,6 +133,37 @@ export default function AdminDepreciationClaimsPage() {
 
     const pendingCount = claims.filter(c => c.status === "PENDING").length;
 
+    const exportToCSV = () => {
+        if (!filteredClaims.length) {
+            setAlert({ visible: true, message: "ไม่มีข้อมูลสำหรับ Export", type: "error" });
+            return;
+        }
+
+        const headers = ["พนักงาน", "รหัสพนักงาน", "หัวหน้าผู้ส่ง", "เดือนที่ขอเบิก", "จำนวนเงิน", "สถานะ"];
+        
+        const rows = filteredClaims.map(c => {
+            const statusText = c.status === "PENDING" ? "รออนุมัติ" : c.status === "APPROVED" ? "อนุมัติแล้ว" : "ตีกลับแก้ไข";
+            return [
+                c.employee?.name || "",
+                c.emp_id || "",
+                c.supervisor?.name || "",
+                format(new Date(c.claim_month), "yyyy-MM-dd"),
+                c.amount.toString(),
+                statusText
+            ];
+        });
+
+        const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `depreciation-claims-${format(new Date(), "yyyyMMdd")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className={styles.wrap}>
             <AlertModal
@@ -173,12 +207,21 @@ export default function AdminDepreciationClaimsPage() {
 
             <div className={styles.filterBar}>
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>MONTH</label>
+                    <label className={styles.filterLabel}>START DATE</label>
                     <input
-                        type="month"
+                        type="date"
                         className={styles.input}
-                        value={filters.month}
-                        onChange={(e) => setFilters(f => ({ ...f, month: e.target.value }))}
+                        value={filters.startDate}
+                        onChange={(e) => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                    />
+                </div>
+                <div className={styles.filterGroup}>
+                    <label className={styles.filterLabel}>END DATE</label>
+                    <input
+                        type="date"
+                        className={styles.input}
+                        value={filters.endDate}
+                        onChange={(e) => setFilters(f => ({ ...f, endDate: e.target.value }))}
                     />
                 </div>
                 <div className={styles.filterGroup}>
@@ -222,6 +265,9 @@ export default function AdminDepreciationClaimsPage() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.btnRefresh} onClick={exportToCSV} disabled={loading} title="Export CSV" style={{ background: '#10b981', color: 'white' }}>
+                        <ArrowDownTrayIcon width={16} />
+                    </button>
                     <button className={styles.btnRefresh} onClick={() => fetchClaims()} disabled={loading}>
                         <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
                     </button>
