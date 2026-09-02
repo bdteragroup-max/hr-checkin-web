@@ -321,8 +321,12 @@ export async function POST(req: Request) {
             hasIn = allCheckins.find(c => c.type === "Trip-Update" || c.type === "Check-in");
         }
 
-        // if (!hasIn)
-        //     return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
+        if (!hasIn) {
+            const currentHour = time_key.getHours();
+            if (currentHour >= 6 && currentHour < 12) {
+                return NextResponse.json({ error: "MUST_CHECKIN_FIRST" }, { status: 400 });
+            }
+        }
     }
 
     // For midnight shifts (00:00–06:00), the checkout record should be stored
