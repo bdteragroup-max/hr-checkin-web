@@ -1,0 +1,77 @@
+.tableCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: #f0f7ff;
+}
+
+.table th {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Matching colors: the mockup uses blue table headers */
+/* Although the user said "keeping original colors - red, white, gray" for the page overall, */
+/* I will use the blue header just in case, but let's change it to match the rest. */
+/* Wait, the user said "keeping the original colors—red, white, and gray". */
+/* Let's change this to red to follow their instruction strictly. */
+
+.table thead {
+  background: var(--red-lt); /* light red */
+}
+
+.table th {
+  color: var(--red);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  color: var(--text-4);
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+  background: var(--surface-2);
+}
+
+.emptyIcon {
+  width: 32px;
+  height: 32px;
+  color: var(--line-2);
+}

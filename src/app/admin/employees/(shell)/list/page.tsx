@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import {
     UsersIcon,
@@ -18,6 +19,7 @@ import {
     InformationCircleIcon
 } from "@heroicons/react/24/outline";
 import SearchableSelect from "@/components/SearchableSelect";
+import EmployeeWizard from "../../components/wizard/EmployeeWizard";
 import { formatDateThai } from "@/utils/time";
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -113,34 +115,83 @@ type JobPosition = { id: number; department_id: number; title: string; is_ot_eli
 /* ── Component ──────────────────────────────────────────────── */
 export default function AdminEmployeesPage() {
     const queryClient = useQueryClient();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
-    const { data: loadData, isLoading: loading, error: queryError, refetch: reload } = useQuery({
-        queryKey: ["admin-employees-page"],
+    /* search / filter */
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+    const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
+    const [deptFilter, setDeptFilter] = useState<number | "all">("all");
+    const [branchFilter, setBranchFilter] = useState<string | "all">("all");
+    const [pageIndex, setPageIndex] = useState(0);
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    // Reset page to 0 when filters change
+    useEffect(() => {
+        setPageIndex(0);
+    }, [debouncedSearch, statusFilter, typeFilter, deptFilter, branchFilter]);
+
+    const { data: orgData } = useQuery({
+        queryKey: ["admin-org-data"],
         queryFn: async () => {
-            const [b, e, dRes, pRes] = await Promise.all([
+            const [b, dRes, pRes, eRes] = await Promise.all([
                 fetch("/api/branches", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/employees", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
                 fetch("/api/admin/organization/departments", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/organization/positions", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
+                fetch("/api/admin/organization/positions", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+                fetch("/api/admin/employees?minimal=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
             ]);
+            return {
+                branches: (b.branches || []) as Branch[],
+                departments: (dRes.list || []) as Department[],
+                positions: (pRes.list || []) as JobPosition[],
+                allEmployees: (eRes.list || []) as Emp[]
+            };
+        }
+    });
+
+    const { data: empData, isLoading: loading, error: queryError, refetch: reload } = useQuery({
+        queryKey: ["admin-employees-list", debouncedSearch, statusFilter, typeFilter, deptFilter, branchFilter, pageIndex],
+        queryFn: async () => {
+            const params = new URLSearchParams();
+            if (debouncedSearch) params.append("q", debouncedSearch);
+            params.append("status", statusFilter);
+            params.append("type", typeFilter);
+            params.append("dept", String(deptFilter));
+            params.append("branch", branchFilter);
+            params.append("page", String(pageIndex));
+
+            const res = await fetch(`/api/admin/employees?${params.toString()}`, { cache: "no-store" });
+            const e = await res.json();
 
             if (e?.error === "UNAUTHORIZED") throw new Error("ยังไม่ได้เข้าสู่ระบบ Admin (โปรด login)");
             if (e?.error === "FORBIDDEN") throw new Error("ไม่มีสิทธิ์ Admin");
             if (!e?.ok) throw new Error(e?.error || "LOAD_FAILED");
 
             return {
-                branches: (b.branches || []) as Branch[],
-                departments: (dRes.list || []) as Department[],
-                positions: (pRes.list || []) as JobPosition[],
-                list: (e.list || []) as Emp[]
+                list: (e.list || []) as Emp[],
+                total: e.total || 0,
+                activeCount: e.activeCount || 0,
+                inactiveCount: e.inactiveCount || 0,
+                pageSize: e.pageSize || 50
             };
-        }
+        },
+        placeholderData: keepPreviousData
     });
 
-    const branches = loadData?.branches || [];
-    const departments = loadData?.departments || [];
-    const positions = loadData?.positions || [];
-    const list = loadData?.list || [];
+    const branches = orgData?.branches || [];
+    const departments = orgData?.departments || [];
+    const positions = orgData?.positions || [];
+    const allEmployees = orgData?.allEmployees || [];
+    const list = empData?.list || [];
     const msg = queryError ? queryError.message : "";
     const [saving, setSaving] = useState(false);
     const [visibleSalaries, setVisibleSalaries] = useState<Set<string>>(new Set());
@@ -155,13 +206,6 @@ export default function AdminEmployeesPage() {
     };
 
     const [newEmpId, setNewEmpId] = useState<string | null>(null);
-
-    /* search / filter */
-    const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("all");
-    const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
-    const [deptFilter, setDeptFilter] = useState<number | "all">("all");
-    const [branchFilter, setBranchFilter] = useState<string | "all">("all");
 
     /* create form */
     const [empId, setEmpId] = useState("");
@@ -205,6 +249,13 @@ export default function AdminEmployeesPage() {
     /* edit modal */
     const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
     const [createModalOpen, setCreateModalOpen] = useState(false);
+    
+    useEffect(() => {
+        if (searchParams.get("add") === "true") {
+            setCreateModalOpen(true);
+            router.replace("/admin/employees/list");
+        }
+    }, [searchParams, router]);
 
     /* warnings modal */
     const [warningTarget, setWarningTarget] = useState<Emp | null>(null);
@@ -238,8 +289,8 @@ export default function AdminEmployeesPage() {
 
     const genderLabel: Record<string, string> = { M: "ชาย", F: "หญิง", O: "อื่นๆ" };
 
-    const activeCnt = list.filter((e) => e.is_active).length;
-    const inactiveCnt = list.length - activeCnt;
+    const activeCnt = empData?.activeCount || 0;
+    const inactiveCnt = empData?.inactiveCount || 0;
 
     /* ── load ── */
     // Handled by useQuery
@@ -511,25 +562,7 @@ export default function AdminEmployeesPage() {
     }
 
     /* ── filtered list ── */
-    const filtered = useMemo(() => list.filter((x) => {
-        const q = search.trim().toLowerCase();
-        const matchQ = !q || x.emp_id.toLowerCase().includes(q) || x.name.toLowerCase().includes(q) || x.nickname?.toLowerCase().includes(q);
-        const matchS =
-            statusFilter === "all" ? true :
-                statusFilter === "active" ? x.is_active :
-                    !x.is_active;
-        const matchT =
-            typeFilter === "all" ? true :
-                x.salary_type === typeFilter;
-        const matchD =
-            deptFilter === "all" ? true :
-                x.department_id === deptFilter;
-        const matchB =
-            branchFilter === "all" ? true :
-                x.branch_id === branchFilter;
-
-        return matchQ && matchS && matchT && matchD && matchB;
-    }), [list, search, statusFilter, typeFilter, deptFilter, branchFilter]);
+    const filtered = list;
 
     /* ─────────────────────────────────────────────────────────
        RENDER
@@ -872,10 +905,24 @@ export default function AdminEmployeesPage() {
 
                                         {filtered.length === 0 && (
                                             <tr>
-                                                <td colSpan={7}>
+                                                <td colSpan={10}>
                                                     <div className={styles.empty}>
                                                         <span className={styles.emptyIcon}><UsersIcon width={32} /></span>
-                                                        ไม่พบข้อมูลตามเงื่อนไข
+                                                        <div style={{ fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                                                            {search ? "ไม่พบข้อมูลพนักงานที่ค้นหา" : "ไม่พบข้อมูลตามเงื่อนไข"}
+                                                        </div>
+                                                        {statusFilter === "active" && search && (
+                                                            <div style={{ marginTop: 8, fontSize: 13, color: "var(--text-3)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                                                                <span>Employee not found — try changing the status to "All"</span>
+                                                                <button
+                                                                    className={styles.btnGhost}
+                                                                    onClick={() => setStatusFilter("all")}
+                                                                    style={{ height: 32, padding: "0 16px", fontSize: 12, border: "1px solid var(--line)" }}
+                                                                >
+                                                                    แสดงพนักงานทั้งหมด (รวมพนักงานที่ลาออก)
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -884,6 +931,31 @@ export default function AdminEmployeesPage() {
                                 </table>
                             )}
                         </div>
+
+                        {/* Pagination */}
+                        {(empData?.total || 0) > 0 && (
+                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", padding: "16px", borderTop: "1px solid var(--line)", background: "#fff" }}>
+                                <button
+                                    className={styles.btnGhost}
+                                    disabled={pageIndex === 0}
+                                    onClick={() => setPageIndex(p => p - 1)}
+                                    style={{ height: 32, padding: "0 12px", border: "1px solid var(--line)", opacity: pageIndex === 0 ? 0.5 : 1 }}
+                                >
+                                    ก่อนหน้า
+                                </button>
+                                <span style={{ fontSize: 13, color: "var(--text-2)" }}>
+                                    หน้า {pageIndex + 1} จาก {Math.ceil((empData?.total || 0) / (empData?.pageSize || 50))} ({empData?.total || 0} รายการ)
+                                </span>
+                                <button
+                                    className={styles.btnGhost}
+                                    disabled={(pageIndex + 1) * (empData?.pageSize || 50) >= (empData?.total || 0)}
+                                    onClick={() => setPageIndex(p => p + 1)}
+                                    style={{ height: 32, padding: "0 12px", border: "1px solid var(--line)", opacity: (pageIndex + 1) * (empData?.pageSize || 50) >= (empData?.total || 0) ? 0.5 : 1 }}
+                                >
+                                    ถัดไป
+                                </button>
+                            </div>
+                        )}
 
                         {/* Footer hint */}
                         <div style={{
@@ -900,261 +972,20 @@ export default function AdminEmployeesPage() {
             </div>
 
             {/* ══════════════════════════════════════════
-                CREATE MODAL
+                CREATE MODAL (NEW WIZARD)
             ══════════════════════════════════════════ */}
             {createModalOpen && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modal} style={{ maxWidth: 700 }}>
-
-                        <div className={styles.modalHeader}>
-                            <span className={styles.modalTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}><PlusIcon width={20} /> สร้างพนักงานใหม่</span>
-                            <button className={styles.modalClose} onClick={() => setCreateModalOpen(false)}>✕</button>
-                        </div>
-
-                        <div className={styles.modalScroll}>
-                            <label className={styles.lbl}>รหัสพนักงาน</label>
-                            <input className={styles.input} placeholder="E0001"
-                                value={empId} onChange={(e) => setEmpId(e.target.value)} />
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                                <div>
-                                    <label className={styles.lbl}>ชื่อ-สกุล</label>
-                                    <input className={styles.input} placeholder="ชื่อพนักงาน"
-                                        value={name} onChange={(e) => setName(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={styles.lbl}>ชื่อเล่น</label>
-                                    <input className={styles.input} placeholder="ชื่อเล่น"
-                                        value={nickname} onChange={(e) => setNickname(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <label className={styles.lbl}>สาขา</label>
-                            <select className={styles.input} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-                                <option value="">— ไม่ระบุ —</option>
-                                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                            </select>
-
-                            <label className={styles.lbl}>เพศ</label>
-                            <select className={styles.input} value={gender} onChange={(e) => setGender(e.target.value as "M" | "F" | "O")}>
-                                <option value="M">ชาย (M)</option>
-                                <option value="F">หญิง (F)</option>
-                                <option value="O">อื่นๆ (O)</option>
-                            </select>
-
-                            <label className={styles.lbl}>เลขบัตรประจำตัวประชาชน</label>
-                            <input className={styles.input} placeholder="1-xxxx-xxxxx-xx-x"
-                                value={nationalIdCard} onChange={(e) => setNationalIdCard(e.target.value)} />
-
-                            <label className={styles.lbl}>ที่อยู่</label>
-                            <textarea className={styles.input} placeholder="ที่อยู่ปัจจุบัน"
-                                value={address} onChange={(e) => setAddress(e.target.value)} style={{ minHeight: 60 }} />
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                                <div>
-                                    <label className={styles.lbl}>ธนาคาร</label>
-                                    <input className={styles.input} placeholder="เช่น กสิกรไทย"
-                                        value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={styles.lbl}>เลขบัญชีธนาคาร</label>
-                                    <input className={styles.input} placeholder="000-0-00000-0"
-                                        value={bankAccountNo} onChange={(e) => setBankAccountNo(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <label className={styles.lbl}>วันที่เริ่มงาน</label>
-                            <input type="date" className={styles.input}
-                                value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
-
-                            <label className={styles.lbl}>วันเกิด (Date of Birth)</label>
-                            <input type="date" className={styles.input}
-                                value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-                                <div>
-                                    <label className={styles.lbl}>แผนก</label>
-                                    <select className={styles.input} value={departmentId} onChange={(e) => {
-                                        setDepartmentId(Number(e.target.value));
-                                        setPositionId(0);
-                                    }}>
-                                        <option value={0}>— ไม่ระบุ —</option>
-                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={styles.lbl}>ตำแหน่ง</label>
-                                    <select className={styles.input} value={positionId} onChange={(e) => setPositionId(Number(e.target.value))}>
-                                        <option value={0}>— ไม่ระบุ —</option>
-                                        {positions.filter(p => !departmentId || p.department_id === departmentId).map(p => (
-                                            <option key={p.id} value={p.id}>{p.title}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>หัวหน้างาน (Supervisor)</label>
-                            <SearchableSelect
-                                className={styles.input}
-                                value={supervisorId}
-                                onChange={(val) => setSupervisorId(val)}
-                                options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
-                                placeholder="— ไม่มี / ไม่ระบุ —"
-                            />
-
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>ผู้ประเมินร่วม (Co-Evaluator)</label>
-                            <SearchableSelect
-                                className={styles.input}
-                                value={secondarySupervisorId}
-                                onChange={(val) => setSecondarySupervisorId(val)}
-                                options={list.map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
-                                placeholder="— ไม่มี / ไม่ระบุ —"
-                            />
-
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>ประเภทเงินเดือน (Salary Type)</label>
-                            <select className={styles.input} value={salaryType} onChange={(e) => {
-                                const val = e.target.value as "monthly" | "daily";
-                                setSalaryType(val);
-                                if (val === "daily" && (!baseSalary || baseSalary === "0")) {
-                                    setBaseSalary("300");
-                                }
-                            }}>
-                                <option value="monthly">รายเดือน (Monthly)</option>
-                                <option value="daily">รายวัน / Intern (Daily Rate)</option>
-                            </select>
-
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>{salaryType === "daily" ? "ค่าแรงรายวัน (Daily Rate) (THB)" : "เงินเดือนฐาน (Base Salary) (THB)"}</label>
-                            <input type="number" className={styles.input} placeholder="0.00"
-                                value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} />
-
-                            <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginBottom: 16 }}>
-                                <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการตายตัวรายเดือน (Fixed Monthly Allowances)</div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "10px", alignItems: "end" }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label className={styles.lbl}>ค่าที่พัก (Accommodation)</label>
-                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedAccommodationAllowance} onChange={(e) => setFixedAccommodationAllowance(e.target.value)} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label className={styles.lbl}>ค่าอาหาร (Meal)</label>
-                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedMealAllowance} onChange={(e) => setFixedMealAllowance(e.target.value)} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label className={styles.lbl}>ค่าเดินทาง (Travel)</label>
-                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedTravelAllowance} onChange={(e) => setFixedTravelAllowance(e.target.value)} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label className={styles.lbl}>หักภาษีรายเดือน (คงที่)</label>
-                                        <input type="number" className={styles.input} placeholder="0.00" value={fixedTaxDeduction} onChange={(e) => setFixedTaxDeduction(e.target.value)} />
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: 11, color: "var(--text-light)" }}>*หากระบุค่าเหล่านี้ จะใช้แทนการคำนวณอัตโนมัติตามวัน/อายุงาน</div>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-                                <div>
-                                    <label className={styles.lbl}>เงินประจำตำแหน่ง (Position Allowance) (THB)</label>
-                                    <input type="number" className={styles.input} placeholder="0.00"
-                                        value={positionAllowance} onChange={(e) => setPositionAllowance(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={styles.lbl}>เงินเบี้ยเลี้ยงอื่นๆ (General Allowance) (THB)</label>
-                                    <input type="number" className={styles.input} placeholder="0.00"
-                                        value={generalAllowance} onChange={(e) => setGeneralAllowance(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-                                <div>
-                                    <label className={styles.lbl}>เบอร์โทรศัพท์มือถือ</label>
-                                    <input type="tel" className={styles.input} placeholder="08XXXXXXXX"
-                                        value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={styles.lbl}>อีเมล (Email)</label>
-                                    <input type="email" className={styles.input} placeholder="email@example.com"
-                                        value={email} onChange={(e) => setEmail(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <label className={styles.lbl} style={{ marginTop: 10 }}>PIN (ไม่บังคับ)</label>
-                            <input type="password" className={styles.input} placeholder="อย่างน้อย 4 หลัก"
-                                value={pin} onChange={(e) => setPin(e.target.value)} />
-
-                            <div style={{ marginTop: 16 }}>
-                                <label className={styles.row}>
-                                    <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-                                    <span>ใช้งานอยู่ (Active)</span>
-                                </label>
-
-                                <label className={styles.row} style={{ marginTop: 10 }}>
-                                    <input type="checkbox" checked={isOnTrial} onChange={(e) => {
-                                        setIsOnTrial(e.target.checked);
-                                        if (!e.target.checked) setProbationEndDate("");
-                                    }} />
-                                    <span style={{ color: "var(--red)", fontWeight: 700 }}>อยู่ระหว่างทดลองงาน (On Trial Period)</span>
-                                </label>
-
-                                {isOnTrial && (
-                                    <div style={{ marginLeft: 24, marginTop: 8 }}>
-                                        <label className={styles.lbl} style={{ color: "var(--text-3)", fontSize: 12 }}>วันสิ้นสุดทดลองงาน (ถ้ามี)</label>
-                                        <input type="date" className={styles.input}
-                                            value={probationEndDate} onChange={(e) => setProbationEndDate(e.target.value)} />
-                                    </div>
-                                )}
-
-                                <label className={styles.row} style={{ marginTop: 10 }}>
-                                    <input type="checkbox" checked={hasTelephoneAllowance} onChange={(e) => setHasTelephoneAllowance(e.target.checked)} />
-                                    <span>รับค่าโทรศัพท์ (Receives Telephone Allowance)</span>
-                                </label>
-
-                                <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
-                                    <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการช่วงทดลองงาน (Probation Allowances)</div>
-                                    <label className={styles.row} style={{ marginBottom: 8 }}>
-                                        <input type="checkbox" checked={probationAccommodationAllowance} onChange={(e) => setProbationAccommodationAllowance(e.target.checked)} />
-                                        <span>รับค่าที่พัก (Accommodation Allowance)</span>
-                                    </label>
-                                    <label className={styles.row} style={{ marginBottom: 8 }}>
-                                        <input type="checkbox" checked={probationMealAllowance} onChange={(e) => setProbationMealAllowance(e.target.checked)} />
-                                        <span>รับค่าอาหาร (Meal Allowance)</span>
-                                    </label>
-                                    <label className={styles.row}>
-                                        <input type="checkbox" checked={probationTravelAllowance} onChange={(e) => setProbationTravelAllowance(e.target.checked)} />
-                                        <span>รับค่าเดินทาง (Travel Allowance)</span>
-                                    </label>
-                                </div>
-
-                                <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
-                                    <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการที่บริษัทจัดหาให้ (Company-provided benefits)</div>
-                                    <label className={styles.row} style={{ marginBottom: 8 }}>
-                                        <input type="checkbox" checked={companyCar} onChange={(e) => setCompanyCar(e.target.checked)} />
-                                        <span>บริษัทจัดหารถยนต์ให้ (Company provides a car)</span>
-                                    </label>
-                                    <label className={styles.row}>
-                                        <input type="checkbox" checked={companyAccommodation} onChange={(e) => setCompanyAccommodation(e.target.checked)} />
-                                        <span>บริษัทจัดหาที่พักให้ (Company provides accommodation)</span>
-                                    </label>
-                                </div>
-
-                                <label className={styles.row} style={{ marginTop: 10 }}>
-                                    <input type="checkbox" checked={isCheckinExempt} onChange={(e) => setIsCheckinExempt(e.target.checked)} />
-                                    <span style={{ color: "var(--red)", fontWeight: 500 }}>ยกเว้นการลงเวลา (Check-in Exempt)</span>
-                                </label>
-
-                                <label className={styles.lbl} style={{ marginTop: 16 }}>LINE User ID (สำหรับการแจ้งเตือน)</label>
-                                <input className={styles.input} placeholder="U123456789..."
-                                    value={lineUserId} onChange={(e) => setLineUserId(e.target.value)} />
-                            </div>
-                        </div>
-
-                        <div className={styles.modalActions}>
-                            <button className={styles.btnCancel} onClick={() => setCreateModalOpen(false)}>ยกเลิก</button>
-                            <button className={styles.btnSave} onClick={create} disabled={saving}>
-                                {saving ? "กำลังบันทึก..." : <><PlusIcon width={16} style={{ display: "inline-block", verticalAlign: "text-bottom" }} /> ดำเนินการสร้างพนักงาน</>}
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
+                <EmployeeWizard
+                    onClose={() => setCreateModalOpen(false)}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ["employeesAdmin"] });
+                        queryClient.invalidateQueries({ queryKey: ["employeesStats"] });
+                    }}
+                    branches={branches}
+                    departments={departments}
+                    positions={positions}
+                    employees={allEmployees}
+                />
             )}
 
             {/* ══════════════════════════════════════════
@@ -1294,6 +1125,7 @@ export default function AdminEmployeesPage() {
                             </div>
                         </div>
 
+
                         <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginBottom: 16, marginTop: 16 }}>
                             <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการตายตัวรายเดือน (Fixed Monthly Allowances)</div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "10px", alignItems: "end" }}>
@@ -1335,7 +1167,7 @@ export default function AdminEmployeesPage() {
                             className={styles.input}
                             value={editDraft.supervisor_id}
                             onChange={(val) => setEditDraft((d) => d && ({ ...d, supervisor_id: val }))}
-                            options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                            options={allEmployees.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                             placeholder="— ไม่มี / ไม่ระบุ —"
                         />
 
@@ -1344,7 +1176,7 @@ export default function AdminEmployeesPage() {
                             className={styles.input}
                             value={editDraft.secondary_supervisor_id}
                             onChange={(val) => setEditDraft((d) => d && ({ ...d, secondary_supervisor_id: val }))}
-                            options={list.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
+                            options={allEmployees.filter(e => e.emp_id !== editDraft.emp_id).map((e) => ({ value: e.emp_id, label: `${e.name} (${e.emp_id})` }))}
                             placeholder="— ไม่มี / ไม่ระบุ —"
                         />
 
@@ -1396,7 +1228,7 @@ export default function AdminEmployeesPage() {
                                     <span>รับค่าเดินทาง (Travel Allowance)</span>
                                 </label>
                             </div>
-                            
+
                             <div style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 6, marginTop: 16 }}>
                                 <div className={styles.lbl} style={{ marginBottom: 10, fontWeight: 700 }}>สวัสดิการที่บริษัทจัดหาให้ (Company-provided benefits)</div>
                                 <label className={styles.row} style={{ marginBottom: 8 }}>

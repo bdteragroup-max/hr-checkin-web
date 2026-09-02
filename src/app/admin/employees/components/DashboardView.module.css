@@ -1,0 +1,220 @@
+.wrap {
+  padding: 24px 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quotaWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.quotaText {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.progressBar {
+  width: 120px;
+  height: 6px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progressWarning {
+  background: #f59e0b;
+}
+
+.progressDanger {
+  background: var(--red);
+}
+
+.btnAdd {
+  padding: 8px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.statsGridSecondary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--text);
+}
+
+.statList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.statValue {
+  font-weight: 700;
+}
+
+.statTotal {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.totalLabel {
+  font-size: 14px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.unit {
+  font-size: 13px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.branchList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.branchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line);
+}
+
+.branchName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.branchCount {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.emptyText {
+  color: var(--text-4);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.tablesWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Loader */
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: var(--text-4);
+  font-size: 13px;
+}
+
+/* Mobile responsive */
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    padding: 16px;
+  }
+  
+  .statsGrid, .statsGridSecondary {
+    grid-template-columns: 1fr;
+  }
+}

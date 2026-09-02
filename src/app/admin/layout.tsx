@@ -18,6 +18,7 @@ import {
     BuildingStorefrontIcon
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { ChevronDownIcon } from "@heroicons/react/24/solid";
 
 type TabKey = "dashboard" | "attendance" | "leave" | "holiday" | "projects";
 
@@ -31,8 +32,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [admin, setAdmin] = useState<any>(null);
-
     const [loading, setLoading] = useState(true);
+    const [isEmployeesExpanded, setIsEmployeesExpanded] = useState(false);
     const isLoginPage = pathname === "/admin/login";
 
     useEffect(() => {
@@ -61,6 +62,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             })
             .finally(() => setLoading(false));
     }, [isLoginPage]);
+
+    useEffect(() => {
+        if (pathname.startsWith("/admin/employees")) {
+            setIsEmployeesExpanded(true);
+        }
+    }, [pathname]);
 
     const role = admin?.role;
 
@@ -179,12 +186,37 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
                             {/* ✅ Employees menu (active by pathname) */}
                             {hasAccess("/admin/employees") && (
-                                <Link
-                                    href="/admin/employees"
-                                    className={`${styles.navItem} ${isEmployeesActive ? styles.active : ""}`}
-                                >
-                                    <span className={styles.navIcon}><UsersIcon width={20} /></span>Employees
-                                </Link>
+                                <div>
+                                    <div
+                                        onClick={() => setIsEmployeesExpanded(!isEmployeesExpanded)}
+                                        className={`${styles.navItem} ${isEmployeesActive ? styles.active : ""}`}
+                                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none" }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center" }}>
+                                            <span className={styles.navIcon}><UsersIcon width={20} /></span>Employees
+                                        </div>
+                                        <ChevronDownIcon 
+                                            width={14} 
+                                            style={{ transition: "transform 0.2s", transform: isEmployeesExpanded ? "rotate(180deg)" : "rotate(0deg)" }} 
+                                        />
+                                    </div>
+                                    {isEmployeesExpanded && (
+                                        <div style={{ paddingLeft: "32px", display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
+                                            <Link href="/admin/employees" className={`${styles.navItem} ${pathname === "/admin/employees" || pathname === "/admin/employees/" ? styles.active : ""}`} style={{ fontSize: "14px", padding: "8px 12px", minHeight: "auto" }}>
+                                                Dashboard
+                                            </Link>
+                                            <Link href="/admin/employees/import" className={`${styles.navItem} ${pathname === "/admin/employees/import" ? styles.active : ""}`} style={{ fontSize: "14px", padding: "8px 12px", minHeight: "auto", pointerEvents: "none", opacity: 0.6 }} title="Coming Soon">
+                                                นำเข้าข้อมูลพนักงาน <span style={{ fontSize: "10px", color: "var(--text-3)", marginLeft: "4px" }}>(เร็วๆ นี้)</span>
+                                            </Link>
+                                            <Link href="/admin/employees/photos" className={`${styles.navItem} ${pathname === "/admin/employees/photos" ? styles.active : ""}`} style={{ fontSize: "14px", padding: "8px 12px", minHeight: "auto" }}>
+                                                รูปพนักงาน
+                                            </Link>
+                                            <Link href="/admin/employees/list" className={`${styles.navItem} ${pathname === "/admin/employees/list" ? styles.active : ""}`} style={{ fontSize: "14px", padding: "8px 12px", minHeight: "auto" }}>
+                                                ข้อมูลพื้นฐาน
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {/* ✅ Organization menu */}

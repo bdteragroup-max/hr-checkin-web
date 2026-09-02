@@ -43,6 +43,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^10.0.0",
     "eslint-config-next": "^0.2.4",
+    "pg": "^8.23.0",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "typescript": "^5"

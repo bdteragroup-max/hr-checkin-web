@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, requireAdminOrSupervisor } from "@/lib/adminAuth";
+import { requireAdmin, requireAdminOrSupervisor, getSubordinateFilter } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
@@ -12,6 +12,9 @@ type CreateEmployeeBody = {
     branch_id?: string | null;
     pin?: string;
     is_active?: boolean;
+    nationality?: string | null;
+    id_document_type?: string | null;
+    is_onboarding_complete?: boolean;
     gender?: "M" | "F" | "O" | null;
     hire_date?: string | null; // YYYY-MM-DD
     birth_date?: string | null; // YYYY-MM-DD
@@ -23,15 +26,7 @@ type CreateEmployeeBody = {
     is_on_trial?: boolean;
     probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
-    probation_accommodation_allowance?: boolean;
-    probation_meal_allowance?: boolean;
-    probation_travel_allowance?: boolean;
-    fixed_accommodation_allowance?: number | null;
-    fixed_meal_allowance?: number | null;
-    fixed_travel_allowance?: number | null;
     fixed_tax_deduction?: number | null;
-    position_allowance?: number | null;
-    general_allowance?: number | null;
     national_id_card?: string | null;
     address?: string | null;
     bank_name?: string | null;
@@ -41,11 +36,6 @@ type CreateEmployeeBody = {
     is_checkin_exempt?: boolean;
     secondary_supervisor_id?: string | null;
     email?: string | null;
-    sso_include_position_allowance?: boolean;
-    sso_include_general_allowance?: boolean;
-    sso_include_fixed_accommodation?: boolean;
-    sso_include_fixed_meal?: boolean;
-    sso_include_fixed_travel?: boolean;
     provident_fund_rate?: number | null;
     provident_fund_amt?: number | null;
     tax_deduction_override?: number | null;
@@ -62,6 +52,9 @@ type PatchEmployeeBody = {
     nickname?: string | null;
     branch_id?: string | null;
     is_active?: boolean;
+    nationality?: string | null;
+    id_document_type?: string | null;
+    is_onboarding_complete?: boolean;
 
     gender?: "M" | "F" | "O" | null;
     hire_date?: string | null; // YYYY-MM-DD
@@ -74,15 +67,7 @@ type PatchEmployeeBody = {
     is_on_trial?: boolean;
     probation_end_date?: string | null; // YYYY-MM-DD
     has_telephone_allowance?: boolean;
-    probation_accommodation_allowance?: boolean;
-    probation_meal_allowance?: boolean;
-    probation_travel_allowance?: boolean;
-    fixed_accommodation_allowance?: number | null;
-    fixed_meal_allowance?: number | null;
-    fixed_travel_allowance?: number | null;
     fixed_tax_deduction?: number | null;
-    position_allowance?: number | null;
-    general_allowance?: number | null;
     national_id_card?: string | null;
     address?: string | null;
     bank_name?: string | null;
@@ -93,11 +78,6 @@ type PatchEmployeeBody = {
     resignation_date?: string | null;
     secondary_supervisor_id?: string | null;
     email?: string | null;
-    sso_include_position_allowance?: boolean;
-    sso_include_general_allowance?: boolean;
-    sso_include_fixed_accommodation?: boolean;
-    sso_include_fixed_meal?: boolean;
-    sso_include_fixed_travel?: boolean;
     provident_fund_rate?: number | null;
     provident_fund_amt?: number | null;
     tax_deduction_override?: number | null;
@@ -128,14 +108,17 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const minimal = searchParams.get("minimal") === "1";
         const teamOnly = searchParams.get("team") === "1";
+        
+        const q = searchParams.get("q") || "";
+        const status = searchParams.get("status") || "active";
+        const type = searchParams.get("type") || "all";
+        const dept = searchParams.get("dept") || "all";
+        const branch = searchParams.get("branch") || "all";
+        
+        const page = parseInt(searchParams.get("page") || "0", 10);
+        const pageSize = 50;
 
-        const subordinateFilter: any = {};
-        if (auth.isSupervisorOnly || teamOnly) {
-            subordinateFilter.OR = [
-                { supervisor_id: auth.emp_id },
-                { secondary_supervisor_id: auth.emp_id }
-            ];
-        }
+        const subordinateFilter = getSubordinateFilter(auth, teamOnly);
 
         if (minimal) {
             const list = await prisma.employees.findMany({
@@ -152,65 +135,91 @@ export async function GET(req: Request) {
             return NextResponse.json({ ok: true, list: formattedList });
         }
 
-        const list = await prisma.employees.findMany({
-            where: subordinateFilter,
-            orderBy: { created_at: "desc" },
-            take: 500,
-            select: {
-                emp_id: true,
-                name: true,
-                nickname: true,
-                branch_id: true,
-                is_active: true,
-                created_at: true,
-                updated_at: true,
-                gender: true,
-                hire_date: true,
-                birth_date: true,
-                phone_number: true,
-                department_id: true,
-                job_position_id: true,
-                base_salary: true,
-                departments: true,
-                job_positions: true,
-                supervisor_id: true,
-                supervisor: { select: { name: true } },
-                secondary_supervisor_id: true,
-                secondary_supervisor: { select: { name: true } },
-                is_on_trial: true,
-                probation_end_date: true,
-                has_telephone_allowance: true,
-                probation_accommodation_allowance: true,
-                probation_meal_allowance: true,
-                probation_travel_allowance: true,
-                fixed_accommodation_allowance: true,
-                fixed_meal_allowance: true,
-                fixed_travel_allowance: true,
-                fixed_tax_deduction: true,
-                position_allowance: true,
-                general_allowance: true,
-                national_id_card: true,
-                address: true,
-                bank_name: true,
-                bank_account_no: true,
-                line_user_id: true,
-                salary_type: true,
-                is_checkin_exempt: true,
-                resignation_date: true,
-                email: true,
-                sso_include_position_allowance: true,
-                sso_include_general_allowance: true,
-                sso_include_fixed_accommodation: true,
-                sso_include_fixed_meal: true,
-                sso_include_fixed_travel: true,
-                // @ts-ignore
-                company_car: true,
-                // @ts-ignore
-                company_accommodation: true,
-            },
-        });
+        // Build where clause
+        const where: any = { ...subordinateFilter };
+        if (status === "active") where.is_active = true;
+        if (status === "inactive") where.is_active = false;
+        
+        if (type !== "all") where.salary_type = type;
+        if (dept !== "all") where.department_id = parseInt(dept, 10);
+        if (branch !== "all") where.branch_id = branch;
+        
+        if (q) {
+            // PostgreSQL supports mode: 'insensitive'. 
+            // The DB is postgresql according to schema.prisma
+            where.OR = [
+                { emp_id: { contains: q, mode: 'insensitive' } },
+                { name: { contains: q, mode: 'insensitive' } },
+                { nickname: { contains: q, mode: 'insensitive' } },
+                { phone_number: { contains: q } }
+            ];
+        }
 
-        return NextResponse.json({ ok: true, list });
+        const [list, total, activeCount, inactiveCount, incompleteCount] = await prisma.$transaction([
+            prisma.employees.findMany({
+                where,
+                orderBy: { created_at: "desc" },
+                skip: page * pageSize,
+                take: pageSize,
+                select: {
+                    emp_id: true,
+                    name: true,
+                    nickname: true,
+                    branch_id: true,
+                    is_active: true,
+                    created_at: true,
+                    updated_at: true,
+                    gender: true,
+                    hire_date: true,
+                    birth_date: true,
+                    phone_number: true,
+                    department_id: true,
+                    job_position_id: true,
+                    base_salary: true,
+                    departments: true,
+                    job_positions: true,
+                    supervisor_id: true,
+                    supervisor: { select: { name: true } },
+                    secondary_supervisor_id: true,
+                    secondary_supervisor: { select: { name: true } },
+                    is_on_trial: true,
+                    probation_end_date: true,
+                    has_telephone_allowance: true,
+                    fixed_tax_deduction: true,
+                    national_id_card: true,
+                    address: true,
+                    bank_name: true,
+                    bank_account_no: true,
+                    line_user_id: true,
+                    salary_type: true,
+                    is_checkin_exempt: true,
+                    resignation_date: true,
+                    email: true,
+                    // @ts-ignore
+                    company_car: true,
+                    // @ts-ignore
+                    company_accommodation: true,
+                    is_onboarding_complete: true,
+                    nationality: true,
+                    id_document_type: true,
+                },
+            }),
+            prisma.employees.count({ where }),
+            prisma.employees.count({ where: { ...subordinateFilter, is_active: true } }),
+            prisma.employees.count({ where: { ...subordinateFilter, is_active: false } }),
+            prisma.employees.count({ where: { ...subordinateFilter, is_onboarding_complete: false } })
+        ]);
+
+        return NextResponse.json({ 
+            ok: true, 
+            list, 
+            total,
+            activeCount,
+            inactiveCount,
+            incompleteCount,
+            pageSize,
+            page 
+        });
     } catch (e) {
         const msg = e instanceof Error ? e.message : "ERROR";
         const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : 500;
@@ -275,16 +284,11 @@ export async function POST(req: Request) {
                     ? new Date(body.probation_end_date)
                     : null,
                 has_telephone_allowance: body.has_telephone_allowance ?? false,
-                probation_accommodation_allowance: body.probation_accommodation_allowance ?? false,
-                probation_meal_allowance: body.probation_meal_allowance ?? false,
-                probation_travel_allowance: body.probation_travel_allowance ?? false,
-                fixed_accommodation_allowance: body.fixed_accommodation_allowance != null ? Number(body.fixed_accommodation_allowance) : 0,
-                fixed_meal_allowance: body.fixed_meal_allowance != null ? Number(body.fixed_meal_allowance) : 0,
-                fixed_travel_allowance: body.fixed_travel_allowance != null ? Number(body.fixed_travel_allowance) : 0,
                 fixed_tax_deduction: body.fixed_tax_deduction != null ? Number(body.fixed_tax_deduction) : 0,
-                position_allowance: body.position_allowance != null ? Number(body.position_allowance) : 0,
-                general_allowance: body.general_allowance != null ? Number(body.general_allowance) : 0,
                 national_id_card: body.national_id_card ? clean(body.national_id_card) : null,
+                nationality: body.nationality ? clean(body.nationality) : 'THA',
+                id_document_type: body.id_document_type ? clean(body.id_document_type) : 'national_id',
+                is_onboarding_complete: body.is_onboarding_complete ?? false,
                 address: body.address ? clean(body.address) : null,
                 bank_name: body.bank_name ? clean(body.bank_name) : null,
                 bank_account_no: body.bank_account_no ? clean(body.bank_account_no) : null,
@@ -293,11 +297,6 @@ export async function POST(req: Request) {
                 is_checkin_exempt: body.is_checkin_exempt ?? false,
                 secondary_supervisor_id: body.secondary_supervisor_id ? clean(body.secondary_supervisor_id) : null,
                 email: body.email ? clean(body.email) : null,
-                sso_include_position_allowance: body.sso_include_position_allowance ?? true,
-                sso_include_general_allowance: body.sso_include_general_allowance ?? false,
-                sso_include_fixed_accommodation: body.sso_include_fixed_accommodation ?? false,
-                sso_include_fixed_meal: body.sso_include_fixed_meal ?? false,
-                sso_include_fixed_travel: body.sso_include_fixed_travel ?? false,
                 // @ts-ignore
                 company_car: body.company_car ?? false,
                 // @ts-ignore
@@ -322,15 +321,7 @@ export async function POST(req: Request) {
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
-                probation_accommodation_allowance: true,
-                probation_meal_allowance: true,
-                probation_travel_allowance: true,
-                fixed_accommodation_allowance: true,
-                fixed_meal_allowance: true,
-                fixed_travel_allowance: true,
                 fixed_tax_deduction: true,
-                position_allowance: true,
-                general_allowance: true,
                 national_id_card: true,
                 address: true,
                 bank_name: true,
@@ -338,13 +329,11 @@ export async function POST(req: Request) {
                 line_user_id: true,
                 is_checkin_exempt: true,
                 email: true,
-                sso_include_position_allowance: true,
-                sso_include_general_allowance: true,
-                sso_include_fixed_accommodation: true,
-                sso_include_fixed_meal: true,
-                sso_include_fixed_travel: true,
                 company_car: true,
                 company_accommodation: true,
+                nationality: true,
+                id_document_type: true,
+                is_onboarding_complete: true,
             },
         });
 
@@ -452,38 +441,21 @@ export async function PATCH(req: Request) {
         if (body.has_telephone_allowance !== undefined) {
             data.has_telephone_allowance = Boolean(body.has_telephone_allowance);
         }
-        if (body.probation_accommodation_allowance !== undefined) {
-            data.probation_accommodation_allowance = Boolean(body.probation_accommodation_allowance);
-        }
-        if (body.probation_meal_allowance !== undefined) {
-            data.probation_meal_allowance = Boolean(body.probation_meal_allowance);
-        }
-        if (body.probation_travel_allowance !== undefined) {
-            data.probation_travel_allowance = Boolean(body.probation_travel_allowance);
-        }
-
-        if (body.fixed_accommodation_allowance !== undefined) {
-            data.fixed_accommodation_allowance = body.fixed_accommodation_allowance != null ? Number(body.fixed_accommodation_allowance) : 0;
-        }
-        if (body.fixed_meal_allowance !== undefined) {
-            data.fixed_meal_allowance = body.fixed_meal_allowance != null ? Number(body.fixed_meal_allowance) : 0;
-        }
-        if (body.fixed_travel_allowance !== undefined) {
-            data.fixed_travel_allowance = body.fixed_travel_allowance != null ? Number(body.fixed_travel_allowance) : 0;
-        }
         if (body.fixed_tax_deduction !== undefined) {
             data.fixed_tax_deduction = body.fixed_tax_deduction != null ? Number(body.fixed_tax_deduction) : 0;
         }
 
-        if (body.position_allowance !== undefined) {
-            data.position_allowance = body.position_allowance != null ? Number(body.position_allowance) : 0;
-        }
-        if (body.general_allowance !== undefined) {
-            data.general_allowance = body.general_allowance != null ? Number(body.general_allowance) : 0;
-        }
-
         if (body.national_id_card !== undefined) {
             data.national_id_card = body.national_id_card ? clean(body.national_id_card) : null;
+        }
+        if (body.nationality !== undefined) {
+            data.nationality = body.nationality ? clean(body.nationality) : 'THA';
+        }
+        if (body.id_document_type !== undefined) {
+            data.id_document_type = body.id_document_type ? clean(body.id_document_type) : 'national_id';
+        }
+        if (body.is_onboarding_complete !== undefined) {
+            data.is_onboarding_complete = Boolean(body.is_onboarding_complete);
         }
         if (body.address !== undefined) {
             data.address = body.address ? clean(body.address) : null;
@@ -505,22 +477,6 @@ export async function PATCH(req: Request) {
         }
         if (body.email !== undefined) {
             data.email = body.email ? clean(body.email) : null;
-        }
-
-        if (body.sso_include_position_allowance !== undefined) {
-            data.sso_include_position_allowance = Boolean(body.sso_include_position_allowance);
-        }
-        if (body.sso_include_general_allowance !== undefined) {
-            data.sso_include_general_allowance = Boolean(body.sso_include_general_allowance);
-        }
-        if (body.sso_include_fixed_accommodation !== undefined) {
-            data.sso_include_fixed_accommodation = Boolean(body.sso_include_fixed_accommodation);
-        }
-        if (body.sso_include_fixed_meal !== undefined) {
-            data.sso_include_fixed_meal = Boolean(body.sso_include_fixed_meal);
-        }
-        if (body.sso_include_fixed_travel !== undefined) {
-            data.sso_include_fixed_travel = Boolean(body.sso_include_fixed_travel);
         }
         if (body.company_car !== undefined) {
             // @ts-ignore
@@ -562,15 +518,7 @@ export async function PATCH(req: Request) {
                 is_on_trial: true,
                 probation_end_date: true,
                 has_telephone_allowance: true,
-                probation_accommodation_allowance: true,
-                probation_meal_allowance: true,
-                probation_travel_allowance: true,
-                fixed_accommodation_allowance: true,
-                fixed_meal_allowance: true,
-                fixed_travel_allowance: true,
                 fixed_tax_deduction: true,
-                position_allowance: true,
-                general_allowance: true,
                 national_id_card: true,
                 address: true,
                 bank_name: true,
@@ -581,6 +529,9 @@ export async function PATCH(req: Request) {
                 email: true,
                 company_car: true,
                 company_accommodation: true,
+                nationality: true,
+                id_document_type: true,
+                is_onboarding_complete: true,
             },
         });
 

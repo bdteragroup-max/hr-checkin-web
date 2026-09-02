@@ -105,6 +105,7 @@
     box-shadow 0.15s;
   box-shadow: var(--shadow-xs);
 }
+
 .btnGhost:hover {
   border-color: var(--red);
   color: var(--red);
@@ -153,6 +154,7 @@
   box-shadow: var(--shadow-red);
   transition: all 0.2s;
 }
+
 .btnAdd:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
@@ -189,12 +191,10 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--red) 0%,
-    var(--red-3) 60%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      var(--red) 0%,
+      var(--red-3) 60%,
+      transparent 100%);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
@@ -255,25 +255,31 @@
   appearance: none;
   -webkit-appearance: none;
 }
+
 .input:hover {
   border-color: #b0bac8;
 }
+
 .input:focus {
   border-color: var(--red);
   box-shadow: 0 0 0 3px var(--red-glow);
   background: var(--surface);
 }
+
 .input::placeholder {
   color: var(--text-5);
 }
+
 .input option {
   background: var(--surface);
   color: var(--text);
 }
+
 .input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.45;
 }
+
 .input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 0.9;
 }
@@ -289,6 +295,7 @@
   cursor: pointer;
   user-select: none;
 }
+
 .row input[type="checkbox"] {
   accent-color: var(--red);
   width: 16px;
@@ -323,11 +330,13 @@
     box-shadow 0.15s;
   box-shadow: var(--shadow-red);
 }
+
 .btnPrimary:hover {
   opacity: 0.92;
   box-shadow: 0 6px 22px rgba(200, 41, 30, 0.32);
   transform: translateY(-1px);
 }
+
 .btnPrimary:active {
   transform: scale(0.98);
   box-shadow: none;
@@ -343,6 +352,7 @@
   background: var(--surface);
   transition: box-shadow 0.2s;
 }
+
 .tableWrap:hover {
   box-shadow: var(--shadow);
 }
@@ -403,9 +413,11 @@
 .table tbody tr:last-child td {
   border-bottom: none;
 }
+
 .table tbody tr {
   transition: background 0.1s;
 }
+
 .table tbody tr:hover td {
   background: var(--surface-2);
 }
@@ -440,6 +452,7 @@
   transition: all 0.15s;
   white-space: nowrap;
 }
+
 .pillActive:hover {
   background: #d1fae5;
   border-color: #6ee7b7;
@@ -461,6 +474,7 @@
   transition: all 0.15s;
   white-space: nowrap;
 }
+
 .pillInactive:hover {
   background: #fee2e2;
   border-color: #fca5a5;
@@ -485,6 +499,7 @@
   white-space: nowrap;
   box-shadow: var(--shadow-xs);
 }
+
 .btnEdit:hover {
   border-color: var(--red);
   color: var(--red);
@@ -521,6 +536,7 @@
   transition: all 0.15s;
   box-shadow: var(--shadow-xs);
 }
+
 .btnRefresh:hover {
   background: var(--surface-3);
   color: var(--text);
@@ -575,7 +591,10 @@
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: var(--line-2);
   transition: .25s;
   border-radius: 24px;
@@ -591,22 +610,22 @@
   background-color: white;
   transition: .25s;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: var(--red);
 }
 
-input:focus + .slider {
+input:focus+.slider {
   box-shadow: 0 0 0 3px var(--red-glow);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(20px);
 }
 
-input:disabled + .slider {
+input:disabled+.slider {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -619,6 +638,7 @@ input:disabled + .slider {
   font-size: 13px;
   font-weight: 500;
 }
+
 .emptyIcon {
   display: block;
   font-size: 32px;
@@ -636,6 +656,7 @@ input:disabled + .slider {
   color: var(--text-4);
   font-size: 13px;
 }
+
 .spinner {
   width: 18px;
   height: 18px;
@@ -645,6 +666,7 @@ input:disabled + .slider {
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -665,10 +687,12 @@ input:disabled + .slider {
   padding: 20px;
   animation: fadeIn 0.16s ease;
 }
+
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -682,32 +706,35 @@ input:disabled + .slider {
   padding: 24px;
   width: 100%;
   max-width: 480px;
-  max-height: 90vh; /* Limits height to viewport */
-  overflow-y: auto; /* Enables inner scrolling */
+  max-height: 90vh;
+  /* Limits height to viewport */
+  overflow-y: auto;
+  /* Enables inner scrolling */
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.14),
     0 6px 20px rgba(0, 0, 0, 0.08);
   animation: modalIn 0.22s cubic-bezier(0.34, 1.5, 0.64, 1);
   position: relative;
 }
+
 .modal::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--red) 0%,
-    var(--red-3) 60%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      var(--red) 0%,
+      var(--red-3) 60%,
+      transparent 100%);
   border-radius: 18px 18px 0 0;
 }
+
 @keyframes modalIn {
   from {
     opacity: 0;
     transform: translateY(16px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -742,6 +769,7 @@ input:disabled + .slider {
   color: var(--text-3);
   transition: all 0.15s;
 }
+
 .modalClose:hover {
   background: var(--bad-bg);
   border-color: var(--bad-border);
@@ -761,24 +789,30 @@ input:disabled + .slider {
     background 0.2s,
     border-color 0.2s;
 }
+
 .statusBlock.active {
   background: var(--ok-bg);
   border: 1.5px solid var(--ok-border);
 }
+
 .statusBlock.inactive {
   background: var(--bad-bg);
   border: 1.5px solid var(--bad-border);
 }
+
 .statusBlockLabel {
   font-size: 13px;
   font-weight: 700;
 }
+
 .statusBlock.active .statusBlockLabel {
   color: var(--ok);
 }
+
 .statusBlock.inactive .statusBlockLabel {
   color: var(--bad);
 }
+
 .statusBlockHint {
   font-size: 11.5px;
   color: var(--text-4);
@@ -805,6 +839,7 @@ input:disabled + .slider {
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .btnCancel:hover {
   background: var(--surface-3);
   color: var(--text);
@@ -828,14 +863,17 @@ input:disabled + .slider {
   transition: all 0.18s;
   box-shadow: var(--shadow-red);
 }
+
 .btnSave:hover:not(:disabled) {
   box-shadow: 0 6px 20px rgba(200, 41, 30, 0.32);
   transform: translateY(-1px);
 }
+
 .btnSave:active:not(:disabled) {
   transform: scale(0.98);
   box-shadow: none;
 }
+
 .btnSave:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -859,21 +897,25 @@ input:disabled + .slider {
   border: 1px solid;
   animation: toastIn 0.28s cubic-bezier(0.34, 1.5, 0.64, 1);
 }
+
 .toast.ok {
   background: var(--surface);
   color: var(--ok);
   border-color: var(--ok-border);
 }
+
 .toast.bad {
   background: var(--surface);
   color: var(--bad);
   border-color: var(--bad-border);
 }
+
 @keyframes toastIn {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -886,8 +928,13 @@ input:disabled + .slider {
 }
 
 @keyframes highlightRedAnim {
-  0% { background-color: rgba(239, 68, 68, 0.3); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(239, 68, 68, 0.3);
+  }
+
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* ─── Responsive ──────────────────────────────────────────── */

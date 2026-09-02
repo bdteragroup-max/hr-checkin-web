@@ -335,10 +335,18 @@ export default function PayrollPage() {
     };
 
     const handlePublishBatch = (companyTitle: string, items: PayrollResult[], targetStatus: boolean) => {
+        const incompleteInBatch = payrollData?.incomplete_employees?.filter((inc: any) => 
+            items.some(i => i.emp_id === inc.emp_id)
+        ) || [];
+
+        const warnMessage = targetStatus && incompleteInBatch.length > 0 
+            ? `\n\n⚠️ คำเตือน: มีพนักงาน ${incompleteInBatch.length} คน ข้อมูลยังไม่สมบูรณ์ (เช่น ${incompleteInBatch[0].name})\nพนักงานเหล่านี้จะไม่ถูกคำนวณเงินเดือนอย่างถูกต้อง ยืนยันที่จะดำเนินการต่อหรือไม่?`
+            : "";
+
         setAlertConfig({
             alert: {
                 visible: true,
-                message: `ยืนยันการ${targetStatus ? 'เผยแพร่' : 'ยกเลิกเผยแพร่'}สลิปเงินเดือนทั้งหมดให้กับพนักงานใน ${companyTitle} จำนวน ${items.length} คน?`,
+                message: `ยืนยันการ${targetStatus ? 'เผยแพร่' : 'ยกเลิกเผยแพร่'}สลิปเงินเดือนทั้งหมดให้กับพนักงานใน ${companyTitle} จำนวน ${items.length} คน?${warnMessage}`,
                 type: "ok"
             },
             onConfirm: async () => {
@@ -502,6 +510,33 @@ export default function PayrollPage() {
                     </select>
                 </div>
             </div>
+
+            {/* Incomplete Employees Warning Banner */}
+            {payrollData?.incomplete_employees?.length > 0 && (
+                <div style={{
+                    background: "var(--bad-bg)",
+                    border: "1px solid var(--bad-border)",
+                    color: "var(--bad)",
+                    padding: "16px 20px",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: 24,
+                    fontSize: 14,
+                    lineHeight: 1.5
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, marginBottom: 8 }}>
+                        <span style={{ fontSize: 18 }}>⚠️</span> 
+                        <span>พนักงานที่มีข้อมูลยังไม่สมบูรณ์ ({payrollData.incomplete_employees.length} คน)</span>
+                    </div>
+                    <div>
+                        พนักงานเหล่านี้อาจไม่ได้รับการคำนวณเงินเดือนที่ถูกต้อง เนื่องจากข้อมูลเบื้องต้น/อัตราเงินเดือนยังไม่ครบถ้วน กรุณาอัปเดตข้อมูลพนักงานให้สมบูรณ์ก่อน Publish:
+                        <div style={{ marginTop: 8, maxHeight: 100, overflowY: "auto", background: "rgba(255,255,255,0.5)", padding: 8, borderRadius: 4 }}>
+                            {payrollData.incomplete_employees.map((inc: any) => (
+                                <div key={inc.emp_id}>• {inc.emp_id} - {inc.name}</div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Off-Site Allowance Summary Section */}
             {Object.keys(offSiteSummary).length > 0 && (
