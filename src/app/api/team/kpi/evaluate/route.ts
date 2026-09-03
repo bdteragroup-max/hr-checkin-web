@@ -37,7 +37,14 @@ export async function GET(req: Request) {
             }
         });
 
-        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId)) {
+        // Check if user is registered in employee_co_evaluators
+        const isCoEvalGet = evaluation?.employee?.emp_id ? (await prisma.$queryRawUnsafe(
+            `SELECT 1 FROM employee_co_evaluators WHERE employee_id = $1 AND evaluator_id = $2 LIMIT 1;`,
+            evaluation.employee.emp_id,
+            supervisorId
+        ).catch(() => []) as any[]).length > 0 : false;
+
+        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId && !isCoEvalGet)) {
             return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
         }
 
@@ -68,7 +75,14 @@ export async function POST(req: Request) {
             include: { employee: true }
         });
 
-        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId)) {
+        // Check if user is registered in employee_co_evaluators
+        const isCoEvalPost = evaluation?.employee?.emp_id ? (await prisma.$queryRawUnsafe(
+            `SELECT 1 FROM employee_co_evaluators WHERE employee_id = $1 AND evaluator_id = $2 LIMIT 1;`,
+            evaluation.employee.emp_id,
+            supervisorId
+        ).catch(() => []) as any[]).length > 0 : false;
+
+        if (!evaluation || (evaluation.supervisor_id !== supervisorId && evaluation.employee?.secondary_supervisor_id !== supervisorId && !isCoEvalPost)) {
             return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
         }
 

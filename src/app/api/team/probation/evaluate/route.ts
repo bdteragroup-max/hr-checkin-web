@@ -80,7 +80,19 @@ export async function POST(req: Request) {
         const isManager = checkIsManager(loggedInUser);
         const isOtherManager = checkIsManager(emp);
 
-        const isDirectSubordinate = emp && (emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId);
+        // Check if user is registered in employee_co_evaluators
+        const coEvalCheck: any[] = ((await prisma.$queryRawUnsafe(
+            `SELECT 1 FROM employee_co_evaluators WHERE employee_id = $1 AND evaluator_id = $2 LIMIT 1;`,
+            emp_id,
+            supervisorId
+        ).catch(() => [])) as any[]) || [];
+        const isCoEvaluator = coEvalCheck.length > 0;
+
+        const isDirectSubordinate = emp && (
+            emp.supervisor_id === supervisorId || 
+            emp.secondary_supervisor_id === supervisorId ||
+            isCoEvaluator
+        );
         const isCrossEvaluating = isManager && isOtherManager && emp?.emp_id !== supervisorId && emp?.is_on_trial === true;
         
         const isAuthorized = isDirectSubordinate || isCrossEvaluating;

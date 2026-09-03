@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import * as ExcelJS from "exceljs";
 
 export async function POST(req: Request) {
-    throw new Error("TODO: Payroll is under maintenance for allowance schema changes");
     try {
         const body = await req.json();
         const { companyTitle, month, year, data } = body;

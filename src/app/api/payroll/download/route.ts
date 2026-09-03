@@ -233,6 +233,8 @@ export async function GET(request: Request) {
 
         if (adj.accommodation_allowance_override !== null && adj.accommodation_allowance_override !== undefined) {
             accommodation_allowance = Number(adj.accommodation_allowance_override);
+        } else if ((emp as any).company_accommodation || isDaily) {
+            accommodation_allowance = 0;
         } else if (Number((emp as any).fixed_accommodation_allowance) > 0) {
             accommodation_allowance = Number((emp as any).fixed_accommodation_allowance);
         } else if (!isDaily && warnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && emp.hire_date) {
@@ -247,6 +249,8 @@ export async function GET(request: Request) {
             else if (yrs < 4) accommodation_allowance = 2400;
             else if (yrs < 5) accommodation_allowance = 2700;
             else accommodation_allowance = 3000;
+        } else if (!isDaily && warnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && !emp.hire_date) {
+            accommodation_allowance = 1500;
         }
 
         if (warnings.length === 0) {
@@ -288,6 +292,15 @@ export async function GET(request: Request) {
             if (adj.meal_allowance_override !== null && adj.meal_allowance_override !== undefined) meal_allowance = Number(adj.meal_allowance_override);
             if (adj.travel_allowance_override !== null && adj.travel_allowance_override !== undefined) travel_allowance = Number(adj.travel_allowance_override);
             if (adj.accommodation_allowance_override !== null && adj.accommodation_allowance_override !== undefined) accommodation_allowance = Number(adj.accommodation_allowance_override);
+        }
+
+        if (isDaily) {
+            accommodation_allowance = 0;
+            meal_allowance = 0;
+            travel_allowance = 0;
+            diligence_allowance = 0;
+            position_allowance = 0;
+            general_allowance = 0;
         }
 
         if ((emp as any).company_car) travel_allowance = 0;

@@ -42,6 +42,22 @@ async function sendLineMessage(to: string, messages: any[], replyToken?: string)
   if (!LINE_CHANNEL_ACCESS_TOKEN) return false;
   if (!to?.trim() && !replyToken) return false;
 
+  // Cease sending notifications immediately if the recipient employee has resigned or is inactive
+  if (to && !replyToken) {
+    try {
+      const recipient = await prisma.employees.findFirst({
+        where: { line_user_id: to.trim() },
+        select: { emp_id: true, name: true, is_active: true }
+      });
+      if (recipient && !recipient.is_active) {
+        console.warn(`[LINE NOTIFICATION CEASED] Suppressed notification to resigned/inactive employee ${recipient.emp_id} (${recipient.name}).`);
+        return false;
+      }
+    } catch (e) {
+      // Ignore lookup error and continue
+    }
+  }
+
   const url = replyToken
     ? "https://api.line.me/v2/bot/message/reply"
     : "https://api.line.me/v2/bot/message/push";

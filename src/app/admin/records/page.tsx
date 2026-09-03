@@ -23,7 +23,8 @@ import {
 interface Employee {
     emp_id: string;
     name: string;
-    is_checkin_exempt: boolean;
+    is_checkin_exempt?: boolean;
+    is_active?: boolean;
 }
 
 interface RecordSummary {
@@ -31,6 +32,7 @@ interface RecordSummary {
     name: string;
     branch_id: string | null;
     is_active: boolean;
+    is_checkin_exempt?: boolean;
     leave_days: number;
     pending_leave_days: number;
     late_count: number;
@@ -73,7 +75,7 @@ export default function RecordsPage() {
     const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
         queryKey: ['admin-employees-list'],
         queryFn: async () => {
-            const res = await fetch("/api/admin/employees");
+            const res = await fetch("/api/admin/employees?all=1&status=all");
             const json = await res.json();
             return json.ok ? json.list || [] : [];
         }
@@ -83,8 +85,7 @@ export default function RecordsPage() {
         queryKey: ['admin-records-summary', startDate, endDate, exportStatus],
         queryFn: async () => {
             if (!startDate || !endDate) return [];
-            const p = new URLSearchParams({ start_date: startDate, end_date: endDate });
-            if (exportStatus !== "all") p.set("status", exportStatus);
+            const p = new URLSearchParams({ start_date: startDate, end_date: endDate, status: exportStatus });
 
             const res = await fetch(`/api/admin/records?${p.toString()}`);
             const json = await res.json();
@@ -191,13 +192,16 @@ export default function RecordsPage() {
 
     const filteredEmployees = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        const activeEmps = employees.filter(e => !e.is_checkin_exempt);
-        if (!term) return activeEmps;
-        return activeEmps.filter(e =>
+        let list = employees;
+        if (exportStatus === "active") list = list.filter(e => e.is_active);
+        else if (exportStatus === "inactive") list = list.filter(e => !e.is_active);
+
+        if (!term) return list;
+        return list.filter(e =>
             e.emp_id.toLowerCase().includes(term) ||
             e.name.toLowerCase().includes(term)
         );
-    }, [employees, searchTerm]);
+    }, [employees, searchTerm, exportStatus]);
 
     const selectedEmployeeName = useMemo(() => {
         if (filterEmpId === "all") return "ทุกคน (สรุปภาพรวม)";
@@ -371,11 +375,16 @@ export default function RecordsPage() {
                                 ) : filteredEmployees.map(e => (
                                     <div
                                         key={e.emp_id}
-                                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: 13, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 700 : 500, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent" }}
+                                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: 13, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 700 : 500, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                                         onClick={() => { setFilterEmpId(e.emp_id); setIsDropdownOpen(false); setSearchTerm(""); }}
                                     >
-                                        <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 11, marginRight: 8 }}>{e.emp_id}</span>
-                                        {e.name}
+                                        <div>
+                                            <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 11, marginRight: 8 }}>{e.emp_id}</span>
+                                            {e.name}
+                                        </div>
+                                        {e.is_checkin_exempt && (
+                                            <span style={{ fontSize: 10, background: "var(--surface3)", color: "var(--text4)", padding: "1px 6px", borderRadius: 4 }}>ยกเว้นลงเวลา</span>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -545,10 +554,21 @@ export default function RecordsPage() {
                                     <tr key={row.emp_id}>
                                         <td><span className={styles.monoText}>{row.emp_id}</span></td>
                                         <td>
-                                            <div style={{ fontWeight: 700, color: "var(--text)" }}>{row.name}</div>
+                                            <div style={{ fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
+                                                {row.name}
+                                                {row.is_checkin_exempt && (
+                                                    <span style={{ fontSize: 10, background: "var(--surface3)", color: "var(--text4)", padding: "1px 6px", borderRadius: 4, fontWeight: 500 }}>ยกเว้นลงเวลา</span>
+                                                )}
+                                            </div>
                                             <div style={{ fontSize: 12, color: "var(--text4)", marginTop: 2 }}>{row.branch_id || "ไม่ระบุสำนักงาน"}</div>
                                         </td>
-                                        <td style={{ textAlign: "center", fontWeight: 700, color: "var(--ok)" }}>{row.present_days} <small style={{ color: "var(--text5)", fontWeight: 400 }}>วัน</small></td>
+                                        <td style={{ textAlign: "center", fontWeight: 700, color: "var(--ok)" }}>
+                                            {row.is_checkin_exempt ? (
+                                                <span style={{ color: "var(--text4)", fontSize: 12, fontWeight: 500 }}>ยกเว้นลงเวลา</span>
+                                            ) : (
+                                                <>{row.present_days} <small style={{ color: "var(--text5)", fontWeight: 400 }}>วัน</small></>
+                                            )}
+                                        </td>
                                         <td style={{ textAlign: "center" }}>
                                             {row.absent_days > 0 ? (
                                                 <span className={`${styles.badge} ${styles.absent}`} style={{ minWidth: 40 }}>{row.absent_days}</span>

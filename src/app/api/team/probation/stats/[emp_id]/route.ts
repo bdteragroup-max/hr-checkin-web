@@ -48,9 +48,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ emp_id: 
         const isManager = checkIsManager(loggedInUser);
         const isOtherManager = checkIsManager(targetEmp);
 
+        // Check if user is registered in employee_co_evaluators
+        const coEvalCheck: any[] = ((await prisma.$queryRawUnsafe(
+            `SELECT 1 FROM employee_co_evaluators WHERE employee_id = $1 AND evaluator_id = $2 LIMIT 1;`,
+            emp_id,
+            supervisorId
+        ).catch(() => [])) as any[]) || [];
+        const isCoEvaluator = coEvalCheck.length > 0;
+
         const isDirectSubordinate = targetEmp && (
             targetEmp.supervisor_id === supervisorId || 
-            targetEmp.secondary_supervisor_id === supervisorId
+            targetEmp.secondary_supervisor_id === supervisorId ||
+            isCoEvaluator
         );
         const isCrossEvaluating = isManager && isOtherManager && targetEmp?.emp_id !== supervisorId && targetEmp?.is_on_trial === true;
 

@@ -3,15 +3,36 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
-import { PencilSquareIcon, BanknotesIcon, PlusCircleIcon, MinusCircleIcon, AcademicCapIcon, AdjustmentsHorizontalIcon, CheckCircleIcon, PaperAirplaneIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import {
+    PencilSquareIcon,
+    BanknotesIcon,
+    AcademicCapIcon,
+    PaperAirplaneIcon,
+    MagnifyingGlassIcon,
+    ArrowDownTrayIcon,
+    BuildingOffice2Icon,
+    UserGroupIcon,
+    ClockIcon,
+    GiftIcon
+} from "@heroicons/react/24/outline";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 
 type PayrollResult = {
     emp_id: string;
     name: string;
+    nickname?: string;
+    company_id: number;
+    company_code: string;
+    company_name: string;
+    branch_id?: string;
+    department_id?: number | null;
     department: string;
     division: string;
     position: string;
+    salary_type: "monthly" | "daily";
+    base_salary_daily?: number | null;
+    is_active: boolean;
+    resignation_date?: string | null;
     service_duration?: string;
     base_salary: number;
     hourly_wage: number;
@@ -76,7 +97,13 @@ export default function PayrollPage() {
     const [month, setMonth] = useState(new Date().getMonth() + 1); // 1-12
     const [year, setYear] = useState(new Date().getFullYear());
 
-    const { data: payrollData, isLoading, isFetching } = useQuery({
+    // Company segmentation & Filter States
+    const [selectedCompanyTab, setSelectedCompanyTab] = useState<"ALL" | number>("ALL");
+    const [deptFilter, setDeptFilter] = useState<string>("all");
+    const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const { data: payrollData, isLoading } = useQuery({
         queryKey: ['admin-payroll', month, year],
         queryFn: async () => {
             const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}`);
@@ -93,24 +120,35 @@ export default function PayrollPage() {
     const cycle = payrollData?.cycle || null;
     const loading = isLoading;
     const [publishing, setPublishing] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
 
-    const handleIssue50Twi = async (empId: string, year: number) => {
+    // Companies list from API or standard default
+    const companies = useMemo(() => {
+        if (payrollData?.companies && payrollData.companies.length > 0) {
+            return payrollData.companies;
+        }
+        return [
+            { id: 2, code: "TG", name: "บริษัท เทอรา กรุ้ป จำกัด" },
+            { id: 3, code: "TE", name: "บริษัท เทอรา อิเล็กทริค จำกัด" },
+            { id: 4, code: "TP", name: "บริษัท เทอรา พาวเวอร์ จำกัด" }
+        ];
+    }, [payrollData]);
+
+    const handleIssue50Twi = async (empId: string, issueYear: number) => {
         try {
             const res = await fetch('/api/admin/payroll/50twi/issue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ employeeId: empId, year })
+                body: JSON.stringify({ employeeId: empId, year: issueYear })
             });
-            const data = await res.json();
+            const d = await res.json();
             if (!res.ok) {
-                alert(`Error: ${data.error || 'Failed to issue'}`);
+                alert(`Error: ${d.error || 'Failed to issue'}`);
             } else {
-                alert(`Issued 50 Tawi successfully! Document No: ${data.document?.document_number}`);
+                alert(`ออกหนังสือรับรอง 50 ทวิ เรียบร้อยแล้ว! เลขที่เอกสาร: ${d.document?.document_number}`);
             }
         } catch (err) {
             console.error(err);
-            alert('An error occurred while issuing the document.');
+            alert('เกิดข้อผิดพลาดในการออกเอกสาร 50 ทวิ');
         }
     };
 
@@ -182,7 +220,7 @@ export default function PayrollPage() {
             other_deductions: raw.other_deductions !== null && raw.other_deductions !== undefined && Number(raw.other_deductions) !== 0 ? String(raw.other_deductions) : "",
             other_benefits: raw.other_benefits !== null && raw.other_benefits !== undefined && Number(raw.other_benefits) !== 0 ? String(raw.other_benefits) : ""
         });
-        setActiveCell(null); // Close any active quick edit
+        setActiveCell(null);
         setShowModal(true);
     };
 
@@ -243,7 +281,6 @@ export default function PayrollPage() {
 
         try {
             const raw = emp.raw_adjustments || {};
-            // Get all existing fields to maintain other overrides
             const payload: any = {
                 emp_id: emp.emp_id,
                 cycle_month: month,
@@ -273,7 +310,6 @@ export default function PayrollPage() {
                 other_benefits: raw.other_benefits
             };
 
-            // Update the specific field
             payload[field] = value === "" ? null : value;
 
             const res = await fetch("/api/admin/payroll/adjustments", {
@@ -292,8 +328,6 @@ export default function PayrollPage() {
         }
         setQuickSaving(null);
     };
-
-
 
     const handlePublish = (emp_id: string, publishStatus: boolean) => {
         setAlertConfig({
@@ -335,11 +369,11 @@ export default function PayrollPage() {
     };
 
     const handlePublishBatch = (companyTitle: string, items: PayrollResult[], targetStatus: boolean) => {
-        const incompleteInBatch = payrollData?.incomplete_employees?.filter((inc: any) => 
+        const incompleteInBatch = payrollData?.incomplete_employees?.filter((inc: any) =>
             items.some(i => i.emp_id === inc.emp_id)
         ) || [];
 
-        const warnMessage = targetStatus && incompleteInBatch.length > 0 
+        const warnMessage = targetStatus && incompleteInBatch.length > 0
             ? `\n\n⚠️ คำเตือน: มีพนักงาน ${incompleteInBatch.length} คน ข้อมูลยังไม่สมบูรณ์ (เช่น ${incompleteInBatch[0].name})\nพนักงานเหล่านี้จะไม่ถูกคำนวณเงินเดือนอย่างถูกต้อง ยืนยันที่จะดำเนินการต่อหรือไม่?`
             : "";
 
@@ -406,37 +440,105 @@ export default function PayrollPage() {
         }
     };
 
-    const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num));
+    const formatB = (num: number) => new Intl.NumberFormat("th-TH").format(Math.round(num || 0));
 
+    // Unique Departments List
+    const departmentsList = useMemo(() => {
+        const set = new Set<string>();
+        data.forEach(d => {
+            if (d.department && d.department !== "N/A") set.add(d.department);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, "th"));
+    }, [data]);
+
+    // Filtered Data
     const filteredData = useMemo(() => {
-        if (!searchTerm.trim()) return data;
-        const s = searchTerm.toLowerCase();
-        return data.filter(d =>
-            d.name.toLowerCase().includes(s) ||
-            d.emp_id.toLowerCase().includes(s)
-        );
-    }, [data, searchTerm]);
-
-    const groupedData = useMemo(() => {
-        const companies = [
-            { key: "TG", title: "บริษัท เทอรา กรุ้ป จำกัด (TG)" },
-            { key: "TE", title: "บริษัท เทอรา อิเล็กทริค จำกัด (TE)" },
-            { key: "TP", title: "บริษัท เทอรา พาวเวอร์ จำกัด (TP)" },
-            { key: "OTHER", title: "บริษัทอื่นๆ" }
-        ];
-
-        return companies.map(comp => {
-            let filtered = [];
-            if (comp.key === "OTHER") {
-                filtered = filteredData.filter(d => !["TG", "TE", "TP"].includes(d.emp_id.toUpperCase().substring(0, 2)));
-            } else {
-                filtered = filteredData.filter(d => d.emp_id.toUpperCase().startsWith(comp.key));
+        return data.filter(d => {
+            // Search (Name, Nickname, Emp ID)
+            if (searchTerm.trim()) {
+                const s = searchTerm.toLowerCase();
+                const matchName = d.name.toLowerCase().includes(s);
+                const matchId = d.emp_id.toLowerCase().includes(s);
+                const matchNickname = d.nickname ? d.nickname.toLowerCase().includes(s) : false;
+                if (!matchName && !matchId && !matchNickname) return false;
             }
 
-            // Sub-group by Division
+            // Department
+            if (deptFilter !== "all") {
+                if (d.department !== deptFilter && String(d.department_id) !== deptFilter) return false;
+            }
+
+            // Salary Type
+            if (typeFilter !== "all") {
+                if (d.salary_type !== typeFilter) return false;
+            }
+
+            // Company Tab Filter
+            if (selectedCompanyTab !== "ALL") {
+                if (d.company_id !== selectedCompanyTab) return false;
+            }
+
+            return true;
+        });
+    }, [data, searchTerm, deptFilter, typeFilter, selectedCompanyTab]);
+
+    // Financial KPI Summary
+    const financialStats = useMemo(() => {
+        const calc = (items: PayrollResult[]) => ({
+            count: items.length,
+            monthlyCount: items.filter(i => i.salary_type !== "daily").length,
+            dailyCount: items.filter(i => i.salary_type === "daily").length,
+            baseSalary: items.reduce((acc, curr) => acc + (Number(curr.base_salary) || 0), 0),
+            otPay: items.reduce((acc, curr) => acc + (Number(curr.ot_amount) || 0), 0),
+            allowances: items.reduce((acc, curr) => acc + (
+                (Number(curr.diligence_allowance) || 0) +
+                (Number(curr.meal_allowance) || 0) +
+                (Number(curr.travel_allowance) || 0) +
+                (Number(curr.accommodation_allowance) || 0) +
+                (Number(curr.long_service_allowance) || 0) +
+                (Number(curr.telephone_allowance) || 0) +
+                (Number(curr.position_allowance) || 0) +
+                (Number(curr.general_allowance) || 0) +
+                (Number(curr.travel_site_allowance) || 0) +
+                (Number(curr.welfare_amount) || 0) +
+                (Number(curr.commissions) || 0) +
+                (Number(curr.bonus) || 0) +
+                (Number(curr.other_benefits) || 0) +
+                (Number(curr.truck_trip_fee) || 0)
+            ), 0),
+            deductions: items.reduce((acc, curr) => acc + (
+                (Number(curr.social_security) || 0) +
+                (Number(curr.student_loan) || 0) +
+                (Number(curr.insurance) || 0) +
+                (Number(curr.unpaid_absenteeism) || 0) +
+                (Number(curr.tax) || 0) +
+                (Number(curr.other_deductions) || 0)
+            ), 0),
+            netPay: items.reduce((acc, curr) => acc + (Number(curr.net_pay) || 0), 0)
+        });
+
+        const overall = calc(data);
+        const perCompany: { [compId: number]: ReturnType<typeof calc> } = {};
+        companies.forEach((c: any) => {
+            perCompany[c.id] = calc(data.filter(d => d.company_id === c.id));
+        });
+
+        const currentView = calc(filteredData);
+        return { overall, perCompany, currentView };
+    }, [data, companies, filteredData]);
+
+    // Grouping by Company -> Division
+    const groupedData = useMemo(() => {
+        const targetCompanies = selectedCompanyTab === "ALL"
+            ? companies
+            : companies.filter((c: any) => c.id === selectedCompanyTab);
+
+        return targetCompanies.map((comp: any) => {
+            const compItems = filteredData.filter(d => d.company_id === comp.id);
+
             const divGroups: { [key: string]: PayrollResult[] } = {};
-            filtered.forEach(item => {
-                const divName = item.division || "ไม่ระบุฝ่าย (Unassigned)";
+            compItems.forEach(item => {
+                const divName = item.division || "ไม่ระบุฝ่าย";
                 if (!divGroups[divName]) divGroups[divName] = [];
                 divGroups[divName].push(item);
             });
@@ -444,290 +546,472 @@ export default function PayrollPage() {
             const divisions = Object.entries(divGroups).map(([name, items]) => ({
                 name,
                 items: items.sort((a, b) => a.emp_id.localeCompare(b.emp_id))
-            })).sort((a, b) => a.name.localeCompare(b.name));
+            })).sort((a, b) => a.name.localeCompare(b.name, "th"));
 
-            return { key: comp.key, title: comp.title, divisions, totalCount: filtered.length };
-        }).filter(g => g.totalCount > 0);
-    }, [filteredData]);
+            return {
+                id: comp.id,
+                code: comp.code,
+                title: comp.name,
+                divisions,
+                totalCount: compItems.length
+            };
+        }).filter((g: any) => g.totalCount > 0);
+    }, [companies, selectedCompanyTab, filteredData]);
 
+    const hasActiveFilters = searchTerm.trim() !== "" || deptFilter !== "all" || typeFilter !== "all";
 
-    const offSiteSummary = useMemo(() => {
-        const summary: { [division: string]: { [role: string]: { count: number, amount: number } } } = {};
+    const handleResetFilters = () => {
+        setSearchTerm("");
+        setDeptFilter("all");
+        setTypeFilter("all");
+    };
 
-        filteredData.forEach(p => {
-            if (p.travel_site_allowance <= 0) return;
-
-            const div = p.division || "ไม่ระบุฝ่าย (Unassigned)";
-            const pos = p.position.toLowerCase();
-            let role = "Staff";
-            if (pos.includes("manager") || pos.includes("ผู้จัดการ")) role = "Manager";
-            else if (pos.includes("engineer") || pos.includes("วิศวกร")) role = "Engineer";
-            else if (pos.includes("foreman") || pos.includes("หัวหน้าช่าง")) role = "Foreman";
-            else if (pos.includes("driver") || pos.includes("ขับรถ")) role = "Driver";
-
-            if (!summary[div]) summary[div] = {};
-            if (!summary[div][role]) summary[div][role] = { count: 0, amount: 0 };
-
-            summary[div][role].count += 1;
-            summary[div][role].amount += p.travel_site_allowance;
-        });
-
-        return summary;
-    }, [filteredData]);
-
-
-    if (loading) return <div className={styles.loading}>กำลังโหลดข้อมูลเงินเดือน...</div>;
+    if (loading) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.loading}>
+                    กำลังประมวลผลข้อมูลเงินเดือนและโอที...
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>
+            {/* ── 1. Header ── */}
             <div className={styles.header}>
-                <div>
-                    <h1 className={styles.title}>ระบบเงินเดือน และ OT (Payroll & Overtime)</h1>
+                <div className={styles.titleArea}>
+                    <div className={styles.titleRow}>
+                        <div className={styles.titleIcon}>
+                            <BanknotesIcon width={20} height={20} />
+                        </div>
+                        <h1 className={styles.title}>คำนวณและสรุปเงินเดือนพนักงาน</h1>
+                    </div>
                     <p className={styles.subtitle}>
-                        รอบคำนวณ: {cycle ? `${new Date(cycle.start).toLocaleDateString("th-TH")} ถึง ${new Date(cycle.end).toLocaleDateString("th-TH")}` : ""}
+                        ระบบประมวลผลเงินเดือน ค่าล่วงเวลา สวัสดิการ และการเผยแพร่สลิป
+                        {cycle && (
+                            <span className={styles.cycleBadge}>
+                                รอบ: {new Date(cycle.start).toLocaleDateString("th-TH")} - {new Date(cycle.end).toLocaleDateString("th-TH")}
+                            </span>
+                        )}
                     </p>
                 </div>
-                <div className={styles.filters}>
-                    <div className={styles.searchBox}>
-                        <MagnifyingGlassIcon className={styles.searchIcon} width={18} />
-                        <input
-                            type="text"
-                            className={styles.searchInput}
-                            placeholder="ค้นหาชื่อ หรือรหัสพนักงาน..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <select className={styles.input} value={month} onChange={e => setMonth(Number(e.target.value))}>
+
+                <div className={styles.headerControls}>
+                    <select
+                        className={styles.periodSelect}
+                        value={month}
+                        onChange={e => setMonth(Number(e.target.value))}
+                    >
                         {Array.from({ length: 12 }, (_, i) => (
                             <option key={i + 1} value={i + 1}>เดือน {i + 1}</option>
                         ))}
                     </select>
-                    <select className={styles.input} value={year} onChange={e => setYear(Number(e.target.value))}>
+
+                    <select
+                        className={styles.periodSelect}
+                        value={year}
+                        onChange={e => setYear(Number(e.target.value))}
+                    >
                         {Array.from({ length: 5 }, (_, i) => (
-                            <option key={i} value={new Date().getFullYear() - 2 + i}>ปี {new Date().getFullYear() - 2 + i}</option>
+                            <option key={i} value={new Date().getFullYear() - 2 + i}>
+                                ปี {new Date().getFullYear() - 2 + i}
+                            </option>
                         ))}
                     </select>
                 </div>
             </div>
 
+            {/* ── 2. Company Segmented Tabs ── */}
+            <div className={styles.companyTabsWrap}>
+                <button
+                    className={`${styles.companyTab} ${selectedCompanyTab === "ALL" ? styles.companyTabActive : ""}`}
+                    onClick={() => setSelectedCompanyTab("ALL")}
+                >
+                    <BuildingOffice2Icon width={16} height={16} />
+                    <span>ทุกบริษัท (All)</span>
+                    <span className={styles.tabCountBadge}>{financialStats.overall.count} คน</span>
+                </button>
+
+                {companies.map((c: any) => {
+                    const compStat = financialStats.perCompany[c.id];
+                    const isSelected = selectedCompanyTab === c.id;
+                    return (
+                        <button
+                            key={c.id}
+                            className={`${styles.companyTab} ${isSelected ? styles.companyTabActive : ""}`}
+                            onClick={() => setSelectedCompanyTab(c.id)}
+                        >
+                            <span className={styles.tabCodeBadge}>{c.code}</span>
+                            <span>{c.name.replace(/^บริษัท\s*/, "").replace(/\s*จำกัด.*$/, "")}</span>
+                            <span className={styles.tabCountBadge}>{compStat?.count || 0} คน</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── 3. Financial KPI Summary Cards ── */}
+            <div className={styles.financialGrid}>
+                <div className={styles.financialCard}>
+                    <div className={styles.financialLabel}>
+                        <UserGroupIcon width={14} height={14} />
+                        <span>พนักงานในรอบนี้</span>
+                    </div>
+                    <div className={styles.financialValue}>
+                        {financialStats.currentView.count} <span style={{ fontSize: 13, fontWeight: 500 }}>คน</span>
+                    </div>
+                    <div className={styles.financialSub}>
+                        รายเดือน {financialStats.currentView.monthlyCount} • รายวัน {financialStats.currentView.dailyCount}
+                    </div>
+                </div>
+
+                <div className={styles.financialCard}>
+                    <div className={styles.financialLabel}>
+                        <BanknotesIcon width={14} height={14} />
+                        <span>เงินเดือนฐานรวม</span>
+                    </div>
+                    <div className={styles.financialValue}>
+                        ฿{formatB(financialStats.currentView.baseSalary)}
+                    </div>
+                    <div className={styles.financialSub}>ตามสัญญาจ้างและการปรับปรุง</div>
+                </div>
+
+                <div className={styles.financialCard}>
+                    <div className={styles.financialLabel}>
+                        <ClockIcon width={14} height={14} />
+                        <span>ค่าล่วงเวลา & วันหยุด (OT)</span>
+                    </div>
+                    <div className={styles.financialValue} style={{ color: "#0284c7" }}>
+                        ฿{formatB(financialStats.currentView.otPay)}
+                    </div>
+                    <div className={styles.financialSub}>คำนวณตามชั่วโมงที่ได้รับอนุมัติ</div>
+                </div>
+
+                <div className={styles.financialCard}>
+                    <div className={styles.financialLabel}>
+                        <GiftIcon width={14} height={14} />
+                        <span>สวัสดิการและเบี้ยเลี้ยง</span>
+                    </div>
+                    <div className={styles.financialValue} style={{ color: "var(--purple)" }}>
+                        ฿{formatB(financialStats.currentView.allowances)}
+                    </div>
+                    <div className={styles.financialSub}>ค่าตำแหน่ง อาหาร ที่พัก เดินทาง</div>
+                </div>
+
+                <div className={styles.financialCard}>
+                    <div className={styles.financialLabel}>
+                        <span>หักภาษี & ประกันสังคม</span>
+                    </div>
+                    <div className={styles.financialValue} style={{ color: "var(--bad)" }}>
+                        -฿{formatB(financialStats.currentView.deductions)}
+                    </div>
+                    <div className={styles.financialSub}>ประกันสังคม กยศ. ขาดงาน ภาษี</div>
+                </div>
+
+                <div className={`${styles.financialCard} ${styles.financialCardTotal}`}>
+                    <div className={styles.financialLabel}>
+                        <span>ยอดรวมจ่ายสุทธิ (Net Pay)</span>
+                    </div>
+                    <div className={styles.financialValue}>
+                        ฿{formatB(financialStats.currentView.netPay)}
+                    </div>
+                    <div className={styles.financialSub} style={{ color: "#94a3b8" }}>
+                        ยอดรวมโอนจริงสำหรับงวดนี้
+                    </div>
+                </div>
+            </div>
+
+            {/* ── 4. Responsive Search & Filter Bar ── */}
+            <div className={styles.filterBar}>
+                <div className={styles.searchBox}>
+                    <MagnifyingGlassIcon className={styles.searchIcon} width={16} height={16} />
+                    <input
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="ค้นหาชื่อ, ชื่อเล่น, หรือรหัสพนักงาน..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                <select
+                    className={styles.filterSelect}
+                    value={deptFilter}
+                    onChange={e => setDeptFilter(e.target.value)}
+                >
+                    <option value="all">ทุกแผนก (ทั้งหมด)</option>
+                    {departmentsList.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                </select>
+
+                <select
+                    className={styles.filterSelect}
+                    value={typeFilter}
+                    onChange={e => setTypeFilter(e.target.value as any)}
+                >
+                    <option value="all">ประเภทการจ้าง (ทั้งหมด)</option>
+                    <option value="monthly">พนักงานรายเดือน</option>
+                    <option value="daily">พนักงานรายวัน</option>
+                </select>
+
+                {hasActiveFilters && (
+                    <button className={styles.btnResetFilter} onClick={handleResetFilters}>
+                        ล้างตัวกรอง
+                    </button>
+                )}
+            </div>
+
             {/* Incomplete Employees Warning Banner */}
             {payrollData?.incomplete_employees?.length > 0 && (
-                <div style={{
-                    background: "var(--bad-bg)",
-                    border: "1px solid var(--bad-border)",
-                    color: "var(--bad)",
-                    padding: "16px 20px",
-                    borderRadius: "var(--radius-sm)",
-                    marginBottom: 24,
-                    fontSize: 14,
-                    lineHeight: 1.5
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, marginBottom: 8 }}>
-                        <span style={{ fontSize: 18 }}>⚠️</span> 
-                        <span>พนักงานที่มีข้อมูลยังไม่สมบูรณ์ ({payrollData.incomplete_employees.length} คน)</span>
+                <div className={styles.incompleteBanner}>
+                    <div className={styles.incompleteHeader}>
+                        <span>⚠️</span>
+                        <span>มีพนักงานที่ยังกรอกข้อมูลตั้งต้นไม่สมบูรณ์ ({payrollData.incomplete_employees.length} คน)</span>
                     </div>
                     <div>
-                        พนักงานเหล่านี้อาจไม่ได้รับการคำนวณเงินเดือนที่ถูกต้อง เนื่องจากข้อมูลเบื้องต้น/อัตราเงินเดือนยังไม่ครบถ้วน กรุณาอัปเดตข้อมูลพนักงานให้สมบูรณ์ก่อน Publish:
-                        <div style={{ marginTop: 8, maxHeight: 100, overflowY: "auto", background: "rgba(255,255,255,0.5)", padding: 8, borderRadius: 4 }}>
+                        พนักงานกลุ่มนี้ถูกแยกไว้ชั่วคราวและยังไม่ถูกนำมาคำนวณเงินเดือนในตารางหลัก กรุณาตรวจสอบและบันทึกข้อมูลพนักงานให้ครบถ้วน:
+                        <div className={styles.incompleteList}>
                             {payrollData.incomplete_employees.map((inc: any) => (
-                                <div key={inc.emp_id}>• {inc.emp_id} - {inc.name}</div>
+                                <span key={inc.emp_id} style={{ display: "inline-block", marginRight: 12 }}>
+                                    • {inc.emp_id} {inc.name}
+                                </span>
                             ))}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Off-Site Allowance Summary Section */}
-            {Object.keys(offSiteSummary).length > 0 && (
-                <div className={styles.summarySection}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                        <div style={{ width: 4, height: 24, background: 'var(--red)', borderRadius: 2 }}></div>
-                        <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>สรุปเบี้ยเลี้ยงปฏิบัติงานนอกสถานที่ (Off-Site Allowance Summary)</h2>
-                    </div>
-                    <div className={styles.summaryGrid}>
-                        {Object.entries(offSiteSummary).map(([div, roles]) => (
-                            <div key={div} className={styles.summaryCard}>
-                                <div className={styles.summaryHeader}>
-                                    <AcademicCapIcon width={18} style={{ color: 'var(--blue)' }} />
-                                    <h2>ฝ่าย: {div}</h2>
-                                </div>
-                                <table className={styles.summaryTable}>
-                                    <thead>
-                                        <tr>
-                                            <th>ระดับ/ตำแหน่ง</th>
-                                            <th style={{ textAlign: 'center' }}>จำนวน (คน)</th>
-                                            <th style={{ textAlign: 'right' }}>ยอดรวม (฿)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(roles).map(([role, stats]) => (
-                                            <tr key={role}>
-                                                <td>
-                                                    <span className={`${styles.roleBadge} ${styles[`role${role}`]}`}>
-                                                        {role === "Manager" ? "ผู้จัดการ" :
-                                                            role === "Engineer" ? "วิศวกร" :
-                                                                role === "Foreman" ? "หัวหน้าช่าง" :
-                                                                    role === "Driver" ? "คนขับรถ" : "พนักงานทั่วไป"}
-                                                    </span>
-                                                </td>
-                                                <td style={{ textAlign: 'center', fontWeight: 600 }}>{stats.count}</td>
-                                                <td style={{ textAlign: 'right' }} className={styles.amountText}>{formatB(stats.amount)}</td>
-                                            </tr>
-                                        ))}
-                                        <tr className={styles.totalRow}>
-                                            <td style={{ fontWeight: 800 }}>รวมทั้งสิ้น</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {Object.values(roles).reduce((acc, curr) => acc + curr.count, 0)}
-                                            </td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                {formatB(Object.values(roles).reduce((acc, curr) => acc + curr.amount, 0))}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-
+            {/* ── 5. Company Payroll Tables ── */}
             {groupedData.length === 0 ? (
-                <div className={styles.card} style={{ padding: "40px", textAlign: "center", color: "var(--text3)", background: "white", borderRadius: "12px", border: "1px solid var(--line)" }}>
-                    ไม่มีข้อมูลพนักงาน หรือข้อมูลการทำงานในรอบนี้
+                <div className={styles.emptyState}>
+                    ไม่พบข้อมูลเงินเดือนพนักงานตามเงื่อนไขตัวกรองที่กำหนด
                 </div>
             ) : (
-                groupedData.map((group, gIdx) => (
-                    <div key={gIdx} className={styles.card} style={{ marginBottom: 24, overflow: "hidden" }}>
-                        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", background: "var(--gray-50)", display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)" }}></div>
-                            <h2 style={{ fontSize: 16, margin: 0, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{group.title}</h2>
-                            <span style={{ color: "var(--text3)", fontSize: 14, fontWeight: 500 }}>({group.totalCount} คน)</span>
-                            <div style={{ flex: 1 }}></div>
-                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "white", borderColor: "#10b981" }} onClick={() => {
-                                const allItems = group.divisions.flatMap(d => d.items);
-                                handleExportExcel(group.title, allItems);
-                            }}>
-                                ดาวน์โหลด Excel
-                            </button>
-                            <button className={styles.btnSecondary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => {
-                                const allItems = group.divisions.flatMap(d => d.items);
-                                handlePublishBatch(group.title, allItems, false);
-                            }} disabled={publishing || loading}>
-                                ยกเลิก Publish ทั้งหมด
-                            </button>
-                            <button className={styles.btnPrimary} style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }} onClick={() => {
-                                const allItems = group.divisions.flatMap(d => d.items);
-                                handlePublishBatch(group.title, allItems, true);
-                            }} disabled={publishing || loading}>
-                                <PaperAirplaneIcon width={14} /> Publish ทั้งหมด
-                            </button>
+                groupedData.map((group: any) => (
+                    <div key={group.id} className={styles.companySection}>
+                        {/* Company Section Header */}
+                        <div className={styles.companySectionHeader}>
+                            <div className={styles.companyHeaderLeft}>
+                                <span className={styles.companyTagCode}>{group.code}</span>
+                                <h2 className={styles.companyTitle}>{group.title}</h2>
+                                <span className={styles.companyStaffCount}>({group.totalCount} คน)</span>
+                            </div>
+
+                            <div className={styles.companyHeaderActions}>
+                                <button
+                                    className={styles.btnExcel}
+                                    onClick={() => {
+                                        const allItems = group.divisions.flatMap((d: any) => d.items);
+                                        handleExportExcel(group.title, allItems);
+                                    }}
+                                >
+                                    <ArrowDownTrayIcon width={14} height={14} />
+                                    <span>ส่งออก Excel ({group.code})</span>
+                                </button>
+
+                                <button
+                                    className={styles.btnUnpublishBatch}
+                                    onClick={() => {
+                                        const allItems = group.divisions.flatMap((d: any) => d.items);
+                                        handlePublishBatch(group.title, allItems, false);
+                                    }}
+                                    disabled={publishing || loading}
+                                >
+                                    ยกเลิก Publish
+                                </button>
+
+                                <button
+                                    className={styles.btnPublishBatch}
+                                    onClick={() => {
+                                        const allItems = group.divisions.flatMap((d: any) => d.items);
+                                        handlePublishBatch(group.title, allItems, true);
+                                    }}
+                                    disabled={publishing || loading}
+                                >
+                                    <PaperAirplaneIcon width={14} height={14} />
+                                    <span>Publish สลิปทั้งหมด</span>
+                                </button>
+                            </div>
                         </div>
-                        {group.divisions.map((div, dIdx) => (
-                            <div key={dIdx} style={{ padding: "0 20px 20px 20px" }}>
-                                <div style={{ padding: "12px 0", borderBottom: "1px solid var(--line)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                                    <AcademicCapIcon width={16} style={{ color: "var(--blue)" }} />
-                                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "var(--text2)" }}>ฝ่าย: {div.name}</h3>
-                                    <span style={{ fontSize: 12, color: "var(--text4)" }}>({div.items.length} คน)</span>
+
+                        {/* Divisions and Tables */}
+                        {group.divisions.map((div: any, dIdx: number) => (
+                            <div key={dIdx} className={styles.divisionBlock}>
+                                <div className={styles.divisionHeader}>
+                                    <AcademicCapIcon width={16} height={16} style={{ color: "var(--red)" }} />
+                                    <h3 className={styles.divisionTitle}>ฝ่าย: {div.name}</h3>
+                                    <span className={styles.divisionCount}>({div.items.length} คน)</span>
                                 </div>
+
                                 <div className={styles.tableWrap}>
                                     <table className={styles.table}>
                                         <thead>
                                             <tr>
-                                                <th>พนักงาน (ID)</th>
+                                                <th className={styles.stickyColEmp}>พนักงาน (ID)</th>
                                                 <th>ตำแหน่ง & แผนก</th>
-                                                <th className={styles.thRight} title="หากมีการปรับฐานเงินเดือนรอบนี้ จะแสดงเป็นสีส้ม">เงินเดือน (฿)</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>เงินประจำตำแหน่ง</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>เบี้ยเลี้ยง/สวัสดิการ</th>
+                                                <th className={styles.thRight} title="คลิกเพื่อแก้ไขยอดเงินเดือนเฉพาะรอบนี้">เงินเดือน (฿)</th>
+                                                <th className={styles.thRight}>เงินประจำตำแหน่ง</th>
+                                                <th className={styles.thRight}>เบี้ยเลี้ยง/สวัสดิการ</th>
                                                 <th>เงื่อนไข OT</th>
-                                                <th className={styles.thRight} style={{ minWidth: 120 }}>OT ปกติ 1.5x (ชม)</th>
-                                                <th className={styles.thRight} style={{ minWidth: 120 }}>ทำวันหยุด 1x (ชม)</th>
-                                                <th className={styles.thRight} style={{ minWidth: 120 }}>OT วันหยุด 3x (ชม)</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>เบี้ยขยัน</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าอาหาร</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าเดินทาง</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าที่พัก</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>เบี้ยเลี้ยง Off-Site</th>
-
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ค่าโทรศัพท์</th>
+                                                <th className={styles.thRight}>OT 1.5x (ชม)</th>
+                                                <th className={styles.thRight}>วันหยุด 1x (ชม)</th>
+                                                <th className={styles.thRight}>OT วันหยุด 3x (ชม)</th>
+                                                <th className={styles.thRight}>เบี้ยขยัน</th>
+                                                <th className={styles.thRight}>ค่าอาหาร</th>
+                                                <th className={styles.thRight}>ค่าเดินทาง</th>
+                                                <th className={styles.thRight}>ค่าที่พัก</th>
+                                                <th className={styles.thRight}>Off-Site</th>
+                                                <th className={styles.thRight}>ค่าโทรศัพท์</th>
                                                 {month === 12 && (
-                                                    <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัสอายุงาน</th>
+                                                    <th className={styles.thRight}>โบนัสอายุงาน</th>
                                                 )}
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>OT+วันหยุด</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>คอมมิชชั่น</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>โบนัส</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>รายได้อื่นๆ</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>ค่าเที่ยวขับรถ</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>สวัสดิการอื่นๆ</th>
-                                                <th className={styles.thRight} style={{ minWidth: 100 }}>รวมรายได้สุทธิ</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>หักประกันสังคม</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>หัก กยศ.</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ประกันทำงาน</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ขาดงาน</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>ภาษี</th>
-                                                <th className={styles.thRight} style={{ minWidth: 90 }}>หักอื่นๆ</th>
-                                                <th className={styles.thRight}>รวมรับจริง (฿)</th>
+                                                <th className={styles.thRight}>OT+วันหยุด</th>
+                                                <th className={styles.thRight}>คอมมิชชั่น</th>
+                                                <th className={styles.thRight}>โบนัส</th>
+                                                <th className={styles.thRight}>รายได้อื่นๆ</th>
+                                                <th className={styles.thRight}>ค่าเที่ยวรถ</th>
+                                                <th className={styles.thRight}>สวัสดิการอื่นๆ</th>
+                                                <th className={styles.thRight}>รวมรายได้สุทธิ</th>
+                                                <th className={styles.thRight}>ประกันสังคม</th>
+                                                <th className={styles.thRight}>กยศ.</th>
+                                                <th className={styles.thRight}>ประกันงาน</th>
+                                                <th className={styles.thRight}>ขาดงาน</th>
+                                                <th className={styles.thRight}>ภาษี</th>
+                                                <th className={styles.thRight}>หักอื่นๆ</th>
+                                                <th className={styles.thRight} style={{ fontWeight: 800 }}>รวมรับจริง (฿)</th>
                                                 <th>บัญชีรับเงิน</th>
-                                                <th>จัดการ</th>
+                                                <th style={{ textAlign: "center" }}>จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {div.items.map(p => (
+                                            {div.items.map((p: PayrollResult) => (
                                                 <tr key={p.emp_id}>
-                                                    <td style={{ whiteSpace: "nowrap" }}>
-                                                        <span className={styles.bold}>{p.name}</span> <span style={{ fontSize: 12, color: "var(--text3)" }}>({p.emp_id})</span>
-                                                    </td>
-                                                    <td style={{ whiteSpace: "nowrap" }}>
-                                                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                            <span>{p.position}</span>
-                                                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                                                <span style={{ fontSize: 12, color: "var(--text3)" }}>{p.department}</span>
-                                                                {p.is_on_trial ? (
-                                                                    <span style={{ fontSize: 10, color: "var(--red)", background: "rgba(239, 68, 68, 0.1)", padding: "1px 4px", borderRadius: 4 }}>ทดลองงาน</span>
-                                                                ) : (
-                                                                    <span style={{ fontSize: 10, color: "var(--ok)", background: "rgba(16, 185, 129, 0.1)", padding: "1px 4px", borderRadius: 4 }}>พนักงานประจำ</span>
+                                                    {/* Sticky Employee Column */}
+                                                    <td className={styles.stickyColEmp}>
+                                                        <div className={styles.empCellWrap}>
+                                                            <div className={styles.empNameRow}>
+                                                                <span>{p.name}</span>
+                                                                {p.nickname && (
+                                                                    <span className={styles.empNickname}>({p.nickname})</span>
+                                                                )}
+                                                            </div>
+                                                            <div className={styles.empSubRow}>
+                                                                <span className={styles.empIdBadge}>{p.emp_id}</span>
+                                                                {!p.is_active && (
+                                                                    <span className={styles.badgeResigned}>
+                                                                        พ้นสภาพ {p.resignation_date ? `(${p.resignation_date})` : ""}
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                     </td>
 
-                                                    {/* Salary */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-override_salary` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "override_salary" }); setTempValue(p.is_salary_overridden ? String(p.base_salary) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "override_salary" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "override_salary", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "override_salary", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <div style={{ color: p.is_salary_overridden ? "var(--orange)" : "inherit", fontWeight: p.is_salary_overridden ? 600 : "normal" }} title={p.is_salary_overridden ? `ปรับฐานเงินเดือนสำหรับรอบนี้ (ฐานเดิม: ${formatB(p.base_salary_original)})` : ""}>
-                                                                {formatB(p.base_salary)}
+                                                    {/* Department & Position */}
+                                                    <td>
+                                                        <div className={styles.deptCell}>
+                                                            <span className={styles.posText}>{p.position}</span>
+                                                            <div className={styles.deptSubText}>
+                                                                <span>{p.department}</span>
+                                                                {p.is_on_trial ? (
+                                                                    <span className={styles.badgeTrial}>ทดลองงาน</span>
+                                                                ) : (
+                                                                    <span className={styles.badgeRegular}>ประจำ</span>
+                                                                )}
+                                                                {p.salary_type === "daily" && (
+                                                                    <span className={styles.dailyRateTag}>
+                                                                        รายวัน (฿{formatB(p.base_salary_daily || p.base_salary)}/วัน)
+                                                                    </span>
+                                                                )}
                                                             </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Base Salary (Quick edit) */}
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-override_salary` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "override_salary" });
+                                                            setTempValue(p.is_salary_overridden ? String(p.base_salary) : "");
+                                                        }}
+                                                    >
+                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "override_salary" ? (
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "override_salary", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "override_salary", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className={p.is_salary_overridden ? styles.cellOverridden : undefined}>
+                                                                {formatB(p.base_salary)}
+                                                            </span>
                                                         )}
                                                     </td>
 
                                                     {/* Position Allowance */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-position_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "position_allowance_override" }); setTempValue(p.position_allowance > 0 ? String(p.position_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-position_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "position_allowance_override" });
+                                                            setTempValue(p.position_allowance > 0 ? String(p.position_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "position_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "position_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "position_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "position_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "position_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <span style={{ fontWeight: 600, color: p.position_allowance > 0 ? "var(--purple)" : "inherit" }}>
+                                                            <span style={{ color: p.position_allowance > 0 ? "var(--purple)" : "inherit", fontWeight: p.position_allowance > 0 ? 700 : 400 }}>
                                                                 {p.position_allowance > 0 ? formatB(p.position_allowance) : "-"}
                                                             </span>
                                                         )}
                                                     </td>
 
                                                     {/* General Allowance */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-general_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "general_allowance_override" }); setTempValue(p.general_allowance > 0 ? String(p.general_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-general_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "general_allowance_override" });
+                                                            setTempValue(p.general_allowance > 0 ? String(p.general_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "general_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "general_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "general_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "general_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "general_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <span style={{ fontWeight: 600, color: p.general_allowance > 0 ? "var(--purple)" : "inherit" }}>
+                                                            <span style={{ color: p.general_allowance > 0 ? "var(--purple)" : "inherit" }}>
                                                                 {p.general_allowance > 0 ? formatB(p.general_allowance) : "-"}
                                                             </span>
                                                         )}
                                                     </td>
 
+                                                    {/* OT Rule */}
                                                     <td>
                                                         <span className={p.is_ot_eligible ? styles.badgeOk : styles.badgeErr}>
                                                             {p.ot_rule}
@@ -735,292 +1019,326 @@ export default function PayrollPage() {
                                                     </td>
 
                                                     {/* OT 1.5x */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-normal_1_5x_hours_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "normal_1_5x_hours_override" }); setTempValue(p.normal_1_5x_hours > 0 ? String(p.normal_1_5x_hours) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-normal_1_5x_hours_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "normal_1_5x_hours_override" });
+                                                            setTempValue(p.normal_1_5x_hours > 0 ? String(p.normal_1_5x_hours) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "normal_1_5x_hours_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "normal_1_5x_hours_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "normal_1_5x_hours_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "normal_1_5x_hours_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "normal_1_5x_hours_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <div style={{ fontWeight: 600, color: p.normal_1_5x_hours > 0 ? "var(--ok)" : "inherit" }}>
+                                                            <div style={{ color: p.normal_1_5x_hours > 0 ? "var(--ok)" : "inherit" }}>
                                                                 {p.normal_1_5x_hours > 0 ? `${p.normal_1_5x_hours} ชม.` : "-"}
-                                                                {p.normal_ot_pay > 0 && <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 6 }}>({formatB(p.normal_ot_pay)} ฿)</span>}
+                                                                {p.normal_ot_pay > 0 && <span style={{ fontSize: 11, color: "var(--text-4)", marginLeft: 4 }}>({formatB(p.normal_ot_pay)})</span>}
                                                             </div>
                                                         )}
                                                     </td>
 
                                                     {/* OT 1x */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-holiday_1_x_hours_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "holiday_1_x_hours_override" }); setTempValue(p.holiday_1x_hours > 0 ? String(p.holiday_1x_hours) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-holiday_1_x_hours_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "holiday_1_x_hours_override" });
+                                                            setTempValue(p.holiday_1x_hours > 0 ? String(p.holiday_1x_hours) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "holiday_1_x_hours_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "holiday_1_x_hours_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "holiday_1_x_hours_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "holiday_1_x_hours_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "holiday_1_x_hours_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <div style={{ fontWeight: 600, color: p.holiday_1x_hours > 0 ? "var(--blue)" : "inherit" }}>
+                                                            <div style={{ color: p.holiday_1x_hours > 0 ? "var(--blue)" : "inherit" }}>
                                                                 {p.holiday_1x_hours > 0 ? `${p.holiday_1x_hours} ชม.` : "-"}
-                                                                {p.holiday_1x_pay > 0 && <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 6 }}>({formatB(p.holiday_1x_pay)} ฿)</span>}
+                                                                {p.holiday_1x_pay > 0 && <span style={{ fontSize: 11, color: "var(--text-4)", marginLeft: 4 }}>({formatB(p.holiday_1x_pay)})</span>}
                                                             </div>
                                                         )}
                                                     </td>
 
                                                     {/* OT 3x */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-holiday_3_x_hours_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "holiday_3_x_hours_override" }); setTempValue(p.holiday_3x_hours > 0 ? String(p.holiday_3x_hours) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-holiday_3_x_hours_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "holiday_3_x_hours_override" });
+                                                            setTempValue(p.holiday_3x_hours > 0 ? String(p.holiday_3x_hours) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "holiday_3_x_hours_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "holiday_3_x_hours_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "holiday_3_x_hours_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "holiday_3_x_hours_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "holiday_3_x_hours_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <div style={{ fontWeight: 600, color: p.holiday_3x_hours > 0 ? "var(--red)" : "inherit" }}>
+                                                            <div style={{ color: p.holiday_3x_hours > 0 ? "var(--red)" : "inherit" }}>
                                                                 {p.holiday_3x_hours > 0 ? `${p.holiday_3x_hours} ชม.` : "-"}
-                                                                {p.holiday_3x_pay > 0 && <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 6 }}>({formatB(p.holiday_3x_pay)} ฿)</span>}
+                                                                {p.holiday_3x_pay > 0 && <span style={{ fontSize: 11, color: "var(--text-4)", marginLeft: 4 }}>({formatB(p.holiday_3x_pay)})</span>}
                                                             </div>
                                                         )}
                                                     </td>
 
                                                     {/* Diligence */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-diligence_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "diligence_allowance_override" }); setTempValue(p.diligence_allowance > 0 ? String(p.diligence_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-diligence_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "diligence_allowance_override" });
+                                                            setTempValue(p.diligence_allowance > 0 ? String(p.diligence_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "diligence_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "diligence_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "diligence_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "diligence_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "diligence_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
                                                             <>
-                                                                <span style={{ fontWeight: 600, color: p.diligence_allowance > 0 ? "var(--ok)" : "var(--text4)" }}>
+                                                                <span style={{ color: p.diligence_allowance > 0 ? "var(--ok)" : "var(--text-4)", fontWeight: p.diligence_allowance > 0 ? 700 : 400 }}>
                                                                     {p.diligence_allowance > 0 ? formatB(p.diligence_allowance) : "0"}
                                                                 </span>
                                                                 {p.diligence_allowance === 0 && p.diligence_failed_reason && (
-                                                                    <span style={{ fontSize: 10, color: "var(--text4)", marginLeft: 6 }}>({p.diligence_failed_reason})</span>
+                                                                    <span style={{ fontSize: 10, color: "var(--text-4)", marginLeft: 4 }}>
+                                                                        ({p.diligence_failed_reason})
+                                                                    </span>
                                                                 )}
                                                             </>
                                                         )}
                                                     </td>
 
                                                     {/* Meal */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-meal_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "meal_allowance_override" }); setTempValue(p.meal_allowance > 0 ? String(p.meal_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-meal_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "meal_allowance_override" });
+                                                            setTempValue(p.meal_allowance > 0 ? String(p.meal_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "meal_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "meal_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "meal_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "meal_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "meal_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <span style={{ fontWeight: 600, color: p.meal_allowance > 0 ? "var(--ink)" : "inherit" }}>
-                                                                {p.meal_allowance > 0 ? formatB(p.meal_allowance) : "-"}
-                                                            </span>
+                                                            <span>{p.meal_allowance > 0 ? formatB(p.meal_allowance) : "-"}</span>
                                                         )}
                                                     </td>
 
                                                     {/* Travel */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-travel_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "travel_allowance_override" }); setTempValue(p.travel_allowance > 0 ? String(p.travel_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-travel_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "travel_allowance_override" });
+                                                            setTempValue(p.travel_allowance > 0 ? String(p.travel_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "travel_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "travel_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "travel_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "travel_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "travel_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <span style={{ fontWeight: 600, color: p.travel_allowance > 0 ? "var(--ink)" : "inherit" }}>
-                                                                {p.travel_allowance > 0 ? formatB(p.travel_allowance) : "-"}
-                                                            </span>
+                                                            <span>{p.travel_allowance > 0 ? formatB(p.travel_allowance) : "-"}</span>
                                                         )}
                                                     </td>
 
                                                     {/* Accommodation */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-accommodation_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "accommodation_allowance_override" }); setTempValue(p.accommodation_allowance > 0 ? String(p.accommodation_allowance) : ""); }}>
+                                                    <td
+                                                        className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-accommodation_allowance_override` ? styles.cellSaving : ""}`}
+                                                        onClick={() => {
+                                                            setActiveCell({ empId: p.emp_id, field: "accommodation_allowance_override" });
+                                                            setTempValue(p.accommodation_allowance > 0 ? String(p.accommodation_allowance) : "");
+                                                        }}
+                                                    >
                                                         {activeCell?.empId === p.emp_id && activeCell?.field === "accommodation_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "accommodation_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "accommodation_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
+                                                            <input
+                                                                autoFocus
+                                                                className={styles.cellInput}
+                                                                type="number"
+                                                                value={tempValue}
+                                                                onChange={e => setTempValue(e.target.value)}
+                                                                onBlur={() => handleQuickSave(p, "accommodation_allowance_override", tempValue)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === "Enter") handleQuickSave(p, "accommodation_allowance_override", tempValue);
+                                                                    if (e.key === "Escape") setActiveCell(null);
+                                                                }}
+                                                            />
                                                         ) : (
-                                                            <span style={{ fontWeight: 600, color: p.accommodation_allowance > 0 ? "var(--ink)" : "inherit" }}>
-                                                                {p.accommodation_allowance > 0 ? formatB(p.accommodation_allowance) : "-"}
-                                                                {p.truck_hotel_allowance_max && p.truck_hotel_allowance_max > 0 ? (
-                                                                    <div style={{ fontSize: "10px", color: "var(--teal)", marginTop: "2px" }}>(Max {formatB(p.truck_hotel_allowance_max)})</div>
-                                                                ) : null}
-                                                            </span>
+                                                            <span>{p.accommodation_allowance > 0 ? formatB(p.accommodation_allowance) : "-"}</span>
                                                         )}
                                                     </td>
 
-                                                    {/* Travel Site */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-travel_site_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "travel_site_allowance_override" }); setTempValue(p.travel_site_allowance > 0 ? String(p.travel_site_allowance) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "travel_site_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "travel_site_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "travel_site_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.travel_site_allowance > 0 ? "var(--blue)" : "inherit" }}>
-                                                                {p.travel_site_allowance > 0 ? formatB(p.travel_site_allowance) : "-"}
-                                                            </span>
-                                                        )}
+                                                    {/* Off-site */}
+                                                    <td className={styles.tdRight}>
+                                                        {p.travel_site_allowance > 0 ? formatB(p.travel_site_allowance) : "-"}
                                                     </td>
 
                                                     {/* Phone */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-phone_allowance_override` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "phone_allowance_override" }); setTempValue(p.telephone_allowance > 0 ? String(p.telephone_allowance) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "phone_allowance_override" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "phone_allowance_override", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "phone_allowance_override", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.telephone_allowance > 0 ? "var(--ink)" : "inherit" }}>
-                                                                {p.telephone_allowance > 0 ? formatB(p.telephone_allowance) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight}>
+                                                        {p.telephone_allowance > 0 ? formatB(p.telephone_allowance) : "-"}
                                                     </td>
 
                                                     {month === 12 && (
-                                                        <td className={styles.thRight}>
-                                                            <span style={{ fontWeight: 600, color: p.long_service_allowance > 0 ? "var(--purple)" : "inherit" }}>
-                                                                {p.long_service_allowance > 0 ? formatB(p.long_service_allowance) : "-"}
-                                                            </span>
+                                                        <td className={styles.tdRight}>
+                                                            {p.long_service_allowance > 0 ? formatB(p.long_service_allowance) : "-"}
                                                         </td>
                                                     )}
 
-                                                    <td className={styles.tdRight} style={{ fontWeight: 600, color: (p.ot_amount + (p.holiday_allowance || 0)) > 0 ? "var(--ok)" : "inherit" }}>
-                                                        {formatB(p.ot_amount + (p.holiday_allowance || 0))}
+                                                    {/* Total OT */}
+                                                    <td className={styles.tdRight} style={{ color: p.ot_amount > 0 ? "var(--ok)" : "inherit", fontWeight: 700 }}>
+                                                        {formatB(p.ot_amount)}
                                                     </td>
 
                                                     {/* Commissions */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-commissions` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "commissions" }); setTempValue(p.commissions > 0 ? String(p.commissions) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "commissions" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "commissions", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "commissions", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.commissions > 0 ? "var(--ok)" : "inherit" }}>
-                                                                {p.commissions > 0 ? formatB(p.commissions) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight}>
+                                                        {p.commissions > 0 ? formatB(p.commissions) : "-"}
                                                     </td>
 
                                                     {/* Bonus */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-bonus` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "bonus" }); setTempValue(p.bonus > 0 ? String(p.bonus) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "bonus" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "bonus", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "bonus", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.bonus > 0 ? "var(--ok)" : "inherit" }}>
-                                                                {p.bonus > 0 ? formatB(p.bonus) : "-"}
-                                                            </span>
-                                                        )}
-                                                    </td>
-
-                                                    {/* Other Benefits (Adjustments) */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-other_benefits` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "other_benefits" }); setTempValue(p.other_benefits > 0 ? String(p.other_benefits) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "other_benefits" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "other_benefits", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "other_benefits", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.other_benefits > 0 ? "var(--ok)" : "inherit" }}>
-                                                                {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
-                                                            </span>
-                                                        )}
-                                                    </td>
-
-                                                    {/* Truck Trip Fee */}
                                                     <td className={styles.tdRight}>
-                                                        <span style={{ fontWeight: 600, color: p.truck_trip_fee && p.truck_trip_fee > 0 ? "var(--ok)" : "inherit" }}>
-                                                            {p.truck_trip_fee && p.truck_trip_fee > 0 ? formatB(p.truck_trip_fee) : "-"}
-                                                        </span>
+                                                        {p.bonus > 0 ? formatB(p.bonus) : "-"}
                                                     </td>
 
-                                                    {/* General Welfare (Automated) */}
+                                                    {/* Other Benefits */}
                                                     <td className={styles.tdRight}>
-                                                        <span style={{ fontWeight: 600, color: p.welfare_amount > 0 ? "var(--purple)" : "inherit" }}>
-                                                            {p.welfare_amount > 0 ? formatB(p.welfare_amount) : "-"}
-                                                        </span>
+                                                        {p.other_benefits > 0 ? formatB(p.other_benefits) : "-"}
                                                     </td>
 
+                                                    {/* Truck Trip */}
                                                     <td className={styles.tdRight}>
-                                                        <div style={{ fontWeight: 500 }}>{formatB(p.gross_pay)}</div>
+                                                        {p.truck_trip_fee && p.truck_trip_fee > 0 ? formatB(p.truck_trip_fee) : "-"}
+                                                    </td>
+
+                                                    {/* Welfare */}
+                                                    <td className={styles.tdRight}>
+                                                        {p.welfare_amount > 0 ? formatB(p.welfare_amount) : "-"}
+                                                    </td>
+
+                                                    {/* Gross Pay */}
+                                                    <td className={styles.tdRight} style={{ fontWeight: 700 }}>
+                                                        {formatB(p.gross_pay)}
                                                     </td>
 
                                                     {/* Social Security */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-social_security` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "social_security" }); setTempValue(p.social_security > 0 ? String(p.social_security) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "social_security" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "social_security", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "social_security", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.social_security > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.social_security > 0 ? "-" + formatB(p.social_security) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight} style={{ color: "var(--bad)" }}>
+                                                        {p.social_security > 0 ? `-${formatB(p.social_security)}` : "-"}
                                                     </td>
 
                                                     {/* Student Loan */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-student_loan` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "student_loan" }); setTempValue(p.student_loan > 0 ? String(p.student_loan) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "student_loan" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "student_loan", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "student_loan", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.student_loan > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.student_loan > 0 ? "-" + formatB(p.student_loan) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight}>
+                                                        {p.student_loan > 0 ? `-${formatB(p.student_loan)}` : "-"}
                                                     </td>
 
                                                     {/* Insurance */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-insurance` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "insurance" }); setTempValue(p.insurance > 0 ? String(p.insurance) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "insurance" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "insurance", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "insurance", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.insurance > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.insurance > 0 ? "-" + formatB(p.insurance) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight}>
+                                                        {p.insurance > 0 ? `-${formatB(p.insurance)}` : "-"}
                                                     </td>
 
-                                                    {/* Absenteeism */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-unpaid_absenteeism` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "unpaid_absenteeism" }); setTempValue(p.unpaid_absenteeism > 0 ? String(p.unpaid_absenteeism) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "unpaid_absenteeism" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "unpaid_absenteeism", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "unpaid_absenteeism", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.unpaid_absenteeism > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.unpaid_absenteeism > 0 ? "-" + formatB(p.unpaid_absenteeism) : "-"}
-                                                            </span>
-                                                        )}
+                                                    {/* Unpaid Leave */}
+                                                    <td className={styles.tdRight}>
+                                                        {p.unpaid_absenteeism > 0 ? `-${formatB(p.unpaid_absenteeism)}` : "-"}
                                                     </td>
 
                                                     {/* Tax */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-tax` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "tax" }); setTempValue(p.tax > 0 ? String(p.tax) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "tax" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "tax", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "tax", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.tax > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.tax > 0 ? "-" + formatB(p.tax) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight} style={{ color: "var(--bad)" }}>
+                                                        {p.tax > 0 ? `-${formatB(p.tax)}` : "-"}
                                                     </td>
 
                                                     {/* Other Deductions */}
-                                                    <td className={`${styles.tdRight} ${styles.editableCell} ${quickSaving === `${p.emp_id}-other_deductions` ? styles.cellSaving : ""}`}
-                                                        onClick={() => { setActiveCell({ empId: p.emp_id, field: "other_deductions" }); setTempValue(p.other_deductions > 0 ? String(p.other_deductions) : ""); }}>
-                                                        {activeCell?.empId === p.emp_id && activeCell?.field === "other_deductions" ? (
-                                                            <input autoFocus className={styles.cellInput} type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} onBlur={() => handleQuickSave(p, "other_deductions", tempValue)} onKeyDown={e => { if (e.key === "Enter") handleQuickSave(p, "other_deductions", tempValue); if (e.key === "Escape") setActiveCell(null); }} />
-                                                        ) : (
-                                                            <span style={{ fontWeight: 600, color: p.other_deductions > 0 ? "var(--red)" : "inherit" }}>
-                                                                {p.other_deductions > 0 ? "-" + formatB(p.other_deductions) : "-"}
-                                                            </span>
-                                                        )}
+                                                    <td className={styles.tdRight}>
+                                                        {p.other_deductions > 0 ? `-${formatB(p.other_deductions)}` : "-"}
                                                     </td>
 
-                                                    <td className={styles.tdRight}>
-                                                        <div style={{ fontWeight: 600, color: "var(--purple)", fontSize: 16 }}>
-                                                            {formatB(p.net_pay)}
+                                                    {/* Net Pay */}
+                                                    <td className={styles.tdRight} style={{ fontWeight: 800, fontSize: 13.5, color: "var(--red)" }}>
+                                                        {formatB(p.net_pay)}
+                                                    </td>
+
+                                                    {/* Bank Account */}
+                                                    <td style={{ fontSize: 11.5 }}>
+                                                        <div>{p.bank_name}</div>
+                                                        <span style={{ fontFamily: "IBM Plex Mono", color: "var(--text-3)" }}>{p.bank_account_no}</span>
+                                                    </td>
+
+                                                    {/* Actions */}
+                                                    <td>
+                                                        <div className={styles.actionBtnRow}>
+                                                            <button
+                                                                className={styles.btnActionIcon}
+                                                                onClick={() => openEditModal(p)}
+                                                                title="แก้ไขยอดรายบุคคล"
+                                                            >
+                                                                <PencilSquareIcon width={14} height={14} />
+                                                            </button>
+
+                                                            <button
+                                                                className={styles.btnActionIcon}
+                                                                style={{ color: p.is_published ? "var(--ok)" : "var(--text-4)" }}
+                                                                onClick={() => handlePublish(p.emp_id, !p.is_published)}
+                                                                title={p.is_published ? "เผยแพร่แล้ว (คลิกเพื่อยกเลิก)" : "ยังไม่เผยแพร่ (คลิกเพื่อเผยแพร่)"}
+                                                                disabled={publishing}
+                                                            >
+                                                                <PaperAirplaneIcon width={14} height={14} />
+                                                            </button>
+
+                                                            <button
+                                                                className={styles.btnActionIcon}
+                                                                onClick={() => handleIssue50Twi(p.emp_id, year)}
+                                                                title="ออกหนังสือรับรอง 50 ทวิ"
+                                                            >
+                                                                <ArrowDownTrayIcon width={14} height={14} />
+                                                            </button>
                                                         </div>
-                                                    </td>
-                                                    <td style={{ whiteSpace: "nowrap" }}>
-                                                        <div style={{ fontSize: 13, fontWeight: 600 }}>{p.bank_name}</div>
-                                                        <div style={{ fontSize: 12, color: "var(--text3)" }}>{p.bank_account_no}</div>
-                                                    </td>
-                                                    <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => window.open(`/api/payroll/50twi?year=${year}&emp_id=${p.emp_id}&mode=draft`, "_blank")}>
-                                                            <ArrowDownTrayIcon width={14} /> ร่าง 50 ทวิ
-                                                        </button>
-                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12, color: 'var(--blue)' }} onClick={() => handleIssue50Twi(p.emp_id, year)}>
-                                                            ออก 50 ทวิ
-                                                        </button>
-                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12, color: 'var(--green)' }} onClick={() => window.open(`/api/payroll/50twi?year=${year}&emp_id=${p.emp_id}&mode=issued`, "_blank")}>
-                                                            <ArrowDownTrayIcon width={14} /> โหลดตัวจริง
-                                                        </button>
-                                                        <button className={styles.btnSecondary} style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => openEditModal(p)}>
-                                                            <PencilSquareIcon width={14} /> จัดการ
-                                                        </button>
-                                                        <button
-                                                            className={p.is_published ? styles.btnSecondary : styles.btnPrimary}
-                                                            style={{ padding: "4px 8px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                                            onClick={() => handlePublish(p.emp_id, !p.is_published)}
-                                                            disabled={publishing || loading}
-                                                        >
-                                                            {p.is_published ? "ยกเลิก Publish" : <><PaperAirplaneIcon width={12} /> Publish</>}
-                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1033,138 +1351,158 @@ export default function PayrollPage() {
                 ))
             )}
 
+            {/* ── 6. Edit Adjustments Modal ── */}
             {showModal && editingEmp && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent} style={{ maxWidth: "800px", width: "95%" }}>
+                <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
+                    <div className={styles.modalContent}>
                         <div className={styles.modalHeader}>
-                            <h2>ปรับแก้ข้อมูลเงินเดือน (รอบเดือน {month}/{year})</h2>
-                            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "var(--text4)" }}>
-                                พนักงาน: <span style={{ color: "var(--text1)", fontWeight: 700 }}>{editingEmp.name}</span>
-                            </p>
+                            <h2 className={styles.modalHeaderTitle}>
+                                ปรับปรุงยอดเงินเดือน: {editingEmp.name} ({editingEmp.emp_id})
+                            </h2>
+                            <button className={styles.modalCloseBtn} onClick={() => setShowModal(false)}>✕</button>
                         </div>
 
-                        <div className={styles.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                            {/* Section: Salary & OT */}
-                            <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <BanknotesIcon width={18} style={{ color: 'var(--blue)' }} /> ฐานเงินเดือน และการทำงานล่วงเวลา
-                                </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                                    <div className={styles.formGroup}>
-                                        <label>เงินเดือน (Override)</label>
-                                        <input className={styles.input} type="number" value={editForm.override_salary} onChange={e => setEditForm({ ...editForm, override_salary: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.base_salary)}`} />
-                                    </div>
-
-                                    <div>
-                                        <label className={styles.lbl}>เงินเบี้ยเลี้ยง/สวัสดิการ (ทั่วไป)</label>
-                                        <input className={styles.input} type="number" value={editForm.general_allowance_override} onChange={e => setEditForm({ ...editForm, general_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.general_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>OT ปกติ 1.5x (ชม.)</label>
-                                        <input className={styles.input} type="number" value={editForm.normal_1_5x_hours_override} onChange={e => setEditForm({ ...editForm, normal_1_5x_hours_override: e.target.value })} placeholder={`ปัจจุบัน: ${editingEmp.normal_1_5x_hours}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ทำวันหยุด 1x (ชม.)</label>
-                                        <input className={styles.input} type="number" value={editForm.holiday_1_x_hours_override} onChange={e => setEditForm({ ...editForm, holiday_1_x_hours_override: e.target.value })} placeholder={`ปัจจุบัน: ${editingEmp.holiday_1x_hours}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>OT วันหยุด 3x (ชม.)</label>
-                                        <input className={styles.input} type="number" value={editForm.holiday_3_x_hours_override} onChange={e => setEditForm({ ...editForm, holiday_3_x_hours_override: e.target.value })} placeholder={`ปัจจุบัน: ${editingEmp.holiday_3x_hours}`} />
-                                    </div>
-                                </div>
+                        <div className={styles.modalBody}>
+                            <div className={styles.inputField}>
+                                <label className={styles.inputLabel}>เงินเดือนฐานรอบนี้ (Override Salary)</label>
+                                <input
+                                    type="number"
+                                    className={styles.inputElement}
+                                    placeholder={String(editingEmp.base_salary)}
+                                    value={editForm.override_salary}
+                                    onChange={e => setEditForm({ ...editForm, override_salary: e.target.value })}
+                                />
                             </div>
 
-                            {/* Section: Allowances */}
-                            <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <PlusCircleIcon width={18} style={{ color: 'var(--ok)' }} /> เงินบวกเพิ่ม / สวัสดิการ
-                                </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                                    <div className={styles.formGroup}>
-                                        <label>เงินประจำตำแหน่ง</label>
-                                        <input className={styles.input} type="number" value={editForm.position_allowance_override} onChange={e => setEditForm({ ...editForm, position_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.position_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>เบี้ยขยัน</label>
-                                        <input className={styles.input} type="number" value={editForm.diligence_allowance_override} onChange={e => setEditForm({ ...editForm, diligence_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.diligence_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ค่าอาหาร</label>
-                                        <input className={styles.input} type="number" value={editForm.meal_allowance_override} onChange={e => setEditForm({ ...editForm, meal_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.meal_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ค่าเดินทาง</label>
-                                        <input className={styles.input} type="number" value={editForm.travel_allowance_override} onChange={e => setEditForm({ ...editForm, travel_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.travel_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ค่าที่พัก</label>
-                                        <input className={styles.input} type="number" value={editForm.accommodation_allowance_override} onChange={e => setEditForm({ ...editForm, accommodation_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.accommodation_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>เบี้ยเลี้ยง Off-Site</label>
-                                        <input className={styles.input} type="number" value={editForm.travel_site_allowance_override} onChange={e => setEditForm({ ...editForm, travel_site_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.travel_site_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ค่าที่พัก (Claim)</label>
-                                        <input className={styles.input} type="number" value={editForm.travel_accommodation_override} onChange={e => setEditForm({ ...editForm, travel_accommodation_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.travel_accommodation)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ค่าโทรศัพท์</label>
-                                        <input className={styles.input} type="number" value={editForm.phone_allowance_override} onChange={e => setEditForm({ ...editForm, phone_allowance_override: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.telephone_allowance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>คอมมิชชั่น</label>
-                                        <input className={styles.input} type="number" value={editForm.commissions} onChange={e => setEditForm({ ...editForm, commissions: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.commissions)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>โบนัส</label>
-                                        <input className={styles.input} type="number" value={editForm.bonus} onChange={e => setEditForm({ ...editForm, bonus: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.bonus)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>รายได้อื่นๆ</label>
-                                        <input className={styles.input} type="number" value={editForm.other_benefits} onChange={e => setEditForm({ ...editForm, other_benefits: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.other_benefits)}`} />
-                                    </div>
+                            <div className={styles.modalFieldGrid}>
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>OT ปกติ 1.5x (ชม.)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.normal_1_5x_hours_override}
+                                        onChange={e => setEditForm({ ...editForm, normal_1_5x_hours_override: e.target.value })}
+                                    />
                                 </div>
-                            </div>
 
-                            {/* Section: Deductions */}
-                            <div style={{ marginBottom: 24 }}>
-                                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <MinusCircleIcon width={18} style={{ color: 'var(--red)' }} /> รายการหัก
-                                </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                                    <div className={styles.formGroup}>
-                                        <label>หักประกันสังคม</label>
-                                        <input className={styles.input} type="number" value={editForm.social_security} onChange={e => setEditForm({ ...editForm, social_security: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.social_security)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>หัก กยศ.</label>
-                                        <input className={styles.input} type="number" value={editForm.student_loan} onChange={e => setEditForm({ ...editForm, student_loan: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.student_loan)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ประกันทำงาน</label>
-                                        <input className={styles.input} type="number" value={editForm.insurance} onChange={e => setEditForm({ ...editForm, insurance: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.insurance)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>หักขาดงาน</label>
-                                        <input className={styles.input} type="number" value={editForm.unpaid_absenteeism} onChange={e => setEditForm({ ...editForm, unpaid_absenteeism: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.unpaid_absenteeism)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>ภาษี</label>
-                                        <input className={styles.input} type="number" value={editForm.tax} onChange={e => setEditForm({ ...editForm, tax: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.tax)}`} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>หักอื่นๆ</label>
-                                        <input className={styles.input} type="number" value={editForm.other_deductions} onChange={e => setEditForm({ ...editForm, other_deductions: e.target.value })} placeholder={`ปัจจุบัน: ${formatB(editingEmp.other_deductions)}`} />
-                                    </div>
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>OT วันหยุด 3x (ชม.)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.holiday_3_x_hours_override}
+                                        onChange={e => setEditForm({ ...editForm, holiday_3_x_hours_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>เงินประจำตำแหน่ง</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.position_allowance_override}
+                                        onChange={e => setEditForm({ ...editForm, position_allowance_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>เบี้ยขยัน</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.diligence_allowance_override}
+                                        onChange={e => setEditForm({ ...editForm, diligence_allowance_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>ค่าอาหาร</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.meal_allowance_override}
+                                        onChange={e => setEditForm({ ...editForm, meal_allowance_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>ค่าเดินทาง</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.travel_allowance_override}
+                                        onChange={e => setEditForm({ ...editForm, travel_allowance_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>ค่าที่พัก</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.accommodation_allowance_override}
+                                        onChange={e => setEditForm({ ...editForm, accommodation_allowance_override: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>หักประกันสังคม</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.social_security}
+                                        onChange={e => setEditForm({ ...editForm, social_security: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>ภาษีหัก ณ ที่จ่าย</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.tax}
+                                        onChange={e => setEditForm({ ...editForm, tax: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>คอมมิชชั่น</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.commissions}
+                                        onChange={e => setEditForm({ ...editForm, commissions: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>โบนัส</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.bonus}
+                                        onChange={e => setEditForm({ ...editForm, bonus: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>รายการหักอื่นๆ</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.other_deductions}
+                                        onChange={e => setEditForm({ ...editForm, other_deductions: e.target.value })}
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         <div className={styles.modalFooter}>
-                            <button className={styles.btnSecondary} onClick={() => setShowModal(false)}>ยกเลิก</button>
-                            <button className={styles.btnPrimary} onClick={saveAdjustments} disabled={saving}>
-                                {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+                            <button className={styles.btnModalCancel} onClick={() => setShowModal(false)}>
+                                ยกเลิก
+                            </button>
+                            <button className={styles.btnModalSave} onClick={saveAdjustments} disabled={saving}>
+                                {saving ? "กำลังบันทึก..." : "บันทึกการปรับปรุง"}
                             </button>
                         </div>
                     </div>

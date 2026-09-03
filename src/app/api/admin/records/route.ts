@@ -45,21 +45,18 @@ export async function GET(req: Request) {
          }
 
         const employeeWhere: any = {
-            is_checkin_exempt: false,
             ...subordinateFilter
         };
         if (status === "active") {
             employeeWhere.is_active = true;
         } else if (status === "inactive") {
             employeeWhere.is_active = false;
+        } else if (status === "all") {
+            // Include all employees
         } else {
-            employeeWhere.AND = [
-                {
-                    OR: [
-                        { is_active: true },
-                        { resignation_date: { gte: startDate, lte: endDate } }
-                    ]
-                }
+            employeeWhere.OR = [
+                { is_active: true },
+                { resignation_date: { gte: startDate, lte: endDate } }
             ];
         }
 
@@ -72,6 +69,7 @@ export async function GET(req: Request) {
                     nickname: true,
                     branch_id: true,
                     is_active: true,
+                    is_checkin_exempt: true,
                     hire_date: true,
                     resignation_date: true,
                 },
@@ -255,7 +253,7 @@ export async function GET(req: Request) {
                 }
             }
 
-            let absences = s.total_work_days - attendedWorkDatesCount - s.leave_days;
+            let absences = e.is_checkin_exempt ? 0 : s.total_work_days - attendedWorkDatesCount - s.leave_days;
             if (absences < 0) absences = 0;
 
             let finalName = e.name;
@@ -268,6 +266,7 @@ export async function GET(req: Request) {
                 name: finalName,
                 branch_id: e.branch_id,
                 is_active: e.is_active,
+                is_checkin_exempt: Boolean(e.is_checkin_exempt),
                 leave_days: s.leave_days,
                 pending_leave_days: s.pending_leave_days,
                 late_count: s.late_count,

@@ -64,12 +64,28 @@ export async function GET() {
             }
         });
 
+        const allCoEvals: any[] = ((await prisma.$queryRawUnsafe(
+            `SELECT employee_id, evaluator_id FROM employee_co_evaluators;`
+        ).catch(() => [])) as any[]) || [];
+        const coEvalMap = new Map<string, Set<string>>();
+        for (const row of allCoEvals) {
+            if (!coEvalMap.has(row.employee_id)) {
+                coEvalMap.set(row.employee_id, new Set());
+            }
+            coEvalMap.get(row.employee_id)!.add(row.evaluator_id);
+        }
+
         const pending = pendingEmployees.map(emp => {
             let finalPendingName = emp.name;
             if (emp.nickname && !finalPendingName.includes(`(${emp.nickname})`)) {
                 finalPendingName = `${finalPendingName} (${emp.nickname})`;
             }
-            const directEvals = emp.probation_evaluations.filter((e: any) => e.supervisor_id === emp.supervisor_id || e.supervisor_id === emp.secondary_supervisor_id);
+            const allowedEvaluators = new Set([emp.supervisor_id, emp.secondary_supervisor_id].filter(Boolean));
+            const extraCoEvals = coEvalMap.get(emp.emp_id);
+            if (extraCoEvals) {
+                extraCoEvals.forEach(id => allowedEvaluators.add(id));
+            }
+            const directEvals = emp.probation_evaluations.filter((e: any) => allowedEvaluators.has(e.supervisor_id));
             const latestEvalNo = directEvals.length > 0 ? directEvals[0].evaluation_no : 0;
             return {
                 emp_id: emp.emp_id,

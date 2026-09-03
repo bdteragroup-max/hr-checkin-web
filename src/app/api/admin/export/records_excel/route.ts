@@ -63,11 +63,11 @@ export async function GET(req: Request) {
 
         if (emp_id) {
             // ================== INDIVIDUAL EXPORT ==================
-            const emp = await prisma.employees.findUnique({ 
+            const emp = await prisma.employees.findFirst({ 
                 where: { 
                     emp_id,
                     ...subordinateFilter
-                } as any
+                }
             });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -105,13 +105,14 @@ export async function GET(req: Request) {
         } else {
             // ================== EVERYONE EXPORT ==================
             const employeeWhere: any = {
-                is_checkin_exempt: false,
                 ...subordinateFilter,
             };
             if (status === "active") {
                 employeeWhere.is_active = true;
             } else if (status === "inactive") {
                 employeeWhere.is_active = false;
+            } else if (status === "all") {
+                // all employees
             } else {
                 employeeWhere.OR = [
                     { is_active: true },
@@ -121,7 +122,7 @@ export async function GET(req: Request) {
 
             const emps = await prisma.employees.findMany({
                 where: employeeWhere,
-                select: { emp_id: true, name: true, branch_id: true, is_active: true, hire_date: true, resignation_date: true },
+                select: { emp_id: true, name: true, branch_id: true, is_active: true, is_checkin_exempt: true, hire_date: true, resignation_date: true },
                 orderBy: { emp_id: "asc" },
             });
 
@@ -250,7 +251,7 @@ export async function GET(req: Request) {
                     }
                 }
 
-                let absences = s.total_work_days - attendedWorkDatesCount - s.leave_days;
+                let absences = e.is_checkin_exempt ? 0 : s.total_work_days - attendedWorkDatesCount - s.leave_days;
                 if (absences < 0) absences = 0;
 
                 summarySheet.addRow({

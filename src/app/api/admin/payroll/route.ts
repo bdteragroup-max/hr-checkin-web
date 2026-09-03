@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { calculateEmployeeAllowances } from "@/lib/allowances";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/adminAuth";
 import { toBangkokWallClock } from "@/utils/time";
@@ -8,7 +9,6 @@ import { toBangkokWallClock } from "@/utils/time";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-    throw new Error("TODO: Payroll is under maintenance for allowance schema changes");
     try {
         await requireAdmin();
     } catch (e) {
@@ -97,15 +97,26 @@ export async function GET(request: Request) {
         });
 
         // 2.11.1 Fetch Previous Month Adjustments (for carrying over Tax)
-        let prevMonth = month - 1;
-        let prevYear = year;
-        if (prevMonth < 1) {
-            prevMonth = 12;
-            prevYear--;
+        let prevAdjustments: any[] = [];
+        if (month === 1) {
+            prevAdjustments = await prisma.monthly_payroll_data.findMany({
+                where: { cycle_month: 12, cycle_year: year - 1 }
+            });
+        } else {
+            prevAdjustments = await prisma.monthly_payroll_data.findMany({
+                where: { cycle_month: month - 1, cycle_year: year }
+            });
         }
-        const prevAdjustments = await prisma.monthly_payroll_data.findMany({
-            where: { cycle_month: prevMonth, cycle_year: prevYear }
-        });
+
+        // --- NEW: Filter out incomplete employees from main calculation ---
+        const incompleteEmployees = employees
+            .filter(emp => !emp.is_onboarding_complete)
+            .map(emp => ({
+                emp_id: emp.emp_id,
+                name: emp.name
+            }));
+
+        const validEmployees = employees.filter(emp => emp.is_onboarding_complete);
 
         // Fetch Tax Config for current year
         const taxConfig = await (prisma as any).tax_configs.findUnique({
@@ -130,6 +141,11 @@ export async function GET(request: Request) {
                     { end_date: null, date: { gte: startDate } }
                 ]
             }
+        });
+
+        // 2.X Fetch DB Allowances
+        const allAllowances = await prisma.employee_allowances.findMany({
+            include: { allowance_type: true }
         });
 
         // 2.12 Fetch Approved Welfare Claims in this cycle
@@ -158,8 +174,37 @@ export async function GET(request: Request) {
             }
         });
 
+        // Fetch Companies
+        let companySettings: any[] = [];
+        try {
+            companySettings = await prisma.$queryRawUnsafe(`SELECT id, name, tax_id FROM company_settings ORDER BY id ASC`);
+        } catch (e) {
+            console.error("Failed to query company_settings:", e);
+        }
+        if (!companySettings || companySettings.length === 0) {
+            companySettings = [
+                { id: 2, name: "บริษัท เทอรา กรุ้ป จำกัด" },
+                { id: 3, name: "บริษัท เทอรา อิเล็กทริค จำกัด" },
+                { id: 4, name: "บริษัท เทอรา พาวเวอร์ จำกัด" }
+            ];
+        }
+
+        const getCompanyInfo = (companyId?: number | null, empId?: string) => {
+            if (companyId === 2 || (!companyId && (empId?.startsWith("TG") || empId === "T02211"))) {
+                return { id: 2, code: "TG", name: "บริษัท เทอรา กรุ้ป จำกัด" };
+            }
+            if (companyId === 3 || (!companyId && empId?.startsWith("TE"))) {
+                return { id: 3, code: "TE", name: "บริษัท เทอรา อิเล็กทริค จำกัด" };
+            }
+            if (companyId === 4 || (!companyId && empId?.startsWith("TP"))) {
+                return { id: 4, code: "TP", name: "บริษัท เทอรา พาวเวอร์ จำกัด" };
+            }
+            return { id: 2, code: "TG", name: "บริษัท เทอรา กรุ้ป จำกัด" };
+        };
+
         // 3. Process each employee
-        const results = employees.map(emp => {
+        const results = validEmployees.map(emp => {
+            const comp = getCompanyInfo((emp as any).company_id, emp.emp_id);
             const adj = adjustments.find(a => a.emp_id === emp.emp_id);
             const prevAdj = prevAdjustments.find(a => a.emp_id === emp.emp_id);
             const isOverridden = adj?.override_salary !== null && adj?.override_salary !== undefined;
@@ -330,9 +375,26 @@ export async function GET(request: Request) {
             let hasLeave = empLeaves.length > 0;
             const hasWarnings = empWarnings.length > 0;
 
-            // 4.1 ACCOMMODATION (Auto-calc only if not overridden)
+            const myAllowances = allAllowances.filter(a => a.employee_id === emp.emp_id);
+            const accAllowanceRow = myAllowances.find(a =>
+                (a as any).allowance_type?.name?.includes('ค่าที่พัก')
+            );
+
+            // 4.1 ACCOMMODATION (สวัสดิการค่าที่พัก: ได้รับทุกคน ยกเว้นพนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน หรือยังไม่ผ่านทดลองงานกรณีตั้งค่าหลังจากผ่านโปร)
             if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) {
                 accommodation_allowance = Number(adj.accommodation_allowance_override);
+            } else if ((emp as any).company_accommodation || isDaily) {
+                // พนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน จะไม่ได้รับค่าที่พัก
+                accommodation_allowance = 0;
+            } else if (accAllowanceRow) {
+                const isBlockedByWarning = accAllowanceRow.void_on_warning && hasWarnings;
+                const isBlockedByProbation = (accAllowanceRow.applies_to === 'after_probation' && isOnTrial) ||
+                    (accAllowanceRow.applies_to === 'probation_only' && !isOnTrial);
+                if (isBlockedByWarning || isBlockedByProbation) {
+                    accommodation_allowance = 0;
+                } else if (Number(accAllowanceRow.amount) > 0) {
+                    accommodation_allowance = Number(accAllowanceRow.amount);
+                }
             } else if (Number((emp as any).fixed_accommodation_allowance) > 0) {
                 accommodation_allowance = Number((emp as any).fixed_accommodation_allowance);
             } else if (!isDaily && empWarnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && emp.hire_date) {
@@ -347,72 +409,19 @@ export async function GET(request: Request) {
                 else if (yrs < 4) accommodation_allowance = 2400;
                 else if (yrs < 5) accommodation_allowance = 2700;
                 else accommodation_allowance = 3000;
-            }
-
-            // Zero out if company provides accommodation
-            if ((emp as any).company_accommodation) {
-                accommodation_allowance = 0;
+            } else if (!isDaily && empWarnings.length === 0 && (!isOnTrial || (emp as any).probation_accommodation_allowance) && !emp.hire_date) {
+                accommodation_allowance = 1500;
             }
 
             // 4.2 Attendance, Meal, Travel (Calculated for all active employees)
-            let totalPaidDays = 0;
-            let mealWorkdays = 0;
-            let travelWorkdays = 0;
-            let maxWorkdays = 0;
+            const allowanceCalc = calculateEmployeeAllowances(
+                emp, startDate, endDate, holidayDates,
+                empCheckins, empLeaves, travelClaims, empWarnings, myAllowances
+            );
 
-            const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
-            if (hireDate) hireDate.setHours(0, 0, 0, 0);
-
-            let curr = new Date(startDate);
-            while (curr <= endDate) {
-                const dateStr = fmt(curr);
-                const isHoliday = curr.getDay() === 0 || holidayDates.has(dateStr);
-                const empResignationDate = (emp as any).resignation_date ? new Date((emp as any).resignation_date) : null;
-                const isResigned = empResignationDate && curr > empResignationDate;
-                const isNotHiredYet = hireDate && curr < hireDate;
-
-                if (isResigned) {
-                    curr.setDate(curr.getDate() + 1);
-                    continue;
-                }
-
-                if (!isNotHiredYet && !isHoliday) {
-                    maxWorkdays++;
-                }
-
-                const dayCheckins = empCheckins.filter(c => fmt(c.date_key) === dateStr);
-                const hasIn = dayCheckins.some(c => ["Check-in", "Project-In", "Offsite-In", "Trip-Update"].includes(c.type));
-                const hasOut = dayCheckins.some(c => ["Check-out", "Project-Out", "Offsite-Out"].includes(c.type));
-                const hasValidAttendance = hasIn || hasOut;
-
-                const isExempt = (emp as any).is_checkin_exempt || false;
-                const isOnLeave = empLeaves.some(l => dateStr >= fmt(l.start_date) && dateStr <= fmt(l.end_date));
-                const empTravels = travelClaims.filter((t: any) => t.emp_id === emp.emp_id);
-                const isOnTravel = empTravels.some((t: any) => dateStr >= fmt(t.date) && dateStr <= fmt(t.end_date || t.date));
-
-                if (hasValidAttendance || (isExempt && !isHoliday) || isOnTravel) {
-                    totalPaidDays++;
-                }
-
-                // Meal and Travel should be paid for ANY day worked, even holidays
-                if (!isOnLeave) {
-                    if (hasValidAttendance || isOnTravel) {
-                        if (!hasWarnings) {
-                            if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
-                            if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
-                        }
-                    } else if (isExempt) {
-                        if (!hasWarnings) {
-                            if (!isOnTrial || (emp as any).probation_meal_allowance) mealWorkdays++;
-                            if (!isOnTrial || (emp as any).probation_travel_allowance) travelWorkdays++;
-                        }
-                    } else if (!isHoliday && !hasValidAttendance && !isOnTravel) {
-                        missingScanInCycle = true;
-                    }
-                }
-
-                curr.setDate(curr.getDate() + 1);
-            }
+            let totalPaidDays = allowanceCalc.totalPaidDays;
+            let maxWorkdays = allowanceCalc.maxWorkdays;
+            missingScanInCycle = allowanceCalc.missingScanInCycle;
 
             if (isDaily && !isOverridden) {
                 baseSalary = totalPaidDays * baseSalaryInput;
@@ -423,8 +432,8 @@ export async function GET(request: Request) {
                 if (adj?.diligence_allowance_override !== null && adj?.diligence_allowance_override !== undefined) {
                     diligence_allowance = Number(adj.diligence_allowance_override);
                 } else if (!isDaily) {
-                    if (hasLate) diligence_failed_reason = "มีประวัติมาสาย";
-                    else if (hasLeave) diligence_failed_reason = "มีการลา";
+                    if (allowanceCalc.hasLate) diligence_failed_reason = "มีประวัติมาสาย";
+                    else if (allowanceCalc.hasLeave) diligence_failed_reason = "มีการลา";
                     else if (missingScanInCycle) diligence_failed_reason = "ลืมสแกนนิ้วบางวัน";
                     else diligence_allowance = 500;
                 }
@@ -433,37 +442,24 @@ export async function GET(request: Request) {
                 else if (empWarnings.length > 0) diligence_failed_reason = "มีใบเตือนในรอบเดือนนี้";
             }
 
-            let max_meal_allowance = 0;
-            let meal_deduction = 0;
+            let max_meal_allowance = allowanceCalc.max_meal_allowance;
+            let meal_deduction = allowanceCalc.meal_deduction;
             if (adj?.meal_allowance_override !== null && adj?.meal_allowance_override !== undefined) {
                 meal_allowance = Number(adj.meal_allowance_override);
                 max_meal_allowance = meal_allowance;
-            } else if (Number((emp as any).fixed_meal_allowance) > 0) {
-                meal_allowance = Number((emp as any).fixed_meal_allowance);
-                max_meal_allowance = meal_allowance;
-            } else if (!isDaily) {
-                meal_allowance = mealWorkdays * 100;
-                // Determine eligibility
-                if (!isOnTrial || (emp as any).probation_meal_allowance) {
-                    max_meal_allowance = maxWorkdays * 100;
-                    meal_deduction = Math.max(0, max_meal_allowance - meal_allowance);
-                }
+                meal_deduction = 0;
+            } else {
+                meal_allowance = allowanceCalc.meal_allowance;
             }
 
-            let max_travel_allowance = 0;
-            let travel_deduction = 0;
+            let max_travel_allowance = allowanceCalc.max_travel_allowance;
+            let travel_deduction = allowanceCalc.travel_deduction;
             if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                 travel_allowance = Number(adj.travel_allowance_override);
                 max_travel_allowance = travel_allowance;
-            } else if (Number((emp as any).fixed_travel_allowance) > 0) {
-                travel_allowance = Number((emp as any).fixed_travel_allowance);
-                max_travel_allowance = travel_allowance;
-            } else if (!isDaily) {
-                travel_allowance = travelWorkdays * 60;
-                if (!isOnTrial || (emp as any).probation_travel_allowance) {
-                    max_travel_allowance = maxWorkdays * 60;
-                    travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
-                }
+                travel_deduction = 0;
+            } else {
+                travel_allowance = allowanceCalc.travel_allowance;
             }
 
             // Zero out if company provides a car
@@ -472,6 +468,20 @@ export async function GET(request: Request) {
                 max_travel_allowance = 0;
                 travel_deduction = 0;
             }
+
+            // พนักงานรายวันไม่ได้รับสวัสดิการใดๆ (ค่าที่พัก, ค่าอาหาร, ค่าเดินทาง, เบี้ยขยัน)
+            if (isDaily) {
+                accommodation_allowance = 0;
+                meal_allowance = 0;
+                max_meal_allowance = 0;
+                meal_deduction = 0;
+                travel_allowance = 0;
+                max_travel_allowance = 0;
+                travel_deduction = 0;
+                diligence_allowance = 0;
+                diligence_failed_reason = "พนักงานรายวัน (ไม่ได้รับสวัสดิการ)";
+            }
+
             // 4.3 Position & Phone & Travel Claims
             position_allowance = adj?.position_allowance_override !== null && adj?.position_allowance_override !== undefined
                 ? Number(adj.position_allowance_override)
@@ -484,45 +494,58 @@ export async function GET(request: Request) {
             // --- 4.3.1 TELEPHONE ALLOWANCE POLICY (New Rules) ---
             let calculatedPhoneAllowance = 0;
             if (!isDaily && emp.has_telephone_allowance) {
-                const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
-                let yearsOfService = 0;
-                if (hireDate) {
-                    yearsOfService = endDate.getFullYear() - hireDate.getFullYear();
-                    const mDiff = endDate.getMonth() - hireDate.getMonth();
-                    if (mDiff < 0 || (mDiff === 0 && endDate.getDate() < hireDate.getDate())) yearsOfService--;
-                }
+                const phoneAllowanceRow = myAllowances.find(a =>
+                    (a as any).allowance_type?.name?.includes('ค่าโทรศัพท์')
+                );
 
-                const deptName = (emp.departments?.name || "").toLowerCase();
-                const posName = (emp.job_positions?.title || "").toLowerCase();
-                const divName = (emp.departments?.divisions?.name || "").toLowerCase();
+                if (phoneAllowanceRow) {
+                    const isBlockedByWarning = phoneAllowanceRow.void_on_warning && hasWarnings;
+                    const isBlockedByProbation = (phoneAllowanceRow.applies_to === 'after_probation' && isOnTrial) ||
+                        (phoneAllowanceRow.applies_to === 'probation_only' && !isOnTrial);
+                    if (!isBlockedByWarning && !isBlockedByProbation && Number(phoneAllowanceRow.amount) > 0) {
+                        calculatedPhoneAllowance = Number(phoneAllowanceRow.amount);
+                    }
+                } else {
+                    const hireDate = emp.hire_date ? new Date(emp.hire_date) : null;
+                    let yearsOfService = 0;
+                    if (hireDate) {
+                        yearsOfService = endDate.getFullYear() - hireDate.getFullYear();
+                        const mDiff = endDate.getMonth() - hireDate.getMonth();
+                        if (mDiff < 0 || (mDiff === 0 && endDate.getDate() < hireDate.getDate())) yearsOfService--;
+                    }
 
-                // 1. Manager (High Priority)
-                if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
-                    calculatedPhoneAllowance = 1000;
-                }
-                // 2. HR / Admin Division
-                else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
-                    calculatedPhoneAllowance = 800;
-                }
-                // 3. Foreman or Driver
-                else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
-                    calculatedPhoneAllowance = 300;
-                }
-                // 4. Technician / Tech (prevent falling into Engineering dept rule, uses general staff conditions)
-                else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) {
-                    if (yearsOfService < 1) calculatedPhoneAllowance = 100;
-                    else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
-                    else calculatedPhoneAllowance = 300;
-                }
-                // 5. Engineering Dept or Engineer Position
-                else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
-                    calculatedPhoneAllowance = 500;
-                }
-                else {
-                    // General Staff - based on years of service
-                    if (yearsOfService < 1) calculatedPhoneAllowance = 100;
-                    else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
-                    else calculatedPhoneAllowance = 300;
+                    const deptName = (emp.departments?.name || "").toLowerCase();
+                    const posName = (emp.job_positions?.title || "").toLowerCase();
+                    const divName = (emp.departments?.divisions?.name || "").toLowerCase();
+
+                    // 1. Manager (High Priority)
+                    if (posName.includes("ผู้จัดการ") || posName.includes("manager")) {
+                        calculatedPhoneAllowance = 1000;
+                    }
+                    // 2. HR / Admin Division
+                    else if (divName.includes("บุคคล") || divName.includes("admin") || divName.includes("hr")) {
+                        calculatedPhoneAllowance = 800;
+                    }
+                    // 3. Foreman or Driver
+                    else if (posName.includes("หัวหน้าช่าง") || posName.includes("foreman") || posName.includes("ขับรถ") || posName.includes("driver")) {
+                        calculatedPhoneAllowance = 300;
+                    }
+                    // 4. Technician / Tech (prevent falling into Engineering dept rule, uses general staff conditions)
+                    else if (posName.includes("ช่าง") || posName.includes("technician") || posName.includes("tech")) {
+                        if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                        else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                        else calculatedPhoneAllowance = 300;
+                    }
+                    // 5. Engineering Dept or Engineer Position
+                    else if (posName.includes("วิศวกร") || posName.includes("engineer") || deptName.includes("engineering") || deptName.includes("วิศว") || divName.includes("engineering") || divName.includes("วิศว")) {
+                        calculatedPhoneAllowance = 500;
+                    }
+                    else {
+                        // General Staff - based on years of service
+                        if (yearsOfService < 1) calculatedPhoneAllowance = 100;
+                        else if (yearsOfService < 2) calculatedPhoneAllowance = 200;
+                        else calculatedPhoneAllowance = 300;
+                    }
                 }
             }
 
@@ -795,9 +818,19 @@ export async function GET(request: Request) {
             return {
                 emp_id: emp.emp_id,
                 name: emp.name,
+                nickname: emp.nickname || "",
+                company_id: comp.id,
+                company_code: comp.code,
+                company_name: comp.name,
+                branch_id: emp.branch_id || "",
+                department_id: emp.department_id || null,
                 department: emp.departments?.name || "N/A",
                 division: emp.departments?.divisions?.name || "N/A",
                 position: emp.job_positions?.title || "N/A",
+                salary_type: (emp as any).salary_type || "monthly",
+                base_salary_daily: isDaily ? baseSalaryInput : null,
+                is_active: emp.is_active,
+                resignation_date: (emp as any).resignation_date ? fmt(new Date((emp as any).resignation_date)) : null,
                 base_salary: baseSalary,
                 hourly_wage: hourlyWage,
                 is_ot_eligible: isOtEligible,
@@ -861,14 +894,6 @@ export async function GET(request: Request) {
             };
         });
 
-        // 2.12 Fetch Employees with Incomplete Onboarding in this cycle
-        const incompleteEmployees = employees
-            .filter(emp => !emp.is_onboarding_complete)
-            .map(emp => ({
-                emp_id: emp.emp_id,
-                name: emp.name
-            }));
-
         const isPublished = adjustments.length > 0 ? adjustments[0].is_published : false;
 
         return NextResponse.json({
@@ -879,6 +904,11 @@ export async function GET(request: Request) {
                 year,
                 is_published: isPublished
             },
+            companies: companySettings.map(c => ({
+                id: c.id,
+                name: c.name.trim(),
+                code: c.id === 2 ? "TG" : c.id === 3 ? "TE" : "TP"
+            })),
             list: results,
             incomplete_employees: incompleteEmployees
         });

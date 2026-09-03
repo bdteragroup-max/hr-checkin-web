@@ -32,10 +32,22 @@ export async function GET() {
 
         const isManager = checkIsManager(loggedInUser);
 
+        // Also fetch any employees where this user is assigned as a co-evaluator in employee_co_evaluators
+        const coEvalRows: any[] = ((await prisma.$queryRawUnsafe(
+            `SELECT employee_id FROM employee_co_evaluators WHERE evaluator_id = $1;`,
+            supervisorId
+        ).catch(() => [])) as any[]) || [];
+        const coEvalEmpIds = coEvalRows.map(r => r.employee_id);
+        const coEvalEmpSet = new Set(coEvalEmpIds);
+
         const baseOrConditions: any[] = [
             { supervisor_id: supervisorId },
             { secondary_supervisor_id: supervisorId }
         ];
+
+        if (coEvalEmpIds.length > 0) {
+            baseOrConditions.push({ emp_id: { in: coEvalEmpIds } });
+        }
 
         if (isManager) {
             baseOrConditions.push({
@@ -80,7 +92,7 @@ export async function GET() {
 
         const now = new Date();
         const results = employees.map(emp => {
-            const isDirectSubordinate = emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId;
+            const isDirectSubordinate = emp.supervisor_id === supervisorId || emp.secondary_supervisor_id === supervisorId || coEvalEmpSet.has(emp.emp_id);
             const isOtherManager = !isDirectSubordinate;
             
             const myEvals = emp.probation_evaluations.filter((ev: any) => ev.supervisor_id === supervisorId);

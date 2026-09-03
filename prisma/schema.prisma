@@ -131,10 +131,15 @@ model employees {
   tax_deduction_override    Decimal?                    @db.Decimal(10, 2)
   company_accommodation     Boolean                     @default(false)
   company_car               Boolean                     @default(false)
-  nationality               String?                     @default("THA") @db.VarChar(3)
-  id_document_type          String                      @default("national_id") @db.VarChar(20)
+  nationality               String?                     @default("THA") @db.VarChar(50)
+  id_document_type          String                      @default("national_id") @db.VarChar(50)
   is_onboarding_complete    Boolean                     @default(false)
   allowance_mode            String                      @default("itemized") @db.VarChar(20)
+  position_allowance        Decimal?                    @default(0) @db.Decimal(12, 2)
+  company_id                Int?
+  title_prefix              String?                     @db.VarChar(20)
+  first_name                String?                     @db.VarChar(50)
+  last_name                 String?                     @db.VarChar(50)
   asset_borrowings          asset_borrowings[]
   birthday_claims           birthday_claims[]
   clothing_requests         clothing_requests[]
@@ -2979,6 +2984,8 @@ model employee_allowances {
   tax_included      Boolean         @default(false)
   created_at        DateTime        @default(now()) @db.Timestamptz(6)
   updated_at        DateTime        @default(now()) @db.Timestamptz(6)
+  calc_basis        String          @default("fixed_monthly") @db.VarChar(50)
+  void_on_warning   Boolean         @default(false)
   allowance_type    allowance_types @relation(fields: [allowance_type_id], references: [id])
   employee          employees       @relation(fields: [employee_id], references: [emp_id])
 
@@ -3097,12 +3104,14 @@ model sso_configs {
   updated_at     DateTime  @default(now()) @db.Timestamptz(6)
 }
 
-model training_topics {
-  id               Int      @id @default(autoincrement())
-  topic_name       String   @db.VarChar(255)
-  course_name      String?  @db.VarChar(255)
-  institution_name String?  @db.VarChar(255)
-  is_active        Boolean  @default(true)
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+model employee_co_evaluators {
+  id           Int       @id @default(autoincrement())
+  employee_id  String    @db.VarChar(20)
+  evaluator_id String    @db.VarChar(20)
+  order_no     Int       @default(1)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([employee_id, evaluator_id], map: "uq_employee_evaluator")
+  @@index([employee_id], map: "idx_employee_co_evaluators_emp")
+  @@index([evaluator_id], map: "idx_employee_co_evaluators_eval")
 }

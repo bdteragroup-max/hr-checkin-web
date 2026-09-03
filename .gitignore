@@ -49,4 +49,7 @@ next-env.d.ts
 /public/uploads/
 /scripts/
 /scr/
+/scratch/
+*.bak*
+*.old*
 *.csv

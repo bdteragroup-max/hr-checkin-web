@@ -45,7 +45,8 @@
 /* Let's change this to red to follow their instruction strictly. */
 
 .table thead {
-  background: var(--red-lt); /* light red */
+  background: var(--red-lt);
+  /* light red */
 }
 
 .table th {
@@ -55,6 +56,66 @@
   font-weight: 700;
   text-align: left;
   border-bottom: 1px solid var(--line);
+}
+
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background-color: var(--surface-2);
+}
+
+.table td {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.targetCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.empName {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empIdBadge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  font-family: monospace;
+}
+
+.editorText {
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.dateCol {
+  color: var(--text-3);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.badgeNote {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--line);
 }
 
 .emptyState {
@@ -74,4 +135,13 @@
   width: 32px;
   height: 32px;
   color: var(--line-2);
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  color: var(--text-3);
+  font-size: 13px;
 }

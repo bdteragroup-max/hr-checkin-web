@@ -13,12 +13,23 @@ export async function GET() {
         const decoded = verifyToken(token);
         const supervisorId = decoded.emp_id;
 
+        const coEvalRows: any[] = ((await prisma.$queryRawUnsafe(
+            `SELECT employee_id FROM employee_co_evaluators WHERE evaluator_id = $1;`,
+            supervisorId
+        ).catch(() => [])) as any[]) || [];
+        const coEvalEmpIds = coEvalRows.map(r => r.employee_id);
+
+        const orConditions: any[] = [
+            { supervisor_id: supervisorId },
+            { secondary_supervisor_id: supervisorId }
+        ];
+        if (coEvalEmpIds.length > 0) {
+            orConditions.push({ emp_id: { in: coEvalEmpIds } });
+        }
+
         const employees = await (prisma as any).employees.findMany({
             where: {
-                OR: [
-                    { supervisor_id: supervisorId },
-                    { secondary_supervisor_id: supervisorId }
-                ],
+                OR: orConditions,
                 is_active: true,
                 NOT: {
                     job_positions: {

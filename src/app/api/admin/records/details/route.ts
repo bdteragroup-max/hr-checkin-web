@@ -52,11 +52,11 @@ export async function GET(req: Request) {
              ];
          }
 
-        const emp = await prisma.employees.findUnique({ 
+        const emp = await prisma.employees.findFirst({ 
             where: { 
                 emp_id,
                 ...subordinateFilter
-            } as any
+            }
         });
         if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -187,7 +187,7 @@ export async function GET(req: Request) {
             if (isSunday && !hasActivity) continue; 
 
             // Calculate Status
-            let status = "ขาด"; // Default Absent
+            let status = emp.is_checkin_exempt ? "ยกเว้นลงเวลา" : "ขาด"; // Default status
             const empResignStr = emp.resignation_date ? emp.resignation_date.toISOString().split("T")[0] : null;
             const empHireStr = emp.hire_date ? emp.hire_date.toISOString().split("T")[0] : null;
 
