@@ -216,10 +216,38 @@
     border: 1px solid var(--warn-bdr);
 }
 
-.status_pending_admin {
-    background: var(--blue-lt);
-    color: var(--blue);
-    border: 1px solid var(--blue-bdr);
+.status_pending_initial {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.status_pending_hr {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.docLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.docLink:hover {
+    background: #e2e8f0;
+    color: #1d4ed8;
+    border-color: #94a3b8;
 }
 
 .status_completed, .status_approved {

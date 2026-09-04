@@ -10,14 +10,18 @@ export async function POST(req: Request) {
 
         const payload = verifyToken(token) as { emp_id: string };
         const body = await req.json();
-        const { borrowing_id, actual_return_date, condition_at_return, is_damaged, photo_url_return, overnight_required, nights_count } = body;
+        const { 
+            borrowing_id, actual_return_date, condition_at_return, is_damaged, photo_url_return, 
+            overnight_required, nights_count,
+            claim_cost, claim_is_billed, maintenance_cost, maintenance_doc_url
+        } = body;
 
         if (!borrowing_id || !actual_return_date) {
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
         }
 
         // Find borrowing record and ensure it belongs to this employee or their supervisor
-        const borrowing = await prisma.asset_borrowings.findFirst({
+        const borrowing: any = await prisma.asset_borrowings.findFirst({
             where: { 
                 id: Number(borrowing_id),
                 OR: [
@@ -68,7 +72,17 @@ export async function POST(req: Request) {
                     nights_count: nights_count ?? null,
                     trip_fee_status: overnight_required ? "PENDING" : null,
                     status: "returned",
-                    return_status: borrowing.assets.category === "Car" ? "PENDING_KEY" : "COMPLETE"
+                    return_status: borrowing.assets.category === "Car" ? "PENDING_KEY" : "COMPLETE",
+                    // Claim settlement fields
+                    ...(borrowing.is_claim ? {
+                        claim_cost: claim_cost !== undefined && claim_cost !== null && claim_cost !== "" ? Number(claim_cost) : null,
+                        claim_is_billed: claim_is_billed !== undefined ? Boolean(claim_is_billed) : null
+                    } : {}),
+                    // Maintenance settlement fields
+                    ...(borrowing.is_maintenance ? {
+                        maintenance_cost: maintenance_cost !== undefined && maintenance_cost !== null && maintenance_cost !== "" ? Number(maintenance_cost) : null,
+                        maintenance_doc_url: maintenance_doc_url || null
+                    } : {})
                 } as any,
                 include: {
                     employee: { include: { supervisor: true } }
@@ -118,7 +132,16 @@ export async function POST(req: Request) {
                     isDamaged: is_damaged || false,
                     photoUrl: photo_url_return ?? undefined,
                     location: borrowing.location ?? undefined,
-                    extraTargetIds: extraIds
+                    extraTargetIds: extraIds,
+                    claimSettlement: borrowing.is_claim ? {
+                        is_claim: true,
+                        claim_cost: claim_cost !== undefined && claim_cost !== null && claim_cost !== "" ? Number(claim_cost) : undefined,
+                        claim_is_billed: claim_is_billed !== undefined ? Boolean(claim_is_billed) : undefined
+                    } : undefined,
+                    maintenanceSettlement: borrowing.is_maintenance ? {
+                        is_maintenance: true,
+                        maintenance_cost: maintenance_cost !== undefined && maintenance_cost !== null && maintenance_cost !== "" ? Number(maintenance_cost) : undefined
+                    } : undefined
                 });
 
                 // Send Trip Fee Approval if overnight_required

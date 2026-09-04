@@ -201,6 +201,7 @@
 
 .available { background: var(--ok-bg); color: var(--ok); }
 .borrowed { background: var(--blue-lt); color: var(--blue); }
+.reserved { background: #fef3c7; color: #92400e; }
 .damaged { background: var(--bad-bg); color: var(--bad); }
 .maintenance { background: var(--late-bg); color: var(--late); }
 .unavailable { background: #f1f5f9; color: #64748b; }

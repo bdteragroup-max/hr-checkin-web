@@ -35,30 +35,34 @@ export async function GET(req: Request) {
         }
 
         const teamOnly = url.searchParams.get("team") === "1";
- 
-         const subordinateFilter: any = {};
-         if (auth.isSupervisorOnly || teamOnly) {
-             subordinateFilter.OR = [
-                 { supervisor_id: auth.emp_id },
-                 { secondary_supervisor_id: auth.emp_id }
-             ];
-         }
 
-        const employeeWhere: any = {
-            ...subordinateFilter
-        };
+        const conditions: any[] = [];
+        if (auth.isSupervisorOnly || teamOnly) {
+            conditions.push({
+                OR: [
+                    { supervisor_id: auth.emp_id },
+                    { secondary_supervisor_id: auth.emp_id },
+                    { emp_id: auth.emp_id }
+                ]
+            });
+        }
+
         if (status === "active") {
-            employeeWhere.is_active = true;
+            conditions.push({ is_active: true });
         } else if (status === "inactive") {
-            employeeWhere.is_active = false;
+            conditions.push({ is_active: false });
         } else if (status === "all") {
             // Include all employees
         } else {
-            employeeWhere.OR = [
-                { is_active: true },
-                { resignation_date: { gte: startDate, lte: endDate } }
-            ];
+            conditions.push({
+                OR: [
+                    { is_active: true },
+                    { resignation_date: { gte: startDate, lte: endDate } }
+                ]
+            });
         }
+
+        const employeeWhere: any = conditions.length > 0 ? { AND: conditions } : {};
 
         const [emps, holidaysFetch] = await Promise.all([
             prisma.employees.findMany({

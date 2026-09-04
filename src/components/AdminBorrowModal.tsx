@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "../app/page.module.css";
-import { XMarkIcon, CalendarIcon, MapPinIcon, DocumentTextIcon, UserIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, CalendarIcon, MapPinIcon, DocumentTextIcon, UserIcon, WrenchScrewdriverIcon, ShieldExclamationIcon, CameraIcon, ClockIcon } from "@heroicons/react/24/outline";
 import SearchableSelect from "./SearchableSelect";
 
 interface AdminBorrowModalProps {
@@ -20,6 +20,7 @@ interface AdminBorrowModalProps {
 
 export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, type = "equipment" }: AdminBorrowModalProps) {
     const isEquipment = type === "equipment";
+    const isCar = isEquipment && (asset?.category === "Car" || asset?.category === "รถยนต์");
     const [employees, setEmployees] = useState<any[]>([]);
     const [borrowerId, setBorrowerId] = useState("");
     const [borrowDate, setBorrowDate] = useState("");
@@ -29,6 +30,15 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // Claim & Maintenance states (for cars)
+    const [isClaim, setIsClaim] = useState(false);
+    const [claimDocNo, setClaimDocNo] = useState("");
+    const [claimDetails, setClaimDetails] = useState("");
+    const [claimPhotoUrl, setClaimPhotoUrl] = useState<string | null>(null);
+    const [isMaintenance, setIsMaintenance] = useState(false);
+    const [maintenanceMileage, setMaintenanceMileage] = useState("");
+    const [uploadingDoc, setUploadingDoc] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -51,14 +61,62 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             setReturnDate(tomorrow.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }));
+
+            // Reset claim/maint
+            setIsClaim(false);
+            setClaimDocNo("");
+            setClaimDetails("");
+            setClaimPhotoUrl(null);
+            setIsMaintenance(false);
+            setMaintenanceMileage("");
         }
     }, [isOpen]);
 
     if (!isOpen || !asset) return null;
 
+    async function handleClaimPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingDoc(true);
+        try {
+            const form = new FormData();
+            form.append("file", file);
+            form.append("prefix", "car-claim-doc");
+
+            const res = await fetch("/api/upload", { method: "POST", body: form });
+            const data = await res.json();
+            if (data.ok) {
+                setClaimPhotoUrl(data.url);
+            } else {
+                setError(data.error || "Upload Failed");
+            }
+        } catch (err) {
+            setError("เกิดข้อผิดพลาดในการอัปโหลดเอกสารเคลม");
+        } finally {
+            setUploadingDoc(false);
+            e.target.value = "";
+        }
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!borrowerId) { setError("กรุณาเลือกผู้ยืม"); return; }
+
+        if (isCar) {
+            if (isClaim) {
+                if (!claimDocNo.trim()) { setError("กรุณาระบุเลขที่เอกสารเคลม"); return; }
+                if (!claimDetails.trim()) { setError("กรุณาระบุรายละเอียดการเคลม"); return; }
+                if (!claimPhotoUrl) { setError("กรุณาแนบรูปถ่ายเอกสารเคลม"); return; }
+            }
+            if (isMaintenance) {
+                const mNum = Number(maintenanceMileage);
+                if (!maintenanceMileage || isNaN(mNum) || mNum < 0) {
+                    setError("กรุณาระบุเลขไมล์ที่นำรถเข้าเช็คระยะ");
+                    return;
+                }
+            }
+        }
         
         setLoading(true);
         setError("");
@@ -82,6 +140,15 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
                 bodyPayload.borrow_is_tires_ok = true;
                 bodyPayload.borrow_is_body_ok = true;
                 bodyPayload.borrow_is_insurance_ok = true;
+
+                if (isCar) {
+                    bodyPayload.is_claim = isClaim;
+                    bodyPayload.claim_doc_no = isClaim ? claimDocNo.trim() : null;
+                    bodyPayload.claim_details = isClaim ? claimDetails.trim() : null;
+                    bodyPayload.claim_photo_url = isClaim ? claimPhotoUrl : null;
+                    bodyPayload.is_maintenance = isMaintenance;
+                    bodyPayload.maintenance_mileage = isMaintenance ? Number(maintenanceMileage) : null;
+                }
             } else {
                 bodyPayload.product_id = asset?.id;
             }
@@ -213,6 +280,108 @@ export default function AdminBorrowModal({ isOpen, onClose, asset, onSuccess, ty
                                 onChange={e => setRemark(e.target.value)}
                             />
                         </div>
+
+                        {/* Special car options for claim & maintenance */}
+                        {isCar && (
+                            <div style={{ marginTop: 16, padding: 14, backgroundColor: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                                    <WrenchScrewdriverIcon width={16} /> การใช้งานพิเศษ (สำหรับรถยนต์)
+                                </div>
+
+                                {/* Claim checkbox */}
+                                <div style={{ marginBottom: isClaim ? 12 : 8 }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: isClaim ? "#b45309" : "#334155" }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isClaim}
+                                            onChange={e => setIsClaim(e.target.checked)}
+                                            style={{ accentColor: "#b45309" }}
+                                        />
+                                        การส่งเคลมรถยนต์ (Vehicle Claim Submission)
+                                    </label>
+
+                                    {isClaim && (
+                                        <div style={{ marginTop: 8, padding: 10, backgroundColor: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a", display: "flex", flexDirection: "column", gap: 8 }}>
+                                            <div>
+                                                <label style={{ fontSize: 12, fontWeight: 600, color: "#92400e", display: "block", marginBottom: 4 }}>เลขที่เอกสารเคลม *</label>
+                                                <input
+                                                    type="text"
+                                                    className={styles.input}
+                                                    placeholder="เช่น CLM-2026-0089"
+                                                    value={claimDocNo}
+                                                    onChange={e => setClaimDocNo(e.target.value)}
+                                                    required={isClaim}
+                                                    style={{ fontSize: 12, padding: "6px 10px" }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 12, fontWeight: 600, color: "#92400e", display: "block", marginBottom: 4 }}>รายละเอียดการเคลม *</label>
+                                                <textarea
+                                                    className={styles.input}
+                                                    placeholder="ระบุจุดที่เคลม หรือศูนย์บริการ..."
+                                                    value={claimDetails}
+                                                    onChange={e => setClaimDetails(e.target.value)}
+                                                    required={isClaim}
+                                                    style={{ minHeight: 50, fontSize: 12, padding: "6px 10px" }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 12, fontWeight: 600, color: "#92400e", display: "block", marginBottom: 4 }}>รูปถ่ายเอกสารเคลม *</label>
+                                                {claimPhotoUrl ? (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", backgroundColor: "#fff", borderRadius: 6, border: "1px solid #fcd34d" }}>
+                                                        <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>แนบแล้ว</span>
+                                                        <a href={claimPhotoUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#2563eb", textDecoration: "underline" }}>ดูรูป</a>
+                                                        <button type="button" onClick={() => setClaimPhotoUrl(null)} style={{ marginLeft: "auto", fontSize: 10, color: "#dc2626", border: "none", background: "none", cursor: "pointer" }}>เปลี่ยน</button>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,application/pdf"
+                                                            id="admin-claim-photo"
+                                                            style={{ display: "none" }}
+                                                            onChange={handleClaimPhotoUpload}
+                                                        />
+                                                        <label htmlFor="admin-claim-photo" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", backgroundColor: "#fff", border: "1px dashed #f59e0b", borderRadius: 6, fontSize: 12, color: "#b45309", cursor: "pointer" }}>
+                                                            {uploadingDoc ? <><ClockIcon width={14} className="animate-spin" /> กำลังอัปโหลด...</> : <><CameraIcon width={14} /> เลือกรูปภาพเอกสารเคลม</>}
+                                                        </label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Maintenance checkbox */}
+                                <div>
+                                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: isMaintenance ? "#1e40af" : "#334155" }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isMaintenance}
+                                            onChange={e => setIsMaintenance(e.target.checked)}
+                                            style={{ accentColor: "#2563eb" }}
+                                        />
+                                        การนำรถเข้าเช็คระยะ (Scheduled Maintenance)
+                                    </label>
+
+                                    {isMaintenance && (
+                                        <div style={{ marginTop: 8, padding: 10, backgroundColor: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe" }}>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: "#1e40af", display: "block", marginBottom: 4 }}>เลขไมล์ที่นำรถเข้าเช็คระยะ (กม.) *</label>
+                                            <input
+                                                type="number"
+                                                className={styles.input}
+                                                placeholder="เช่น 45000"
+                                                value={maintenanceMileage}
+                                                onChange={e => setMaintenanceMileage(e.target.value)}
+                                                required={isMaintenance}
+                                                min="0"
+                                                style={{ fontSize: 12, padding: "6px 10px" }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
  
                         <div className={styles.inputGroup} style={{ marginTop: 16 }}>
                             <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: 14, fontWeight: 600 }}>

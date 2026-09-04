@@ -36,7 +36,8 @@ export async function GET(req: Request) {
         if (auth.isSupervisorOnly || teamOnly) {
             subordinateFilter.OR = [
                 { supervisor_id: auth.emp_id },
-                { secondary_supervisor_id: auth.emp_id }
+                { secondary_supervisor_id: auth.emp_id },
+                { emp_id: auth.emp_id }
             ];
         }
 
@@ -103,11 +104,12 @@ export async function GET(req: Request) {
         };
 
         if (emp_id) {
+            const empWhere: any = { emp_id };
+            if (auth.isSupervisorOnly || teamOnly) {
+                empWhere.AND = [subordinateFilter];
+            }
             const emp = await prisma.employees.findFirst({ 
-                where: { 
-                    emp_id,
-                    ...subordinateFilter
-                }
+                where: empWhere
             });
             if (!emp) return NextResponse.json({ ok: false, error: "EMP_NOT_FOUND" }, { status: 404 });
 
@@ -286,21 +288,25 @@ export async function GET(req: Request) {
             };
 
             drawPortrait(`Historical Records: ${periodLabel}`, 18, true);
-            const employeeWhere: any = {
-                ...subordinateFilter,
-            };
+            const conditions: any[] = [];
+            if (auth.isSupervisorOnly || teamOnly) {
+                conditions.push(subordinateFilter);
+            }
             if (status === "active") {
-                employeeWhere.is_active = true;
+                conditions.push({ is_active: true });
             } else if (status === "inactive") {
-                employeeWhere.is_active = false;
+                conditions.push({ is_active: false });
             } else if (status === "all") {
                 // all employees
             } else {
-                employeeWhere.OR = [
-                    { is_active: true },
-                    { resignation_date: { gte: start, lte: end } }
-                ];
+                conditions.push({
+                    OR: [
+                        { is_active: true },
+                        { resignation_date: { gte: start, lte: end } }
+                    ]
+                });
             }
+            const employeeWhere: any = conditions.length > 0 ? { AND: conditions } : {};
 
             const emps = await prisma.employees.findMany({
                 where: employeeWhere,

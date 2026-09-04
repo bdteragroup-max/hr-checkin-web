@@ -131,7 +131,8 @@ export default function AdminDepreciationClaimsPage() {
         });
     }, [claims, searchQuery]);
 
-    const pendingCount = claims.filter(c => c.status === "PENDING").length;
+    const pendingHrCount = claims.filter(c => c.status === "PENDING_HR" || c.status === "PENDING").length;
+    const pendingInitialCount = claims.filter(c => c.status === "PENDING_INITIAL").length;
 
     const exportToCSV = () => {
         if (!filteredClaims.length) {
@@ -139,17 +140,24 @@ export default function AdminDepreciationClaimsPage() {
             return;
         }
 
-        const headers = ["พนักงาน", "รหัสพนักงาน", "หัวหน้าผู้ส่ง", "เดือนที่ขอเบิก", "จำนวนเงิน", "สถานะ"];
+        const headers = ["พนักงาน", "รหัสพนักงาน", "หัวหน้าผู้ส่ง", "เดือนที่ขอเบิก", "จำนวนเงิน", "สถานะ", "อนุมัติเบื้องต้น", "ลิงก์เอกสาร"];
         
         const rows = filteredClaims.map(c => {
-            const statusText = c.status === "PENDING" ? "รออนุมัติ" : c.status === "APPROVED" ? "อนุมัติแล้ว" : "ตีกลับแก้ไข";
+            let statusText = "รออนุมัติ";
+            if (c.status === "PENDING_INITIAL") statusText = "รออนุมัติเบื้องต้น (คุณณัฎธินี)";
+            else if (c.status === "PENDING_HR") statusText = "รอ HR อนุมัติ (ผ่านคุณณัฎธินีแล้ว)";
+            else if (c.status === "APPROVED") statusText = "อนุมัติแล้ว";
+            else if (c.status === "RETURNED") statusText = `ตีกลับแก้ไข: ${c.return_reason || ""}`;
+
             return [
                 c.employee?.name || "",
                 c.emp_id || "",
                 c.supervisor?.name || "",
                 format(new Date(c.claim_month), "yyyy-MM-dd"),
                 c.amount.toString(),
-                statusText
+                statusText,
+                c.initial_approved_by ? `อนุมัติแล้ว (${c.initial_approved_by})` : "-",
+                c.receipt_url || ""
             ];
         });
 
@@ -176,7 +184,7 @@ export default function AdminDepreciationClaimsPage() {
             {/* Custom Modal for Return Reason */}
             {pendingAction?.action === "return" && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
-                    <form onSubmit={executeAction} style={{ background: '#fff', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+                    <form onSubmit={executeAction} style={{ background: '#fff', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, boxDetails: '0 10px 25px rgba(0,0,0,0.2)' } as any}>
                         <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: '#111827' }}>ตีกลับเพื่อแก้ไข</h3>
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>เหตุผลการตีกลับ</label>
@@ -201,7 +209,7 @@ export default function AdminDepreciationClaimsPage() {
             <header className={styles.header}>
                 <div>
                     <h1 className={styles.h1}>จัดการค่าเสื่อม/ค่าน้ำมัน</h1>
-                    <p className={styles.sub}>ตรวจสอบ อนุมัติ และส่งกลับแก้ไขรายการขอเบิกค่าเสื่อมจากทุกทีม</p>
+                    <p className={styles.sub}>ตรวจสอบ อนุมัติ และส่งกลับแก้ไขรายการขอเบิกค่าเสื่อมจากทุกทีม พร้อมดูเอกสารแนบ</p>
                 </div>
             </header>
 
@@ -232,7 +240,9 @@ export default function AdminDepreciationClaimsPage() {
                         onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
                     >
                         <option value="all">ทุกสถานะ</option>
-                        <option value="PENDING">รออนุมัติ (PENDING)</option>
+                        <option value="PENDING">รออนุมัติทั้งหมด</option>
+                        <option value="PENDING_HR">รอ HR อนุมัติ (ผ่านคุณณัฎธินีแล้ว)</option>
+                        <option value="PENDING_INITIAL">รออนุมัติเบื้องต้น (คุณณัฎธินี)</option>
                         <option value="APPROVED">อนุมัติแล้ว (APPROVED)</option>
                         <option value="RETURNED">ตีกลับแก้ไข (RETURNED)</option>
                     </select>
@@ -278,17 +288,30 @@ export default function AdminDepreciationClaimsPage() {
                 <div className={styles.tableHeader}>
                     <div className={styles.tableHeaderTitle}>
                         <FolderOpenIcon width={20} /> รายการขอเบิกทั้งหมด
-                        {pendingCount > 0 && (
+                        {pendingHrCount > 0 && (
                             <span style={{
-                                background: "var(--red)",
+                                background: "#2563eb",
                                 color: "white",
-                                padding: "1px 7px",
+                                padding: "2px 8px",
                                 borderRadius: 10,
-                                fontSize: 10,
-                                fontWeight: 800,
+                                fontSize: 11,
+                                fontWeight: 700,
                                 marginLeft: 8
                             }}>
-                                {pendingCount} PENDING
+                                {pendingHrCount} รอ HR อนุมัติ
+                            </span>
+                        )}
+                        {pendingInitialCount > 0 && (
+                            <span style={{
+                                background: "#ea580c",
+                                color: "white",
+                                padding: "2px 8px",
+                                borderRadius: 10,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                marginLeft: 6
+                            }}>
+                                {pendingInitialCount} รอคุณณัฎธินี
                             </span>
                         )}
                     </div>
@@ -309,6 +332,7 @@ export default function AdminDepreciationClaimsPage() {
                                     <th>หัวหน้าผู้ส่ง</th>
                                     <th>เดือนที่ขอเบิก</th>
                                     <th>จำนวนเงิน</th>
+                                    <th>เอกสารแนบ</th>
                                     <th>สถานะ</th>
                                     <th style={{ textAlign: "right" }}>จัดการ</th>
                                 </tr>
@@ -316,7 +340,7 @@ export default function AdminDepreciationClaimsPage() {
                             <tbody>
                                 {filteredClaims.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} style={{ textAlign: "center", padding: 60, color: "var(--text4)" }}>
+                                        <td colSpan={7} style={{ textAlign: "center", padding: 60, color: "var(--text4)" }}>
                                             ไม่พบรายการที่ตรงกับเงื่อนไข
                                         </td>
                                     </tr>
@@ -324,11 +348,15 @@ export default function AdminDepreciationClaimsPage() {
                                     filteredClaims.map(c => (
                                         <tr key={c.id}>
                                             <td>
-                                                <div className={styles.empName}>{c.employee?.name}</div>
+                                                <div className={styles.empName}>
+                                                    {c.employee?.name} {c.employee?.nickname ? `(${c.employee.nickname})` : ''}
+                                                </div>
                                                 <div className={styles.empId}>{c.emp_id}</div>
                                             </td>
                                             <td>
-                                                <div style={{ fontWeight: 500, fontSize: 13.5, color: "var(--text2)" }}>{c.supervisor?.name}</div>
+                                                <div style={{ fontWeight: 500, fontSize: 13.5, color: "var(--text2)" }}>
+                                                    {c.supervisor?.name || c.submitted_by}
+                                                </div>
                                             </td>
                                             <td>{format(new Date(c.claim_month), "MMM yy", { locale: th })}</td>
                                             <td>
@@ -337,25 +365,68 @@ export default function AdminDepreciationClaimsPage() {
                                                 </span>
                                             </td>
                                             <td>
-                                                <span className={`${styles.statusBadge} ${styles["status_" + c.status.toLowerCase()]}`}>
-                                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        {c.status === "PENDING" ? "รออนุมัติ" :
-                                                         c.status === "APPROVED" ? <><CheckCircleIcon width={14} /> อนุมัติแล้ว</> : 
-                                                         <><XCircleIcon width={14} /> ตีกลับแก้ไข</>}
+                                                {c.receipt_url ? (
+                                                    <a 
+                                                        href={c.receipt_url} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className={styles.docLink}
+                                                        title="คลิกเพื่อดูไฟล์แนบเอกสาร (บิล/ใบเสร็จ)"
+                                                    >
+                                                        <PaperClipIcon width={14} /> เปิดดูเอกสาร
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: "#94a3b8", fontSize: 12 }}>ไม่มีเอกสาร</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {c.status === "PENDING_INITIAL" ? (
+                                                    <span className={`${styles.statusBadge} ${styles.status_pending_initial}`}>
+                                                        รออนุมัติเบื้องต้น (คุณณัฎธินี)
                                                     </span>
-                                                </span>
+                                                ) : (c.status === "PENDING_HR" || c.status === "PENDING") ? (
+                                                    <div>
+                                                        <span className={`${styles.statusBadge} ${styles.status_pending_hr}`}>
+                                                            รอ HR อนุมัติ
+                                                        </span>
+                                                        {c.initial_approved_by && (
+                                                            <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2, fontWeight: 600 }}>
+                                                                ✓ ผ่านคุณณัฎธินีแล้ว
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : c.status === "APPROVED" ? (
+                                                    <span className={`${styles.statusBadge} ${styles.status_approved}`}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <CheckCircleIcon width={14} /> อนุมัติแล้ว
+                                                        </span>
+                                                    </span>
+                                                ) : (
+                                                    <div>
+                                                        <span className={`${styles.statusBadge} ${styles.status_returned}`}>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                <XCircleIcon width={14} /> ตีกลับแก้ไข
+                                                            </span>
+                                                        </span>
+                                                        {c.return_reason && (
+                                                            <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.return_reason}>
+                                                                {c.return_reason}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td style={{ textAlign: "right" }}>
                                                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                                    <a href={c.receipt_url} target="_blank" className={styles.btnExport} title="ดูไฟล์แนบ" style={{ textDecoration: 'none' }}>
+                                                    <a href={c.receipt_url} target="_blank" rel="noopener noreferrer" className={styles.btnExport} title="ดูไฟล์แนบ" style={{ textDecoration: 'none' }}>
                                                         <PaperClipIcon width={16} />
                                                     </a>
-                                                    {c.status === "PENDING" && (
+                                                    {(c.status === "PENDING_HR" || c.status === "PENDING" || c.status === "PENDING_INITIAL") && (
                                                         <>
                                                             <button 
                                                                 className={styles.btnApprove} 
                                                                 onClick={() => handleActionClick(c.id, "approve")}
-                                                                title="อนุมัติ"
+                                                                title={c.status === "PENDING_INITIAL" ? "อนุมัติ (HR Override)" : "อนุมัติ"}
                                                             >
                                                                 <CheckIcon width={16} />
                                                             </button>

@@ -964,9 +964,53 @@ function AdminAssetsPageInner() {
                                                 <div className={styles.historyField}>
                                                     <span className={styles.historyLabel}>ผู้ยืม:</span> {item.employee.name}
                                                 </div>
-                                                <div className={styles.historyField}>
-                                                    <span className={styles.historyLabel}>สถานะ:</span> {item.status === 'borrowed' ? 'อยู่ระหว่างการยืม' : 'คืนแล้ว'}
-                                                </div>
+                                                {(() => {
+                                                    const isReturned = item.status === 'returned' || !!item.actual_return_date;
+                                                    const isPendingKey = item.return_status === 'PENDING_KEY';
+                                                    const now = new Date();
+                                                    const isOverdue = !isReturned && !isPendingKey && item.expected_return_date && now > new Date(item.expected_return_date);
+                                                    const isReserved = !isReturned && (item.status === 'reserved' && new Date(item.borrow_date) > now);
+
+                                                    let statusText = 'อยู่ระหว่างการยืม';
+                                                    let statusBg = '#dbeafe';
+                                                    let statusColor = '#1d4ed8';
+
+                                                    if (isReturned) {
+                                                        statusText = 'คืนแล้ว';
+                                                        statusBg = '#dcfce7';
+                                                        statusColor = '#15803d';
+                                                    } else if (isPendingKey) {
+                                                        statusText = 'รอคืนกุญแจ';
+                                                        statusBg = '#ffedd5';
+                                                        statusColor = '#c2410c';
+                                                    } else if (isOverdue) {
+                                                        statusText = 'ยังไม่คืน (เกินกำหนด)';
+                                                        statusBg = '#fee2e2';
+                                                        statusColor = '#b91c1c';
+                                                    } else if (isReserved) {
+                                                        statusText = 'จองล่วงหน้า';
+                                                        statusBg = '#fef3c7';
+                                                        statusColor = '#92400e';
+                                                    }
+
+                                                    return (
+                                                        <div className={styles.historyField}>
+                                                            <span className={styles.historyLabel}>สถานะ:</span>
+                                                            <span style={{
+                                                                backgroundColor: statusBg,
+                                                                color: statusColor,
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 600,
+                                                                display: 'inline-block',
+                                                                width: 'fit-content'
+                                                            }}>
+                                                                {statusText}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <div className={styles.historyField}>
                                                     <span className={styles.historyLabel}>วันที่ยืม:</span> {new Date(item.borrow_date).toLocaleDateString('th-TH')}
                                                 </div>

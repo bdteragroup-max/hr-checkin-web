@@ -467,6 +467,16 @@ model asset_borrowings {
   overnight_required       Boolean   @default(false)
   nights_count             Int?
   trip_fee_status          String?   @db.VarChar(20)
+  claim_cost               Decimal?  @db.Decimal(10, 2)
+  claim_details            String?
+  claim_doc_no             String?   @db.VarChar(100)
+  claim_is_billed          Boolean?
+  claim_photo_url          String?
+  is_claim                 Boolean   @default(false)
+  is_maintenance           Boolean   @default(false)
+  maintenance_cost         Decimal?  @db.Decimal(10, 2)
+  maintenance_doc_url      String?
+  maintenance_mileage      Int?
   assets                   assets    @relation(fields: [asset_id], references: [id], onDelete: Cascade)
   employee                 employees @relation(fields: [emp_id], references: [emp_id], onDelete: Cascade)
 
@@ -2902,21 +2912,23 @@ model FacilityRepairRequest {
 }
 
 model sales_depreciation_claims {
-  id            Int                                  @id @default(autoincrement())
-  emp_id        String                               @db.VarChar(20)
-  submitted_by  String                               @db.VarChar(20)
-  amount        Decimal                              @db.Decimal(10, 2)
-  receipt_url   String
-  status        String                               @default("PENDING")
-  return_reason String?
-  approved_by   String?                              @db.VarChar(20)
-  approved_at   DateTime?                            @db.Timestamptz(6)
-  claim_month   DateTime                             @db.Date
-  created_at    DateTime                             @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime                             @default(now()) @db.Timestamptz(6)
-  revisions     sales_depreciation_claim_revisions[]
-  employee      employees                            @relation("EmployeeToDepreciation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
-  supervisor    employees                            @relation("SupervisorToDepreciation", fields: [submitted_by], references: [emp_id], onDelete: Cascade)
+  id                  Int                                  @id @default(autoincrement())
+  emp_id              String                               @db.VarChar(20)
+  submitted_by        String                               @db.VarChar(20)
+  amount              Decimal                              @db.Decimal(10, 2)
+  receipt_url         String
+  status              String                               @default("PENDING_INITIAL")
+  return_reason       String?
+  initial_approved_by String?                              @db.VarChar(20)
+  initial_approved_at DateTime?                            @db.Timestamptz(6)
+  approved_by         String?                              @db.VarChar(20)
+  approved_at         DateTime?                            @db.Timestamptz(6)
+  claim_month         DateTime                             @db.Date
+  created_at          DateTime                             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime                             @default(now()) @db.Timestamptz(6)
+  revisions           sales_depreciation_claim_revisions[]
+  employee            employees                            @relation("EmployeeToDepreciation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor          employees                            @relation("SupervisorToDepreciation", fields: [submitted_by], references: [emp_id], onDelete: Cascade)
 }
 
 model sales_depreciation_claim_revisions {
@@ -3105,11 +3117,11 @@ model sso_configs {
 }
 
 model employee_co_evaluators {
-  id           Int       @id @default(autoincrement())
-  employee_id  String    @db.VarChar(20)
-  evaluator_id String    @db.VarChar(20)
-  order_no     Int       @default(1)
-  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  id           Int      @id @default(autoincrement())
+  employee_id  String   @db.VarChar(20)
+  evaluator_id String   @db.VarChar(20)
+  order_no     Int      @default(1)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([employee_id, evaluator_id], map: "uq_employee_evaluator")
   @@index([employee_id], map: "idx_employee_co_evaluators_emp")

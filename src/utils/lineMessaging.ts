@@ -1080,6 +1080,15 @@ export async function sendAssetBorrowNotification(
       is_insurance_ok?: boolean;
       remark?: string;
     };
+    claimSummary?: {
+      is_claim?: boolean;
+      claim_doc_no?: string;
+      claim_details?: string;
+    };
+    maintenanceSummary?: {
+      is_maintenance?: boolean;
+      maintenance_mileage?: number;
+    };
   }
 ) {
   // Format names with nicknames
@@ -1169,6 +1178,63 @@ export async function sendAssetBorrowNotification(
     }
   }
 
+  // Add Claim Summary if exists
+  if (data.claimSummary?.is_claim) {
+    bodyContents.push(
+      { type: "separator", margin: "lg" },
+      { type: "text", text: "📄 การส่งเคลมรถยนต์", weight: "bold", size: "sm", margin: "md", color: "#b45309" },
+      {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        margin: "sm",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "เลขที่เอกสารเคลม:", size: "xs", color: "#666666", flex: 5 },
+              { type: "text", text: data.claimSummary.claim_doc_no || "-", size: "xs", color: "#111111", weight: "bold", flex: 5, align: "end" }
+            ]
+          },
+          ...(data.claimSummary.claim_details ? [{
+            type: "box",
+            layout: "vertical",
+            margin: "xs",
+            contents: [
+              { type: "text", text: "รายละเอียดการเคลม:", size: "xs", color: "#666666" },
+              { type: "text", text: data.claimSummary.claim_details, size: "xs", color: "#111111", wrap: true }
+            ]
+          }] : [])
+        ]
+      }
+    );
+  }
+
+  // Add Maintenance Summary if exists
+  if (data.maintenanceSummary?.is_maintenance) {
+    bodyContents.push(
+      { type: "separator", margin: "lg" },
+      { type: "text", text: "🔧 นำรถเข้าเช็คระยะ / ซ่อมบำรุง", weight: "bold", size: "sm", margin: "md", color: "#1d4ed8" },
+      {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        margin: "sm",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "เลขไมล์ที่เข้าเช็ค:", size: "xs", color: "#666666", flex: 5 },
+              { type: "text", text: data.maintenanceSummary.maintenance_mileage ? `${data.maintenanceSummary.maintenance_mileage.toLocaleString()} กม.` : "-", size: "xs", color: "#111111", weight: "bold", flex: 5, align: "end" }
+            ]
+          }
+        ]
+      }
+    );
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -1210,6 +1276,15 @@ export async function sendAssetReturnNotification(
     photoUrl?: string;
     location?: string;
     extraTargetIds?: string[];
+    claimSettlement?: {
+      is_claim?: boolean;
+      claim_cost?: number;
+      claim_is_billed?: boolean;
+    };
+    maintenanceSettlement?: {
+      is_maintenance?: boolean;
+      maintenance_cost?: number;
+    };
   }
 ) {
   // Format names with nicknames
@@ -1234,6 +1309,36 @@ export async function sendAssetReturnNotification(
   const photos = parsePhotoData(data.photoUrl);
   const heroComponent = generateImageGrid(photos);
 
+  const returnDetailsList: any[] = [
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
+    ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+    ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#111111", size: "sm", flex: 7 }] },
+    ...(data.location ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ชื่องาน / สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }] : []),
+    { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพอุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition, color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] }
+  ];
+
+  if (data.claimSettlement?.is_claim) {
+    const costText = data.claimSettlement.claim_cost !== undefined && data.claimSettlement.claim_cost !== null
+      ? `฿${Number(data.claimSettlement.claim_cost).toLocaleString()} (${data.claimSettlement.claim_is_billed ? 'เรียกเก็บเงิน' : 'ไม่เรียกเก็บเงิน'})`
+      : 'ไม่มีค่าใช้จ่าย';
+    returnDetailsList.push(
+      { type: "separator", margin: "md" },
+      { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ค่าเคลมประกัน:", color: "#b45309", size: "sm", flex: 4, weight: "bold" }, { type: "text", text: costText, color: "#111111", size: "sm", weight: "bold", flex: 6, align: "end" }] }
+    );
+  }
+
+  if (data.maintenanceSettlement?.is_maintenance) {
+    const maintText = data.maintenanceSettlement.maintenance_cost !== undefined && data.maintenanceSettlement.maintenance_cost !== null
+      ? `฿${Number(data.maintenanceSettlement.maintenance_cost).toLocaleString()}`
+      : 'ไม่มีค่าใช้จ่าย';
+    returnDetailsList.push(
+      { type: "separator", margin: "md" },
+      { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ค่าเช็คระยะ/ซ่อม:", color: "#1d4ed8", size: "sm", flex: 4, weight: "bold" }, { type: "text", text: maintText, color: "#111111", size: "sm", weight: "bold", flex: 6, align: "end" }] }
+    );
+  }
+
   const contents: any = {
     type: "bubble",
     header: {
@@ -1254,15 +1359,7 @@ export async function sendAssetReturnNotification(
           type: "box",
           layout: "vertical",
           spacing: "sm",
-          contents: [
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-            ...(data.jobTitle ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ตำแหน่ง:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.jobTitle, color: "#64748b", size: "sm", flex: 7 }] }] : []),
-            ...(data.branchName ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "หน่วยงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.branchName, color: "#64748b", size: "sm", flex: 7 }] }] : []),
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "อุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${data.assetName} (${data.assetId})`, color: "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] },
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่คืน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.actualReturnDate, color: "#111111", size: "sm", flex: 7 }] },
-            ...(data.location ? [{ type: "box", layout: "horizontal", contents: [{ type: "text", text: "ชื่องาน / สถานที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.location, color: "#111111", size: "sm", flex: 7, wrap: true }] }] : []),
-            { type: "box", layout: "horizontal", contents: [{ type: "text", text: "สภาพอุปกรณ์:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: data.condition, color: data.isDamaged ? "#dc2626" : "#111111", size: "sm", weight: "bold", flex: 7, wrap: true }] }
-          ]
+          contents: returnDetailsList
         }
       ]
     }
@@ -3405,3 +3502,141 @@ export async function sendTripFeeApprovalRequest(
     return false;
   }
 }
+
+export async function sendDepreciationClaimNotification(data: {
+  id: number;
+  employeeName: string;
+  submitterName: string;
+  month: string;
+  amount: string;
+  receiptUrl: string;
+  status: string; // PENDING_INITIAL, PENDING_HR, APPROVED, RETURNED
+  returnReason?: string;
+}, lineUserIds: string[]) {
+  if (!lineUserIds || lineUserIds.length === 0) return false;
+
+  const statusColor = data.status === "APPROVED"
+    ? "#059669"
+    : data.status === "RETURNED" ? "#dc2626"
+    : data.status === "PENDING_HR" ? "#2563eb" : "#d97706";
+
+  const statusText = data.status === "PENDING_INITIAL" ? "รออนุมัติเบื้องต้น (คุณณัฎธินี)" :
+    data.status === "PENDING_HR" ? "รอ HR อนุมัติขั้นสุดท้าย" :
+    data.status === "APPROVED" ? "อนุมัติเรียบร้อยแล้ว" :
+    data.status === "RETURNED" ? "ตีกลับเพื่อแก้ไข" : data.status;
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `แจ้งเตือนคำขอเบิกค่าเสื่อม/ค่าน้ำมัน: ${data.employeeName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: statusColor,
+        contents: [
+          { type: "text", text: "คำขอเบิกค่าเสื่อม/ค่าน้ำมัน", color: "#ffffff", weight: "bold", size: "md" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: data.employeeName, weight: "bold", size: "lg", color: "#111827" },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "สถานะ:", color: "#6b7280", size: "sm", flex: 3 },
+                  { type: "text", text: statusText, color: statusColor, weight: "bold", size: "sm", flex: 5 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ผู้ส่งคำขอ:", color: "#6b7280", size: "sm", flex: 3 },
+                  { type: "text", text: data.submitterName, color: "#111827", size: "sm", flex: 5 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "เดือน:", color: "#6b7280", size: "sm", flex: 3 },
+                  { type: "text", text: data.month, color: "#111827", size: "sm", flex: 5 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "จำนวนเงิน:", color: "#6b7280", size: "sm", flex: 3 },
+                  { type: "text", text: `฿${data.amount} บาท`, color: "#b91c1c", weight: "bold", size: "sm", flex: 5 }
+                ]
+              },
+              ...(data.returnReason ? [
+                {
+                  type: "box",
+                  layout: "vertical",
+                  margin: "md",
+                  contents: [
+                    { type: "text", text: "เหตุผลที่ตีกลับ:", color: "#dc2626", size: "xs", weight: "bold" },
+                    { type: "text", text: data.returnReason, color: "#dc2626", size: "sm", wrap: true }
+                  ]
+                }
+              ] : [])
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          ...(data.receiptUrl ? [
+            {
+              type: "button",
+              style: "secondary",
+              height: "sm",
+              action: {
+                type: "uri",
+                label: "📎 ดูเอกสารแนบ",
+                uri: data.receiptUrl
+              }
+            }
+          ] : []),
+          {
+            type: "button",
+            style: "primary",
+            color: "#d93025",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "ตรวจสอบในระบบ",
+              uri: "https://hr.teragroup.com/team/depreciation-claims"
+            }
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    for (const uid of lineUserIds) {
+      if (uid) await sendLineMessage(uid, [flexMessage]);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error sending depreciation claim notification:", error);
+    return false;
+  }
+}
+

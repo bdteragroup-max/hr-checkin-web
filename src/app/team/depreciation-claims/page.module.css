@@ -148,13 +148,11 @@
   font-family: var(--font-display);
   border: 1.5px dashed var(--gray-300);
   border-radius: var(--radius-sm);
-}
-
-.emptyState::before {
-  display: block;
-  font-size: 36px;
-  margin-bottom: 10px;
-  content: "📋";
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .listItem {
@@ -210,6 +208,16 @@
   color: #d97706;
 }
 
+.status_PENDING_INITIAL {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status_PENDING_HR {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .status_APPROVED {
   background: #d1fae5;
   color: #059669;
@@ -219,6 +227,87 @@
   background: #fee2e2;
   color: var(--red);
 }
+
+.tabGroup {
+  display: flex;
+  gap: 8px;
+  background: #e5e8ef;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tabBtnActive {
+  background: var(--white);
+  color: var(--red);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.tabBadge {
+  background: var(--red);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.btnApprove {
+  padding: 6px 14px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s;
+}
+
+.btnApprove:hover {
+  background: #059669;
+}
+
+.btnReject {
+  padding: 6px 14px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s;
+}
+
+.btnReject:hover {
+  background: #dc2626;
+}
+
 
 .link {
   color: var(--red);
@@ -315,4 +404,79 @@
 
 .fileInput:hover {
   border-color: var(--gray-400);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.modalDesc {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.infoBanner {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 13.5px;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(217, 48, 37, 0.1);
 }

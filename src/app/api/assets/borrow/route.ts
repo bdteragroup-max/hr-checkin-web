@@ -14,7 +14,9 @@ export async function POST(req: Request) {
             asset_id, borrow_date, expected_return_date, location, remark, photo_url_borrow,
             borrow_vehicle_status, borrow_is_clean, borrow_is_lights_ok, borrow_is_tires_ok,
             borrow_is_body_ok, borrow_is_insurance_ok, borrow_inspection_remark,
-            borrower_emp_id
+            borrower_emp_id,
+            is_claim, claim_doc_no, claim_details, claim_photo_url,
+            is_maintenance, maintenance_mileage
         } = body;
 
         // If admin or warehouse manager, they can borrow for someone else. Otherwise, use payload.emp_id
@@ -24,6 +26,27 @@ export async function POST(req: Request) {
         if (!asset_id || !borrow_date || !expected_return_date) {
             console.warn("[API/assets/borrow] 400: Missing required fields", { asset_id, borrow_date, expected_return_date });
             return NextResponse.json({ error: "MISSING_REQUIRED_FIELDS" }, { status: 400 });
+        }
+
+        // Validate claim fields
+        if (is_claim) {
+            if (!claim_doc_no || !claim_doc_no.trim()) {
+                return NextResponse.json({ error: "MISSING_CLAIM_DOC_NO", message: "กรุณาระบุเลขที่เอกสารเคลม" }, { status: 400 });
+            }
+            if (!claim_details || !claim_details.trim()) {
+                return NextResponse.json({ error: "MISSING_CLAIM_DETAILS", message: "กรุณาระบุรายละเอียดการเคลม" }, { status: 400 });
+            }
+            if (!claim_photo_url) {
+                return NextResponse.json({ error: "MISSING_CLAIM_PHOTO", message: "กรุณาแนบรูปถ่ายเอกสารเคลม" }, { status: 400 });
+            }
+        }
+
+        // Validate scheduled maintenance fields
+        if (is_maintenance) {
+            const mileageNum = Number(maintenance_mileage);
+            if (maintenance_mileage === undefined || maintenance_mileage === null || isNaN(mileageNum) || mileageNum < 0) {
+                return NextResponse.json({ error: "INVALID_MAINTENANCE_MILEAGE", message: "กรุณาระบุเลขไมล์ที่นำรถเข้าเช็คระยะ" }, { status: 400 });
+            }
         }
 
         // Fetch employee details (Job and Branch)
@@ -145,7 +168,14 @@ export async function POST(req: Request) {
                     borrow_is_tires_ok: borrow_is_tires_ok === true,
                     borrow_is_body_ok: borrow_is_body_ok === true,
                     borrow_is_insurance_ok: borrow_is_insurance_ok === true,
-                    borrow_inspection_remark: borrow_inspection_remark || null
+                    borrow_inspection_remark: borrow_inspection_remark || null,
+                    // Claim & Maintenance Fields
+                    is_claim: is_claim === true,
+                    claim_doc_no: is_claim ? (claim_doc_no?.trim() || null) : null,
+                    claim_details: is_claim ? (claim_details?.trim() || null) : null,
+                    claim_photo_url: is_claim ? (claim_photo_url || null) : null,
+                    is_maintenance: is_maintenance === true,
+                    maintenance_mileage: is_maintenance ? (Number(maintenance_mileage) || null) : null
                 }
             });
             
@@ -199,6 +229,15 @@ export async function POST(req: Request) {
                         is_body_ok: borrow_is_body_ok,
                         is_insurance_ok: borrow_is_insurance_ok,
                         remark: borrow_inspection_remark
+                    },
+                    claimSummary: {
+                        is_claim: is_claim === true,
+                        claim_doc_no: claim_doc_no?.trim(),
+                        claim_details: claim_details?.trim()
+                    },
+                    maintenanceSummary: {
+                        is_maintenance: is_maintenance === true,
+                        maintenance_mileage: is_maintenance ? Number(maintenance_mileage) : undefined
                     }
                 });
             } catch (notifyError) {

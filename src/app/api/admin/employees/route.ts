@@ -126,14 +126,17 @@ export async function GET(req: Request) {
         const page = parseInt(searchParams.get("page") || "0", 10);
         const all = searchParams.get("all") === "1";
         const pageSize = 50;
-
-        const subordinateFilter = getSubordinateFilter(auth, teamOnly);
+        const isAll = all || teamOnly;
+        const subordinateFilter = getSubordinateFilter(auth, teamOnly, true);
 
         if (minimal) {
-            const minWhere: any = { ...subordinateFilter };
-            if (status === "active") minWhere.is_active = true;
-            else if (status === "inactive") minWhere.is_active = false;
-            else if (status === "trial") { minWhere.is_active = true; minWhere.is_on_trial = true; }
+            const minConditions: any[] = [];
+            if (subordinateFilter.OR) minConditions.push(subordinateFilter);
+            if (status === "active") minConditions.push({ is_active: true });
+            else if (status === "inactive") minConditions.push({ is_active: false });
+            else if (status === "trial") minConditions.push({ is_active: true, is_on_trial: true });
+
+            const minWhere: any = minConditions.length > 0 ? { AND: minConditions } : {};
 
             const list = await prisma.employees.findMany({
                 where: minWhere,
@@ -150,35 +153,46 @@ export async function GET(req: Request) {
         }
 
         // Build where clause
-        const where: any = { ...subordinateFilter };
-        if (status === "active") where.is_active = true;
-        if (status === "inactive") where.is_active = false;
+        const conditions: any[] = [];
+        if (subordinateFilter.OR) conditions.push(subordinateFilter);
+        if (status === "active") conditions.push({ is_active: true });
+        if (status === "inactive") conditions.push({ is_active: false });
         if (status === "trial") {
-            where.is_active = true;
-            where.is_on_trial = true;
+            conditions.push({ is_active: true, is_on_trial: true });
         }
 
-        if (type !== "all") where.salary_type = type;
-        if (dept !== "all") where.department_id = parseInt(dept, 10);
-        if (branch !== "all") where.branch_id = branch;
+        if (type !== "all") conditions.push({ salary_type: type });
+        if (dept !== "all") conditions.push({ department_id: parseInt(dept, 10) });
+        if (branch !== "all") conditions.push({ branch_id: branch });
 
         if (q) {
             // PostgreSQL supports mode: 'insensitive'. 
             // The DB is postgresql according to schema.prisma
-            where.OR = [
-                { emp_id: { contains: q, mode: 'insensitive' } },
-                { name: { contains: q, mode: 'insensitive' } },
-                { nickname: { contains: q, mode: 'insensitive' } },
-                { phone_number: { contains: q } }
-            ];
+            conditions.push({
+                OR: [
+                    { emp_id: { contains: q, mode: 'insensitive' } },
+                    { name: { contains: q, mode: 'insensitive' } },
+                    { nickname: { contains: q, mode: 'insensitive' } },
+                    { phone_number: { contains: q } }
+                ]
+            });
         }
+
+        const where: any = conditions.length > 0 ? { AND: conditions } : {};
+
+        const countBase = (extra: any) => {
+            if (subordinateFilter.OR) {
+                return { AND: [subordinateFilter, extra] };
+            }
+            return extra;
+        };
 
         const [list, total, activeCount, inactiveCount, trialCount, incompleteCount] = await prisma.$transaction([
             prisma.employees.findMany({
                 where,
                 orderBy: { created_at: "desc" },
-                skip: all ? undefined : page * pageSize,
-                take: all ? undefined : pageSize,
+                skip: isAll ? undefined : page * pageSize,
+                take: isAll ? undefined : pageSize,
                 select: {
                     emp_id: true,
                     name: true,
@@ -229,10 +243,10 @@ export async function GET(req: Request) {
                 },
             }),
             prisma.employees.count({ where }),
-            prisma.employees.count({ where: { ...subordinateFilter, is_active: true } }),
-            prisma.employees.count({ where: { ...subordinateFilter, is_active: false } }),
-            prisma.employees.count({ where: { ...subordinateFilter, is_active: true, is_on_trial: true } }),
-            prisma.employees.count({ where: { ...subordinateFilter, is_onboarding_complete: false } })
+            prisma.employees.count({ where: countBase({ is_active: true }) }),
+            prisma.employees.count({ where: countBase({ is_active: false }) }),
+            prisma.employees.count({ where: countBase({ is_active: true, is_on_trial: true }) }),
+            prisma.employees.count({ where: countBase({ is_onboarding_complete: false }) })
         ]);
 
         const allCoEvals: any[] = ((await prisma.$queryRawUnsafe(

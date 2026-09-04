@@ -65,7 +65,7 @@ export default function TeamRecordsPage() {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetch("/api/admin/employees?team=1")
+        fetch("/api/admin/employees?team=1&all=1")
             .then(r => r.json())
             .then(json => {
                 if (json.ok) setEmployees(json.list || []);
@@ -165,7 +165,7 @@ export default function TeamRecordsPage() {
 
     const filteredEmployees = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        const activeEmps = employees.filter(e => !e.is_checkin_exempt);
+        const activeEmps = employees;
         if (!term) return activeEmps;
         return activeEmps.filter(e => 
             e.emp_id.toLowerCase().includes(term) || 
@@ -303,11 +303,18 @@ export default function TeamRecordsPage() {
                                 ) : filteredEmployees.map(e => (
                                     <div 
                                         key={e.emp_id} 
-                                        style={{ padding: "12px 20px", cursor: "pointer", fontSize: 14, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 800 : 600, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent" }}
+                                        style={{ padding: "12px 20px", cursor: "pointer", fontSize: 14, borderTop: "1px solid var(--line)", fontWeight: filterEmpId === e.emp_id ? 800 : 600, color: filterEmpId === e.emp_id ? "var(--red)" : "var(--text2)", background: filterEmpId === e.emp_id ? "var(--red-lt)" : "transparent", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                                         onClick={() => { setFilterEmpId(e.emp_id); setIsDropdownOpen(false); setSearchTerm(""); }}
                                     >
-                                        <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 12, marginRight: 10 }}>{e.emp_id}</span>
-                                        {e.name}
+                                        <div>
+                                            <span style={{ fontFamily: "monospace", opacity: 0.6, fontSize: 12, marginRight: 10 }}>{e.emp_id}</span>
+                                            {e.name}
+                                        </div>
+                                        {e.is_checkin_exempt && (
+                                            <span style={{ fontSize: 11, background: "var(--surface3)", color: "var(--text4)", padding: "2px 6px", borderRadius: 4, fontWeight: 500 }}>
+                                                ยกเว้นลงเวลา
+                                            </span>
+                                        )}
                                     </div>
                                 ))}
                             </div>

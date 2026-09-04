@@ -16,7 +16,10 @@ import {
     XMarkIcon,
     ChartBarIcon,
     MagnifyingGlassIcon,
-    ArrowDownTrayIcon
+    ArrowDownTrayIcon,
+    WrenchScrewdriverIcon,
+    ShieldExclamationIcon,
+    PaperClipIcon
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import AlertModal, { AlertState } from "@/components/AlertModal";
@@ -40,6 +43,16 @@ type Asset = {
         borrow_date: string;
         expected_return_date: string;
         status: string;
+        is_claim?: boolean;
+        claim_doc_no?: string | null;
+        claim_details?: string | null;
+        claim_photo_url?: string | null;
+        claim_cost?: any;
+        claim_is_billed?: boolean | null;
+        is_maintenance?: boolean;
+        maintenance_mileage?: number | null;
+        maintenance_cost?: any;
+        maintenance_doc_url?: string | null;
     }>;
 };
 
@@ -67,8 +80,13 @@ export default function AdminAssetsPage() {
         actual_return_date: new Date().toISOString().split("T")[0],
         actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         condition_at_return: "",
-        is_damaged: false
+        is_damaged: false,
+        claim_cost: "" as string | number,
+        claim_is_billed: false,
+        maintenance_cost: "" as string | number,
+        maintenance_doc_url: ""
     });
+    const [uploadingDoc, setUploadingDoc] = useState(false);
     const [processing, setProcessing] = useState(false);
 
     // Asset Form Modal State
@@ -206,7 +224,43 @@ export default function AdminAssetsPage() {
 
     function openReturnModal(asset: Asset) {
         setSelectedAsset(asset);
+        const currentBorrow = asset.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
+        setReturnData({
+            actual_return_date: new Date().toISOString().split("T")[0],
+            actual_return_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+            condition_at_return: "",
+            is_damaged: false,
+            claim_cost: currentBorrow?.claim_cost != null ? String(currentBorrow.claim_cost) : "",
+            claim_is_billed: currentBorrow?.claim_is_billed ?? false,
+            maintenance_cost: currentBorrow?.maintenance_cost != null ? String(currentBorrow.maintenance_cost) : "",
+            maintenance_doc_url: currentBorrow?.maintenance_doc_url || ""
+        });
         setShowReturnModal(true);
+    }
+
+    async function handleMaintenanceDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingDoc(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("prefix", "maintenance-doc");
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.url) {
+                setReturnData(prev => ({ ...prev, maintenance_doc_url: data.url }));
+            } else {
+                setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาดในการอัปโหลดไฟล์", type: "error" });
+            }
+        } catch (err: any) {
+            setAlert({ visible: true, message: err.message || "เกิดข้อผิดพลาดในการอัปโหลด", type: "error" });
+        } finally {
+            setUploadingDoc(false);
+        }
     }
 
     async function handleReturn() {
@@ -296,9 +350,10 @@ export default function AdminAssetsPage() {
             const start = new Date(b.borrow_date);
             return b.status === "borrowed" || (b.status === "reserved" && start <= now);
         });
-        const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
+        const upcomingBorrow = asset.asset_borrowings.find(b => b.status === "reserved" && new Date(b.borrow_date) > now);
+        const effectiveStatus = currentBorrow ? "borrowed" : (upcomingBorrow ? "reserved" : asset.status);
 
-        const matchesStatus = filterStatus === "all" || effectiveStatus === filterStatus;
+        const matchesStatus = filterStatus === "all" || effectiveStatus === filterStatus || (filterStatus === "borrowed" && effectiveStatus === "reserved");
         return matchesSearch && matchesStatus;
     });
 
@@ -491,7 +546,9 @@ export default function AdminAssetsPage() {
                                     const start = new Date(b.borrow_date);
                                     return b.status === "borrowed" || (b.status === "reserved" && start <= now);
                                 });
-                                const effectiveStatus = currentBorrow ? "borrowed" : asset.status;
+                                const upcomingBorrow = asset.asset_borrowings.find(b => b.status === "reserved" && new Date(b.borrow_date) > now);
+                                const activeBorrowing = currentBorrow || upcomingBorrow;
+                                const effectiveStatus = currentBorrow ? "borrowed" : (upcomingBorrow ? "reserved" : asset.status);
 
                                 const isOverdue = currentBorrow ? now > new Date(currentBorrow.expected_return_date) : false;
 
@@ -510,31 +567,53 @@ export default function AdminAssetsPage() {
                                         </td>
                                         <td>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                <span className={`${styles.statusBadge} ${isOverdue ? styles.damaged : styles[effectiveStatus]}`}>
+                                                <span className={`${styles.statusBadge} ${isOverdue ? styles.damaged : styles[effectiveStatus] || styles.available}`}>
                                                     {isOverdue ? "ยังไม่คืนรถ" :
                                                         effectiveStatus === "available" ? "พร้อมใช้งาน" :
                                                             effectiveStatus === "borrowed" ? "ถูกยืม" :
-                                                                effectiveStatus === "damaged" ? "ชำรุด" :
-                                                                    effectiveStatus === "unavailable" ? "ไม่พร้อมใช้งาน" : "ซ่อมบำรุง"}
+                                                                effectiveStatus === "reserved" ? "จองล่วงหน้า" :
+                                                                    effectiveStatus === "damaged" ? "ชำรุด" :
+                                                                        effectiveStatus === "unavailable" ? "ไม่พร้อมใช้งาน" : "ซ่อมบำรุง"}
                                                 </span>
-                                                {currentBorrow && (
+                                                {activeBorrowing && (
                                                     <div className={styles.borrowerInfo} style={{ fontSize: "0.8rem", marginTop: 4 }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                                            <UserIcon width={12} /> {currentBorrow.employee.name}
+                                                            <UserIcon width={12} /> {activeBorrowing.employee.name}
                                                         </div>
-                                                        <div style={{ color: "var(--bad)", fontWeight: 500, marginTop: "2px" }}>
-                                                            คืน: {new Date(currentBorrow.expected_return_date).toLocaleString("th-TH", {
-                                                                day: "2-digit", month: "2-digit", year: "2-digit",
-                                                                hour: "2-digit", minute: "2-digit"
-                                                            })}
+                                                        <div style={{ color: effectiveStatus === "reserved" ? "#b45309" : "var(--bad)", fontWeight: 500, marginTop: "2px" }}>
+                                                            {effectiveStatus === "reserved" ? (
+                                                                <>เริ่ม: {new Date(activeBorrowing.borrow_date).toLocaleString("th-TH", {
+                                                                    day: "2-digit", month: "2-digit", year: "2-digit",
+                                                                    hour: "2-digit", minute: "2-digit"
+                                                                })}</>
+                                                            ) : (
+                                                                <>คืน: {new Date(activeBorrowing.expected_return_date).toLocaleString("th-TH", {
+                                                                    day: "2-digit", month: "2-digit", year: "2-digit",
+                                                                    hour: "2-digit", minute: "2-digit"
+                                                                })}</>
+                                                            )}
                                                         </div>
+                                                        {activeBorrowing.is_claim && (
+                                                            <div style={{ marginTop: "3px" }}>
+                                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", backgroundColor: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", padding: "1px 5px", borderRadius: "4px", fontWeight: 600 }}>
+                                                                    <ShieldExclamationIcon width={12} /> ส่งเคลมรถ
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {activeBorrowing.is_maintenance && (
+                                                            <div style={{ marginTop: "3px" }}>
+                                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", backgroundColor: "#ede9fe", color: "#6d28d9", border: "1px solid #ddd6fe", padding: "1px 5px", borderRadius: "4px", fontWeight: 600 }}>
+                                                                    <WrenchScrewdriverIcon width={12} /> เช็คระยะ/ซ่อม
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
                                         <td>
                                             <div className={styles.actions}>
-                                                {effectiveStatus === "borrowed" && (
+                                                {(effectiveStatus === "borrowed" || effectiveStatus === "reserved") && (
                                                     <button
                                                         className={styles.returnBtn}
                                                         onClick={() => openReturnModal(asset)}
@@ -556,7 +635,7 @@ export default function AdminAssetsPage() {
                                                 >
                                                     <PencilSquareIcon width={16} />
                                                 </button>
-                                                {effectiveStatus !== "borrowed" && (
+                                                {effectiveStatus !== "borrowed" && effectiveStatus !== "reserved" && (
                                                     <button
                                                         className={styles.deleteBtn}
                                                         onClick={() => handleDelete(asset.id, asset.name)}
@@ -738,6 +817,102 @@ export default function AdminAssetsPage() {
                                     อุปกรณ์ชำรุด / เสียหาย
                                 </label>
                             </div>
+
+                            {/* Claim Settlement */}
+                            {(() => {
+                                const currentBorrow = selectedAsset.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
+                                if (!currentBorrow?.is_claim) return null;
+                                return (
+                                    <div style={{ padding: "14px", backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#92400e", display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <ShieldExclamationIcon width={16} /> สรุปการส่งเคลมรถยนต์ (Claim Settlement)
+                                        </div>
+                                        <div style={{ fontSize: "12px", color: "#78350f" }}>
+                                            <div><strong>เลขที่เอกสารเคลม:</strong> {currentBorrow.claim_doc_no || "-"}</div>
+                                            <div><strong>รายละเอียดการเคลม:</strong> {currentBorrow.claim_details || "-"}</div>
+                                            {currentBorrow.claim_photo_url && (
+                                                <div style={{ marginTop: "4px" }}>
+                                                    <a href={currentBorrow.claim_photo_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                        <PaperClipIcon width={12} /> ดูรูปเอกสารเคลม
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#92400e" }}>ค่าใช้จ่ายในการเคลม (บาท)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="ระบุค่าใช้จ่าย (ถ้ามี)"
+                                                value={returnData.claim_cost}
+                                                onChange={e => setReturnData({ ...returnData, claim_cost: e.target.value })}
+                                                style={{ backgroundColor: "#fff" }}
+                                            />
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <input
+                                                type="checkbox"
+                                                id="admin_claim_is_billed"
+                                                checked={returnData.claim_is_billed}
+                                                onChange={e => setReturnData({ ...returnData, claim_is_billed: e.target.checked })}
+                                                style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                                            />
+                                            <label htmlFor="admin_claim_is_billed" style={{ fontSize: "12px", fontWeight: 600, color: "#92400e", cursor: "pointer", margin: 0 }}>
+                                                มีการเรียกเก็บเงิน / วางบิล (Billed)
+                                            </label>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Scheduled Maintenance Settlement */}
+                            {(() => {
+                                const currentBorrow = selectedAsset.asset_borrowings.find(b => b.status === "borrowed" || b.status === "reserved");
+                                if (!currentBorrow?.is_maintenance) return null;
+                                return (
+                                    <div style={{ padding: "14px", backgroundColor: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: "8px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#6b21a8", display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <WrenchScrewdriverIcon width={16} /> สรุปการเช็คระยะ / ซ่อมบำรุง (Maintenance Settlement)
+                                        </div>
+                                        <div style={{ fontSize: "12px", color: "#581c87" }}>
+                                            <div><strong>เลขไมล์ตอนนำเข้าเช็คระยะ:</strong> {currentBorrow.maintenance_mileage ? `${currentBorrow.maintenance_mileage.toLocaleString()} กม.` : "-"}</div>
+                                        </div>
+                                        <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#6b21a8" }}>ค่าใช้จ่ายเช็คระยะ/ซ่อมบำรุง (บาท)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="ระบุค่าใช้จ่าย (ถ้ามี)"
+                                                value={returnData.maintenance_cost}
+                                                onChange={e => setReturnData({ ...returnData, maintenance_cost: e.target.value })}
+                                                style={{ backgroundColor: "#fff" }}
+                                            />
+                                        </div>
+                                        <div className={styles.inputGroup} style={{ marginBottom: 0 }}>
+                                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#6b21a8" }}>
+                                                แนบเอกสารใบเสร็จ / บิลเช็คระยะ <span style={{ fontWeight: 400, color: "#888" }}>(ไม่บังคับ)</span>
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept="image/*,application/pdf"
+                                                onChange={handleMaintenanceDocUpload}
+                                                disabled={uploadingDoc}
+                                                style={{ fontSize: "12px" }}
+                                            />
+                                            {uploadingDoc && <span style={{ fontSize: "11px", color: "#6b21a8" }}>กำลังอัปโหลด...</span>}
+                                            {returnData.maintenance_doc_url && (
+                                                <div style={{ marginTop: "4px" }}>
+                                                    <a href={returnData.maintenance_doc_url} target="_blank" rel="noreferrer" style={{ fontSize: "12px", color: "#2563eb", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                        <PaperClipIcon width={12} /> ดูเอกสารที่แนบแล้ว
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.cancelBtn} onClick={() => setShowReturnModal(false)} disabled={processing}>ยกเลิก</button>
@@ -776,9 +951,53 @@ export default function AdminAssetsPage() {
                                                 <div className={styles.historyField}>
                                                     <span className={styles.historyLabel}>ผู้ยืม:</span> {item.employee.name}
                                                 </div>
-                                                <div className={styles.historyField}>
-                                                    <span className={styles.historyLabel}>สถานะ:</span> {item.status === 'borrowed' ? 'อยู่ระหว่างการยืม' : 'คืนแล้ว'}
-                                                </div>
+                                                {(() => {
+                                                    const isReturned = item.status === 'returned' || !!item.actual_return_date;
+                                                    const isPendingKey = item.return_status === 'PENDING_KEY';
+                                                    const now = new Date();
+                                                    const isOverdue = !isReturned && !isPendingKey && item.expected_return_date && now > new Date(item.expected_return_date);
+                                                    const isReserved = !isReturned && (item.status === 'reserved' && new Date(item.borrow_date) > now);
+
+                                                    let statusText = 'อยู่ระหว่างการยืม';
+                                                    let statusBg = '#dbeafe';
+                                                    let statusColor = '#1d4ed8';
+
+                                                    if (isReturned) {
+                                                        statusText = 'คืนแล้ว';
+                                                        statusBg = '#dcfce7';
+                                                        statusColor = '#15803d';
+                                                    } else if (isPendingKey) {
+                                                        statusText = 'รอคืนกุญแจ';
+                                                        statusBg = '#ffedd5';
+                                                        statusColor = '#c2410c';
+                                                    } else if (isOverdue) {
+                                                        statusText = 'ยังไม่คืนรถ (เกินกำหนด)';
+                                                        statusBg = '#fee2e2';
+                                                        statusColor = '#b91c1c';
+                                                    } else if (isReserved) {
+                                                        statusText = 'จองล่วงหน้า';
+                                                        statusBg = '#fef3c7';
+                                                        statusColor = '#92400e';
+                                                    }
+
+                                                    return (
+                                                        <div className={styles.historyField}>
+                                                            <span className={styles.historyLabel}>สถานะ:</span>
+                                                            <span style={{
+                                                                backgroundColor: statusBg,
+                                                                color: statusColor,
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px',
+                                                                fontSize: '11px',
+                                                                fontWeight: 600,
+                                                                display: 'inline-block',
+                                                                width: 'fit-content'
+                                                            }}>
+                                                                {statusText}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <div className={styles.historyField}>
                                                     <span className={styles.historyLabel}>วันที่ยืม:</span> {new Date(item.borrow_date).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
@@ -822,6 +1041,52 @@ export default function AdminAssetsPage() {
                                                     {item.borrow_inspection_remark && (
                                                         <div style={{ marginTop: 8, fontSize: "11px", color: "#64748b", fontStyle: "italic" }}>
                                                             บันทึกเพิ่มเติม: {item.borrow_inspection_remark}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* ข้อมูลการส่งเคลม (ถ้ามี) */}
+                                            {item.is_claim && (
+                                                <div style={{ marginTop: 12, padding: "12px", backgroundColor: "#fffbeb", borderRadius: "8px", border: "1px solid #fde68a" }}>
+                                                    <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px", color: "#92400e", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                        <ShieldExclamationIcon width={14} /> รายละเอียดการส่งเคลมรถยนต์
+                                                    </div>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px", fontSize: "11px" }}>
+                                                        <div><strong style={{ color: "#78350f" }}>เลขที่เอกสารเคลม:</strong> {item.claim_doc_no || "-"}</div>
+                                                        <div><strong style={{ color: "#78350f" }}>ค่าใช้จ่ายเคลม:</strong> {item.claim_cost != null ? `฿${Number(item.claim_cost).toLocaleString()}` : "-"}</div>
+                                                        <div><strong style={{ color: "#78350f" }}>การเรียกเก็บเงิน:</strong> {item.claim_is_billed === true ? "เรียกเก็บเงิน / วางบิล" : item.claim_is_billed === false ? "ไม่เรียกเก็บเงิน" : "-"}</div>
+                                                    </div>
+                                                    {item.claim_details && (
+                                                        <div style={{ marginTop: 6, fontSize: "11px", color: "#78350f" }}>
+                                                            <strong>รายละเอียดเคลม:</strong> {item.claim_details}
+                                                        </div>
+                                                    )}
+                                                    {item.claim_photo_url && (
+                                                        <div style={{ marginTop: 6 }}>
+                                                            <a href={item.claim_photo_url} target="_blank" rel="noreferrer" style={{ fontSize: "11px", color: "#2563eb", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                                <PaperClipIcon width={12} /> ดูรูปถ่ายเอกสารเคลม
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* ข้อมูลเช็คระยะ / ซ่อมบำรุง (ถ้ามี) */}
+                                            {item.is_maintenance && (
+                                                <div style={{ marginTop: 12, padding: "12px", backgroundColor: "#faf5ff", borderRadius: "8px", border: "1px solid #e9d5ff" }}>
+                                                    <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "8px", color: "#6b21a8", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                        <WrenchScrewdriverIcon width={14} /> รายละเอียดการเช็คระยะ / ซ่อมบำรุง
+                                                    </div>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px", fontSize: "11px" }}>
+                                                        <div><strong style={{ color: "#581c87" }}>เลขไมล์ตอนส่งซ่อม:</strong> {item.maintenance_mileage != null ? `${Number(item.maintenance_mileage).toLocaleString()} กม.` : "-"}</div>
+                                                        <div><strong style={{ color: "#581c87" }}>ค่าใช้จ่าย:</strong> {item.maintenance_cost != null ? `฿${Number(item.maintenance_cost).toLocaleString()}` : "-"}</div>
+                                                    </div>
+                                                    {item.maintenance_doc_url && (
+                                                        <div style={{ marginTop: 6 }}>
+                                                            <a href={item.maintenance_doc_url} target="_blank" rel="noreferrer" style={{ fontSize: "11px", color: "#2563eb", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                                <PaperClipIcon width={12} /> ดูเอกสารใบเสร็จ / บิลเช็คระยะ
+                                                            </a>
                                                         </div>
                                                     )}
                                                 </div>

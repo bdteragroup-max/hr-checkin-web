@@ -39,15 +39,23 @@ export async function requireAdmin(): Promise<AdminTokenPayload> {
 
 /**
  * Returns a Prisma 'where' clause filter that limits results to subordinates
- * if the user is a supervisor (or if teamOnly is true).
+ * (and optionally themselves) if the user is a supervisor (or if teamOnly is true).
  */
-export function getSubordinateFilter(auth: { emp_id: string; isSupervisorOnly: boolean }, teamOnly: boolean = false) {
+export function getSubordinateFilter(
+    auth: { emp_id: string; isSupervisorOnly: boolean }, 
+    teamOnly: boolean = false,
+    includeSelf: boolean = false
+) {
     if (auth.isSupervisorOnly || teamOnly) {
+        const conditions: any[] = [
+            { supervisor_id: auth.emp_id },
+            { secondary_supervisor_id: auth.emp_id }
+        ];
+        if (includeSelf || teamOnly) {
+            conditions.push({ emp_id: auth.emp_id });
+        }
         return {
-            OR: [
-                { supervisor_id: auth.emp_id },
-                { secondary_supervisor_id: auth.emp_id }
-            ]
+            OR: conditions
         };
     }
     return {};

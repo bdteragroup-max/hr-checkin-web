@@ -17,7 +17,11 @@ import {
     CheckCircleIcon,
     ClockIcon,
     ClipboardDocumentListIcon,
-    UserIcon
+    UserIcon,
+    WrenchScrewdriverIcon,
+    ShieldExclamationIcon,
+    BanknotesIcon,
+    PaperClipIcon
 } from "@heroicons/react/24/outline";
 
 /** 24-hour time picker using two selects — avoids browser AM/PM locale issues */
@@ -119,7 +123,12 @@ export default function CarBorrowPage() {
         condition_at_return: "",
         is_damaged: false,
         overnight_required: false,
-        nights_count: 1
+        nights_count: 1,
+        // Claim & Maintenance Settlement
+        claim_cost: "",
+        claim_is_billed: false,
+        maintenance_cost: "",
+        maintenance_doc_url: null as string | null
     });
 
     const nowRounded = (() => { const d = new Date(); d.setSeconds(0, 0); return d; })();
@@ -137,7 +146,15 @@ export default function CarBorrowPage() {
         borrow_is_tires_ok: true,
         borrow_is_body_ok: true,
         borrow_is_insurance_ok: true,
-        borrow_inspection_remark: ""
+        borrow_inspection_remark: "",
+        // Vehicle Claim Submission
+        is_claim: false,
+        claim_doc_no: "",
+        claim_details: "",
+        claim_photo_url: null as string | null,
+        // Scheduled Maintenance
+        is_maintenance: false,
+        maintenance_mileage: ""
     });
 
     useEffect(() => {
@@ -239,6 +256,60 @@ export default function CarBorrowPage() {
         }
     }
 
+    async function handleClaimPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading("claim-photo");
+        try {
+            const processedFile = file.type.startsWith("image/") ? await compressImage(file) : file;
+            const form = new FormData();
+            form.append("file", processedFile);
+            form.append("prefix", "car-claim-doc");
+
+            const res = await fetch("/api/upload", { method: "POST", body: form });
+            const data = await res.json();
+            if (data.ok) {
+                setFormData(prev => ({ ...prev, claim_photo_url: data.url }));
+            } else {
+                setAlert({ visible: true, message: data.error === "FILE_TOO_LARGE" ? "ไฟล์รูปภาพใหญ่เกินไป" : (data.error || "Upload Failed"), type: "error" });
+            }
+        } catch (err) {
+            console.error(err);
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการอัปโหลดเอกสารเคลม", type: "error" });
+        } finally {
+            setUploading(null);
+            e.target.value = "";
+        }
+    }
+
+    async function handleMaintenanceDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading("maintenance-doc");
+        try {
+            const processedFile = file.type.startsWith("image/") ? await compressImage(file) : file;
+            const form = new FormData();
+            form.append("file", processedFile);
+            form.append("prefix", "car-maint-doc");
+
+            const res = await fetch("/api/upload", { method: "POST", body: form });
+            const data = await res.json();
+            if (data.ok) {
+                setReturnData(prev => ({ ...prev, maintenance_doc_url: data.url }));
+            } else {
+                setAlert({ visible: true, message: data.error === "FILE_TOO_LARGE" ? "ไฟล์เอกสารใหญ่เกินไป" : (data.error || "Upload Failed"), type: "error" });
+            }
+        } catch (err) {
+            console.error(err);
+            setAlert({ visible: true, message: "เกิดข้อผิดพลาดในการอัปโหลดเอกสารเช็คระยะ", type: "error" });
+        } finally {
+            setUploading(null);
+            e.target.value = "";
+        }
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!selectedAsset) return;
@@ -251,11 +322,34 @@ export default function CarBorrowPage() {
         const borrowDatetime = `${formData.borrow_date}T${formData.borrow_time}:00`;
         const returnDatetime = `${formData.expected_return_date}T${formData.expected_return_time}:00`;
 
-        // No longer requiring photos for borrowing
-
         if (!formData.location) {
             setAlert({ visible: true, message: "กรุณาระบุสถานที่ปลายทางที่เดินทางไป", type: "error" });
             return;
+        }
+
+        // Validate claim inputs if checked
+        if (formData.is_claim) {
+            if (!formData.claim_doc_no || !formData.claim_doc_no.trim()) {
+                setAlert({ visible: true, message: "กรุณาระบุเลขที่เอกสารเคลม", type: "error" });
+                return;
+            }
+            if (!formData.claim_details || !formData.claim_details.trim()) {
+                setAlert({ visible: true, message: "กรุณาระบุรายละเอียดการเคลม", type: "error" });
+                return;
+            }
+            if (!formData.claim_photo_url) {
+                setAlert({ visible: true, message: "กรุณาแนบรูปถ่ายเอกสารเคลม", type: "error" });
+                return;
+            }
+        }
+
+        // Validate scheduled maintenance inputs if checked
+        if (formData.is_maintenance) {
+            const mileageNum = Number(formData.maintenance_mileage);
+            if (formData.maintenance_mileage === "" || isNaN(mileageNum) || mileageNum < 0) {
+                setAlert({ visible: true, message: "กรุณาระบุเลขไมล์ที่นำรถเข้าเช็คระยะให้ถูกต้อง", type: "error" });
+                return;
+            }
         }
 
         setSubmitting(true);
@@ -276,7 +370,14 @@ export default function CarBorrowPage() {
                     borrow_is_body_ok: formData.borrow_is_body_ok,
                     borrow_is_insurance_ok: formData.borrow_is_insurance_ok,
                     borrow_inspection_remark: formData.borrow_inspection_remark,
-                    photo_url_borrow: JSON.stringify(borrowPhotos)
+                    photo_url_borrow: JSON.stringify(borrowPhotos),
+                    // Claim & Maintenance
+                    is_claim: formData.is_claim,
+                    claim_doc_no: formData.is_claim ? formData.claim_doc_no.trim() : null,
+                    claim_details: formData.is_claim ? formData.claim_details.trim() : null,
+                    claim_photo_url: formData.is_claim ? formData.claim_photo_url : null,
+                    is_maintenance: formData.is_maintenance,
+                    maintenance_mileage: formData.is_maintenance ? Number(formData.maintenance_mileage) : null
                 })
             });
 
@@ -299,7 +400,13 @@ export default function CarBorrowPage() {
                     borrow_is_tires_ok: true,
                     borrow_is_body_ok: true,
                     borrow_is_insurance_ok: true,
-                    borrow_inspection_remark: ""
+                    borrow_inspection_remark: "",
+                    is_claim: false,
+                    claim_doc_no: "",
+                    claim_details: "",
+                    claim_photo_url: null,
+                    is_maintenance: false,
+                    maintenance_mileage: ""
                 }));
                 queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
@@ -307,7 +414,7 @@ export default function CarBorrowPage() {
                     data.error === "TIME_OVERLAP" ? data.message :
                         data.error === "INVALID_DATE_RANGE" ? "กรุณากำหนดเวลาคืนให้หลังเวลายืม" :
                             data.error === "INVALID_DATE" ? data.message || "วันที่ไม่ถูกต้อง" :
-                                data.error || "เกิดข้อผิดพลาด";
+                                data.message || data.error || "เกิดข้อผิดพลาด";
                 setAlert({ visible: true, message: errMsg, type: "error" });
             }
         } catch (err: any) {
@@ -326,7 +433,11 @@ export default function CarBorrowPage() {
             condition_at_return: "",
             is_damaged: false,
             overnight_required: false,
-            nights_count: 1
+            nights_count: 1,
+            claim_cost: borrowing.claim_cost !== null && borrowing.claim_cost !== undefined ? String(borrowing.claim_cost) : "",
+            claim_is_billed: borrowing.claim_is_billed ?? false,
+            maintenance_cost: borrowing.maintenance_cost !== null && borrowing.maintenance_cost !== undefined ? String(borrowing.maintenance_cost) : "",
+            maintenance_doc_url: borrowing.maintenance_doc_url || null
         });
         setShowReturnModal(true);
     }
@@ -351,7 +462,11 @@ export default function CarBorrowPage() {
                     is_damaged: returnData.is_damaged,
                     photo_url_return: JSON.stringify(returnPhotos),
                     overnight_required: returnData.overnight_required,
-                    nights_count: returnData.overnight_required ? Number(returnData.nights_count) : null
+                    nights_count: returnData.overnight_required ? Number(returnData.nights_count) : null,
+                    claim_cost: selectedReturn.is_claim ? (returnData.claim_cost !== "" ? Number(returnData.claim_cost) : null) : null,
+                    claim_is_billed: selectedReturn.is_claim ? Boolean(returnData.claim_is_billed) : null,
+                    maintenance_cost: selectedReturn.is_maintenance ? (returnData.maintenance_cost !== "" ? Number(returnData.maintenance_cost) : null) : null,
+                    maintenance_doc_url: selectedReturn.is_maintenance ? returnData.maintenance_doc_url : null
                 })
             });
 
@@ -362,7 +477,7 @@ export default function CarBorrowPage() {
                 setShowKeyReturnModal(selectedReturn);
                 queryClient.invalidateQueries({ queryKey: ["assets"] });
             } else {
-                setAlert({ visible: true, message: data.error || "เกิดข้อผิดพลาด", type: "error" });
+                setAlert({ visible: true, message: data.message || data.error || "เกิดข้อผิดพลาด", type: "error" });
             }
         } catch (err: any) {
             setAlert({ visible: true, message: err.message, type: "error" });
@@ -595,6 +710,22 @@ export default function CarBorrowPage() {
                                             </div>
                                             <h3 className={styles.assetName}>{b.assets.name}</h3>
 
+                                            {/* Badges for Claim and Maintenance */}
+                                            {(b.is_claim || b.is_maintenance) && (
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                                                    {b.is_claim && (
+                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 8px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, backgroundColor: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                                                            <ShieldExclamationIcon width={13} /> ส่งเคลมรถยนต์
+                                                        </span>
+                                                    )}
+                                                    {b.is_maintenance && (
+                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 8px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, backgroundColor: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe" }}>
+                                                            <WrenchScrewdriverIcon width={13} /> เช็คระยะ/ซ่อมบำรุง
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             <div className={styles.myDetails}>
                                                 <div className={styles.myDetailItem}>
                                                     <span>เวลายืม:</span> {new Date(b.borrow_date).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -605,6 +736,26 @@ export default function CarBorrowPage() {
                                                 <div className={styles.myDetailItem}>
                                                     <span>สถานที่/ผู้ติดต่อ:</span> {b.location || "-"}
                                                 </div>
+                                                {b.is_claim && (
+                                                    <div className={styles.myDetailItem} style={{ color: "#92400e" }}>
+                                                        <span>เลขที่เอกสารเคลม:</span> {b.claim_doc_no || "-"}
+                                                        {b.claim_cost !== null && b.claim_cost !== undefined && (
+                                                            <span style={{ marginLeft: 6, fontWeight: 600 }}>
+                                                                (ค่าใช้จ่าย: ฿{Number(b.claim_cost).toLocaleString()} - {b.claim_is_billed ? 'เรียกเก็บเงิน' : 'ไม่เรียกเก็บเงิน'})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {b.is_maintenance && (
+                                                    <div className={styles.myDetailItem} style={{ color: "#1e40af" }}>
+                                                        <span>ไมล์เข้าเช็ค:</span> {b.maintenance_mileage ? `${Number(b.maintenance_mileage).toLocaleString()} กม.` : "-"}
+                                                        {b.maintenance_cost !== null && b.maintenance_cost !== undefined && (
+                                                            <span style={{ marginLeft: 6, fontWeight: 600 }}>
+                                                                (ค่าใช้จ่าย: ฿{Number(b.maintenance_cost).toLocaleString()})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
@@ -703,6 +854,148 @@ export default function CarBorrowPage() {
                                     value={formData.remark}
                                     onChange={e => setFormData({ ...formData, remark: e.target.value })}
                                 />
+                            </div>
+
+                            {/* 🛡️ CLAIMS & MAINTENANCE OPTIONS */}
+                            <div style={{ backgroundColor: "#f8fafc", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "20px" }}>
+                                <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <WrenchScrewdriverIcon width={18} /> ประเภทการใช้งานพิเศษ (ถ้ามี)
+                                </h3>
+
+                                {/* Checkbox 1: ส่งเคลมรถยนต์ */}
+                                <div style={{ marginBottom: formData.is_claim ? "16px" : "12px" }}>
+                                    <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.is_claim}
+                                            onChange={e => setFormData(prev => ({ ...prev, is_claim: e.target.checked }))}
+                                            style={{ width: "18px", height: "18px", accentColor: "#b45309", cursor: "pointer" }}
+                                        />
+                                        <span style={{ fontSize: "14px", fontWeight: 600, color: formData.is_claim ? "#b45309" : "#334155" }}>
+                                            การส่งเคลมรถยนต์ (Vehicle Claim Submission)
+                                        </span>
+                                    </label>
+
+                                    {formData.is_claim && (
+                                        <div style={{ marginTop: "10px", padding: "14px", backgroundColor: "#fffbeb", borderRadius: "10px", border: "1px solid #fde68a", display: "flex", flexDirection: "column", gap: "12px" }}>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                                <label style={{ fontSize: "13px", fontWeight: 600, color: "#92400e", marginBottom: "4px", display: "block" }}>
+                                                    เลขที่เอกสารเคลม <span style={{ color: "#dc2626" }}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="เช่น CLM-2026-0089"
+                                                    value={formData.claim_doc_no}
+                                                    onChange={e => setFormData(prev => ({ ...prev, claim_doc_no: e.target.value }))}
+                                                    required={formData.is_claim}
+                                                    style={{ backgroundColor: "#fff", borderColor: "#fcd34d" }}
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                                <label style={{ fontSize: "13px", fontWeight: 600, color: "#92400e", marginBottom: "4px", display: "block" }}>
+                                                    รายละเอียดการเคลม <span style={{ color: "#dc2626" }}>*</span>
+                                                </label>
+                                                <textarea
+                                                    placeholder="ระบุจุดที่เคลม สาเหตุ หรือศูนย์บริการที่ส่ง..."
+                                                    value={formData.claim_details}
+                                                    onChange={e => setFormData(prev => ({ ...prev, claim_details: e.target.value }))}
+                                                    required={formData.is_claim}
+                                                    style={{ minHeight: "70px", backgroundColor: "#fff", borderColor: "#fcd34d" }}
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                                <label style={{ fontSize: "13px", fontWeight: 600, color: "#92400e", marginBottom: "4px", display: "block" }}>
+                                                    รูปถ่ายเอกสารเคลม <span style={{ color: "#dc2626" }}>*</span>
+                                                </label>
+                                                {formData.claim_photo_url ? (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #fcd34d" }}>
+                                                        <img src={formData.claim_photo_url} alt="Claim Doc" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px" }} />
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a" }}>แนบเอกสารเคลมเรียบร้อย</div>
+                                                            <a href={formData.claim_photo_url} target="_blank" rel="noreferrer" style={{ fontSize: "11px", color: "#2563eb", textDecoration: "underline" }}>ดูรูปเอกสาร</a>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData(prev => ({ ...prev, claim_photo_url: null }))}
+                                                            style={{ padding: "4px 8px", fontSize: "11px", backgroundColor: "#fee2e2", color: "#dc2626", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                                                        >
+                                                            เปลี่ยนรูป
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,application/pdf"
+                                                            capture="environment"
+                                                            id="claim-photo-input"
+                                                            style={{ display: "none" }}
+                                                            onChange={handleClaimPhotoUpload}
+                                                        />
+                                                        <label
+                                                            htmlFor="claim-photo-input"
+                                                            style={{
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: "8px",
+                                                                padding: "8px 16px",
+                                                                backgroundColor: "#fff",
+                                                                border: "1px dashed #f59e0b",
+                                                                borderRadius: "8px",
+                                                                cursor: "pointer",
+                                                                fontSize: "13px",
+                                                                color: "#b45309",
+                                                                fontWeight: 600
+                                                            }}
+                                                        >
+                                                            {uploading === "claim-photo" ? (
+                                                                <><ClockIcon width={16} className="animate-spin" /> กำลังอัปโหลด...</>
+                                                            ) : (
+                                                                <><CameraIcon width={18} /> ถ่ายรูป / เลือกรูปเอกสารเคลม</>
+                                                            )}
+                                                        </label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Checkbox 2: การนำรถเข้าเช็คระยะ */}
+                                <div>
+                                    <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.is_maintenance}
+                                            onChange={e => setFormData(prev => ({ ...prev, is_maintenance: e.target.checked }))}
+                                            style={{ width: "18px", height: "18px", accentColor: "#2563eb", cursor: "pointer" }}
+                                        />
+                                        <span style={{ fontSize: "14px", fontWeight: 600, color: formData.is_maintenance ? "#1e40af" : "#334155" }}>
+                                            การนำรถเข้าเช็คระยะ (Scheduled Maintenance)
+                                        </span>
+                                    </label>
+
+                                    {formData.is_maintenance && (
+                                        <div style={{ marginTop: "10px", padding: "14px", backgroundColor: "#eff6ff", borderRadius: "10px", border: "1px solid #bfdbfe" }}>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                                <label style={{ fontSize: "13px", fontWeight: 600, color: "#1e40af", marginBottom: "4px", display: "block" }}>
+                                                    เลขไมล์ที่นำรถเข้าเช็คระยะ (กิโลเมตร) <span style={{ color: "#dc2626" }}>*</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="เช่น 45000"
+                                                    value={formData.maintenance_mileage}
+                                                    onChange={e => setFormData(prev => ({ ...prev, maintenance_mileage: e.target.value }))}
+                                                    required={formData.is_maintenance}
+                                                    min="0"
+                                                    style={{ backgroundColor: "#fff", borderColor: "#93c5fd" }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* 📋 VEHICLE INSPECTION CHECKLIST (ตามภาพ) */}
@@ -976,6 +1269,144 @@ export default function CarBorrowPage() {
                                     onChange={e => setReturnData({ ...returnData, condition_at_return: e.target.value })}
                                 />
                             </div>
+
+                            {/* 📄 CLAIM SETTLEMENT (ถ้าเป็นรายการส่งเคลม) */}
+                            {selectedReturn.is_claim && (
+                                <div style={{ padding: "16px", backgroundColor: "#fffbeb", borderRadius: "10px", marginBottom: "16px", border: "1px solid #fde68a" }}>
+                                    <h4 style={{ margin: "0 0 10px 0", color: "#92400e", display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 700 }}>
+                                        <ShieldExclamationIcon width={18} />
+                                        สรุปผลการส่งเคลมรถยนต์ (Claim Settlement)
+                                    </h4>
+                                    <div style={{ fontSize: "12px", color: "#78350f", marginBottom: "12px", backgroundColor: "#fef3c7", padding: "8px 12px", borderRadius: "6px" }}>
+                                        <div><strong>เลขที่เอกสารเคลม:</strong> {selectedReturn.claim_doc_no || "-"}</div>
+                                        {selectedReturn.claim_details && <div style={{ marginTop: 2 }}><strong>รายละเอียด:</strong> {selectedReturn.claim_details}</div>}
+                                        {selectedReturn.claim_photo_url && (
+                                            <div style={{ marginTop: "4px" }}>
+                                                <a href={selectedReturn.claim_photo_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline" }}>
+                                                    ดูรูปถ่ายเอกสารเคลมที่แนบไว้
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className={styles.formRow}>
+                                        <div className={styles.formGroup} style={{ margin: 0 }}>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: "#92400e", marginBottom: "4px", display: "block" }}>
+                                                ค่าใช้จ่ายในการเคลม (บาท)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                placeholder="ระบุจำนวนเงิน (ถ้ามี หรือใส่ 0)"
+                                                value={returnData.claim_cost}
+                                                onChange={e => setReturnData({ ...returnData, claim_cost: e.target.value })}
+                                                min="0"
+                                                step="0.01"
+                                                style={{ backgroundColor: "#fff", borderColor: "#fcd34d" }}
+                                            />
+                                        </div>
+                                        <div className={styles.formGroup} style={{ margin: 0 }}>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: "#92400e", marginBottom: "4px", display: "block" }}>
+                                                สถานะการเรียกเก็บเงิน <span style={{ color: "#dc2626" }}>*</span>
+                                            </label>
+                                            <select
+                                                value={returnData.claim_is_billed ? "billed" : "not_billed"}
+                                                onChange={e => setReturnData({ ...returnData, claim_is_billed: e.target.value === "billed" })}
+                                                style={{ backgroundColor: "#fff", borderColor: "#fcd34d", padding: "8px 12px", borderRadius: "8px", height: "42px", width: "100%" }}
+                                            >
+                                                <option value="not_billed">ไม่เรียกเก็บเงิน (Not to be billed)</option>
+                                                <option value="billed">เรียกเก็บเงิน (To be billed)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 🔧 MAINTENANCE SETTLEMENT (ถ้าเป็นรายการนำรถเข้าเช็คระยะ) */}
+                            {selectedReturn.is_maintenance && (
+                                <div style={{ padding: "16px", backgroundColor: "#eff6ff", borderRadius: "10px", marginBottom: "16px", border: "1px solid #bfdbfe" }}>
+                                    <h4 style={{ margin: "0 0 10px 0", color: "#1e40af", display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 700 }}>
+                                        <WrenchScrewdriverIcon width={18} />
+                                        สรุปผลการนำรถเข้าเช็คระยะ (Maintenance Settlement)
+                                    </h4>
+                                    <div style={{ fontSize: "12px", color: "#1e3a8a", marginBottom: "12px", backgroundColor: "#dbeafe", padding: "8px 12px", borderRadius: "6px" }}>
+                                        <div><strong>เลขไมล์ที่บันทึกไว้เมื่อส่งรถ:</strong> {selectedReturn.maintenance_mileage ? `${Number(selectedReturn.maintenance_mileage).toLocaleString()} กม.` : "-"}</div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#1e40af", marginBottom: "4px", display: "block" }}>
+                                            ค่าใช้จ่ายในการเช็คระยะ / ซ่อมบำรุง (บาท)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="ระบุค่าใช้จ่าย (ถ้ามี หรือใส่ 0)"
+                                            value={returnData.maintenance_cost}
+                                            onChange={e => setReturnData({ ...returnData, maintenance_cost: e.target.value })}
+                                            min="0"
+                                            step="0.01"
+                                            style={{ backgroundColor: "#fff", borderColor: "#93c5fd" }}
+                                        />
+                                    </div>
+
+                                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: "13px", fontWeight: 600, color: "#1e40af", display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                                            <PaperClipIcon width={16} /> เอกสารประกอบ / ใบเสร็จเช็คระยะ (ไม่บังคับ / Optional)
+                                        </label>
+                                        <p style={{ fontSize: "11px", color: "#64748b", margin: "2px 0 8px" }}>
+                                            * สามารถแนบภายหลังได้ เนื่องจากอาจนำรถไปใช้พบลูกค้าต่อ
+                                        </p>
+                                        {returnData.maintenance_doc_url ? (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #93c5fd" }}>
+                                                <div style={{ flex: 1, fontSize: "12px", fontWeight: 600, color: "#16a34a" }}>
+                                                    แนบเอกสารเรียบร้อยแล้ว
+                                                    <a href={returnData.maintenance_doc_url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, fontSize: "11px", color: "#2563eb", textDecoration: "underline" }}>
+                                                        ดูไฟล์เอกสาร
+                                                    </a>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setReturnData(prev => ({ ...prev, maintenance_doc_url: null }))}
+                                                    style={{ padding: "4px 8px", fontSize: "11px", backgroundColor: "#fee2e2", color: "#dc2626", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                                                >
+                                                    ลบออก
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*,application/pdf"
+                                                    capture="environment"
+                                                    id="maint-doc-input"
+                                                    style={{ display: "none" }}
+                                                    onChange={handleMaintenanceDocUpload}
+                                                />
+                                                <label
+                                                    htmlFor="maint-doc-input"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        padding: "8px 16px",
+                                                        backgroundColor: "#fff",
+                                                        border: "1px dashed #3b82f6",
+                                                        borderRadius: "8px",
+                                                        cursor: "pointer",
+                                                        fontSize: "13px",
+                                                        color: "#1d4ed8",
+                                                        fontWeight: 600
+                                                    }}
+                                                >
+                                                    {uploading === "maintenance-doc" ? (
+                                                        <><ClockIcon width={16} className="animate-spin" /> กำลังอัปโหลด...</>
+                                                    ) : (
+                                                        <><CameraIcon width={18} /> ถ่ายรูป / เลือกไฟล์ใบเสร็จ</>
+                                                    )}
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {selectedReturn.assets?.asset_id === "71-1557" && (
                                 <div style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "8px", marginBottom: "16px", border: "1px solid #e2e8f0" }}>
