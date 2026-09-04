@@ -29,7 +29,12 @@ export async function GET(request: Request) {
             where: {
                 OR: [
                     { is_active: true },
-                    { resignation_date: { gte: startDate } }
+                    { resignation_date: { gte: startDate } },
+                    {
+                        monthly_payroll_data: {
+                            some: { cycle_month: month, cycle_year: year }
+                        }
+                    }
                 ]
             },
             include: {
@@ -379,12 +384,16 @@ export async function GET(request: Request) {
             const accAllowanceRow = myAllowances.find(a =>
                 (a as any).allowance_type?.name?.includes('ค่าที่พัก')
             );
+            const hasLumpSum = (emp as any).allowance_mode === 'lump_sum' || myAllowances.some(a =>
+                (a as any).allowance_type?.name?.includes('เหมาจ่าย') ||
+                (a as any).allowance_type?.name?.toLowerCase().includes('lump')
+            );
 
-            // 4.1 ACCOMMODATION (สวัสดิการค่าที่พัก: ได้รับทุกคน ยกเว้นพนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน หรือยังไม่ผ่านทดลองงานกรณีตั้งค่าหลังจากผ่านโปร)
+            // 4.1 ACCOMMODATION (สวัสดิการค่าที่พัก: ได้รับทุกคน ยกเว้นพนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน หรือมีเงินช่วยเหลือเหมาจ่าย หรือยังไม่ผ่านทดลองงานกรณีตั้งค่าหลังจากผ่านโปร)
             if (adj?.accommodation_allowance_override !== null && adj?.accommodation_allowance_override !== undefined) {
                 accommodation_allowance = Number(adj.accommodation_allowance_override);
-            } else if ((emp as any).company_accommodation || isDaily) {
-                // พนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน จะไม่ได้รับค่าที่พัก
+            } else if ((emp as any).company_accommodation || isDaily || hasLumpSum) {
+                // พนักงานรายวัน หรือผู้มีสวัสดิการบ้านพักพนักงาน หรือมีเงินช่วยเหลือเหมาจ่าย จะไม่ได้รับค่าที่พัก
                 accommodation_allowance = 0;
             } else if (accAllowanceRow) {
                 const isBlockedByWarning = accAllowanceRow.void_on_warning && hasWarnings;
@@ -448,6 +457,10 @@ export async function GET(request: Request) {
                 meal_allowance = Number(adj.meal_allowance_override);
                 max_meal_allowance = meal_allowance;
                 meal_deduction = 0;
+            } else if (hasLumpSum) {
+                meal_allowance = 0;
+                max_meal_allowance = 0;
+                meal_deduction = 0;
             } else {
                 meal_allowance = allowanceCalc.meal_allowance;
             }
@@ -457,6 +470,10 @@ export async function GET(request: Request) {
             if (adj?.travel_allowance_override !== null && adj?.travel_allowance_override !== undefined) {
                 travel_allowance = Number(adj.travel_allowance_override);
                 max_travel_allowance = travel_allowance;
+                travel_deduction = 0;
+            } else if (hasLumpSum) {
+                travel_allowance = 0;
+                max_travel_allowance = 0;
                 travel_deduction = 0;
             } else {
                 travel_allowance = allowanceCalc.travel_allowance;
@@ -722,6 +739,33 @@ export async function GET(request: Request) {
             const pvdRate = Number((emp as any).provident_fund_rate || 0);
             const provident_fund = pvdAmt > 0 ? pvdAmt : Math.round(baseSalary * (pvdRate / 100));
 
+            // 4.8 Lump-sum Allowance (เงินช่วยเหลือเหมาจ่าย) -> Other Benefits
+            let calculatedLumpSum = 0;
+            if (!isDaily) {
+                const lumpSumRows = myAllowances.filter(a =>
+                    (a as any).allowance_type?.name?.includes('เหมาจ่าย') ||
+                    (a as any).allowance_type?.name?.toLowerCase().includes('lump')
+                );
+
+                for (const row of lumpSumRows) {
+                    const isBlockedByWarning = row.void_on_warning && hasWarnings;
+                    const isBlockedByProbation = (row.applies_to === 'after_probation' && isOnTrial) ||
+                        (row.applies_to === 'probation_only' && !isOnTrial);
+
+                    if (!isBlockedByWarning && !isBlockedByProbation && Number(row.amount) > 0) {
+                        if (row.calc_basis === 'daily_attendance') {
+                            calculatedLumpSum += Number(row.amount) * (allowanceCalc?.totalPaidDays || 0);
+                        } else {
+                            calculatedLumpSum += Number(row.amount);
+                        }
+                    }
+                }
+            }
+
+            const other_benefits = (adj?.other_benefits !== null && adj?.other_benefits !== undefined && Number(adj.other_benefits) > 0)
+                ? Number(adj.other_benefits)
+                : calculatedLumpSum;
+
             const housing_benefit = Number((emp as any).housing_benefit || 0);
             const car_benefit = Number((emp as any).car_benefit || 0);
 
@@ -729,7 +773,7 @@ export async function GET(request: Request) {
             const bonus = Number(adj?.bonus || 0);
             // Note: travel_allowance and travel_site_allowance are considered tax-exempt per requirements
             const fixedTaxableIncome = baseSalary + position_allowance + general_allowance + telephone_allowance + accommodation_allowance + housing_benefit + car_benefit;
-            const variableTaxableIncome = totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + long_service_allowance + welfare_amount + commissions + bonus;
+            const variableTaxableIncome = totalOtAmount + totalHolidayAllowance + diligence_allowance + meal_allowance + long_service_allowance + welfare_amount + commissions + bonus + other_benefits;
             const currentMonthTaxable = fixedTaxableIncome + variableTaxableIncome;
 
             const ytdEmpData = ytdPayrollData.filter(d => d.emp_id === emp.emp_id);
@@ -794,7 +838,6 @@ export async function GET(request: Request) {
             }
 
             const other_deductions = Number(adj?.other_deductions || 0);
-            const other_benefits = Number(adj?.other_benefits || 0);
 
             const grossPay = netPayCalculated + commissions + bonus + other_benefits + truck_trip_fee;
             const finalNetPay = grossPay - social_security - student_loan - insurance - other_deductions - unpaid_absenteeism - tax;
@@ -874,6 +917,7 @@ export async function GET(request: Request) {
                 bonus,
                 other_deductions,
                 other_benefits,
+                calculated_lump_sum: calculatedLumpSum,
                 welfare_amount,
                 gross_pay: grossPay,
                 net_pay: finalNetPay,

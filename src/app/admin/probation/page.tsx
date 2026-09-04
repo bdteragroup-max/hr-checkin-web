@@ -15,13 +15,18 @@ import {
     XMarkIcon,
     ChatBubbleLeftEllipsisIcon,
     ExclamationTriangleIcon,
+    ExclamationCircleIcon,
+    ClockIcon,
+    InformationCircleIcon,
     EyeIcon,
     ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 import {
     calculateTotalScore,
     calculateGrade,
-    calculateAttendanceScore
+    calculateAttendanceScore,
+    calculateProbationNoticeDeadline,
+    getRound3NoticeGuidance
 } from "@/utils/probationCalculations";
 import * as XLSX from "xlsx";
 
@@ -309,6 +314,7 @@ export default function AdminProbationPage() {
         // 2. Upcoming Sheet
         const upcomingData = filteredPending.map(emp => {
             const info = getDaysInfo(emp.probation_end_date);
+            const noticeInfo = emp.hire_date ? calculateProbationNoticeDeadline(emp.hire_date) : null;
 
             const getTargetDate = (round: number) => {
                 if (!emp.hire_date) return "-";
@@ -330,7 +336,11 @@ export default function AdminProbationPage() {
                 "กำหนดประเมินครั้งที่ 1 (30 วัน)": getTargetDate(1),
                 "กำหนดประเมินครั้งที่ 2 (60 วัน)": getTargetDate(2),
                 "กำหนดประเมินครั้งที่ 3 (90 วัน)": getTargetDate(3),
-                "กำหนดประเมินครั้งที่ 4 (119 วัน)": getTargetDate(4)
+                "กำหนดประเมินครั้งที่ 4 (119 วัน)": getTargetDate(4),
+                "วันครบ 119 วัน": noticeInfo ? noticeInfo.d119.toLocaleDateString("th-TH") : "-",
+                "วันสิ้นสุดการจ้างสูงสุด (ไม่เกิน 119 วัน)": noticeInfo ? noticeInfo.terminationDate.toLocaleDateString("th-TH") : "-",
+                "วันสุดท้ายที่ต้องแจ้งไม่ผ่านทดลองงาน": noticeInfo ? noticeInfo.noticeDeadline.toLocaleDateString("th-TH") : "-",
+                "สถานะแจ้งเตือนตามรอบค่าจ้าง": noticeInfo ? noticeInfo.statusLabel : "-"
             };
         });
         const wsUpcoming = XLSX.utils.json_to_sheet(upcomingData);
@@ -418,6 +428,7 @@ export default function AdminProbationPage() {
                             <div className={styles.pendingGrid}>
                                 {filteredPending.map(emp => {
                                     const info = getDaysInfo(emp.probation_end_date);
+                                    const noticeInfo = emp.hire_date ? calculateProbationNoticeDeadline(emp.hire_date) : null;
                                     return (
                                         <div key={emp.emp_id} className={styles.pendingCardCompact}>
                                             <div className={styles.pendingEmpCompact}>
@@ -443,6 +454,85 @@ export default function AdminProbationPage() {
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {noticeInfo && (
+                                                <div style={{
+                                                    marginTop: 10,
+                                                    padding: '10px 12px',
+                                                    borderRadius: 8,
+                                                    background: noticeInfo.badgeStyle.bg,
+                                                    border: `1.5px solid ${noticeInfo.badgeStyle.border}`,
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 800, color: noticeInfo.badgeStyle.color, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                            {noticeInfo.status === "overdue" && <ExclamationCircleIcon width={16} height={16} color={noticeInfo.badgeStyle.color} style={{ flexShrink: 0 }} />}
+                                                            {noticeInfo.status === "due_today" && <ExclamationTriangleIcon width={16} height={16} color={noticeInfo.badgeStyle.color} style={{ flexShrink: 0 }} />}
+                                                            {noticeInfo.status === "urgent" && <ClockIcon width={16} height={16} color={noticeInfo.badgeStyle.color} style={{ flexShrink: 0 }} />}
+                                                            {noticeInfo.status === "monitoring" && <InformationCircleIcon width={16} height={16} color={noticeInfo.badgeStyle.color} style={{ flexShrink: 0 }} />}
+                                                            {noticeInfo.status === "normal" && <CheckCircleIcon width={16} height={16} color={noticeInfo.badgeStyle.color} style={{ flexShrink: 0 }} />}
+                                                            <span>แจ้งเตือนไม่ผ่านทดลองงาน</span>
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: 10,
+                                                            fontWeight: 800,
+                                                            padding: '2px 6px',
+                                                            borderRadius: 6,
+                                                            background: noticeInfo.badgeStyle.iconBg,
+                                                            color: noticeInfo.badgeStyle.color
+                                                        }}>
+                                                            {noticeInfo.daysLeft < 0 ? `เกินกำหนด ${Math.abs(noticeInfo.daysLeft)} วัน` : noticeInfo.daysLeft === 0 ? 'วันนี้วันสุดท้าย' : `เหลือ ${noticeInfo.daysLeft} วัน`}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', fontSize: 11, color: '#334155' }}>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>วันครบ 119 วัน: </span>
+                                                            <b>{noticeInfo.d119.toLocaleDateString("th-TH")}</b>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>สิ้นสุดจ้างสูงสุด: </span>
+                                                            <b>{noticeInfo.terminationDate.toLocaleDateString("th-TH")}</b>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{
+                                                        marginTop: 6,
+                                                        paddingTop: 6,
+                                                        borderTop: `1px dashed ${noticeInfo.badgeStyle.border}`,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        fontSize: 11
+                                                    }}>
+                                                        <span style={{ color: '#64748b', fontWeight: 600 }}>วันสุดท้ายที่ต้องแจ้ง:</span>
+                                                        <b style={{ color: noticeInfo.badgeStyle.color, fontSize: 12 }}>
+                                                            {noticeInfo.noticeDeadline.toLocaleDateString("th-TH")}
+                                                        </b>
+                                                    </div>
+
+                                                    {(() => {
+                                                        const r3 = getRound3NoticeGuidance(emp.hire_date);
+                                                        if (!r3) return null;
+                                                        return (
+                                                            <div style={{
+                                                                marginTop: 6,
+                                                                paddingTop: 6,
+                                                                borderTop: `1px dashed ${noticeInfo.badgeStyle.border}`,
+                                                                fontSize: 10,
+                                                                color: r3.isPastDeadline ? '#b91c1c' : '#92400e',
+                                                                display: 'flex',
+                                                                alignItems: 'flex-start',
+                                                                gap: 4
+                                                            }}>
+                                                                <InformationCircleIcon width={13} height={13} style={{ flexShrink: 0, marginTop: 1 }} />
+                                                                <div>
+                                                                    <b>รอบที่ 3 (เปิดครบ 75 วัน: {r3.unlockDate75.toLocaleDateString("th-TH")}):</b> {r3.guidanceMessage}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
 
                                             {emp.hire_date && (
                                                 <div style={{ marginTop: 4, paddingTop: 12, borderTop: '1px dashed #e2e8f0' }}>

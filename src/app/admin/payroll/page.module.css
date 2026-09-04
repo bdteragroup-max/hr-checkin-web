@@ -353,6 +353,9 @@
 }
 
 .btnResetFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 8px 12px;
   border: none;
   background: var(--surface-3);
@@ -865,16 +868,21 @@
 }
 
 .modalCloseBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  font-size: 18px;
   color: var(--text-4);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
 }
 
 .modalCloseBtn:hover {
   color: var(--text);
+  background: var(--surface-2);
 }
 
 .modalBody {

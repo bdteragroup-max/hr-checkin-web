@@ -22,8 +22,8 @@ export async function POST(req: Request) {
             { key: "long_service_allowance", name: "โบนัสอายุงาน" },
             { key: "commissions", name: "คอมมิชชั่น" },
             { key: "bonus", name: "โบนัส" },
-            { key: "other_benefits", name: "รายได้อื่นๆ" },
-            { key: "welfare_amount", name: "สวัสดิการอื่นๆ" }
+            { key: "other_benefits", name: "สวัสดิการอื่นๆ (เหมาจ่าย)" },
+            { key: "welfare_amount", name: "เบิกสวัสดิการ" }
         ];
 
         let hasAnyData = false;

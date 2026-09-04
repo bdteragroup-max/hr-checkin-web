@@ -191,7 +191,7 @@ export function calculateEmployeeAllowances(
         if (mRow && mRow.calc_basis === 'fixed_monthly') max_meal_allowance = Number(mRow.amount);
         else if (mRow && mRow.calc_basis === 'daily_attendance') max_meal_allowance = maxWorkdays * Number(mRow.amount);
     }
-    const meal_deduction = Math.max(0, max_meal_allowance - meal_allowance);
+    let meal_deduction = Math.max(0, max_meal_allowance - meal_allowance);
 
     let max_travel_allowance = maxWorkdays * 60;
     if (Number(emp.fixed_travel_allowance) > 0) max_travel_allowance = Number(emp.fixed_travel_allowance);
@@ -200,7 +200,22 @@ export function calculateEmployeeAllowances(
         if (tRow && tRow.calc_basis === 'fixed_monthly') max_travel_allowance = Number(tRow.amount);
         else if (tRow && tRow.calc_basis === 'daily_attendance') max_travel_allowance = maxWorkdays * Number(tRow.amount);
     }
-    const travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
+    let travel_deduction = Math.max(0, max_travel_allowance - travel_allowance);
+
+    // If employee has Lump-sum Allowance (เงินช่วยเหลือเหมาจ่าย), they do not receive meal or travel allowance
+    const hasLumpSum = (emp as any).allowance_mode === 'lump_sum' || myAllowances.some(a =>
+        a.allowance_type?.name?.includes('เหมาจ่าย') ||
+        a.allowance_type?.name?.toLowerCase().includes('lump')
+    );
+
+    if (hasLumpSum) {
+        meal_allowance = 0;
+        max_meal_allowance = 0;
+        meal_deduction = 0;
+        travel_allowance = 0;
+        max_travel_allowance = 0;
+        travel_deduction = 0;
+    }
 
     return {
         meal_allowance, max_meal_allowance, meal_deduction,

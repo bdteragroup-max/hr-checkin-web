@@ -7,7 +7,7 @@ import Step3Onboarding from "./Step3Onboarding";
 
 type Props = {
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (createdEmpId?: string) => void;
     branches: any[];
     departments: any[];
     positions: any[];
@@ -86,8 +86,15 @@ export default function EmployeeWizard({
         setCurrentStep(3);
     };
 
+    const handleClose = () => {
+        if (!isEdit && empId) {
+            onSuccess(empId);
+        }
+        onClose();
+    };
+
     const handleStep3Complete = () => {
-        onSuccess();
+        onSuccess(empId || undefined);
         onClose();
     };
 
@@ -126,7 +133,7 @@ export default function EmployeeWizard({
                         </div>
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100 cursor-pointer"
                             aria-label="ปิด"
                         >
@@ -184,7 +191,7 @@ export default function EmployeeWizard({
                             initialData={step1State || employeeData}
                             empId={empId}
                             onComplete={handleStep1Complete}
-                            onClose={onClose}
+                            onClose={handleClose}
                         />
                     </div>
 
@@ -198,7 +205,7 @@ export default function EmployeeWizard({
                                 mode={isEdit ? "edit" : "create"}
                                 onComplete={handleStep2Complete}
                                 onBack={() => setCurrentStep(1)}
-                                onClose={onClose}
+                                onClose={handleClose}
                             />
                         </div>
                     )}
@@ -212,7 +219,7 @@ export default function EmployeeWizard({
                                 mode={isEdit ? "edit" : "create"}
                                 onComplete={handleStep3Complete}
                                 onBack={() => setCurrentStep(2)}
-                                onClose={onClose}
+                                onClose={handleClose}
                             />
                         </div>
                     )}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { PDFDocument, rgb, PDFFont, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
@@ -94,7 +94,7 @@ const WEIGHTS = [4, 3, 8, 5, 5, 4, 8, 6, 3, 3, 3, 5];
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await requireAdmin();
+        const auth = await requireAdminOrSupervisor();
         const { id: idStr } = await params;
         const id = parseInt(idStr);
 
@@ -109,7 +109,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                         birth_date: true,
                         job_positions: { select: { title: true } },
                         departments: { select: { name: true } },
-                        is_on_trial: true
+                        is_on_trial: true,
+                        supervisor_id: true,
+                        secondary_supervisor_id: true
                     }
                 },
                 supervisor: { select: { name: true } }
@@ -117,6 +119,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         });
 
         if (!evalData) return NextResponse.json({ error: "EVALUATION_NOT_FOUND" }, { status: 404 });
+
+        // If accessed by supervisor, verify permissions
+        if (auth.isSupervisorOnly) {
+            const isDirectSupervisor =
+                evalData.supervisor_id === auth.emp_id ||
+                evalData.employee.supervisor_id === auth.emp_id ||
+                evalData.employee.secondary_supervisor_id === auth.emp_id;
+
+            if (!isDirectSupervisor) {
+                const coEval = await prisma.$queryRawUnsafe<any[]>(
+                    `SELECT 1 FROM employee_co_evaluators WHERE employee_id = $1 AND evaluator_id = $2 LIMIT 1;`,
+                    evalData.emp_id,
+                    auth.emp_id
+                ).catch(() => []);
+
+                const loggedInUser = await prisma.employees.findUnique({
+                    where: { emp_id: auth.emp_id },
+                    select: { job_positions: { select: { node_type: true, title: true } } }
+                });
+                const title = loggedInUser?.job_positions?.title?.toLowerCase() || "";
+                const nodeType = loggedInUser?.job_positions?.node_type;
+                const isManager = nodeType === "executive" ||
+                    title.includes("mgr") ||
+                    title.includes("manager") ||
+                    title.includes("หัวหน้า") ||
+                    title.includes("sup.") ||
+                    title.includes("supervisor") ||
+                    title.includes("director");
+
+                if (coEval.length === 0 && !isManager) {
+                    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+                }
+            }
+        }
 
         const pdf = await PDFDocument.create();
         pdf.registerFontkit(fontkit);
@@ -524,7 +560,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         const bytes = await pdf.save();
         return new Response(Buffer.from(bytes), {
-            headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="eval_${evalData.employee.emp_id}.pdf"` },
+            headers: { 
+                "Content-Type": "application/pdf", 
+                "Content-Disposition": `inline; filename="eval_${evalData.employee.emp_id}_round_${evalData.evaluation_no}.pdf"` 
+            },
         });
     } catch (e: any) {
         console.error("[API/PROBATION/PDF] Error:", e);

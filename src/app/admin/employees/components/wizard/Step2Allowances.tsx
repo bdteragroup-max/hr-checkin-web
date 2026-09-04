@@ -198,11 +198,21 @@ function parseAllowancesAndPosition(employeeData: any, allowanceTypes?: any[]) {
     let hasPhone = Boolean(employeeData?.has_telephone_allowance);
     const itemizedRows: any[] = [];
 
+    const hasLumpInInitial = Array.isArray(employeeData?.allowances) && (
+        employeeData?.allowance_mode === 'lump_sum' ||
+        employeeData.allowances.some((a: any) => {
+            const typeName = a.allowance_type?.name || "";
+            return typeName.includes("เหมาจ่าย") || (allowanceTypes && allowanceTypes.some(t => t.id === Number(a.allowance_type_id) && t.name.includes("เหมาจ่าย")));
+        })
+    );
+
     if (Array.isArray(employeeData?.allowances)) {
         for (const a of employeeData.allowances) {
             const typeName = a.allowance_type?.name || "";
             const isPos = typeName.includes("ค่าตำแหน่ง") || (allowanceTypes && allowanceTypes.some(t => t.id === Number(a.allowance_type_id) && t.name.includes("ค่าตำแหน่ง")));
             const isPhone = typeName.includes("ค่าโทรศัพท์") || (allowanceTypes && allowanceTypes.some(t => t.id === Number(a.allowance_type_id) && t.name.includes("ค่าโทรศัพท์")));
+            const isMealAccOrTravel = typeName.includes("ค่าที่พัก") || typeName.includes("ค่าอาหาร") || typeName.includes("ค่าเดินทาง") ||
+                (allowanceTypes && allowanceTypes.some(t => t.id === Number(a.allowance_type_id) && (t.name.includes("ค่าที่พัก") || t.name.includes("ค่าอาหาร") || t.name.includes("ค่าเดินทาง"))));
 
             if (isPos) {
                 if (!posAllow && a.amount != null && Number(a.amount) > 0) {
@@ -213,6 +223,11 @@ function parseAllowancesAndPosition(employeeData: any, allowanceTypes?: any[]) {
 
             if (isPhone) {
                 hasPhone = true;
+                continue;
+            }
+
+            // If employee has lump-sum allowance, they do not receive meal, accommodation, or travel allowances
+            if (hasLumpInInitial && isMealAccOrTravel) {
                 continue;
             }
 
@@ -331,8 +346,8 @@ export default function Step2Allowances({
                 if (data.ok) {
                     const list = data.list || [];
                     setAllowanceTypes(list);
-                    // ONLY in create mode for a brand new employee: default to Accommodation/Rental allowance if list is empty
-                    if (!isEdit) {
+                    // ONLY in create mode for a brand new employee: default to Accommodation/Rental allowance if list is empty (and not lump_sum)
+                    if (!isEdit && employeeData?.allowance_mode !== "lump_sum") {
                         setAllowances(prev => {
                             if (prev.length === 0) {
                                 const accType = list.find((t: any) => t.name.includes("ค่าที่พัก"));
@@ -391,17 +406,35 @@ export default function Step2Allowances({
         setAllowances(newArr);
     };
 
+    const hasLumpSum = allowances.some(row => {
+        const t = allowanceTypes.find(at => String(at.id) === String(row.allowance_type_id));
+        return t?.name?.includes("เหมาจ่าย") || t?.name?.toLowerCase().includes("lump");
+    }) || allowanceMode === "lump_sum";
+
     const handleTypeChange = (index: number, newTypeId: string) => {
         const type = allowanceTypes.find(t => String(t.id) === String(newTypeId));
-        const newArr = [...allowances];
+        let newArr = [...allowances];
         newArr[index].allowance_type_id = newTypeId;
 
         if (type) {
             const isAccommodation = type.name.includes("ค่าที่พัก");
             const isMeal = type.name.includes("ค่าอาหาร");
             const isTravel = type.name.includes("ค่าเดินทาง");
+            const isLumpSum = type.name.includes("เหมาจ่าย") || type.name.toLowerCase().includes("lump");
 
-            if (isAccommodation) {
+            if (isLumpSum) {
+                newArr[index].calc_basis = "fixed_monthly";
+                newArr[index].applies_to = "always";
+                newArr[index].sso_included = false;
+                newArr[index].tax_included = true;
+                newArr[index].void_on_warning = false;
+                // If Lump-sum allowance is selected, employee does not receive meals, accommodation, or travel
+                newArr = newArr.filter((row, i) => {
+                    if (i === index) return true;
+                    const rowType = allowanceTypes.find(t => String(t.id) === String(row.allowance_type_id));
+                    return !rowType?.name?.includes("ค่าที่พัก") && !rowType?.name?.includes("ค่าอาหาร") && !rowType?.name?.includes("ค่าเดินทาง");
+                });
+            } else if (isAccommodation) {
                 const tier = getAccommodationTier(employeeData?.hire_date);
                 newArr[index].amount = String(tier.amount);
                 newArr[index].calc_basis = "fixed_monthly";
@@ -438,6 +471,13 @@ export default function Step2Allowances({
         if (salaryType === "daily") {
             finalAllowances = [];
         } else {
+            if (hasLumpSum) {
+                finalAllowances = finalAllowances.filter(a => {
+                    const t = allowanceTypes.find(at => String(at.id) === String(a.allowance_type_id));
+                    return !t?.name?.includes("ค่าที่พัก") && !t?.name?.includes("ค่าอาหาร") && !t?.name?.includes("ค่าเดินทาง");
+                });
+            }
+
             const phoneType = allowanceTypes.find(t => t.name.includes("ค่าโทรศัพท์"));
             finalAllowances = finalAllowances.filter(a => {
                 const t = allowanceTypes.find(at => at.id == a.allowance_type_id);
@@ -698,16 +738,36 @@ export default function Step2Allowances({
                 ) : (
                     <div className="border-t border-gray-100 pt-6 space-y-4">
                         <div className="flex justify-between items-center mb-1">
-                        <h3 className="font-bold text-lg text-gray-800">สวัสดิการและเบี้ยเลี้ยง</h3>
-                        <select
-                            className="h-10 px-3 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-500 bg-white"
-                            value={allowanceMode}
-                            onChange={e => setAllowanceMode(e.target.value)}
-                        >
-                            <option value="itemized">แสดงแยกรายการ (ในสลิปเงินเดือน)</option>
-                            <option value="lump_sum">แบบเหมาจ่าย (รวมเป็นยอดเดียว)</option>
-                        </select>
-                    </div>
+                            <h3 className="font-bold text-lg text-gray-800">สวัสดิการและเบี้ยเลี้ยง</h3>
+                            <select
+                                className="h-10 px-3 rounded-xl border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-500 bg-white"
+                                value={allowanceMode}
+                                onChange={e => {
+                                    const newMode = e.target.value;
+                                    setAllowanceMode(newMode);
+                                    if (newMode === "lump_sum") {
+                                        setAllowances(prev => prev.filter(row => {
+                                            const rowType = allowanceTypes.find(t => String(t.id) === String(row.allowance_type_id));
+                                            return !rowType?.name?.includes("ค่าที่พัก") && !rowType?.name?.includes("ค่าอาหาร") && !rowType?.name?.includes("ค่าเดินทาง");
+                                        }));
+                                    }
+                                }}
+                            >
+                                <option value="itemized">แสดงแยกรายการ (ในสลิปเงินเดือน)</option>
+                                <option value="lump_sum">แบบเหมาจ่าย (รวมเป็นยอดเดียว)</option>
+                            </select>
+                        </div>
+
+                        {hasLumpSum && (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 text-xs flex items-center gap-3 shadow-2xs">
+                                <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <div>
+                                    <span className="font-bold text-amber-950">เงื่อนไขสวัสดิการเหมาจ่าย:</span> พนักงานที่ได้รับ <strong>เงินช่วยเหลือเหมาจ่าย</strong> จะไม่ได้รับสวัสดิการ <strong>ค่าอาหาร</strong>, <strong>ค่าที่พัก</strong> และ <strong>ค่าเดินทาง</strong> (ระบบตัดสิทธิ์ค่าอาหาร ค่าที่พัก และค่าเดินทางอัตโนมัติ)
+                                </div>
+                            </div>
+                        )}
 
                     {/* Mobile Phone Allowance Box */}
                     {(() => {
@@ -903,9 +963,15 @@ export default function Step2Allowances({
                                             onChange={e => handleTypeChange(index, e.target.value)}
                                         >
                                             <option value="">-- เลือก --</option>
-                                            {allowanceTypes.filter(t => !t.name.includes("ค่าโทรศัพท์") && !t.name.includes("ค่าตำแหน่ง")).map(t => (
-                                                <option key={t.id} value={t.id}>{t.name}</option>
-                                            ))}
+                                            {allowanceTypes.filter(t => !t.name.includes("ค่าโทรศัพท์") && !t.name.includes("ค่าตำแหน่ง")).map(t => {
+                                                const isExcluded = t.name.includes("ค่าที่พัก") || t.name.includes("ค่าอาหาร") || t.name.includes("ค่าเดินทาง");
+                                                const isDisabled = hasLumpSum && isExcluded && String(row.allowance_type_id) !== String(t.id);
+                                                return (
+                                                    <option key={t.id} value={t.id} disabled={isDisabled}>
+                                                        {t.name}{isDisabled ? " (ไม่สามารถรับร่วมกับเงินช่วยเหลือเหมาจ่ายได้)" : ""}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                         <svg className="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

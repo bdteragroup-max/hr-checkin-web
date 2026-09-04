@@ -13,7 +13,13 @@ import {
     BuildingOffice2Icon,
     UserGroupIcon,
     ClockIcon,
-    GiftIcon
+    GiftIcon,
+    ExclamationTriangleIcon,
+    XMarkIcon,
+    ReceiptPercentIcon,
+    CreditCardIcon,
+    EyeSlashIcon,
+    ArrowPathIcon
 } from "@heroicons/react/24/outline";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 
@@ -74,6 +80,7 @@ type PayrollResult = {
     bonus: number;
     other_deductions: number;
     other_benefits: number;
+    calculated_lump_sum?: number;
     welfare_amount: number;
     base_salary_original: number;
     is_salary_overridden: boolean;
@@ -101,6 +108,7 @@ export default function PayrollPage() {
     const [selectedCompanyTab, setSelectedCompanyTab] = useState<"ALL" | number>("ALL");
     const [deptFilter, setDeptFilter] = useState<string>("all");
     const [typeFilter, setTypeFilter] = useState<"all" | "monthly" | "daily">("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "resigned">("all");
     const [searchTerm, setSearchTerm] = useState("");
 
     const { data: payrollData, isLoading } = useQuery({
@@ -374,7 +382,7 @@ export default function PayrollPage() {
         ) || [];
 
         const warnMessage = targetStatus && incompleteInBatch.length > 0
-            ? `\n\n⚠️ คำเตือน: มีพนักงาน ${incompleteInBatch.length} คน ข้อมูลยังไม่สมบูรณ์ (เช่น ${incompleteInBatch[0].name})\nพนักงานเหล่านี้จะไม่ถูกคำนวณเงินเดือนอย่างถูกต้อง ยืนยันที่จะดำเนินการต่อหรือไม่?`
+            ? `\n\nคำเตือน: มีพนักงาน ${incompleteInBatch.length} คน ข้อมูลยังไม่สมบูรณ์ (เช่น ${incompleteInBatch[0].name})\nพนักงานเหล่านี้จะไม่ถูกคำนวณเงินเดือนอย่างถูกต้อง ยืนยันที่จะดำเนินการต่อหรือไม่?`
             : "";
 
         setAlertConfig({
@@ -451,6 +459,24 @@ export default function PayrollPage() {
         return Array.from(set).sort((a, b) => a.localeCompare(b, "th"));
     }, [data]);
 
+    // Status Counts (Active vs Employment Ended)
+    const statusCounts = useMemo(() => {
+        const targetData = selectedCompanyTab === "ALL"
+            ? data
+            : data.filter(d => d.company_id === selectedCompanyTab);
+
+        let active = 0;
+        let resigned = 0;
+        targetData.forEach(d => {
+            if (!d.is_active || Boolean(d.resignation_date)) {
+                resigned++;
+            } else {
+                active++;
+            }
+        });
+        return { active, resigned, total: targetData.length };
+    }, [data, selectedCompanyTab]);
+
     // Filtered Data
     const filteredData = useMemo(() => {
         return data.filter(d => {
@@ -473,6 +499,11 @@ export default function PayrollPage() {
                 if (d.salary_type !== typeFilter) return false;
             }
 
+            // Employment Status Filter
+            const isEmploymentEnded = !d.is_active || Boolean(d.resignation_date);
+            if (statusFilter === "active" && isEmploymentEnded) return false;
+            if (statusFilter === "resigned" && !isEmploymentEnded) return false;
+
             // Company Tab Filter
             if (selectedCompanyTab !== "ALL") {
                 if (d.company_id !== selectedCompanyTab) return false;
@@ -480,7 +511,7 @@ export default function PayrollPage() {
 
             return true;
         });
-    }, [data, searchTerm, deptFilter, typeFilter, selectedCompanyTab]);
+    }, [data, searchTerm, deptFilter, typeFilter, statusFilter, selectedCompanyTab]);
 
     // Financial KPI Summary
     const financialStats = useMemo(() => {
@@ -558,12 +589,13 @@ export default function PayrollPage() {
         }).filter((g: any) => g.totalCount > 0);
     }, [companies, selectedCompanyTab, filteredData]);
 
-    const hasActiveFilters = searchTerm.trim() !== "" || deptFilter !== "all" || typeFilter !== "all";
+    const hasActiveFilters = searchTerm.trim() !== "" || deptFilter !== "all" || typeFilter !== "all" || statusFilter !== "all";
 
     const handleResetFilters = () => {
         setSearchTerm("");
         setDeptFilter("all");
         setTypeFilter("all");
+        setStatusFilter("all");
     };
 
     if (loading) {
@@ -695,11 +727,12 @@ export default function PayrollPage() {
                     <div className={styles.financialValue} style={{ color: "var(--purple)" }}>
                         ฿{formatB(financialStats.currentView.allowances)}
                     </div>
-                    <div className={styles.financialSub}>ค่าตำแหน่ง อาหาร ที่พัก เดินทาง</div>
+                    <div className={styles.financialSub}>ค่าตำแหน่ง อาหาร ที่พัก เดินทาง เหมาจ่าย</div>
                 </div>
 
                 <div className={styles.financialCard}>
                     <div className={styles.financialLabel}>
+                        <ReceiptPercentIcon width={14} height={14} />
                         <span>หักภาษี & ประกันสังคม</span>
                     </div>
                     <div className={styles.financialValue} style={{ color: "var(--bad)" }}>
@@ -710,6 +743,7 @@ export default function PayrollPage() {
 
                 <div className={`${styles.financialCard} ${styles.financialCardTotal}`}>
                     <div className={styles.financialLabel}>
+                        <CreditCardIcon width={14} height={14} />
                         <span>ยอดรวมจ่ายสุทธิ (Net Pay)</span>
                     </div>
                     <div className={styles.financialValue}>
@@ -755,9 +789,20 @@ export default function PayrollPage() {
                     <option value="daily">พนักงานรายวัน</option>
                 </select>
 
+                <select
+                    className={styles.filterSelect}
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value as any)}
+                >
+                    <option value="all">สถานะการทำงาน (ทั้งหมด)</option>
+                    <option value="active">กำลังปฏิบัติงาน ({statusCounts.active})</option>
+                    <option value="resigned">สิ้นสุดการจ้าง / พ้นสภาพ ({statusCounts.resigned})</option>
+                </select>
+
                 {hasActiveFilters && (
                     <button className={styles.btnResetFilter} onClick={handleResetFilters}>
-                        ล้างตัวกรอง
+                        <ArrowPathIcon width={14} height={14} />
+                        <span>ล้างตัวกรอง</span>
                     </button>
                 )}
             </div>
@@ -766,7 +811,7 @@ export default function PayrollPage() {
             {payrollData?.incomplete_employees?.length > 0 && (
                 <div className={styles.incompleteBanner}>
                     <div className={styles.incompleteHeader}>
-                        <span>⚠️</span>
+                        <ExclamationTriangleIcon width={18} height={18} style={{ color: "#d97706", flexShrink: 0 }} />
                         <span>มีพนักงานที่ยังกรอกข้อมูลตั้งต้นไม่สมบูรณ์ ({payrollData.incomplete_employees.length} คน)</span>
                     </div>
                     <div>
@@ -818,7 +863,8 @@ export default function PayrollPage() {
                                     }}
                                     disabled={publishing || loading}
                                 >
-                                    ยกเลิก Publish
+                                    <EyeSlashIcon width={14} height={14} />
+                                    <span>ยกเลิก Publish</span>
                                 </button>
 
                                 <button
@@ -869,9 +915,9 @@ export default function PayrollPage() {
                                                 <th className={styles.thRight}>OT+วันหยุด</th>
                                                 <th className={styles.thRight}>คอมมิชชั่น</th>
                                                 <th className={styles.thRight}>โบนัส</th>
-                                                <th className={styles.thRight}>รายได้อื่นๆ</th>
+                                                <th className={styles.thRight}>สวัสดิการอื่นๆ (เหมาจ่าย)</th>
                                                 <th className={styles.thRight}>ค่าเที่ยวรถ</th>
-                                                <th className={styles.thRight}>สวัสดิการอื่นๆ</th>
+                                                <th className={styles.thRight}>เบิกสวัสดิการ</th>
                                                 <th className={styles.thRight}>รวมรายได้สุทธิ</th>
                                                 <th className={styles.thRight}>ประกันสังคม</th>
                                                 <th className={styles.thRight}>กยศ.</th>
@@ -1359,7 +1405,9 @@ export default function PayrollPage() {
                             <h2 className={styles.modalHeaderTitle}>
                                 ปรับปรุงยอดเงินเดือน: {editingEmp.name} ({editingEmp.emp_id})
                             </h2>
-                            <button className={styles.modalCloseBtn} onClick={() => setShowModal(false)}>✕</button>
+                            <button className={styles.modalCloseBtn} onClick={() => setShowModal(false)} aria-label="ปิด">
+                                <XMarkIcon width={18} height={18} />
+                            </button>
                         </div>
 
                         <div className={styles.modalBody}>
@@ -1482,6 +1530,17 @@ export default function PayrollPage() {
                                         className={styles.inputElement}
                                         value={editForm.bonus}
                                         onChange={e => setEditForm({ ...editForm, bonus: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className={styles.inputField}>
+                                    <label className={styles.inputLabel}>สวัสดิการอื่นๆ (เหมาจ่าย)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.inputElement}
+                                        value={editForm.other_benefits}
+                                        onChange={e => setEditForm({ ...editForm, other_benefits: e.target.value })}
+                                        placeholder={String(editingEmp?.calculated_lump_sum ?? editingEmp?.other_benefits ?? 0)}
                                     />
                                 </div>
 

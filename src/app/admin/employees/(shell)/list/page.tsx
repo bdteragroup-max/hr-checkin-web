@@ -417,7 +417,10 @@ export default function AdminEmployeesPage() {
             setCompanyCar(false);
             setCompanyAccommodation(false);
             setCreateModalOpen(false);
-            queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-employees-list"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-org-data"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-employees-stats"] });
+            reload();
         } finally { setSaving(false); }
     }
 
@@ -480,7 +483,10 @@ export default function AdminEmployeesPage() {
             });
             if (r.ok) {
                 showToast(next ? `เปิดใช้งาน ${x.name}` : `ปิดใช้งาน ${x.name}`, next ? "ok" : "bad");
-                queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
+                queryClient.invalidateQueries({ queryKey: ["admin-employees-list"] });
+                queryClient.invalidateQueries({ queryKey: ["admin-org-data"] });
+                queryClient.invalidateQueries({ queryKey: ["admin-employees-stats"] });
+                reload();
             } else showToast("เกิดข้อผิดพลาด", "bad");
         } finally { setSaving(false); }
     }
@@ -998,10 +1004,17 @@ export default function AdminEmployeesPage() {
             {createModalOpen && (
                 <EmployeeWizard
                     onClose={() => setCreateModalOpen(false)}
-                    onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: ["employeesAdmin"] });
-                        queryClient.invalidateQueries({ queryKey: ["employeesStats"] });
-                        queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
+                    onSuccess={(createdId) => {
+                        setCreateModalOpen(false);
+                        if (createdId) {
+                            setNewEmpId(createdId);
+                            setTimeout(() => setNewEmpId(null), 4000);
+                        }
+                        queryClient.invalidateQueries({ queryKey: ["admin-employees-list"] });
+                        queryClient.invalidateQueries({ queryKey: ["admin-org-data"] });
+                        queryClient.invalidateQueries({ queryKey: ["admin-employees-stats"] });
+                        reload();
+                        showToast(createdId ? `เพิ่มพนักงาน ${createdId} เรียบร้อยแล้ว` : "เพิ่มพนักงานเรียบร้อยแล้ว", "ok");
                     }}
                     branches={branches}
                     departments={departments}
@@ -1020,9 +1033,10 @@ export default function AdminEmployeesPage() {
                     onClose={() => setEditDraft(null)}
                     onSuccess={() => {
                         setEditDraft(null);
-                        queryClient.invalidateQueries({ queryKey: ["admin-employees-page"] });
-                        queryClient.invalidateQueries({ queryKey: ["employeesAdmin"] });
-                        queryClient.invalidateQueries({ queryKey: ["employeesStats"] });
+                        queryClient.invalidateQueries({ queryKey: ["admin-employees-list"] });
+                        queryClient.invalidateQueries({ queryKey: ["admin-org-data"] });
+                        queryClient.invalidateQueries({ queryKey: ["admin-employees-stats"] });
+                        reload();
                         showToast("บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อย", "ok");
                     }}
                     branches={branches}

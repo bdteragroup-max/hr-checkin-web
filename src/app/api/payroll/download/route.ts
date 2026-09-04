@@ -227,13 +227,23 @@ export async function GET(request: Request) {
             });
         }
 
+        const empAllowances = await prisma.employee_allowances.findMany({
+            where: { employee_id: emp.emp_id },
+            include: { allowance_type: true }
+        });
+
+        const hasLumpSum = (emp as any).allowance_mode === 'lump_sum' || empAllowances.some(a =>
+            (a as any).allowance_type?.name?.includes('เหมาจ่าย') ||
+            (a as any).allowance_type?.name?.toLowerCase().includes('lump')
+        );
+
         const isOnTrial = (emp as any).is_on_trial || false;
         let diligence_allowance = 0, meal_allowance = 0, travel_allowance = 0, accommodation_allowance = 0;
         let long_service_allowance = 0, telephone_allowance = 0, travel_site_allowance = 0, travel_accommodation = 0, position_allowance = 0, general_allowance = 0;
 
         if (adj.accommodation_allowance_override !== null && adj.accommodation_allowance_override !== undefined) {
             accommodation_allowance = Number(adj.accommodation_allowance_override);
-        } else if ((emp as any).company_accommodation || isDaily) {
+        } else if ((emp as any).company_accommodation || isDaily || hasLumpSum) {
             accommodation_allowance = 0;
         } else if (Number((emp as any).fixed_accommodation_allowance) > 0) {
             accommodation_allowance = Number((emp as any).fixed_accommodation_allowance);
@@ -301,6 +311,16 @@ export async function GET(request: Request) {
             diligence_allowance = 0;
             position_allowance = 0;
             general_allowance = 0;
+        } else if (hasLumpSum) {
+            if (adj.accommodation_allowance_override === null || adj.accommodation_allowance_override === undefined) {
+                accommodation_allowance = 0;
+            }
+            if (adj.meal_allowance_override === null || adj.meal_allowance_override === undefined) {
+                meal_allowance = 0;
+            }
+            if (adj.travel_allowance_override === null || adj.travel_allowance_override === undefined) {
+                travel_allowance = 0;
+            }
         }
 
         if ((emp as any).company_car) travel_allowance = 0;
@@ -451,7 +471,28 @@ export async function GET(request: Request) {
         const commissions = adjCommissions !== 0 ? adjCommissions : calculatedCommissions;
         const bonus = Number(adj.bonus || 0);
         const other_deductions = Number(adj.other_deductions || 0);
-        const other_benefits = Number(adj.other_benefits || 0);
+
+        let calculatedLumpSum = 0;
+        if (!isDaily) {
+            const lumpSumRows = empAllowances.filter(a =>
+                (a as any).allowance_type?.name?.includes('เหมาจ่าย') ||
+                (a as any).allowance_type?.name?.toLowerCase().includes('lump')
+            );
+
+            for (const row of lumpSumRows) {
+                const isBlockedByWarning = row.void_on_warning && warnings.length > 0;
+                const isBlockedByProbation = (row.applies_to === 'after_probation' && isOnTrial) ||
+                    (row.applies_to === 'probation_only' && !isOnTrial);
+
+                if (!isBlockedByWarning && !isBlockedByProbation && Number(row.amount) > 0) {
+                    calculatedLumpSum += Number(row.amount);
+                }
+            }
+        }
+
+        const other_benefits = (adj.other_benefits !== null && adj.other_benefits !== undefined && Number(adj.other_benefits) > 0)
+            ? Number(adj.other_benefits)
+            : calculatedLumpSum;
         const welfare_amount = welfareClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
         // Combined Income Other (as requested by user)

@@ -84,7 +84,7 @@ export async function GET() {
                 departments: { select: { name: true } },
                 salary_type: true,
                 probation_evaluations: {
-                    select: { id: true, evaluation_no: true, evaluation_date: true, total_score: true, grade: true, supervisor_id: true, status: true, return_reason: true },
+                    select: { id: true, evaluation_no: true, evaluation_date: true, period_start: true, period_end: true, total_score: true, grade: true, supervisor_id: true, status: true, return_reason: true, decision: true },
                     orderBy: { evaluation_no: "asc" }
                 }
             }
@@ -116,7 +116,14 @@ export async function GET() {
                     dueDate.setDate(dueDate.getDate() + dueDays);
                     
                     unlockDate = new Date(dueDate);
-                    unlockDate.setDate(unlockDate.getDate() - 14); // Allow evaluation 14 days in advance instead of 7
+                    if (nextRound === 3) {
+                        // Round 3 (90 days) opens at the 75-day mark (e.g. August 20 for June 4 hire)
+                        // to ensure evaluation is completed before the Section 17 notice deadline
+                        unlockDate = new Date(emp.hire_date);
+                        unlockDate.setDate(unlockDate.getDate() + 75);
+                    } else {
+                        unlockDate.setDate(unlockDate.getDate() - 14); // Allow evaluation 14 days in advance
+                    }
                     
                     isUnlocked = isReturned || (now >= unlockDate);
                 }
@@ -150,6 +157,7 @@ export async function GET() {
                 unlock_date: unlockDate ? unlockDate.toISOString() : null,
                 is_unlocked: isUnlocked,
                 evaluation_history: emp.probation_evaluations,
+                my_evaluations: myEvals,
                 is_other_manager: isOtherManager,
                 returned_evaluation: lastEval?.status === "returned" ? lastEval : null
             };

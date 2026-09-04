@@ -38,9 +38,9 @@ export async function POST(req: Request) {
             { header: "โบนัสอายุงาน", key: "long_service_allowance", width: 15 },
             { header: "คอมมิชชั่น", key: "commissions", width: 15 },
             { header: "โบนัส", key: "bonus", width: 15 },
-            { header: "รายได้อื่นๆ", key: "other_benefits", width: 15 },
+            { header: "สวัสดิการอื่นๆ (เหมาจ่าย)", key: "other_benefits", width: 22 },
             { header: "ค่าเที่ยวขับรถ", key: "truck_trip_fee", width: 15 },
-            { header: "สวัสดิการอื่นๆ", key: "welfare_amount", width: 15 },
+            { header: "เบิกสวัสดิการ", key: "welfare_amount", width: 15 },
             { header: "รวมรายได้สุทธิ", key: "gross_pay", width: 15 },
             { header: "หักประกันสังคม", key: "social_security", width: 15 },
             { header: "หัก กยศ.", key: "student_loan", width: 15 },
@@ -133,8 +133,8 @@ export async function POST(req: Request) {
             { key: "long_service_allowance", name: "โบนัสอายุงาน" },
             { key: "commissions", name: "คอมมิชชั่น" },
             { key: "bonus", name: "โบนัส" },
-            { key: "other_benefits", name: "รายได้อื่นๆ" },
-            { key: "welfare_amount", name: "สวัสดิการอื่นๆ" }
+            { key: "other_benefits", name: "สวัสดิการอื่นๆ (เหมาจ่าย)" },
+            { key: "welfare_amount", name: "เบิกสวัสดิการ" }
         ];
         
         const usedSheetNames = new Set<string>();

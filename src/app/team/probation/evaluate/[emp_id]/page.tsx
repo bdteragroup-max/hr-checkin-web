@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { 
     calculateTotalScore, 
     calculateGrade,
-    calculateProbationDates
+    calculateProbationDates,
+    getRound3NoticeGuidance
 } from "@/utils/probationCalculations";
 import { 
     ChevronLeftIcon, 
@@ -210,8 +211,10 @@ export default function EvaluatePage() {
                 setDecision("pass"); // Default back to pass if grade improves
             }
         } else {
-            if ((grade === "D" || grade === "E") && (decision === "pass" || decision === "salary_adjust")) {
-                setDecision("extend");
+            if (grade === "D" || grade === "E") {
+                setDecision("fail");
+            } else if (decision === "extend") {
+                setDecision("fail");
             }
         }
     }, [grade, decision]);
@@ -280,6 +283,39 @@ export default function EvaluatePage() {
                         </div>
                     </div>
                 )}
+
+                {(() => {
+                    const currentRound = (empInfo?.last_evaluation_no || 0) + 1;
+                    if (!empInfo?.is_on_trial || currentRound !== 3 || !empInfo?.hire_date) return null;
+                    const r3 = getRound3NoticeGuidance(empInfo.hire_date);
+                    if (!r3) return null;
+                    return (
+                        <div style={{
+                            background: r3.isPastDeadline ? '#FEF2F2' : '#FFFBEB',
+                            border: `1.5px solid ${r3.isPastDeadline ? '#FCA5A5' : '#FDE68A'}`,
+                            padding: '14px 18px',
+                            borderRadius: '12px',
+                            marginBottom: '24px',
+                            display: 'flex',
+                            gap: '12px',
+                            alignItems: 'flex-start'
+                        }}>
+                            {r3.isPastDeadline ? (
+                                <ExclamationTriangleIcon width={22} height={22} color="#DC2626" style={{ flexShrink: 0, marginTop: 2 }} />
+                            ) : (
+                                <ClockIcon width={22} height={22} color="#D97706" style={{ flexShrink: 0, marginTop: 2 }} />
+                            )}
+                            <div>
+                                <div style={{ color: r3.isPastDeadline ? '#991B1B' : '#92400E', fontWeight: 800, fontSize: 14, marginBottom: 2 }}>
+                                    ข้อความแจ้งเตือนผู้ประเมิน (รอบที่ 3):
+                                </div>
+                                <div style={{ color: r3.isPastDeadline ? '#B91C1C' : '#78350F', fontSize: 13, lineHeight: 1.5 }}>
+                                    {r3.guidanceMessage}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* ── SECTION 1: INFO ── */}
                 <div className={styles.card}>
@@ -511,19 +547,16 @@ export default function EvaluatePage() {
                                     onClick={() => (grade !== "D" && grade !== "E") && setDecision("pass")}
                                     disabled={grade === "D" || grade === "E"}
                                 >
-                                    ผ่านทดลองงาน
+                                    ผ่านการทดลองงาน
                                 </button>
-                                <button className={`${styles.choice} ${decision === "fail" ? styles.choiceActive : ""}`} onClick={() => setDecision("fail")}>ไม่ผ่านทดลองงาน</button>
-                                <button className={`${styles.choice} ${decision === "extend" ? styles.choiceActive : ""}`} onClick={() => setDecision("extend")}>ขยายเวลา</button>
+                                <button 
+                                    className={`${styles.choice} ${decision === "fail" ? styles.choiceActive : ""}`} 
+                                    onClick={() => setDecision("fail")}
+                                >
+                                    ไม่ผ่านการทดลองงาน
+                                </button>
                             </>
                         )}
-                        <button 
-                            className={`${styles.choice} ${decision === "salary_adjust" ? styles.choiceActive : ""} ${(grade === "D" || grade === "E") ? styles.choiceDisabled : ""}`} 
-                            onClick={() => (grade !== "D" && grade !== "E") && setDecision("salary_adjust")}
-                            disabled={grade === "D" || grade === "E"}
-                        >
-                            ปรับเงินเดือน
-                        </button>
                     </div>
 
                     {(grade === "D" || grade === "E") && (

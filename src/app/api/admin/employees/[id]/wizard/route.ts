@@ -120,10 +120,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
                     where: { employee_id: emp_id }
                 });
 
-                // Insert new allowances if itemized (ยกเว้นพนักงานรายวัน ไม่บันทึกสวัสดิการใดๆ)
-                if (empUpdateData.salary_type !== "daily" && allowance_mode === 'itemized' && Array.isArray(body.allowances) && body.allowances.length > 0) {
+                // Insert new allowances (ยกเว้นพนักงานรายวัน ไม่บันทึกสวัสดิการใดๆ)
+                if (empUpdateData.salary_type !== "daily" && Array.isArray(body.allowances) && body.allowances.length > 0) {
+                    const allTypes = await tx.allowance_types.findMany();
+                    const isLumpSumType = (typeId: number) => {
+                        const t = allTypes.find(at => at.id === typeId);
+                        return t?.name?.includes("เหมาจ่าย") || t?.name?.toLowerCase().includes("lump");
+                    };
+                    const isExcludedAllowanceType = (typeId: number) => {
+                        const t = allTypes.find(at => at.id === typeId);
+                        return t?.name?.includes("ค่าที่พัก") || t?.name?.includes("ค่าอาหาร") || t?.name?.includes("ค่าเดินทาง");
+                    };
+
+                    const hasLumpSum = allowance_mode === "lump_sum" || body.allowances.some((a: any) => isLumpSumType(Number(a.allowance_type_id)));
+
                     const validAllowances = body.allowances
-                        .filter((a: any) => a.allowance_type_id && a.amount !== "")
+                        .filter((a: any) => {
+                            if (!a.allowance_type_id || a.amount === "") return false;
+                            const typeId = Number(a.allowance_type_id);
+                            // หากพนักงานได้รับเงินช่วยเหลือเหมาจ่าย จะไม่ได้รับค่าอาหาร ค่าที่พัก และค่าเดินทาง
+                            if (hasLumpSum && isExcludedAllowanceType(typeId)) {
+                                return false;
+                            }
+                            return true;
+                        })
                         .map((a: any) => ({
                             employee_id: emp_id,
                             allowance_type_id: Number(a.allowance_type_id),
