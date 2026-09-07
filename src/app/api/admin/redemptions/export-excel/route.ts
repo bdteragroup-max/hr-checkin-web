@@ -36,13 +36,20 @@ export async function POST(req: Request) {
 
         // Add rows
         for (const r of (data || [])) {
+            let coinsText = `${r.points_spent} ${r.coin_type_id || r.reward?.required_coin_type || ''}`;
+            if (r.costs && Array.isArray(r.costs) && r.costs.length > 0) {
+                coinsText = r.costs.map((c: any) => `${c.amount} ${c.coin_type}`).join(", ");
+            } else if (r.reward?.costs && Array.isArray(r.reward.costs) && r.reward.costs.length > 0) {
+                coinsText = r.reward.costs.map((c: any) => `${c.amount * (r.quantity || 1)} ${c.coin_type}`).join(", ");
+            }
+
             sheet.addRow({
                 redeemed_at: new Date(r.redeemed_at).toLocaleString(),
                 emp_id: r.emp_id,
                 employee_name: r.employee?.name || "",
                 reward_name: r.reward?.name || "",
                 quantity: r.quantity,
-                points_spent: `${r.points_spent} ${r.coin_type_id || r.reward?.required_coin_type || ''}`,
+                points_spent: coinsText,
                 status: r.status === 'pending' ? 'รออนุมัติ' : r.status === 'fulfilled' ? 'อนุมัติแล้ว' : 'ปฏิเสธแล้ว',
                 processor_name: r.processor?.name || "-",
                 cancelled_reason: r.cancelled_reason || "-"

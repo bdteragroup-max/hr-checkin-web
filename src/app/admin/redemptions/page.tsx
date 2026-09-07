@@ -11,10 +11,16 @@ interface Employee {
   emp_id: string;
 }
 
+interface CoinCost {
+  coin_type: string;
+  amount: number;
+}
+
 interface Reward {
   name: string;
   required_coins: number;
   required_coin_type: string;
+  costs?: CoinCost[] | null;
 }
 
 interface Processor {
@@ -28,6 +34,7 @@ interface Redemption {
   quantity: number;
   points_spent: number;
   coin_type_id: string | null;
+  costs?: CoinCost[] | null;
   status: "pending" | "fulfilled" | "rejected";
   redeemed_at: string;
   fulfilled_at: string | null;
@@ -35,6 +42,24 @@ interface Redemption {
   employee: Employee;
   reward: Reward;
   processor: Processor | null;
+}
+
+function getRedemptionCosts(r: Redemption): CoinCost[] {
+  if (r.costs && Array.isArray(r.costs) && r.costs.length > 0) {
+    return r.costs;
+  }
+  if (r.reward?.costs && Array.isArray(r.reward.costs) && r.reward.costs.length > 0) {
+    return r.reward.costs.map((c) => ({
+      coin_type: c.coin_type,
+      amount: c.amount * (r.quantity || 1),
+    }));
+  }
+  return [
+    {
+      coin_type: r.coin_type_id || r.reward?.required_coin_type || "COIN",
+      amount: r.points_spent || r.reward?.required_coins || 0,
+    },
+  ];
 }
 
 export default function AdminRedemptionsPage() {
@@ -319,8 +344,21 @@ export default function AdminRedemptionsPage() {
                         <div style={{fontSize: '12px', color: '#6b7280'}}>จำนวน: {r.quantity}</div>
                       </td>
                       <td>
-                        <div className={styles.amount}>
-                          {r.points_spent} {r.coin_type_id || r.reward.required_coin_type}
+                        <div className={styles.costsContainer}>
+                          {getRedemptionCosts(r).map((cost, idx) => (
+                            <div key={idx} className={styles.costBadge}>
+                              <img
+                                src={`/images/coins/${cost.coin_type.toLowerCase()}.png`}
+                                alt={cost.coin_type}
+                                className={styles.costCoinIcon}
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = "none";
+                                }}
+                              />
+                              <span className={styles.costAmount}>{cost.amount}</span>
+                              <span className={styles.costType}>{cost.coin_type}</span>
+                            </div>
+                          ))}
                         </div>
                       </td>
                       {activeTab === 'pending' ? (
@@ -361,6 +399,37 @@ export default function AdminRedemptionsPage() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <h2 className={styles.modalTitle}>ยืนยันการอนุมัติ</h2>
+            {(() => {
+              const target = redemptions.find((item) => item.id === fulfillId);
+              if (!target) return null;
+              return (
+                <div style={{ margin: "12px 0", padding: "12px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>
+                    {target.reward.name} (จำนวน {target.quantity} ชิ้น)
+                  </div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+                    พนักงาน: {target.employee.name} ({target.emp_id})
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>เหรียญที่ใช้:</div>
+                  <div className={styles.costsContainer}>
+                    {getRedemptionCosts(target).map((cost, idx) => (
+                      <div key={idx} className={styles.costBadge}>
+                        <img
+                          src={`/images/coins/${cost.coin_type.toLowerCase()}.png`}
+                          alt={cost.coin_type}
+                          className={styles.costCoinIcon}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                        <span className={styles.costAmount}>{cost.amount}</span>
+                        <span className={styles.costType}>{cost.coin_type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <p className={styles.modalDesc}>
               คุณแน่ใจหรือไม่ที่จะอนุมัติคำขอนี้? หากอนุมัติแล้วระบบจะประมวลผลทันที
             </p>
@@ -388,8 +457,39 @@ export default function AdminRedemptionsPage() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <h2 className={styles.modalTitle}>ปฏิเสธการแลกของรางวัล</h2>
+            {(() => {
+              const target = redemptions.find((item) => item.id === rejectId);
+              if (!target) return null;
+              return (
+                <div style={{ margin: "12px 0", padding: "12px", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+                  <div style={{ fontWeight: 600, color: "#991b1b", marginBottom: 4 }}>
+                    {target.reward.name} (จำนวน {target.quantity} ชิ้น)
+                  </div>
+                  <div style={{ fontSize: 13, color: "#7f1d1d", marginBottom: 8 }}>
+                    พนักงาน: {target.employee.name} ({target.emp_id})
+                  </div>
+                  <div style={{ fontSize: 12, color: "#7f1d1d", marginBottom: 4 }}>เหรียญที่จะคืนให้พนักงาน:</div>
+                  <div className={styles.costsContainer}>
+                    {getRedemptionCosts(target).map((cost, idx) => (
+                      <div key={idx} className={styles.costBadge}>
+                        <img
+                          src={`/images/coins/${cost.coin_type.toLowerCase()}.png`}
+                          alt={cost.coin_type}
+                          className={styles.costCoinIcon}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                        <span className={styles.costAmount}>{cost.amount}</span>
+                        <span className={styles.costType}>{cost.coin_type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <p className={styles.modalDesc}>
-              การดำเนินการนี้จะคืนสินค้ากลับเข้าสู่ระบบและคืนเหรียญให้กับพนักงาน และไม่สามารถยกเลิกได้
+              การดำเนินการนี้จะคืนสินค้ากลับเข้าสู่สต็อก และคืนเหรียญทั้งหมดตามรายการด้านบนเข้ากระเป๋าพนักงาน และไม่สามารถยกเลิกได้
             </p>
             
             <div className={styles.formGroup}>

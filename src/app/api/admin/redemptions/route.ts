@@ -47,7 +47,7 @@ export async function GET(request: Request) {
                     select: { name: true, emp_id: true }
                 },
                 reward: {
-                    select: { name: true, required_coins: true, required_coin_type: true }
+                    select: { name: true, required_coins: true, required_coin_type: true, costs: true }
                 },
                 processor: {
                     select: { name: true }

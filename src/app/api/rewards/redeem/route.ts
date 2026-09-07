@@ -9,7 +9,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid input parameters' }, { status: 400 });
     }
 
+    if (quantity > 1) {
+      return NextResponse.json({ success: false, error: 'สามารถแลกได้เพียง 1 ชิ้นต่อคนเท่านั้น' }, { status: 400 });
+    }
+
     const result = await prisma.$transaction(async (tx) => {
+      // 0. Check if the employee has already redeemed this reward (limiting to 1 per person)
+      const existingRedemption = await tx.reward_redemptions.findFirst({
+        where: {
+          emp_id,
+          reward_id,
+          status: { not: 'rejected' }
+        }
+      });
+
+      if (existingRedemption) {
+        throw new Error('คุณได้ใช้สิทธิ์แลกของรางวัลชิ้นนี้ไปแล้ว (จำกัด 1 สิทธิ์ต่อคน)');
+      }
+
       // 1. Fetch the reward and check if enough stock exists
       const reward = await tx.rewards.findUnique({
         where: { id: reward_id }
@@ -102,7 +119,13 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error redeeming reward:', error.message);
     // Determine status based on error type
-    const status = error.message.includes('ยอดเหรียญ') && error.message.includes('ไม่เพียงพอ') ? 400 : 500;
+    const isClientError =
+      error.message?.includes('ใช้สิทธิ์') ||
+      error.message?.includes('ยอดเหรียญ') ||
+      error.message?.includes('ไม่เพียงพอ') ||
+      error.message?.includes('stock') ||
+      error.message?.includes('หมด');
+    const status = isClientError ? 400 : 500;
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to redeem reward' },
       { status: status }

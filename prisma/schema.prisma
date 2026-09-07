@@ -2917,15 +2917,15 @@ model sales_depreciation_claims {
   submitted_by        String                               @db.VarChar(20)
   amount              Decimal                              @db.Decimal(10, 2)
   receipt_url         String
-  status              String                               @default("PENDING_INITIAL")
+  status              String                               @default("PENDING")
   return_reason       String?
-  initial_approved_by String?                              @db.VarChar(20)
-  initial_approved_at DateTime?                            @db.Timestamptz(6)
   approved_by         String?                              @db.VarChar(20)
   approved_at         DateTime?                            @db.Timestamptz(6)
   claim_month         DateTime                             @db.Date
   created_at          DateTime                             @default(now()) @db.Timestamptz(6)
   updated_at          DateTime                             @default(now()) @db.Timestamptz(6)
+  initial_approved_by String?                              @db.VarChar(20)
+  initial_approved_at DateTime?                            @db.Timestamptz(6)
   revisions           sales_depreciation_claim_revisions[]
   employee            employees                            @relation("EmployeeToDepreciation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
   supervisor          employees                            @relation("SupervisorToDepreciation", fields: [submitted_by], references: [emp_id], onDelete: Cascade)
@@ -3126,4 +3126,165 @@ model employee_co_evaluators {
   @@unique([employee_id, evaluator_id], map: "uq_employee_evaluator")
   @@index([employee_id], map: "idx_employee_co_evaluators_emp")
   @@index([evaluator_id], map: "idx_employee_co_evaluators_eval")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ad_creatives {
+  id             String    @id
+  code           String    @unique
+  name           String
+  filename       String
+  fileType       String
+  fileSize       String
+  fileUrl        String
+  thumbnailUrl   String?
+  dimensions     String?   @default("1080 x 1080 px")
+  product        String?   @default("Solar Pump")
+  version        String    @default("V1")
+  isPrimary      Boolean   @default(true)
+  status         String    @default("Active")
+  uploadedBy     String    @default("Marketing Team")
+  uploadedAt     DateTime  @default(now()) @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  archivedAt     DateTime? @db.Timestamptz(6)
+  versionHistory Json?     @default("[]")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ad_crm_snapshots {
+  id               String    @id
+  snapshotId       String    @unique
+  adId             String
+  campaignId       String
+  adSetId          String
+  creativeId       String?
+  creativeFile     String?
+  creativeVersion  String?
+  creativeUrl      String?
+  periodStart      DateTime? @db.Date
+  periodEnd        DateTime? @db.Date
+  capturedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  spend            Decimal   @default(0) @db.Decimal(12, 2)
+  messageInbox     Int?      @default(0)
+  leads            Int?      @default(0)
+  qualifiedLeads   Int?      @default(0)
+  appointments     Int?      @default(0)
+  quotations       Int?      @default(0)
+  closedSales      Int?      @default(0)
+  sale             Decimal   @default(0) @db.Decimal(14, 2)
+  notes            String?
+  enteredBy        String?
+  updateType       String?   @default("Regular Update")
+  correctionReason String?
+  status           String?   @default("SAVED")
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([adId], map: "idx_ad_crm_snaps_ad")
+  @@index([campaignId], map: "idx_ad_crm_snaps_camp")
+  @@index([capturedAt(sort: Desc)], map: "idx_ad_crm_snaps_date")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ad_performance_snapshots {
+  id               String    @id
+  snapshotId       String    @unique
+  adId             String
+  campaignId       String
+  adSetId          String
+  creativeId       String?
+  creativeFile     String?
+  creativeVersion  String?
+  creativeUrl      String?
+  periodStart      DateTime? @db.Date
+  periodEnd        DateTime? @db.Date
+  capturedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updateMode       String?   @default("CUMULATIVE_SNAPSHOT")
+  spend            Decimal   @default(0) @db.Decimal(12, 2)
+  messageInbox     Int?      @default(0)
+  reach            Int?      @default(0)
+  impressions      Int?      @default(0)
+  clicks           Int?      @default(0)
+  dataSource       String?   @default("Ads Manager")
+  notes            String?
+  enteredBy        String?
+  updateType       String?   @default("Regular Update")
+  correctionReason String?
+  status           String?   @default("SAVED")
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([adId], map: "idx_ad_perf_snaps_ad")
+  @@index([campaignId], map: "idx_ad_perf_snaps_camp")
+  @@index([capturedAt(sort: Desc)], map: "idx_ad_perf_snaps_date")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ad_sets {
+  id         String   @id
+  adSetId    String   @unique
+  campaignId String
+  name       String
+  targeting  String?
+  budget     Decimal? @default(0) @db.Decimal(12, 2)
+  status     String?  @default("Active")
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([campaignId], map: "idx_ad_sets_camp")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ads {
+  id              String   @id
+  adId            String   @unique
+  adSetId         String
+  campaignId      String
+  name            String
+  status          String?  @default("Active")
+  format          String?  @default("Image")
+  creativeId      String?
+  creativeVersion String?  @default("V1")
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([adSetId], map: "idx_ads_adset")
+  @@index([campaignId], map: "idx_ads_camp")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ads_creative_mapping {
+  id            String   @id
+  adId          String
+  creativeId    String
+  activeVersion String?  @default("V1")
+  assignedAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([adId], map: "idx_ac_map_adid")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model creative_assets {
+  id           String   @id
+  code         String   @unique
+  name         String
+  filename     String
+  fileType     String?
+  fileUrl      String?
+  thumbnailUrl String?
+  status       String?  @default("Active")
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model creative_versions {
+  id         String   @id
+  creativeId String
+  version    String
+  fileUrl    String?
+  notes      String?
+  isCurrent  Boolean? @default(false)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([creativeId], map: "idx_creat_vers_cid")
 }

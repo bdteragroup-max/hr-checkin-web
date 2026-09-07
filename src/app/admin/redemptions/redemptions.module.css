@@ -170,6 +170,45 @@
   font-family: "Prompt", sans-serif;
 }
 
+.costsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.costBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: "Prompt", sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.costCoinIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.costAmount {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.costType {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .date {
   color: #6b7280;
   font-size: 13px;

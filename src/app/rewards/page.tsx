@@ -8,6 +8,7 @@ import { GiftIcon } from "@heroicons/react/24/outline";
 export default function RewardsCatalog() {
   const [rewards, setRewards] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
+  const [redeemedRewardIds, setRedeemedRewardIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -31,8 +32,8 @@ export default function RewardsCatalog() {
       const userJson = await resUser.json();
       if (userJson.ok) {
         setBalances(userJson.balances);
-        setCurrentUser(userJson.employee); // actually, /api/me/coins returns auth.emp now? wait, let me check what /api/me/coins returns... well it didn't return employee before this either
-        // Note: the original code expected userJson.employee, let's keep it.
+        setCurrentUser(userJson.employee);
+        setRedeemedRewardIds(userJson.redeemedRewardIds || []);
       }
 
       const rewardsJson = await resRewards.json();
@@ -153,17 +154,22 @@ export default function RewardsCatalog() {
               const rewardCosts = r.costs && r.costs.length > 0 ? r.costs : [{coin_type: r.required_coin_type, amount: r.required_coins}];
               const canAfford = rewardCosts.every((c: any) => getBalance(c.coin_type) >= c.amount);
               const hasStock = r.stock_quantity > 0;
-              const disabled = !canAfford || !hasStock;
+              const isAlreadyRedeemed = redeemedRewardIds.includes(r.id);
+              const disabled = isAlreadyRedeemed || !canAfford || !hasStock;
 
               return (
                 <div key={r.id} className={styles.card}>
                   <div className={styles.cardImageWrapper}>
                     {r.image_url && <img src={r.image_url} alt={r.name} className={styles.cardImage} />}
-                    {rewardCosts.some((c: any) => c.original_amount && c.original_amount > c.amount) && (
+                    {isAlreadyRedeemed ? (
+                      <div className={styles.redeemedBadge}>
+                        ✓ ใช้สิทธิ์แล้ว
+                      </div>
+                    ) : rewardCosts.some((c: any) => c.original_amount && c.original_amount > c.amount) ? (
                       <div style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 'bold', zIndex: 10 }}>
                         ลดราคา
                       </div>
-                    )}
+                    ) : null}
                     <div className={`${styles.stockBadge} ${!hasStock ? styles.stockOut : ""}`}>
                     {hasStock ? `เหลือ ${r.stock_quantity} ชิ้น` : 'สินค้าหมด'}
                   </div>
@@ -186,11 +192,11 @@ export default function RewardsCatalog() {
                         ))}
                       </div>
                       <button 
-                      className={styles.redeemBtn} 
+                      className={`${styles.redeemBtn} ${isAlreadyRedeemed ? styles.alreadyRedeemedBtn : ""}`} 
                       disabled={disabled}
                       onClick={() => openRedeemModal(r)}
                     >
-                      แลกรางวัล
+                      {isAlreadyRedeemed ? 'ใช้สิทธิ์แล้ว' : 'แลกรางวัล'}
                     </button>
                     </div>
                   </div>
@@ -251,8 +257,12 @@ export default function RewardsCatalog() {
                   
                   <div className={styles.modalActions}>
                     <button className={styles.cancelBtn} onClick={closeRedeemModal} disabled={redeemLoading}>ยกเลิก</button>
-                    <button className={styles.confirmBtn} onClick={handleRedeem} disabled={redeemLoading}>
-                      {redeemLoading ? "กำลังดำเนินการ..." : "ยืนยัน"}
+                    <button 
+                      className={styles.confirmBtn} 
+                      onClick={handleRedeem} 
+                      disabled={redeemLoading || (selectedReward && redeemedRewardIds.includes(selectedReward.id))}
+                    >
+                      {redeemLoading ? "กำลังดำเนินการ..." : (selectedReward && redeemedRewardIds.includes(selectedReward.id)) ? "ใช้สิทธิ์แล้ว" : "ยืนยัน"}
                     </button>
                   </div>
                 </div>

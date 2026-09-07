@@ -22,7 +22,7 @@ export async function GET() {
 
     try {
         // Fetch everything in parallel
-        const [balances, history, budget] = await Promise.all([
+        const [balances, history, budget, myRedemptions] = await Promise.all([
             prisma.employee_coins.findMany({
                 where: { emp_id: auth.emp.emp_id },
                 include: { coin_type: true },
@@ -35,15 +35,25 @@ export async function GET() {
             }),
             prisma.transfer_budgets.findUnique({
                 where: { emp_id: auth.emp.emp_id }
+            }),
+            prisma.reward_redemptions.findMany({
+                where: {
+                    emp_id: auth.emp.emp_id,
+                    status: { not: "rejected" }
+                },
+                select: { reward_id: true }
             })
         ]);
+
+        const redeemedRewardIds = Array.from(new Set(myRedemptions.map((r) => r.reward_id)));
 
         return NextResponse.json({
             ok: true,
             balances,
             history,
             employee: auth.emp,
-            budget: budget || { balance: 0, monthly_topup: 20 }
+            budget: budget || { balance: 0, monthly_topup: 20 },
+            redeemedRewardIds
         });
     } catch (e: any) {
         console.error("GET Coins Error:", e);
