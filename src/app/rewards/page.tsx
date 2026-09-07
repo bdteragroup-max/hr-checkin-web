@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import styles from "./rewards.module.css";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { GiftIcon } from "@heroicons/react/24/outline";
@@ -29,16 +30,25 @@ export default function RewardsCatalog() {
         fetch("/api/rewards")
       ]);
 
-      const userJson = await resUser.json();
-      if (userJson.ok) {
-        setBalances(userJson.balances);
-        setCurrentUser(userJson.employee);
-        setRedeemedRewardIds(userJson.redeemedRewardIds || []);
+      if (resUser.ok) {
+        const userJson = await resUser.json();
+        if (userJson.ok) {
+          setBalances(userJson.balances || []);
+          setCurrentUser(userJson.employee || null);
+          setRedeemedRewardIds(userJson.redeemedRewardIds || []);
+        }
+      } else {
+        // User is not logged in or session expired
+        setCurrentUser(null);
+        setBalances([]);
+        setRedeemedRewardIds([]);
       }
 
-      const rewardsJson = await resRewards.json();
-      if (rewardsJson.success) {
-        setRewards(rewardsJson.rewards);
+      if (resRewards.ok) {
+        const rewardsJson = await resRewards.json();
+        if (rewardsJson.success) {
+          setRewards(rewardsJson.rewards || []);
+        }
       }
     } catch (e) {
       setError("Failed to load rewards data.");
@@ -138,6 +148,41 @@ export default function RewardsCatalog() {
           })}
         </div>
 
+        {!currentUser && !loading && (
+          <div style={{
+            background: "#fffbeb",
+            border: "1px solid #fef3c7",
+            borderRadius: "12px",
+            padding: "14px 18px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#92400e", fontSize: "14px", fontWeight: 500 }}>
+              <span>กรุณาเข้าสู่ระบบด้วยรหัสพนักงานเพื่อดูเหรียญที่คุณมีและแลกของรางวัล</span>
+            </div>
+            <Link
+              href="/?callbackUrl=/rewards"
+              style={{
+                background: "var(--red, #d93025)",
+                color: "#ffffff",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center"
+              }}
+            >
+              เข้าสู่ระบบ
+            </Link>
+          </div>
+        )}
+
         {rewards.length === 0 ? (
           <div className={styles.emptyState}>
             <GiftIcon className={styles.emptyStateIcon} />
@@ -151,7 +196,7 @@ export default function RewardsCatalog() {
         ) : (
           <div className={styles.grid}>
             {rewards.map((r) => {
-              const rewardCosts = r.costs && r.costs.length > 0 ? r.costs : [{coin_type: r.required_coin_type, amount: r.required_coins}];
+              const rewardCosts = r.costs && r.costs.length > 0 ? r.costs : [{ coin_type: r.required_coin_type, amount: r.required_coins }];
               const canAfford = rewardCosts.every((c: any) => getBalance(c.coin_type) >= c.amount);
               const hasStock = r.stock_quantity > 0;
               const isAlreadyRedeemed = redeemedRewardIds.includes(r.id);
@@ -171,8 +216,8 @@ export default function RewardsCatalog() {
                       </div>
                     ) : null}
                     <div className={`${styles.stockBadge} ${!hasStock ? styles.stockOut : ""}`}>
-                    {hasStock ? `เหลือ ${r.stock_quantity} ชิ้น` : 'สินค้าหมด'}
-                  </div>
+                      {hasStock ? `เหลือ ${r.stock_quantity} ชิ้น` : 'สินค้าหมด'}
+                    </div>
                   </div>
                   <div className={styles.cardContent}>
                     <h3 className={styles.itemName}>{r.name}</h3>
@@ -191,13 +236,23 @@ export default function RewardsCatalog() {
                           </div>
                         ))}
                       </div>
-                      <button 
-                      className={`${styles.redeemBtn} ${isAlreadyRedeemed ? styles.alreadyRedeemedBtn : ""}`} 
-                      disabled={disabled}
-                      onClick={() => openRedeemModal(r)}
-                    >
-                      {isAlreadyRedeemed ? 'ใช้สิทธิ์แล้ว' : 'แลกรางวัล'}
-                    </button>
+                      {!currentUser ? (
+                        <Link
+                          href="/?callbackUrl=/rewards"
+                          className={styles.redeemBtn}
+                          style={{ textDecoration: 'none', textAlign: 'center' }}
+                        >
+                          เข้าสู่ระบบเพื่อแลก
+                        </Link>
+                      ) : (
+                        <button
+                          className={`${styles.redeemBtn} ${isAlreadyRedeemed ? styles.alreadyRedeemedBtn : ""}`}
+                          disabled={disabled}
+                          onClick={() => openRedeemModal(r)}
+                        >
+                          {isAlreadyRedeemed ? 'ใช้สิทธิ์แล้ว' : 'แลกรางวัล'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -207,39 +262,39 @@ export default function RewardsCatalog() {
         )}
 
         {isModalOpen && selectedReward && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHandle} />
-            
-            {redeemSuccess ? (
-              <div className={styles.successContent}>
-                <CheckCircleIcon className={styles.successIcon} />
-                <h2 className={styles.successTitle}>แลกรางวัลสำเร็จ!</h2>
-                <p className={styles.successDesc}>
-                  ส่งคำขอแลก <strong>{selectedReward.name}</strong> เรียบร้อยแล้ว ฝ่ายบุคคลจะดำเนินการให้เร็วๆ นี้
-                </p>
-                <button className={styles.successBtn} onClick={closeRedeemModal}>เสร็จสิ้น</button>
-              </div>
-            ) : (
-              <>
-                <div className={styles.modalHeader}>
-                  <h2>ยืนยันการแลกรางวัล</h2>
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalContent}>
+              <div className={styles.modalHandle} />
+
+              {redeemSuccess ? (
+                <div className={styles.successContent}>
+                  <CheckCircleIcon className={styles.successIcon} />
+                  <h2 className={styles.successTitle}>แลกรางวัลสำเร็จ!</h2>
+                  <p className={styles.successDesc}>
+                    ส่งคำขอแลก <strong>{selectedReward.name}</strong> เรียบร้อยแล้ว ฝ่ายบุคคลจะดำเนินการให้เร็วๆ นี้
+                  </p>
+                  <button className={styles.successBtn} onClick={closeRedeemModal}>เสร็จสิ้น</button>
                 </div>
-                
-                <div className={styles.modalBody}>
-                  {selectedReward.image_url && (
-                    <img src={selectedReward.image_url} alt={selectedReward.name} className={styles.modalImage} />
-                  )}
-                  
-                  <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: "18px", fontWeight: "700" }}>{selectedReward.name}</div>
-                    <div style={{ color: "var(--text3)", fontSize: "13px" }}>{selectedReward.description}</div>
+              ) : (
+                <>
+                  <div className={styles.modalHeader}>
+                    <h2>ยืนยันการแลกรางวัล</h2>
                   </div>
-                  
-                  <div className={styles.modalCost}>
-                    <span className={styles.modalCostLabel}>ใช้เหรียญ</span>
-                    <div className={styles.modalCostValue} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {(selectedReward.costs && selectedReward.costs.length > 0 ? selectedReward.costs : [{coin_type: selectedReward.required_coin_type, amount: selectedReward.required_coins}]).map((c: any, i: number) => (
+
+                  <div className={styles.modalBody}>
+                    {selectedReward.image_url && (
+                      <img src={selectedReward.image_url} alt={selectedReward.name} className={styles.modalImage} />
+                    )}
+
+                    <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: "18px", fontWeight: "700" }}>{selectedReward.name}</div>
+                      <div style={{ color: "var(--text3)", fontSize: "13px" }}>{selectedReward.description}</div>
+                    </div>
+
+                    <div className={styles.modalCost}>
+                      <span className={styles.modalCostLabel}>ใช้เหรียญ</span>
+                      <div className={styles.modalCostValue} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {(selectedReward.costs && selectedReward.costs.length > 0 ? selectedReward.costs : [{ coin_type: selectedReward.required_coin_type, amount: selectedReward.required_coins }]).map((c: any, i: number) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             {c.original_amount && c.original_amount > c.amount && (
                               <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85em', marginRight: 4 }}>
@@ -249,28 +304,28 @@ export default function RewardsCatalog() {
                             <img src={getCoinImage(c.coin_type)} className={styles.priceIcon} alt="Coin" />
                             {c.amount} {c.coin_type}
                           </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+
+                    {redeemError && <div className={styles.errorAlert}>{redeemError}</div>}
+
+                    <div className={styles.modalActions}>
+                      <button className={styles.cancelBtn} onClick={closeRedeemModal} disabled={redeemLoading}>ยกเลิก</button>
+                      <button
+                        className={styles.confirmBtn}
+                        onClick={handleRedeem}
+                        disabled={redeemLoading || (selectedReward && redeemedRewardIds.includes(selectedReward.id))}
+                      >
+                        {redeemLoading ? "กำลังดำเนินการ..." : (selectedReward && redeemedRewardIds.includes(selectedReward.id)) ? "ใช้สิทธิ์แล้ว" : "ยืนยัน"}
+                      </button>
                     </div>
                   </div>
-                  
-                  {redeemError && <div className={styles.errorAlert}>{redeemError}</div>}
-                  
-                  <div className={styles.modalActions}>
-                    <button className={styles.cancelBtn} onClick={closeRedeemModal} disabled={redeemLoading}>ยกเลิก</button>
-                    <button 
-                      className={styles.confirmBtn} 
-                      onClick={handleRedeem} 
-                      disabled={redeemLoading || (selectedReward && redeemedRewardIds.includes(selectedReward.id))}
-                    >
-                      {redeemLoading ? "กำลังดำเนินการ..." : (selectedReward && redeemedRewardIds.includes(selectedReward.id)) ? "ใช้สิทธิ์แล้ว" : "ยืนยัน"}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

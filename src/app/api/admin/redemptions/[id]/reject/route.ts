@@ -1,30 +1,44 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/jwt";
+import { requireAdmin, requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { cookies } from "next/headers";
 
-async function requireAdmin() {
-    const token = (await cookies()).get("token")?.value;
-    if (!token) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
-    try {
-        const payload = verifyToken(token) as { emp_id: string };
-        const emp = await prisma.employees.findUnique({
-            where: { emp_id: payload.emp_id },
-            include: { departments: true }
-        });
-        if (!emp || !emp.is_active) return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
-        return { emp };
-    } catch {
-        return { error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
+async function authenticateAdmin() {
+    const cookieStore = await cookies();
+    const adminToken = cookieStore.get("admin_token")?.value;
+    const userToken = cookieStore.get("token")?.value;
+
+    if (adminToken) {
+        try {
+            const admin = await requireAdmin();
+            const emp = await prisma.employees.findFirst({
+                where: { emp_id: { equals: admin.emp_id, mode: "insensitive" } },
+                select: { emp_id: true }
+            });
+            return { ok: true as const, empId: emp?.emp_id || null, username: admin.emp_id, role: admin.role };
+        } catch {}
     }
+
+    if (userToken) {
+        try {
+            const auth = await requireAdminOrSupervisor();
+            const emp = await prisma.employees.findFirst({
+                where: { emp_id: { equals: auth.emp_id, mode: "insensitive" } },
+                select: { emp_id: true }
+            });
+            return { ok: true as const, empId: emp?.emp_id || null, username: auth.username, role: auth.role };
+        } catch {}
+    }
+
+    return { ok: false as const, error: NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 }) };
 }
 
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const auth = await requireAdmin();
-    if ("error" in auth) return auth.error;
+    const auth = await authenticateAdmin();
+    if (!auth.ok) return auth.error;
 
     const idStr = (await params).id;
     const redemptionId = parseInt(idStr, 10);
@@ -55,7 +69,7 @@ export async function PUT(
                     status: "rejected",
                     cancelled_reason: body.cancelled_reason,
                     fulfilled_at: new Date(),
-                    processed_by: auth.emp.emp_id
+                    processed_by: auth.empId
                 }
             });
 
