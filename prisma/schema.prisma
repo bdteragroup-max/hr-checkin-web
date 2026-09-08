@@ -2558,6 +2558,7 @@ model CustomerSatisfaction {
   updatedAt        DateTime
   callNotes        String?
   criteriaComments Json?
+  contactName      String?
   Company          Company   @relation(fields: [companyId], references: [id])
   User             User      @relation(fields: [surveyBy], references: [id])
 }

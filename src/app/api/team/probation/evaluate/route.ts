@@ -118,17 +118,6 @@ export async function POST(req: Request) {
         const totalScore = calculateTotalScore(finalScores);
         const grade = calculateGrade(totalScore);
 
-        // 4.5 STRICT VALIDATION: Minimum C to pass
-        const isPassingDecision = decision === "pass" || decision === "salary_adjust";
-        const isFailingGrade = grade === "D" || grade === "E";
-        
-        if (isPassingDecision && isFailingGrade) {
-            return NextResponse.json({ 
-                error: "INSUFFICIENT_GRADE", 
-                message: `Grade ${grade} cannot pass probation. A minimum grade of C is required.` 
-            }, { status: 400 });
-        }
-
         // 5. Save to DB (Check if exists first for editing returned evaluations)
         const evalData = {
             emp_id,

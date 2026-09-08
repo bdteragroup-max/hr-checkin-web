@@ -32,7 +32,13 @@ export async function GET() {
         }
 
         const list = await prisma.leave_requests.findMany({
-            where: { supervisor_id: p.emp_id },
+            where: {
+                OR: [
+                    { supervisor_id: p.emp_id },
+                    { employees: { supervisor_id: p.emp_id } },
+                    { employees: { secondary_supervisor_id: p.emp_id } }
+                ]
+            },
             orderBy: { timestamp: "desc" },
             select: {
                 id: true,

@@ -100,7 +100,17 @@ export async function POST(req: Request) {
                         console.log(`[LINE WEBHOOK] Querying leave request: ${targetId}`);
                         const leaveReq = await prisma.leave_requests.findUnique({
                             where: { id: targetId! },
-                            include: { employees: { select: { name: true, nickname: true, line_user_id: true } } }
+                            include: { 
+                                employees: { 
+                                    select: { 
+                                        name: true, 
+                                        nickname: true, 
+                                        line_user_id: true,
+                                        supervisor_id: true,
+                                        secondary_supervisor_id: true
+                                    } 
+                                } 
+                            }
                         });
 
                         if (!leaveReq) {
@@ -114,13 +124,27 @@ export async function POST(req: Request) {
                         const managementLineUserId = process.env.MANAGEMENT_LINE_USER_ID;
                         const isHr = hrLineUserId === lineUserId;
                         const isManagement = managementLineUserId === lineUserId;
+
+                        const approverEmp = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { emp_id: true, name: true }
+                        });
+
                         const supervisor = await prisma.employees.findUnique({
                             where: { emp_id: leaveReq.supervisor_id || "" }
                         });
-                        const isSupervisor = supervisor && supervisor.line_user_id === lineUserId;
+
+                        const isSupervisor = Boolean(
+                            (supervisor && supervisor.line_user_id === lineUserId) ||
+                            (approverEmp && (
+                                approverEmp.emp_id === leaveReq.supervisor_id ||
+                                approverEmp.emp_id === leaveReq.employees?.supervisor_id ||
+                                approverEmp.emp_id === leaveReq.employees?.secondary_supervisor_id
+                            ))
+                        );
 
                         if (!isHr && !isSupervisor && !isManagement) {
-                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected supervisor(${supervisor?.line_user_id}), HR(${hrLineUserId}), or Management(${managementLineUserId}), Got ${lineUserId}`);
+                            console.warn(`[LINE WEBHOOK] UNAUTHORIZED: Expected supervisor(${supervisor?.line_user_id || leaveReq.employees?.supervisor_id}), HR(${hrLineUserId}), or Management(${managementLineUserId}), Got ${lineUserId}`);
                             await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติคำขอนี้");
                             continue;
                         }
@@ -181,6 +205,7 @@ export async function POST(req: Request) {
                                 data: {
                                     status: nextStatus,
                                     supervisor_approved_at: isSupervisor ? new Date() : leaveReq.supervisor_approved_at,
+                                    supervisor_id: (isSupervisor && approverEmp) ? approverEmp.emp_id : leaveReq.supervisor_id,
                                     approved_at: (isHr || isManagement) ? new Date() : leaveReq.approved_at,
                                     approved_by: (isHr || isManagement) ? (isManagement ? "MANAGEMENT_LINE" : "HR_LINE") : leaveReq.approved_by
                                 },

@@ -22,10 +22,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const { id } = await params;
         if (!id) return NextResponse.json({ error: "MISSING_ID" }, { status: 400 });
 
-        const leave = await prisma.leave_requests.findUnique({ where: { id } });
+        const leave = await prisma.leave_requests.findUnique({ 
+            where: { id },
+            include: {
+                employees: { select: { supervisor_id: true, secondary_supervisor_id: true } }
+            }
+        });
         if (!leave) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-        if (leave.supervisor_id !== p.emp_id) {
+        const isSupervisor = leave.supervisor_id === p.emp_id ||
+            leave.employees?.supervisor_id === p.emp_id ||
+            leave.employees?.secondary_supervisor_id === p.emp_id;
+
+        if (!isSupervisor) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }
 
@@ -37,6 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             where: { id },
             data: {
                 status: "pending_hr",
+                supervisor_id: p.emp_id,
                 supervisor_approved_at: new Date(),
             },
             include: {

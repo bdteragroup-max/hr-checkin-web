@@ -25,10 +25,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const body = await req.json().catch(() => ({}));
         const rejectReason = body.reason ? String(body.reason).trim() : null;
 
-        const leave = await prisma.leave_requests.findUnique({ where: { id } });
+        const leave = await prisma.leave_requests.findUnique({ 
+            where: { id },
+            include: {
+                employees: { select: { supervisor_id: true, secondary_supervisor_id: true } }
+            }
+        });
         if (!leave) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-        if (leave.supervisor_id !== p.emp_id) {
+        const isSupervisor = leave.supervisor_id === p.emp_id ||
+            leave.employees?.supervisor_id === p.emp_id ||
+            leave.employees?.secondary_supervisor_id === p.emp_id;
+
+        if (!isSupervisor) {
             return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         }
 
@@ -40,6 +49,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             where: { id },
             data: {
                 status: "rejected",
+                supervisor_id: p.emp_id,
                 supervisor_approved_at: new Date(),
                 // Append supervisor reject reason to main reason for HR visibility
                 reason: rejectReason ? `${leave.reason || ""} (หัวหน้าไม่อนุมัติ: ${rejectReason})`.trim() : `${leave.reason || ""} (หัวหน้าไม่อนุมัติ)`,

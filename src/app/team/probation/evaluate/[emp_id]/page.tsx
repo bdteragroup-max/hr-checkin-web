@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { 
     calculateTotalScore, 
     calculateGrade,
@@ -45,6 +45,8 @@ const CATEGORIES = [
 export default function EvaluatePage() {
     const { emp_id } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const isRegular = searchParams.get("is_regular") === "true";
 
     const [empInfo, setEmpInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function EvaluatePage() {
     const [attendanceCounts, setAttendanceCounts] = useState({ late: 0, sick: 0, personal: 0, ot_min: 0 });
     const [attendanceLoading, setAttendanceLoading] = useState(false);
 
-    const [decision, setDecision] = useState("pass");
+    const [decision, setDecision] = useState<string>("");
     const [salaryFrom, setSalaryFrom] = useState("");
     const [salaryTo, setSalaryTo] = useState("");
     
@@ -95,7 +97,6 @@ export default function EvaluatePage() {
                     const found = data.list.find((e: any) => e.emp_id === emp_id);
                     setEmpInfo(found);
                     if (found) {
-                        const isRegular = new URLSearchParams(window.location.search).get("is_regular") === "true";
                         if (isRegular) {
                             const now = new Date();
                             // Generate local YYYY-MM-DD strings
@@ -107,7 +108,7 @@ export default function EvaluatePage() {
                             
                             setPeriodStart(firstDayStr);
                             setPeriodEnd(lastDayStr);
-                            setDecision("acknowledge"); // Default decision for regular
+                            setDecision("pass"); // Default decision for regular
                         } else {
                             const evalNo = found.returned_evaluation ? found.returned_evaluation.evaluation_no : (found.last_evaluation_no + 1);
                             const dates = calculateProbationDates(found.hire_date, evalNo);
@@ -201,26 +202,27 @@ export default function EvaluatePage() {
 
     const grade = useMemo(() => calculateGrade(totalScore), [totalScore]);
 
-    // --- POLICY ENFORCEMENT: Reset decision if grade is D or E ---
+    // --- POLICY ENFORCEMENT: Reset decision if grade is D or E for regular staff only ---
     useEffect(() => {
-        const isRegular = new URLSearchParams(window.location.search).get("is_regular") === "true";
         if (isRegular) {
             if (grade === "D" || grade === "E") {
                 setDecision("fail");
             } else if (decision === "fail") {
                 setDecision("pass"); // Default back to pass if grade improves
             }
-        } else {
-            if (grade === "D" || grade === "E") {
-                setDecision("fail");
-            } else if (decision === "extend") {
-                setDecision("fail");
-            }
         }
-    }, [grade, decision]);
+        // Note: For probation (!isRegular), supervisor manually selects pass or fail without automatic status overrides
+    }, [grade, decision, isRegular]);
 
     async function handleSubmit() {
         if (submitting) return;
+        if (!decision) {
+            alert(isRegular 
+                ? "กรุณาเลือกผลการประเมิน (ผ่านเกณฑ์ หรือ ไม่ผ่านเกณฑ์)" 
+                : "กรุณาเลือกผลการประเมิน (ผ่านการทดลองงาน หรือ ไม่ผ่านการทดลองงาน)"
+            );
+            return;
+        }
         setSubmitting(true);
         try {
             const res = await fetch("/api/team/probation/evaluate", {
@@ -357,7 +359,7 @@ export default function EvaluatePage() {
                     </div>
                     <div style={{ fontSize: 11, color: '#94a3b8', background: '#f8fafc', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <LockClosedIcon width={14} />
-                        {new URLSearchParams(window.location.search).get("is_regular") === "true" 
+                        {isRegular 
                             ? "ระบบเลือกช่วงเวลาประเมินอัตโนมัติ (เต็มเดือนปัจจุบัน)" 
                             : "ระบบล็อคช่วงเวลาประเมินอัตโนมัติ (รอบละ 30 วัน นับจากวันเริ่มงาน)"}
                     </div>
@@ -523,9 +525,10 @@ export default function EvaluatePage() {
                     <div className={styles.divider} style={{ margin: '20px 0', borderTop: '1px dashed #E2E8F0' }} />
 
                     <div className={styles.decisionGrid}>
-                        {new URLSearchParams(window.location.search).get("is_regular") === "true" ? (
+                        {isRegular ? (
                             <>
                                 <button 
+                                    type="button"
                                     className={`${styles.choice} ${decision === "pass" ? styles.choiceActive : ""} ${(grade === "D" || grade === "E") ? styles.choiceDisabled : ""}`} 
                                     onClick={() => (grade !== "D" && grade !== "E") && setDecision("pass")}
                                     disabled={grade === "D" || grade === "E"}
@@ -533,6 +536,7 @@ export default function EvaluatePage() {
                                     ผ่านเกณฑ์
                                 </button>
                                 <button 
+                                    type="button"
                                     className={`${styles.choice} ${decision === "fail" ? styles.choiceActive : ""} ${(grade !== "D" && grade !== "E") ? styles.choiceDisabled : ""}`} 
                                     onClick={() => (grade === "D" || grade === "E") && setDecision("fail")}
                                     disabled={grade !== "D" && grade !== "E"}
@@ -543,14 +547,15 @@ export default function EvaluatePage() {
                         ) : (
                             <>
                                 <button 
-                                    className={`${styles.choice} ${decision === "pass" ? styles.choiceActive : ""} ${(grade === "D" || grade === "E") ? styles.choiceDisabled : ""}`} 
-                                    onClick={() => (grade !== "D" && grade !== "E") && setDecision("pass")}
-                                    disabled={grade === "D" || grade === "E"}
+                                    type="button"
+                                    className={`${styles.choice} ${decision === "pass" ? styles.choicePassActive : ""}`} 
+                                    onClick={() => setDecision("pass")}
                                 >
                                     ผ่านการทดลองงาน
                                 </button>
                                 <button 
-                                    className={`${styles.choice} ${decision === "fail" ? styles.choiceActive : ""}`} 
+                                    type="button"
+                                    className={`${styles.choice} ${decision === "fail" ? styles.choiceFailActive : ""}`} 
                                     onClick={() => setDecision("fail")}
                                 >
                                     ไม่ผ่านการทดลองงาน
@@ -559,7 +564,7 @@ export default function EvaluatePage() {
                         )}
                     </div>
 
-                    {(grade === "D" || grade === "E") && (
+                    {isRegular && (grade === "D" || grade === "E") && (
                         <div style={{ marginTop: 16, padding: 12, background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
                             <ExclamationTriangleIcon width={20} color="#dc2626" />
                             <div style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>
