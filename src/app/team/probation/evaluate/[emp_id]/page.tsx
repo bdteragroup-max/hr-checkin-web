@@ -42,6 +42,13 @@ const CATEGORIES = [
     { key: "participation", label: "12. เข้าร่วมกิจกรรมของบริษัท", weight: 5 },
 ];
 
+const sanitize = (val: string) => {
+    // Allow Thai, English, numbers, spaces, and basic punctuation: . , - _ ( ) /
+    return val.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s.,\-_()\/]/g, "");
+};
+
+const hasValidText = (val: string) => /[a-zA-Z0-9\u0E00-\u0E7F]/.test(val || "");
+
 export default function EvaluatePage() {
     const { emp_id } = useParams();
     const router = useRouter();
@@ -216,6 +223,10 @@ export default function EvaluatePage() {
 
     async function handleSubmit() {
         if (submitting) return;
+        if (!hasValidText(commentSupervisor)) {
+            alert("กรุณาระบุเหตุผลประกอบการประเมิน (Grade Justification) ก่อนส่งผลประเมิน (ห้ามเว้นว่าง)");
+            return;
+        }
         if (!decision) {
             alert(isRegular 
                 ? "กรุณาเลือกผลการประเมิน (ผ่านเกณฑ์ หรือ ไม่ผ่านเกณฑ์)" 
@@ -508,18 +519,49 @@ export default function EvaluatePage() {
                     </div>
                     
                     <div className={styles.inputGroup}>
-                        <label>ความคิดเห็นเพิ่มเติม (Comments)</label>
-                        <textarea rows={3} value={commentSupervisor} onChange={e => setCommentSupervisor(e.target.value)} />
+                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>
+                                เหตุผลประกอบการประเมิน (Grade Justification) <span style={{ color: '#dc2626', fontWeight: 800 }}>*จำเป็น</span>
+                            </span>
+                            {!hasValidText(commentSupervisor) && (
+                                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                                    (ห้ามเว้นว่าง)
+                                </span>
+                            )}
+                        </label>
+                        <textarea 
+                            rows={3} 
+                            value={commentSupervisor} 
+                            onChange={e => setCommentSupervisor(sanitize(e.target.value))}
+                            placeholder="ระบุเหตุผลประกอบการประเมินหรือการให้เกรด (จำเป็นต้องระบุ ไม่อนุญาตให้เว้นว่าง)..."
+                            style={!hasValidText(commentSupervisor) ? { borderColor: '#fca5a5' } : undefined}
+                            required
+                        />
+                        {!hasValidText(commentSupervisor) && (
+                            <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2 }}>
+                                * กรุณาระบุเหตุผลประกอบการประเมิน (ไม่อนุญาตให้เว้นว่าง หรือระบุเฉพาะอักขระพิเศษ)
+                            </div>
+                        )}
                     </div>
                     
                     <div className={styles.inputGroup}>
                         <label>คำแนะนำการพัฒนา (Recommendations)</label>
-                        <textarea rows={3} value={commentImprovement} onChange={e => setCommentImprovement(e.target.value)} />
+                        <textarea 
+                            rows={3} 
+                            value={commentImprovement} 
+                            onChange={e => setCommentImprovement(sanitize(e.target.value))}
+                            placeholder="ระบุคำแนะนำหรือสิ่งที่ต้องการให้พนักงานพัฒนาเพิ่มเติม..."
+                        />
                     </div>
 
                     <div className={styles.inputGroup}>
                         <label>คำชื่นชม / จุดเด่น (Commendations)</label>
-                        <textarea rows={3} value={commentPraise} onChange={e => setCommentPraise(e.target.value)} placeholder="ระบุจุดเด่นหรือพฤติกรรมที่น่าชื่นชม..." />
+                        <textarea 
+                            rows={3} 
+                            value={commentPraise} 
+                            onChange={e => setCommentPraise(sanitize(e.target.value))} 
+                            placeholder="ระบุจุดเด่นหรือพฤติกรรมที่น่าชื่นชม..." 
+                        />
                     </div>
 
                     <div className={styles.divider} style={{ margin: '20px 0', borderTop: '1px dashed #E2E8F0' }} />
@@ -597,13 +639,21 @@ export default function EvaluatePage() {
                         <div className={styles.gradeVal} style={{ color: (grade === "D" || grade === "E") ? "#dc2626" : "#16a34a" }}>{grade}</div>
                         <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', marginTop: -4 }}>GRADE</div>
                     </div>
-                    <button 
-                        className={styles.btnSubmit}
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                    >
-                        {submitting ? "..." : "ส่งผลประเมิน"}
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <button 
+                            className={styles.btnSubmit}
+                            onClick={handleSubmit}
+                            disabled={submitting || !hasValidText(commentSupervisor)}
+                            title={!hasValidText(commentSupervisor) ? "กรุณาระบุเหตุผลประกอบการประเมินก่อนส่ง (ห้ามเว้นว่าง)" : ""}
+                        >
+                            {submitting ? "..." : "ส่งผลประเมิน"}
+                        </button>
+                        {!hasValidText(commentSupervisor) && (
+                            <span style={{ fontSize: 10, color: '#dc2626', textAlign: 'center', marginTop: 4, fontWeight: 700 }}>
+                                * กรุณาระบุเหตุผลเพื่อปลดล็อคการส่ง
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── MODAL: ATTENDANCE DETAILS ── */}

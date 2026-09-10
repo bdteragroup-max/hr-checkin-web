@@ -96,9 +96,21 @@ export async function GET() {
             const isOtherManager = !isDirectSubordinate;
             
             const myEvals = emp.probation_evaluations.filter((ev: any) => ev.supervisor_id === supervisorId);
-            const lastEval = myEvals[myEvals.length - 1];
-            const isReturned = lastEval?.status === "returned";
-            const nextRound = isReturned ? lastEval.evaluation_no : (lastEval?.evaluation_no || 0) + 1;
+            
+            // For direct subordinates, track evaluation progress across the employee's lifecycle
+            // (so a co-evaluator or promoted supervisor can seamlessly proceed to the next round).
+            // For cross-manager reviews (isOtherManager), track by evaluator individually.
+            const returnedEval = isDirectSubordinate
+                ? emp.probation_evaluations.find((ev: any) => ev.status === "returned")
+                : myEvals.find((ev: any) => ev.status === "returned");
+
+            const completedEvals = isDirectSubordinate
+                ? emp.probation_evaluations.filter((ev: any) => ev.status !== "returned")
+                : myEvals.filter((ev: any) => ev.status !== "returned");
+
+            const lastCompletedEval = completedEvals[completedEvals.length - 1] || null;
+            const isReturned = Boolean(returnedEval);
+            const nextRound = returnedEval ? returnedEval.evaluation_no : (lastCompletedEval?.evaluation_no || 0) + 1;
             
             let dueDate = null;
             let unlockDate = null;
@@ -134,7 +146,7 @@ export async function GET() {
                 unlockDate = new Date(currentYear, currentMonth, 20);
                 dueDate = new Date(currentYear, currentMonth + 1, 0); 
                 
-                const lastEvalDate = lastEval ? new Date(lastEval.evaluation_date) : null;
+                const lastEvalDate = lastCompletedEval ? new Date(lastCompletedEval.evaluation_date) : null;
                 const evaluatedThisMonth = lastEvalDate && 
                                           lastEvalDate.getMonth() === currentMonth && 
                                           lastEvalDate.getFullYear() === currentYear &&
@@ -151,7 +163,7 @@ export async function GET() {
                 position: emp.job_positions?.title || "N/A",
                 department: emp.departments?.name || "N/A",
                 salary_type: emp.salary_type,
-                last_evaluation_no: nextRound - 1,
+                last_evaluation_no: returnedEval ? (returnedEval.evaluation_no - 1) : (lastCompletedEval?.evaluation_no || 0),
                 next_round: nextRound,
                 due_date: dueDate ? dueDate.toISOString() : null,
                 unlock_date: unlockDate ? unlockDate.toISOString() : null,
@@ -159,7 +171,7 @@ export async function GET() {
                 evaluation_history: emp.probation_evaluations,
                 my_evaluations: myEvals,
                 is_other_manager: isOtherManager,
-                returned_evaluation: lastEval?.status === "returned" ? lastEval : null
+                returned_evaluation: returnedEval || null
             };
         });
 

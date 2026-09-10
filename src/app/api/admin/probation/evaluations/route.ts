@@ -56,7 +56,7 @@ export async function GET() {
             where: { is_on_trial: true, is_active: true },
             include: {
                 probation_evaluations: { 
-                    select: { evaluation_no: true, supervisor_id: true },
+                    select: { evaluation_no: true, supervisor_id: true, status: true },
                     orderBy: { evaluation_no: 'desc' }
                 },
                 job_positions: { select: { title: true } },
@@ -80,13 +80,8 @@ export async function GET() {
             if (emp.nickname && !finalPendingName.includes(`(${emp.nickname})`)) {
                 finalPendingName = `${finalPendingName} (${emp.nickname})`;
             }
-            const allowedEvaluators = new Set([emp.supervisor_id, emp.secondary_supervisor_id].filter(Boolean));
-            const extraCoEvals = coEvalMap.get(emp.emp_id);
-            if (extraCoEvals) {
-                extraCoEvals.forEach(id => allowedEvaluators.add(id));
-            }
-            const directEvals = emp.probation_evaluations.filter((e: any) => allowedEvaluators.has(e.supervisor_id));
-            const latestEvalNo = directEvals.length > 0 ? directEvals[0].evaluation_no : 0;
+            const validEvals = emp.probation_evaluations.filter((e: any) => e.status !== 'returned');
+            const latestEvalNo = validEvals.length > 0 ? validEvals[0].evaluation_no : 0;
             return {
                 emp_id: emp.emp_id,
                 name: finalPendingName,

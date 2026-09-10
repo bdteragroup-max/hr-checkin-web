@@ -43,10 +43,29 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 });
         }
 
+        const sanitize = (val: any) => {
+            if (typeof val !== 'string') return val;
+            return val.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9\s.,\-_()\/]/g, "");
+        };
+
+        const hasValidText = (val: string) => /[a-zA-Z0-9\u0E00-\u0E7F]/.test(val || "");
+
+        const cleanCommentSupervisor = sanitize(comment_supervisor || "");
+        const cleanCommentImprovement = sanitize(comment_improvement || "");
+        const cleanCommentPraise = sanitize(comment_praise || "");
+
+        if (!hasValidText(cleanCommentSupervisor)) {
+            return NextResponse.json({ 
+                error: "MISSING_GRADE_JUSTIFICATION", 
+                message: "กรุณาระบุเหตุผลประกอบการประเมิน (Grade Justification) ให้ครบถ้วน ห้ามเว้นว่าง" 
+            }, { status: 400 });
+        }
+
         // --- Handle Corrections Logic ---
-        let finalCommentSupervisor = comment_supervisor || "";
-        if (correction_remark && correction_remark.trim()) {
-            const auditLog = `\n\n---บันทึกการแก้ไขสถิติ---\n${correction_remark.trim()}\n(สถิติเดิมจากระบบ: มาสาย ${system_attendance_counts?.late || 0}, ลาป่วย ${system_attendance_counts?.sick || 0}, ลากิจ ${system_attendance_counts?.personal || 0})`;
+        let finalCommentSupervisor = cleanCommentSupervisor;
+        if (correction_remark && typeof correction_remark === "string" && correction_remark.trim()) {
+            const cleanRemark = sanitize(correction_remark.trim());
+            const auditLog = `\n\n---บันทึกการแก้ไขสถิติ---\n${cleanRemark}\n(สถิติเดิมจากระบบ: มาสาย ${system_attendance_counts?.late || 0}, ลาป่วย ${system_attendance_counts?.sick || 0}, ลากิจ ${system_attendance_counts?.personal || 0})`;
             finalCommentSupervisor += auditLog;
         }
 
@@ -151,8 +170,8 @@ export async function POST(req: Request) {
             grade: grade,
             
             comment_supervisor: finalCommentSupervisor,
-            comment_improvement,
-            comment_praise,
+            comment_improvement: cleanCommentImprovement,
+            comment_praise: cleanCommentPraise,
             score_comments: score_comments || {},
             
             decision,
@@ -166,8 +185,8 @@ export async function POST(req: Request) {
         const existing = await prisma.probation_evaluations.findFirst({
             where: {
                 emp_id,
-                supervisor_id,
-                evaluation_no: Number(evaluation_no || 1)
+                evaluation_no: Number(evaluation_no || 1),
+                ...(isOtherManager ? { supervisor_id } : {})
             }
         });
 

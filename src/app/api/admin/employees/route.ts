@@ -800,7 +800,21 @@ export async function handleSupervisorResignation(resignedSupervisorId: string) 
                         secondary_supervisor_id: newSecondaryId
                     }
                 });
-                console.log(`[SUPERVISOR SUCCESSION] Subordinate ${sub.emp_id} promoted co-evaluator ${newSupervisorId} to supervisor.`);
+
+                // Hand over probation evaluation records from resigned supervisor to the new supervisor
+                await prisma.probation_evaluations.updateMany({
+                    where: {
+                        emp_id: sub.emp_id,
+                        supervisor_id: resignedSupervisorId
+                    },
+                    data: {
+                        supervisor_id: newSupervisorId
+                    }
+                }).catch((evalErr) => {
+                    console.error(`[SUPERVISOR SUCCESSION] Failed to transfer probation evaluations for ${sub.emp_id}:`, evalErr);
+                });
+
+                console.log(`[SUPERVISOR SUCCESSION] Subordinate ${sub.emp_id} promoted co-evaluator ${newSupervisorId} to supervisor and transferred evaluation history.`);
             } else {
                 // No co-evaluator available, set supervisor_id to null so it falls back to HR
                 await prisma.employees.update({
