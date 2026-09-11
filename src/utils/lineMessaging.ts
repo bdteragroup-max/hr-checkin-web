@@ -3348,38 +3348,85 @@ export async function sendDepartmentLeaveNotification(
     endDate: string;
     minutes: number;
     reason: string;
-    departmentName: string;
-  }
+    departmentName?: string;
+  },
+  isModified: boolean = false
 ) {
   // Format names with nicknames
   if (leaveData) {
     if ((leaveData as any).empName) (leaveData as any).empName = await formatNameDb((leaveData as any).empName);
   }
 
+  const depText = leaveData.departmentName ? ` (${leaveData.departmentName})` : "";
+  const title = isModified ? `คำขอลา (แก้ไขข้อมูล)${depText}` : `แจ้งเตือนคำขอลา${depText}`;
+  const timeStr = formatLeaveMins(leaveData.minutes);
+  const dateStr = leaveData.startDate === leaveData.endDate
+    ? leaveData.startDate
+    : `${leaveData.startDate} ถึง ${leaveData.endDate}`;
+
   const contents = {
     type: "bubble",
+    size: "mega",
     header: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#f0f9ff",
+      backgroundColor: isModified ? "#fefce8" : "#fff7ed",
+      paddingAll: "16px",
       contents: [
-        { type: "text", text: `แจ้งเตือนการลา (${leaveData.departmentName})`, weight: "bold", color: "#0284c7", size: "sm" }
+        { type: "text", text: `📢 ${title}`, weight: "bold", size: "lg", color: isModified ? "#ca8a04" : "#ea580c" },
+        { type: "text", text: `วันที่ลา: ${dateStr}`, size: "sm", color: "#6b7280", margin: "sm" }
       ]
     },
     body: {
       type: "box",
       layout: "vertical",
       spacing: "sm",
+      paddingAll: "16px",
       contents: [
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "พนักงาน:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.empName, color: "#111111", size: "sm", weight: "bold", flex: 7 }] },
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "ประเภท:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.leaveType, color: "#111111", size: "sm", flex: 7 }] },
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "วันที่:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: `${leaveData.startDate} ถึง ${leaveData.endDate} (${formatLeaveMins(leaveData.minutes)})`, color: "#111111", size: "sm", flex: 7, wrap: true }] },
-        { type: "box", layout: "horizontal", contents: [{ type: "text", text: "เหตุผล:", color: "#888888", size: "sm", flex: 3 }, { type: "text", text: leaveData.reason || "-", color: "#111111", size: "sm", flex: 7, wrap: true }] }
+        {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: `👤 ${leaveData.empName} (${timeStr})`,
+              weight: "bold",
+              size: "sm",
+              color: "#111827",
+              wrap: true
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              margin: "sm",
+              contents: [
+                { type: "text", text: "ประเภท:", size: "xs", color: "#6b7280", flex: 2 },
+                { type: "text", text: leaveData.leaveType, size: "xs", color: "#3b82f6", flex: 6, wrap: true }
+              ]
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: "สถานะ:", size: "xs", color: "#6b7280", flex: 2 },
+                { type: "text", text: isModified ? "รออนุมัติ (แก้ไข)" : "รออนุมัติ", size: "xs", color: "#ea580c", flex: 6, wrap: true, weight: "bold" }
+              ]
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: "เหตุผล:", size: "xs", color: "#6b7280", flex: 2 },
+                { type: "text", text: leaveData.reason || "-", size: "xs", color: "#111827", flex: 6, wrap: true }
+              ]
+            }
+          ]
+        }
       ]
     }
   };
 
-  return sendLineMessage(lineUserId, [{ type: "flex", altText: `แจ้งเตือนการลา: ${leaveData.empName}`, contents: contents as any }]);
+  return sendLineMessage(lineUserId, [{ type: "flex", altText: `${title}: ${leaveData.empName}`, contents: contents as any }]);
 }
 
 

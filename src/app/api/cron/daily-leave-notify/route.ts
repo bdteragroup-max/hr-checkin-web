@@ -202,7 +202,7 @@ export async function GET(req: Request) {
         
         let sentCount = 0;
 
-        // 1. Send Global Summary to Management and HR
+        // 1. Send Global Summary to Management, HR, and TP69044
         const globalFlex = buildFlexMessage(leaves, dateLabel, "รายงานพนักงานลางาน (ทั้งหมด)");
         if (targetId) {
             await sendFlexMessage(targetId, globalFlex, `รายงานพนักงานลางานประจำวันที่ ${dateLabel}`);
@@ -210,6 +210,16 @@ export async function GET(req: Request) {
         }
         if (HR_LINE_USER_ID && HR_LINE_USER_ID !== targetId) {
             await sendFlexMessage(HR_LINE_USER_ID, globalFlex, `รายงานพนักงานลางานประจำวันที่ ${dateLabel}`);
+            sentCount++;
+        }
+
+        // Also send Global Summary to TP69044
+        const tpEmp = await prisma.employees.findUnique({
+            where: { emp_id: "TP69044" },
+            select: { line_user_id: true }
+        });
+        if (tpEmp?.line_user_id && tpEmp.line_user_id !== targetId && tpEmp.line_user_id !== HR_LINE_USER_ID) {
+            await sendFlexMessage(tpEmp.line_user_id, globalFlex, `รายงานพนักงานลางานประจำวันที่ ${dateLabel}`);
             sentCount++;
         }
 
@@ -241,8 +251,8 @@ export async function GET(req: Request) {
             for (const sup of supervisors) {
                 if (!sup.line_user_id) continue;
                 
-                // Avoid sending duplicate global message if the supervisor is also management/HR
-                if (sup.line_user_id === targetId || sup.line_user_id === HR_LINE_USER_ID) continue;
+                // Avoid sending duplicate global message if the supervisor is also management/HR/TP69044
+                if (sup.line_user_id === targetId || sup.line_user_id === HR_LINE_USER_ID || (tpEmp?.line_user_id && sup.line_user_id === tpEmp.line_user_id)) continue;
 
                 const supLeaves = supervisorLeaves[sup.emp_id];
                 if (supLeaves && supLeaves.length > 0) {

@@ -526,6 +526,21 @@ export async function POST(req: Request) {
                 }).catch(console.error);
             }
         }
+
+        // ✅ 4. Notify TP69044 for all employee leave requests
+        const tp = await prisma.employees.findUnique({ where: { emp_id: "TP69044" }, select: { line_user_id: true } });
+        if (tp?.line_user_id) {
+            const { sendDepartmentLeaveNotification } = await import("@/utils/lineMessaging");
+            sendDepartmentLeaveNotification(tp.line_user_id, {
+                empName: empDisplayName,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                departmentName: emp.departments?.name || "-"
+            }).catch(console.error);
+        }
     } catch (e: any) {
         console.error("LEAVE API ERROR:", e);
         // ถ้า trigger DB โยน error จะมาเข้าตรงนี้
@@ -612,7 +627,8 @@ export async function PUT(req: Request) {
             line_user_id: true,
             salary_type: true,
             base_salary: true,
-            supervisor: { select: { line_user_id: true } }
+            supervisor: { select: { line_user_id: true } },
+            departments: { select: { name: true } }
         },
     });
     if (!emp) return NextResponse.json({ error: "EMP_NOT_FOUND" }, { status: 404 });
@@ -792,6 +808,21 @@ export async function PUT(req: Request) {
             }).catch(console.error);
         }
 
+        // ✅ Notify TP69044 for all employee leave requests (modified)
+        const tp = await prisma.employees.findUnique({ where: { emp_id: "TP69044" }, select: { line_user_id: true } });
+        if (tp?.line_user_id) {
+            const { sendDepartmentLeaveNotification } = await import("@/utils/lineMessaging");
+            sendDepartmentLeaveNotification(tp.line_user_id, {
+                empName: empDisplayName2,
+                leaveType: def.name,
+                startDate: startAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                endDate: endAt.toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok" }),
+                minutes,
+                reason: reason || "",
+                departmentName: emp.departments?.name || "-"
+            }, true).catch(console.error);
+        }
+
     } catch (e: any) {
         return NextResponse.json({ error: "DB_ERROR" }, { status: 500 });
     }
@@ -856,6 +887,11 @@ export async function DELETE(req: Request) {
         // Notify HR
         if (hrLineUserId) {
             sendLeaveCancelledNotification(hrLineUserId, noticeData).catch(console.error);
+        }
+        // Notify TP69044
+        const tp = await prisma.employees.findUnique({ where: { emp_id: "TP69044" }, select: { line_user_id: true } });
+        if (tp?.line_user_id) {
+            sendLeaveCancelledNotification(tp.line_user_id, noticeData).catch(console.error);
         }
 
     } catch (e: any) {

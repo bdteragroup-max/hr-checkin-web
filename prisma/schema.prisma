@@ -3289,3 +3289,95 @@ model creative_versions {
 
   @@index([creativeId], map: "idx_creat_vers_cid")
 }
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MarketingRequest {
+  id                         String                       @id
+  requestNo                  String                       @unique
+  requesterId                String
+  requesterName              String
+  requesterDepartment        String
+  requesterBranch            String
+  requesterPhone             String
+  requestType                String
+  title                      String
+  description                String
+  requiredDate               DateTime                     @db.Timestamptz(6)
+  usageLocationType          String
+  usageBranch                String?
+  usageProvince              String?
+  usageLocationName          String?
+  usageLocationDetails       String?
+  typeDetails                Json?
+  shippingMethod             String?
+  recipientName              String?
+  recipientPhone             String?
+  recipientCompanyBranch     String?
+  deliveryAddress            String?
+  deliveryProvince           String?
+  deliveryPostalCode         String?
+  requestedDeliveryDate      DateTime?                    @db.Timestamptz(6)
+  shippingRemarks            String?
+  status                     String                       @default("BACKLOG")
+  priority                   String                       @default("NORMAL")
+  assignedToId               String?
+  assignedById               String?
+  assignedAt                 DateTime?                    @db.Timestamptz(6)
+  internalDueDate            DateTime?                    @db.Timestamptz(6)
+  internalNote               String?
+  completedAt                DateTime?                    @db.Timestamptz(6)
+  kanbanCardId               String?
+  createdAt                  DateTime                     @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                     @default(now()) @db.Timestamptz(6)
+  MarketingRequestAttachment MarketingRequestAttachment[]
+  MarketingRequestComment    MarketingRequestComment[]
+  MarketingRequestLog        MarketingRequestLog[]
+
+  @@index([assignedToId])
+  @@index([requestType])
+  @@index([requesterId])
+  @@index([requiredDate])
+  @@index([status])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MarketingRequestAttachment {
+  id               String           @id
+  requestId        String
+  fileName         String
+  fileUrl          String
+  fileType         String?
+  fileSize         Int?
+  uploadedById     String?
+  createdAt        DateTime         @default(now()) @db.Timestamptz(6)
+  MarketingRequest MarketingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MarketingRequestComment {
+  id               String           @id
+  requestId        String
+  userId           String
+  message          String
+  isInternal       Boolean          @default(false)
+  createdAt        DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime         @default(now()) @db.Timestamptz(6)
+  MarketingRequest MarketingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MarketingRequestLog {
+  id               String           @id
+  requestId        String
+  userId           String?
+  actionType       String
+  details          String?
+  createdAt        DateTime         @default(now()) @db.Timestamptz(6)
+  MarketingRequest MarketingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
