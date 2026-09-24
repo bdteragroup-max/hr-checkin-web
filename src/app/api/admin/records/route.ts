@@ -131,6 +131,11 @@ export async function GET(req: Request) {
             present_dates: Set<string>;
             travel_dates: Set<string>;
             total_work_days: number;
+            under_9h_count: number;
+            under_9h_dates: string[];
+            over_9h_count: number;
+            over_9h_mins: number;
+            over_9h_dates: string[];
         }> = {};
 
         for (const e of emps) {
@@ -162,7 +167,12 @@ export async function GET(req: Request) {
                 late_mins: 0, 
                 present_dates: new Set(), 
                 travel_dates: new Set(),
-                total_work_days: empTotalWorkDays
+                total_work_days: empTotalWorkDays,
+                under_9h_count: 0,
+                under_9h_dates: [],
+                over_9h_count: 0,
+                over_9h_mins: 0,
+                over_9h_dates: []
             };
         }
 
@@ -221,13 +231,40 @@ export async function GET(req: Request) {
         // Process checkins
         const checkins = adjustCheckinsForLeaves(rows, leaves);
 
+        // Daily in and out timestamps per employee for calculating working hours (< 9 hours)
+        const empDailyCheckins: Record<string, Record<string, { ins: Date[]; outs: Date[] }>> = {};
+
+        // Track approved leave dates per employee to exclude them from the < 9h calculation
+        const approvedLeaveEmpDates = new Set<string>();
+        for (const l of leaves) {
+            if (l.status === "approved") {
+                let cur = new Date(l.start_date);
+                const endD = new Date(l.end_date);
+                while (cur <= endD) {
+                    approvedLeaveEmpDates.add(`${l.emp_id}_${cur.toISOString().split("T")[0]}`);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            }
+        }
+
         for (const r of checkins) {
             if (!stats[r.emp_id]) continue;
             // Match by date_key string comparison
             const d = r.date_key.toISOString().split("T")[0];
 
-            if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In" || r.type === "Trip-Update") {
+            if (!empDailyCheckins[r.emp_id]) {
+                empDailyCheckins[r.emp_id] = {};
+            }
+            if (!empDailyCheckins[r.emp_id][d]) {
+                empDailyCheckins[r.emp_id][d] = { ins: [], outs: [] };
+            }
+
+            const isOut = r.type.toLowerCase().includes("-out") || r.type === "Check-out";
+            const isIn = r.type.toLowerCase().includes("-in") || r.type === "Trip-Update";
+
+            if (isIn) {
                 stats[r.emp_id].present_dates.add(d);
+                empDailyCheckins[r.emp_id][d].ins.push(new Date(r.timestamp));
 
                 // Consistency: Skip counting late on Sundays
                 const isSunday = r.date_key.getUTCDay() === 0;
@@ -238,6 +275,61 @@ export async function GET(req: Request) {
                     }
                 }
             }
+            if (isOut) {
+                empDailyCheckins[r.emp_id][d].outs.push(new Date(r.timestamp));
+            }
+        }
+
+        // Calculate under 9 hours (Monday-Friday, not holiday, not on approved leave, duration < 540 min)
+        for (const e of emps) {
+            if (e.is_checkin_exempt) continue;
+            const empDays = empDailyCheckins[e.emp_id];
+            if (!empDays) continue;
+
+            for (const [dStr, daily] of Object.entries(empDays)) {
+                if (daily.ins.length === 0 || daily.outs.length === 0) continue;
+
+                const dt = new Date(dStr + "T00:00:00Z");
+                const dayOfWeek = dt.getUTCDay();
+                // Monday (1) to Friday (5) only (exclude Saturdays & Sundays)
+                if (dayOfWeek < 1 || dayOfWeek > 5) continue;
+                // Skip public holidays
+                if (holidayDates.has(dStr)) continue;
+                // Skip approved leave
+                if (approvedLeaveEmpDates.has(`${e.emp_id}_${dStr}`)) continue;
+
+                const firstIn = Math.min(...daily.ins.map(t => t.getTime()));
+                const lastOut = Math.max(...daily.outs.map(t => t.getTime()));
+                const diffMinutes = Math.round((lastOut - firstIn) / 60000);
+
+                if (diffMinutes > 0) {
+                    if (diffMinutes < 540) {
+                        stats[e.emp_id].under_9h_count += 1;
+                        stats[e.emp_id].under_9h_dates.push(dStr);
+                    } else if (diffMinutes > 540) {
+                        stats[e.emp_id].over_9h_count += 1;
+                        stats[e.emp_id].over_9h_mins += (diffMinutes - 540);
+                        stats[e.emp_id].over_9h_dates.push(dStr);
+                    }
+                }
+            }
+        }
+
+        let totalUnder9h = 0;
+        let affectedEmps = 0;
+        let totalOver9h = 0;
+        let affectedOver9hEmps = 0;
+        let totalOver9hMins = 0;
+
+        for (const e of emps) {
+            const u = stats[e.emp_id].under_9h_count;
+            totalUnder9h += u;
+            if (u > 0) affectedEmps++;
+
+            const o = stats[e.emp_id].over_9h_count;
+            totalOver9h += o;
+            if (o > 0) affectedOver9hEmps++;
+            totalOver9hMins += stats[e.emp_id].over_9h_mins;
         }
 
         // Build summary output
@@ -279,10 +371,27 @@ export async function GET(req: Request) {
                 present_days: s.present_dates.size,
                 travel_days: travelDays,
                 total_work_days_period: s.total_work_days,
+                under_9h_count: s.under_9h_count,
+                under_9h_dates: s.under_9h_dates,
+                over_9h_count: s.over_9h_count,
+                over_9h_mins: s.over_9h_mins,
+                over_9h_dates: s.over_9h_dates,
             };
         });
 
-        return NextResponse.json({ ok: true, start_date: startDate, end_date: endDate, summary });
+        return NextResponse.json({
+            ok: true,
+            start_date: startDate,
+            end_date: endDate,
+            kpi: {
+                total_under_9h_count: totalUnder9h,
+                affected_employees_count: affectedEmps,
+                total_over_9h_count: totalOver9h,
+                affected_over_9h_employees_count: affectedOver9hEmps,
+                total_over_9h_mins: totalOver9hMins
+            },
+            summary
+        });
 
     } catch (e: any) {
         console.error("ADMIN_RECORDS_ERROR:", e);

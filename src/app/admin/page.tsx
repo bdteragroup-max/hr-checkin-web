@@ -15,7 +15,8 @@ import {
     UserPlusIcon, CakeIcon, ChevronRightIcon, PlayIcon, StopIcon,
     ArrowDownTrayIcon, TrashIcon, ArrowPathIcon, InboxStackIcon,
     ChevronLeftIcon, CalendarIcon, XMarkIcon, PlusIcon, CheckIcon,
-    UserIcon, MapPinIcon
+    UserIcon, MapPinIcon, ChartBarIcon, BellAlertIcon, CheckBadgeIcon,
+    SparklesIcon, PresentationChartLineIcon, UsersIcon
 } from "@heroicons/react/24/outline";
 import { AlertTriangle } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateThai } from "@/utils/time";
@@ -43,12 +44,24 @@ interface CheckItem {
     lon?: number | null;
 }
 
+interface Under9HoursItem {
+    emp_id: string;
+    name: string;
+    in_time: string;
+    out_time: string;
+    duration_mins: number;
+    duration_display: string;
+    diff_mins: number;
+}
+
 interface DashboardData {
     present: number;
     absent: number;
     late: number;
     onLeave: number;
     onTravel?: number;
+    under9Hours?: number;
+    under9HoursList?: Under9HoursItem[];
     recent: CheckItem[];
 }
 
@@ -61,7 +74,7 @@ interface LeaveRequest {
     endDate: string;
     days: number;
     reason?: string;
-    status: "pending" | "approved" | "rejected";
+    status: "pending" | "pending_hr" | "pending_supervisor" | "approved" | "rejected" | string;
 }
 
 interface Holiday { date: string; name: string; }
@@ -210,6 +223,8 @@ function AdminPageInner() {
 
     /* ── Dashboard ── */
     const [dash, setDash] = useState<DashboardData | null>(null);
+    const [dashLoading, setDashLoading] = useState(false);
+    const [dashView, setDashView] = useState<"daily" | "analytics">("daily");
     const [notifs, setNotifs] = useState<{
         arrivals: any[],
         birthdays: any[],
@@ -330,7 +345,17 @@ function AdminPageInner() {
         loadBranches();
         loadDashboard();
         loadNotifications();
+        loadLeave();
     }, []);
+
+    useEffect(() => {
+        const view = searchParams.get("view");
+        if (view === "analytics") {
+            setDashView("analytics");
+        } else if (view === "daily") {
+            setDashView("daily");
+        }
+    }, [searchParams]);
 
     async function loadNotifications() {
         try {
@@ -363,12 +388,25 @@ function AdminPageInner() {
     /*  DASHBOARD                          */
     /* ─────────────────────────────────── */
     async function loadDashboard() {
+        setDashLoading(true);
         try {
             const r = await fetch("/api/admin/dashboard", { cache: "no-store" });
             if (!r.ok) { handleAuthError(await r.json().catch(() => ({}))); return; }
             const d = await r.json();
             setDash(d);
         } catch { setDash(null); }
+        finally { setDashLoading(false); }
+    }
+
+    async function refreshAll() {
+        setDashLoading(true);
+        await Promise.allSettled([
+            loadDashboard(),
+            loadNotifications(),
+            loadLeave(),
+        ]);
+        setDashLoading(false);
+        showToast("อัปเดตข้อมูลล่าสุดเรียบร้อย");
     }
 
     /* ─────────────────────────────────── */
@@ -429,29 +467,56 @@ function AdminPageInner() {
     async function loadLeave() {
         setLeaveLoading(true);
         try {
-            const r = await fetch("/api/admin/leave", { cache: "no-store" });
+            const r = await fetch("/api/admin/leaves", { cache: "no-store" });
             if (!r.ok) return;
             const d = await r.json();
-            setLeaveRequests(d.requests || []);
+            const raw = d.list || d.requests || [];
+            const mapped: LeaveRequest[] = raw.map((r: any) => ({
+                id: r.id,
+                emp_id: r.emp_id,
+                name: r.name,
+                leaveType: r.leave_type || r.leaveType,
+                startDate: r.start_date ? r.start_date.slice(0, 10) : "",
+                endDate: r.end_date ? r.end_date.slice(0, 10) : "",
+                days: r.days || 1,
+                reason: r.reason || "",
+                status: r.status,
+            }));
+            setLeaveRequests(mapped);
         } catch { setLeaveRequests([]); }
         finally { setLeaveLoading(false); }
     }
 
     async function approveLeave(id: string, status: "approved" | "rejected") {
         try {
-            const r = await fetch("/api/admin/leave/update", {
+            const endpoint = status === "approved" ? `/api/admin/leaves/${id}/approve` : `/api/admin/leaves/${id}/reject`;
+            const r = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, status }),
             });
             if (r.ok) {
                 showToast(status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธแล้ว", status === "approved" ? "ok" : "bad");
                 loadLeave();
-            } else showToast("เกิดข้อผิดพลาด", "bad");
+            } else {
+                // Fallback to legacy endpoint if available
+                const fallbackRes = await fetch("/api/admin/leave/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id, status }),
+                });
+                if (fallbackRes.ok) {
+                    showToast(status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธแล้ว", status === "approved" ? "ok" : "bad");
+                    loadLeave();
+                } else {
+                    showToast("เกิดข้อผิดพลาด", "bad");
+                }
+            }
         } catch { showToast("เกิดข้อผิดพลาด", "bad"); }
     }
 
-    const pendingLeave = leaveRequests.filter(r => r.status === "pending");
+    const pendingLeave = useMemo(() => {
+        return leaveRequests.filter(r => r.status === "pending" || r.status === "pending_hr" || r.status === "pending_supervisor");
+    }, [leaveRequests]);
 
     /* ─────────────────────────────────── */
     /*  HOLIDAY                            */
@@ -729,48 +794,481 @@ function AdminPageInner() {
             );
         }
 
+        const totalAttentionCount =
+            pendingLeave.length +
+            (notifs?.pendingClaimsCount || 0) +
+            (notifs?.missingPlansCount || 0) +
+            (notifs?.birthdays?.length || 0) +
+            (notifs?.arrivals?.length || 0);
+        const hasAttentionItems = totalAttentionCount > 0;
+
         return (
-            <>
-                {notifs && (notifs.arrivals.length > 0 || notifs.birthdays.length > 0 || notifs.pendingClaimsCount > 0 || notifs.missingPlansCount > 0) && (
-                    <div className={styles.notifTray}>
-                        {notifs.arrivals.map(a => (
-                            <div key={a.emp_id} className={styles.notifItem}>
-                                <span className={styles.notifIcon}><UserPlusIcon width={20} /></span>
-                                <div className={styles.notifText}>
-                                    <b>{a.name}</b> จะเริ่มงานในวันที่ {fmtThai(a.hire_date)}
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* ── Executive Header ── */}
+                <div className={styles.dashHeader}>
+                    <div>
+                        <div className={styles.dashGreetingRow}>
+                            <h1 className={styles.dashMainTitle}>ภาพรวมประจำวันและงานบุคคล</h1>
+                            <span className={styles.liveStatusBadge}>
+                                <span className={styles.livePulseDot} />
+                                ระบบออนไลน์ Real-time
+                            </span>
+                        </div>
+                        <p className={styles.dashSubTitle}>
+                            {todayLabel} · ตรวจสอบสถานะการเข้างาน คำขอที่รอการอนุมัติ และทางลัดจัดการระบบ
+                        </p>
+                    </div>
+
+                    <div className={styles.dashHeaderActions}>
+                        <button
+                            className={styles.dashRefreshBtn}
+                            onClick={refreshAll}
+                            disabled={dashLoading}
+                            title="รีเฟรชข้อมูลล่าสุด"
+                        >
+                            <ArrowPathIcon width={16} className={dashLoading ? styles.spinIcon : ""} />
+                            <span>{dashLoading ? "กำลังอัปเดต..." : "อัปเดตข้อมูล"}</span>
+                        </button>
+
+                        <div className={styles.toggleGroup}>
+                            <button
+                                className={`${styles.toggleBtn} ${dashView === "daily" ? styles.toggleActive : ""}`}
+                                onClick={() => setDashView("daily")}
+                            >
+                                <ClipboardDocumentListIcon width={16} />
+                                <span>ภาพรวมวันนี้ (Live)</span>
+                            </button>
+                            <button
+                                className={`${styles.toggleBtn} ${dashView === "analytics" ? styles.toggleActive : ""}`}
+                                onClick={() => setDashView("analytics")}
+                            >
+                                <ChartBarIcon width={16} />
+                                <span>สถิติและแนวโน้ม (Analytics)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {dashView === "daily" ? (
+                    <>
+                        {/* ── 1. Attendance Metrics ── */}
+                        <div className={styles.overviewGrid}>
+                            <Link href="/admin?tab=attendance" className={`${styles.metricCard} ${styles.metricGreen}`}>
+                                <div className={styles.metricTop}>
+                                    <div className={styles.metricIconBox}>
+                                        <CheckCircleIcon width={22} />
+                                    </div>
+                                    <span className={styles.metricTag}>ปกติ</span>
                                 </div>
-                            </div>
-                        ))}
-                        {notifs.birthdays.map(b => (
-                            <div key={b.emp_id} className={styles.notifItem}>
-                                <span className={styles.notifIcon}><CakeIcon width={20} /></span>
-                                <div className={styles.notifText}>
-                                    วันนี้เป็นวันเกิดของ <b>{b.name}</b> อย่าลืมมอบสวัสดิการ!
-                                </div>
-                            </div>
-                        ))}
-                        {notifs.pendingClaimsCount > 0 && (
-                            <Link href="/admin/birthday-claims" className={styles.notifItemLink}>
-                                <span className={styles.notifIcon}><PencilSquareIcon width={20} /></span>
-                                <div className={styles.notifText}>
-                                    มีคำขอสวัสดิการวันเกิด <b>{notifs.pendingClaimsCount} รายการ</b> ที่รอการตรวจสอบ
-                                </div>
-                                <span className={styles.notifArrow}><ChevronRightIcon width={16} /></span>
+                                <div className={styles.metricVal}>{dash?.present ?? 0}</div>
+                                <div className={styles.metricLabel}>เข้างานแล้ววันนี้</div>
+                                <div className={styles.metricHint}>คลิกเพื่อดูบันทึกเวลา →</div>
                             </Link>
-                        )}
-                        {notifs.missingPlansCount > 0 && (
-                            <div className={styles.notifItem} style={{ background: '#fff7ed', border: '1px solid #ffedd5' }}>
-                                <span className={styles.notifIcon} style={{ color: '#f97316' }}><ClipboardDocumentListIcon width={20} /></span>
-                                <div className={styles.notifText}>
-                                    มีพนักงาน <b>{notifs.missingPlansCount} คน</b> ยังไม่ได้ส่งแผนงานประจำวัน
+
+                            <Link href="/admin?tab=attendance&status=absent" className={`${styles.metricCard} ${styles.metricRed}`}>
+                                <div className={styles.metricTop}>
+                                    <div className={styles.metricIconBox}>
+                                        <XCircleIcon width={22} />
+                                    </div>
+                                    <span className={styles.metricTag}>ยังไม่มา</span>
+                                </div>
+                                <div className={styles.metricVal}>{dash?.absent ?? 0}</div>
+                                <div className={styles.metricLabel}>ยังไม่เช็คอิน / ขาดงาน</div>
+                                <div className={styles.metricHint}>ดูรายชื่อพนักงาน →</div>
+                            </Link>
+
+                            <Link href="/admin?tab=attendance&status=late" className={`${styles.metricCard} ${styles.metricAmber}`}>
+                                <div className={styles.metricTop}>
+                                    <div className={styles.metricIconBox}>
+                                        <ClockIcon width={22} />
+                                    </div>
+                                    <span className={styles.metricTag}>สาย</span>
+                                </div>
+                                <div className={styles.metricVal}>{dash?.late ?? 0}</div>
+                                <div className={styles.metricLabel}>มาสายวันนี้</div>
+                                <div className={styles.metricHint}>ตรวจสอบเวลาเข้างาน →</div>
+                            </Link>
+
+                            <Link href="/admin/leaves" className={`${styles.metricCard} ${styles.metricBlue}`}>
+                                <div className={styles.metricTop}>
+                                    <div className={styles.metricIconBox}>
+                                        <SunIcon width={22} />
+                                    </div>
+                                    <span className={styles.metricTag}>อนุมัติแล้ว</span>
+                                </div>
+                                <div className={styles.metricVal}>{dash?.onLeave ?? 0}</div>
+                                <div className={styles.metricLabel}>ลางานวันนี้</div>
+                                <div className={styles.metricHint}>ดูรายละเอียดการลา →</div>
+                            </Link>
+
+                            <Link href="/admin/records?under9=1" className={`${styles.metricCard} ${styles.metricRose}`}>
+                                <div className={styles.metricTop}>
+                                    <div className={styles.metricIconBox}>
+                                        <ExclamationTriangleIcon width={22} />
+                                    </div>
+                                    <span className={styles.metricTag}>ต้องติดตาม</span>
+                                </div>
+                                <div className={styles.metricVal}>{dash?.under9Hours ?? 0}</div>
+                                <div className={styles.metricLabel}>ทำงาน &lt; 9 ชม.</div>
+                                <div className={styles.metricHint}>ดูรายชื่อและเวลาขาด →</div>
+                            </Link>
+                        </div>
+
+                        {/* ── 2. Action Center ── */}
+                        <div className={styles.actionCenterSection}>
+                            <div className={styles.sectionHeaderRow}>
+                                <div className={styles.sectionTitleWithIcon}>
+                                    <BellAlertIcon width={18} style={{ color: "var(--red)" }} />
+                                    <span>สิ่งที่ต้องดำเนินการ &amp; แจ้งเตือนสำคัญ</span>
+                                </div>
+                                {hasAttentionItems ? (
+                                    <span className={styles.attentionBadgeCount}>{totalAttentionCount} รายการ</span>
+                                ) : (
+                                    <span className={styles.allClearBadge}>
+                                        <CheckBadgeIcon width={16} /> ทุกรายการเรียบร้อย
+                                    </span>
+                                )}
+                            </div>
+
+                            {hasAttentionItems ? (
+                                <div className={styles.actionItemsGrid}>
+                                    {pendingLeave.length > 0 && (
+                                        <Link href="/admin/leaves" className={styles.actionCardItem}>
+                                            <div className={styles.actionCardIcon} style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                                                <SunIcon width={20} />
+                                            </div>
+                                            <div className={styles.actionCardBody}>
+                                                <div className={styles.actionCardTitle}>คำขอลาที่รอการอนุมัติ</div>
+                                                <div className={styles.actionCardDesc}>มีใบลาค้างรอตรวจสอบ <b>{pendingLeave.length} รายการ</b></div>
+                                            </div>
+                                            <span className={styles.actionCardBtn}>ตรวจสอบ <ChevronRightIcon width={14} /></span>
+                                        </Link>
+                                    )}
+
+                                    {notifs && notifs.pendingClaimsCount > 0 && (
+                                        <Link href="/admin/birthday-claims" className={styles.actionCardItem}>
+                                            <div className={styles.actionCardIcon} style={{ background: "#fdf4ff", color: "#c026d3" }}>
+                                                <GiftIcon width={20} />
+                                            </div>
+                                            <div className={styles.actionCardBody}>
+                                                <div className={styles.actionCardTitle}>คำขอสวัสดิการวันเกิด</div>
+                                                <div className={styles.actionCardDesc}>มีคำขอรอการตรวจสอบ <b>{notifs.pendingClaimsCount} รายการ</b></div>
+                                            </div>
+                                            <span className={styles.actionCardBtn}>ตรวจสอบ <ChevronRightIcon width={14} /></span>
+                                        </Link>
+                                    )}
+
+                                    {notifs && notifs.missingPlansCount > 0 && (
+                                        <div className={styles.actionCardItemStatic}>
+                                            <div className={styles.actionCardIcon} style={{ background: "#fff7ed", color: "#ea580c" }}>
+                                                <ClipboardDocumentListIcon width={20} />
+                                            </div>
+                                            <div className={styles.actionCardBody}>
+                                                <div className={styles.actionCardTitle}>แผนงานประจำวัน</div>
+                                                <div className={styles.actionCardDesc}>มีพนักงาน <b>{notifs.missingPlansCount} คน</b> ยังไม่ได้ส่งแผนงาน</div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {notifs && notifs.birthdays.length > 0 && (
+                                        <div className={styles.actionCardItemStatic}>
+                                            <div className={styles.actionCardIcon} style={{ background: "#fef2f2", color: "#e11d48" }}>
+                                                <CakeIcon width={20} />
+                                            </div>
+                                            <div className={styles.actionCardBody}>
+                                                <div className={styles.actionCardTitle}>วันเกิดพนักงานวันนี้</div>
+                                                <div className={styles.actionCardDesc}>
+                                                    {notifs.birthdays.map((b: any) => b.name).join(", ")} 🎉
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {notifs && notifs.arrivals.length > 0 && (
+                                        <div className={styles.actionCardItemStatic}>
+                                            <div className={styles.actionCardIcon} style={{ background: "#f0fdf4", color: "#16a34a" }}>
+                                                <UserPlusIcon width={20} />
+                                            </div>
+                                            <div className={styles.actionCardBody}>
+                                                <div className={styles.actionCardTitle}>พนักงานใหม่จะเริ่มงาน</div>
+                                                <div className={styles.actionCardDesc}>
+                                                    {notifs.arrivals.map((a: any) => `${a.name} (${fmtThai(a.hire_date)})`).join(", ")}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className={styles.allClearCard}>
+                                    <CheckCircleIcon width={20} style={{ color: "#10b981" }} />
+                                    <span>ไม่มีรายการรอการอนุมัติหรือการแจ้งเตือนค้างในวันนี้ การดำเนินงานเป็นไปอย่างเรียบร้อย</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── 3. Two-Column Layout ── */}
+                        <div className={styles.dashTwoColLayout}>
+                            {/* Left: Live Activity Feed */}
+                            <div className={styles.dashMainCol}>
+                                <div className={styles.feedCard}>
+                                    <div className={styles.feedHeader}>
+                                        <div className={styles.feedHeaderTitle}>
+                                            <ClockIcon width={20} style={{ color: "var(--red)" }} />
+                                            <span>บันทึกเวลาเข้า–ออกงานล่าสุดวันนี้</span>
+                                            {dash?.recent && dash.recent.length > 0 && (
+                                                <span className={styles.feedCountBadge}>{dash.recent.length} รายการ</span>
+                                            )}
+                                        </div>
+                                        <Link href="/admin?tab=attendance" className={styles.feedHeaderLink}>
+                                            ดูทั้งหมด <ChevronRightIcon width={14} />
+                                        </Link>
+                                    </div>
+
+                                    <div className={styles.feedTableWrap}>
+                                        {dashLoading && !dash ? (
+                                            <div className={styles.loader} style={{ height: 180 }}>
+                                                <div className={styles.spinner} /> กำลังโหลดบันทึกเวลา...
+                                            </div>
+                                        ) : !dash?.recent || dash.recent.length === 0 ? (
+                                            <div className={styles.emptyFeed}>
+                                                <InboxStackIcon width={36} />
+                                                <p>ยังไม่มีบันทึกเวลาเช็คอินในวันนี้</p>
+                                            </div>
+                                        ) : (
+                                            <table className={styles.feedTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>เวลา</th>
+                                                        <th>พนักงาน</th>
+                                                        <th>ประเภท</th>
+                                                        <th>สถานที่ / สาขา</th>
+                                                        <th>สถานะ</th>
+                                                        <th>รูปถ่าย</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {dash.recent.slice(0, 10).map((r) => (
+                                                        <tr key={r.id}>
+                                                            <td className={styles.feedTimeCol}>
+                                                                <span className={styles.monoTime}>{formatTime(r.timestamp)}</span>
+                                                            </td>
+                                                            <td>
+                                                                <div className={styles.feedEmpName}>{r.name}</div>
+                                                                <div className={styles.feedEmpId}>{r.emp_id}</div>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`${styles.typeBadge} ${
+                                                                    r.type?.toLowerCase().includes("-in") ? styles.checkin :
+                                                                    (r.type === "ขาดงาน" || r.late_status === "absent") ? styles.absent :
+                                                                    r.type === "ลา" ? styles.leave : styles.checkout
+                                                                }`}>
+                                                                    {r.type?.toLowerCase().includes("-in") ? "เข้า" :
+                                                                     r.type === "ขาดงาน" ? "ขาด" :
+                                                                     r.type === "ลา" ? "ลา" : "ออก"}
+                                                                    {r.type?.includes("Project") ? " (โครงการ)" :
+                                                                     r.type?.includes("Offsite") ? " (นอกสถานที่)" : ""}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <div className={styles.feedBranchName}>{r.branch_name || "—"}</div>
+                                                                {r.project_name && (
+                                                                    <div className={styles.feedPrjName}>• {r.project_name}</div>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {r.late_status ? (
+                                                                    <span className={badgeClass(r.late_status)}>
+                                                                        {r.late_label || r.late_status}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span style={{ color: "var(--text4)", fontSize: 12 }}>—</span>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {r.photo_url ? (
+                                                                    <Image
+                                                                        src={r.photo_url}
+                                                                        alt="photo"
+                                                                        width={40}
+                                                                        height={30}
+                                                                        unoptimized
+                                                                        className={styles.feedThumb}
+                                                                        onClick={() => setPhotoModal({
+                                                                            url: r.photo_url!,
+                                                                            empId: r.emp_id,
+                                                                            name: r.name,
+                                                                            time: formatTime(r.timestamp),
+                                                                            type: r.type,
+                                                                            lateLabel: r.late_label || ""
+                                                                        })}
+                                                                    />
+                                                                ) : (
+                                                                    <span style={{ color: "var(--text5)", fontSize: 12 }}>—</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+
+                                    {dash?.recent && dash.recent.length > 10 && (
+                                        <div className={styles.feedFooter}>
+                                            <span>แสดง 10 จาก {dash.recent.length} รายการล่าสุด</span>
+                                            <Link href="/admin?tab=attendance" className={styles.btnSecondarySm}>
+                                                ดูรายการทั้งหมด
+                                            </Link>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+
+                            {/* Right: Watchlist & Shortcuts */}
+                            <div className={styles.dashSideCol}>
+                                {/* Under 9 Hours Watchlist */}
+                                <div className={styles.sideCard}>
+                                    <div className={styles.sideCardHeader}>
+                                        <div className={styles.sideCardTitle} style={{ color: dash?.under9Hours ? "#e11d48" : "var(--text)" }}>
+                                            <ExclamationTriangleIcon width={18} />
+                                            <span>ทำงานไม่ครบ 9 ชม. วันนี้</span>
+                                        </div>
+                                        {dash?.under9Hours ? (
+                                            <span className={styles.under9Badge}>{dash.under9Hours} คน</span>
+                                        ) : null}
+                                    </div>
+
+                                    <div className={styles.sideCardBody}>
+                                        {dash?.under9HoursList && dash.under9HoursList.length > 0 ? (
+                                            <div className={styles.under9List}>
+                                                {dash.under9HoursList.map(u => (
+                                                    <div key={u.emp_id} className={styles.under9Item}>
+                                                        <div className={styles.under9Top}>
+                                                            <span className={styles.under9Name}>{u.name}</span>
+                                                            <span className={styles.under9Diff}>ขาด {u.diff_mins} นาที</span>
+                                                        </div>
+                                                        <div className={styles.under9Times}>
+                                                            เข้า {u.in_time} → ออก {u.out_time} ({u.duration_display})
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className={styles.under9Empty}>
+                                                <CheckCircleIcon width={24} style={{ color: "#10b981", margin: "0 auto 6px" }} />
+                                                <div>ไม่มีพนักงานทำงานไม่ครบ 9 ชม. ในวันนี้</div>
+                                                <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 2 }}>คำนวณจากเวลาเข้า-ออกงานรวม 9 ชั่วโมง</div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className={styles.sideCardFooter}>
+                                        <Link href="/admin/records?under9=1" className={styles.sideCardLink}>
+                                            ดูรายงานสถิติ &lt; 9 ชม. ย้อนหลัง →
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                {/* Quick Shortcuts */}
+                                <div className={styles.sideCard}>
+                                    <div className={styles.sideCardHeader}>
+                                        <div className={styles.sideCardTitle}>
+                                            <SparklesIcon width={18} style={{ color: "#f59e0b" }} />
+                                            <span>ทางลัดเมนูหลัก (Quick Actions)</span>
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.quickGrid}>
+                                        <Link href="/admin?tab=attendance" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#ecfdf5", color: "#059669" }}>
+                                                <ClipboardDocumentListIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>บันทึกเวลา</div>
+                                                <div className={styles.quickSub}>ดู log &amp; รูป</div>
+                                            </div>
+                                        </Link>
+
+                                        <Link href="/admin/records" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#eff6ff", color: "#2563eb" }}>
+                                                <PresentationChartLineIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>สถิติย้อนหลัง</div>
+                                                <div className={styles.quickSub}>สรุป &amp; โหลด Excel</div>
+                                            </div>
+                                        </Link>
+
+                                        <Link href="/admin/employees/list" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                                                <UsersIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>ข้อมูลพนักงาน</div>
+                                                <div className={styles.quickSub}>รายชื่อ &amp; แผนก</div>
+                                            </div>
+                                        </Link>
+
+                                        <Link href="/admin/leaves" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#fffbeb", color: "#d97706" }}>
+                                                <SunIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>อนุมัติการลา</div>
+                                                <div className={styles.quickSub}>จัดการใบลา</div>
+                                            </div>
+                                        </Link>
+
+                                        <Link href="/admin/ot" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#fdf4ff", color: "#c026d3" }}>
+                                                <ClockIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>คำขอ OT</div>
+                                                <div className={styles.quickSub}>ล่วงเวลา &amp; อนุมัติ</div>
+                                            </div>
+                                        </Link>
+
+                                        <Link href="/admin/payroll" className={styles.quickItem}>
+                                            <div className={styles.quickIcon} style={{ background: "#f0fdf4", color: "#16a34a" }}>
+                                                <BanknotesIcon width={18} />
+                                            </div>
+                                            <div className={styles.quickTexts}>
+                                                <div className={styles.quickName}>ระบบเงินเดือน</div>
+                                                <div className={styles.quickSub}>สรุปยอดเงินเดือน</div>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    /* ── HR Analytics View ── */
+                    <div className={styles.analyticsWrapper}>
+                        <div className={styles.analyticsNoticeBanner}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <ChartBarIcon width={22} style={{ color: "var(--red)" }} />
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: 14 }}>สถิติและแนวโน้มภาพรวมองค์กร (HR Analytics)</div>
+                                    <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>
+                                        วิเคราะห์ข้อมูลเชิงลึก โครงสร้างฝ่าย ช่วงอายุ อัตราการลาออก และสถิติการลา
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                className={styles.btnOutlineSm}
+                                onClick={() => setDashView("daily")}
+                                style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
+                            >
+                                <ChevronLeftIcon width={14} /> กลับไปภาพรวมประจำวัน
+                            </button>
+                        </div>
+
+                        <HRDashboard />
                     </div>
                 )}
-
-                <HRDashboard />
-            </>
+            </div>
         );
     }
 
@@ -1406,12 +1904,14 @@ function AdminPageInner() {
 
     return (
         <div className={styles.content}>
-            <div className={styles.pageHeader}>
-                <h2 className={styles.pageTitle}>
-                    {TAB_TITLES[activeTab]}
-                    <span className={styles.pageSubtitle}>TERA GROUP · HR Admin System</span>
-                </h2>
-            </div>
+            {activeTab !== "dashboard" && (
+                <div className={styles.pageHeader}>
+                    <h2 className={styles.pageTitle}>
+                        {TAB_TITLES[activeTab]}
+                        <span className={styles.pageSubtitle}>TERA GROUP · HR Admin System</span>
+                    </h2>
+                </div>
+            )}
 
             {activeTab === "dashboard" && renderDashboard()}
             {activeTab === "attendance" && renderAttendance()}

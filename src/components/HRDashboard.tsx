@@ -2,13 +2,14 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
 import {
   UsersIcon, UserGroupIcon, UserIcon, UserPlusIcon, ArrowRightStartOnRectangleIcon,
-  ArrowUpIcon, ArrowDownIcon, ArrowDownTrayIcon, ArrowPathIcon
+  ArrowUpIcon, ArrowDownIcon, ArrowDownTrayIcon, ArrowPathIcon, ClockIcon, ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 import styles from "./HRDashboard.module.css";
 
@@ -41,6 +42,8 @@ interface HRData {
   newHiresDiff: number;
   resigned: number;
   resignedDiff: number;
+  under9HoursCount?: number;
+  under9HoursAffected?: number;
 }
 
 interface ChartData {
@@ -205,6 +208,23 @@ export default function HRDashboard() {
             )}
           </div>
         </div>
+
+        <Link 
+          href={startDate && endDate ? `/admin/records?tab=under_9h&start_date=${startDate}&end_date=${endDate}` : '/admin/records?tab=under_9h'} 
+          className={styles.kpiCard} 
+          style={{ textDecoration: 'none', cursor: 'pointer' }}
+        >
+          <div className={styles.kpiHeader}>
+            <div className={styles.kpiIconWrapper} style={{ background: '#fff7ed', color: '#ea580c' }}>
+              <ClockIcon width={24} />
+            </div>
+            <div className={styles.kpiTitle}>ทำงาน &lt; 9 ชม. (จ.-ศ.)</div>
+          </div>
+          <div className={styles.kpiValue} style={{ color: '#c2410c' }}>{data?.under9HoursCount ?? 0} <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>ครั้ง</span></div>
+          <div className={styles.kpiSub} style={{ color: '#475569' }}>
+            พบในพนักงาน <b>{data?.under9HoursAffected ?? 0}</b> คน <span style={{ color: '#3b82f6', fontWeight: 600, marginLeft: 4 }}>ดูสถิติย้อนหลัง →</span>
+          </div>
+        </Link>
       </div>
 
       {/* 2. First Row of Charts */}

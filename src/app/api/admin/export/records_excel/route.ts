@@ -23,6 +23,8 @@ export async function GET(req: Request) {
         const paramEndDate = url.searchParams.get("end_date");
         const emp_id = url.searchParams.get("emp_id");
         const status = url.searchParams.get("status");
+        const onlyUnder9h = url.searchParams.get("under_9h") === "1" || url.searchParams.get("only_under_9h") === "1";
+        const onlyOver9h = url.searchParams.get("over_9h") === "1" || url.searchParams.get("only_over_9h") === "1";
 
         const teamOnly = url.searchParams.get("team") === "1";
         const subordinateFilter: any = {};
@@ -94,13 +96,17 @@ export async function GET(req: Request) {
                 },
             });
 
-            processEmployeeSheet(sheet, emp_id, start, end, holidayMap, checkins, leaves, travels);
+            processEmployeeSheet(sheet, emp_id, start, end, holidayMap, checkins, leaves, travels, onlyUnder9h, onlyOver9h);
 
             const buffer = await workbook.xlsx.writeBuffer();
+            let filterTag = "";
+            if (onlyUnder9h) filterTag = "_UNDER_9H";
+            else if (onlyOver9h) filterTag = "_OVER_9H";
+            const filenameTag = `${emp_id}_records${filterTag}_${periodLabel}.xlsx`;
             return new Response(buffer, {
                 headers: {
                     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "Content-Disposition": `attachment; filename="${emp_id}_records_${periodLabel}.xlsx"`,
+                    "Content-Disposition": `attachment; filename="${filenameTag}"`,
                 },
             });
 
@@ -147,6 +153,9 @@ export async function GET(req: Request) {
                 { header: "PENDING_LEAVES", key: "pending", width: 15 },
                 { header: "LATE_TIMES", key: "late_count", width: 15 },
                 { header: "LATE_MINUTES", key: "late_mins", width: 15 },
+                { header: "UNDER_9H_DAYS", key: "under_9h_count", width: 16 },
+                { header: "OVER_9H_DAYS", key: "over_9h_count", width: 16 },
+                { header: "OVER_9H_MINUTES", key: "over_9h_mins", width: 18 },
                 { header: "TOTAL_WORK_DAYS", key: "total_days", width: 15 },
             ];
             summarySheet.getRow(1).font = { bold: true };
@@ -176,7 +185,20 @@ export async function GET(req: Request) {
 
             const holidayDates = new Set(Array.from(holidayMap.keys()));
 
-            const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string>, total_work_days: number }> = {};
+            // Map approved leave dates per emp_id
+            const approvedLeaveEmpDates = new Set<string>();
+            for (const l of leavesAll) {
+                if (l.status === "approved") {
+                    let cur = new Date(l.start_date);
+                    const endD = new Date(l.end_date);
+                    while (cur <= endD) {
+                        approvedLeaveEmpDates.add(`${l.emp_id}_${cur.toISOString().split("T")[0]}`);
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                }
+            }
+
+            const stats: Record<string, { leave_days: number, pending_leave_days: number, late_count: number, late_mins: number, present_dates: Set<string>, total_work_days: number, under_9h_count: number, over_9h_count: number, over_9h_mins: number }> = {};
             
             for (const e of emps) {
                 let empStartDate = start;
@@ -199,7 +221,7 @@ export async function GET(req: Request) {
                     }
                 }
 
-                stats[e.emp_id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set(), total_work_days: empTotalWorkDays };
+                stats[e.emp_id] = { leave_days: 0, pending_leave_days: 0, late_count: 0, late_mins: 0, present_dates: new Set(), total_work_days: empTotalWorkDays, under_9h_count: 0, over_9h_count: 0, over_9h_mins: 0 };
             }
 
             for (const l of leavesAll) {
@@ -234,19 +256,72 @@ export async function GET(req: Request) {
                 else if (l.status === "pending") stats[l.emp_id].pending_leave_days += finalDaysToAdd;
             }
 
+            const empDailyCheckins: Record<string, Record<string, { ins: Date[]; outs: Date[] }>> = {};
+
             for (const r of checkinsAll) {
                 if (!stats[r.emp_id]) continue;
                 const d = r.date_key.toISOString().split("T")[0];
-                if (r.type === "Check-in" || r.type === "Project-In" || r.type === "Offsite-In") {
+
+                if (!empDailyCheckins[r.emp_id]) empDailyCheckins[r.emp_id] = {};
+                if (!empDailyCheckins[r.emp_id][d]) empDailyCheckins[r.emp_id][d] = { ins: [], outs: [] };
+
+                const isOut = r.type.toLowerCase().includes("-out") || r.type === "Check-out";
+                const isIn = r.type.toLowerCase().includes("-in") || r.type === "Trip-Update";
+
+                if (isIn) {
                     stats[r.emp_id].present_dates.add(d);
+                    empDailyCheckins[r.emp_id][d].ins.push(new Date(r.timestamp));
                     if (r.late_status === "late") {
                         stats[r.emp_id].late_count += 1;
                         if (r.late_min) stats[r.emp_id].late_mins += r.late_min;
                     }
                 }
+                if (isOut) {
+                    empDailyCheckins[r.emp_id][d].outs.push(new Date(r.timestamp));
+                }
             }
 
             for (const e of emps) {
+                if (e.is_checkin_exempt) continue;
+                const empDays = empDailyCheckins[e.emp_id];
+                if (!empDays) continue;
+
+                for (const [dStr, daily] of Object.entries(empDays)) {
+                    if (daily.ins.length === 0 || daily.outs.length === 0) continue;
+                    const dt = new Date(dStr + "T00:00:00Z");
+                    const dayOfWeek = dt.getUTCDay();
+                    if (dayOfWeek < 1 || dayOfWeek > 5) continue;
+                    if (holidayDates.has(dStr)) continue;
+                    if (approvedLeaveEmpDates.has(`${e.emp_id}_${dStr}`)) continue;
+
+                    const firstIn = Math.min(...daily.ins.map(t => t.getTime()));
+                    const lastOut = Math.max(...daily.outs.map(t => t.getTime()));
+                    const diffMinutes = Math.round((lastOut - firstIn) / 60000);
+
+                    if (diffMinutes > 0) {
+                        if (diffMinutes < 540) {
+                            stats[e.emp_id].under_9h_count += 1;
+                        } else if (diffMinutes > 540) {
+                            stats[e.emp_id].over_9h_count += 1;
+                            stats[e.emp_id].over_9h_mins += (diffMinutes - 540);
+                        }
+                    }
+                }
+            }
+
+            const empsToExport = onlyUnder9h 
+                ? emps.filter(e => (stats[e.emp_id]?.under_9h_count || 0) > 0)
+                : onlyOver9h
+                    ? emps.filter(e => (stats[e.emp_id]?.over_9h_count || 0) > 0)
+                    : emps;
+
+            if (onlyUnder9h) {
+                summarySheet.name = "Summary (Under 9h)";
+            } else if (onlyOver9h) {
+                summarySheet.name = "Summary (Over 9h)";
+            }
+
+            for (const e of empsToExport) {
                 const s = stats[e.emp_id];
                 
                 let attendedWorkDatesCount = 0;
@@ -271,11 +346,14 @@ export async function GET(req: Request) {
                     pending: s.pending_leave_days,
                     late_count: s.late_count,
                     late_mins: s.late_mins,
+                    under_9h_count: s.under_9h_count,
+                    over_9h_count: s.over_9h_count,
+                    over_9h_mins: s.over_9h_mins,
                     total_days: s.total_work_days
                 });
             }
 
-            // 2. Individual Sheets
+            // 2. Pre-index Checkins, Leaves, and Travels
             const checkinsByEmp = checkinsAll.reduce((acc, curr) => {
                 acc[curr.emp_id] = acc[curr.emp_id] || [];
                 acc[curr.emp_id].push(curr);
@@ -294,7 +372,158 @@ export async function GET(req: Request) {
                 return acc;
             }, {} as Record<string, any[]>);
 
-            for (const e of emps) {
+            // 1.5 Consolidated Under 9h Master Log Sheet
+            if (onlyUnder9h) {
+                const logSheet = workbook.addWorksheet("Under 9h Master Log");
+                logSheet.columns = [
+                    { header: "EMP_ID", key: "emp_id", width: 14 },
+                    { header: "NAME", key: "name", width: 25 },
+                    { header: "BRANCH", key: "branch", width: 15 },
+                    { header: "DATE", key: "date", width: 14 },
+                    { header: "IN_TIME", key: "in_time", width: 12 },
+                    { header: "IN_LOCATION", key: "in_loc", width: 30 },
+                    { header: "OUT_TIME", key: "out_time", width: 12 },
+                    { header: "OUT_LOCATION", key: "out_loc", width: 30 },
+                    { header: "DURATION", key: "duration", width: 16 },
+                    { header: "DEFICIT", key: "deficit", width: 16 },
+                ];
+                logSheet.getRow(1).font = { bold: true };
+                logSheet.getRow(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFE0B2' }
+                };
+
+                for (const e of empsToExport) {
+                    const empDays = empDailyCheckins[e.emp_id] || {};
+                    const sortedDates = Object.keys(empDays).sort();
+                    for (const dStr of sortedDates) {
+                        const daily = empDays[dStr];
+                        if (daily.ins.length === 0 || daily.outs.length === 0) continue;
+                        const dt = new Date(dStr + "T00:00:00Z");
+                        const dayOfWeek = dt.getUTCDay();
+                        if (dayOfWeek < 1 || dayOfWeek > 5) continue;
+                        if (holidayDates.has(dStr)) continue;
+                        if (approvedLeaveEmpDates.has(`${e.emp_id}_${dStr}`)) continue;
+
+                        const firstIn = Math.min(...daily.ins.map(t => t.getTime()));
+                        const lastOut = Math.max(...daily.outs.map(t => t.getTime()));
+                        const diffMinutes = Math.round((lastOut - firstIn) / 60000);
+
+                        if (diffMinutes > 0 && diffMinutes < 540) {
+                            const h = Math.floor(diffMinutes / 60);
+                            const m = diffMinutes % 60;
+                            const dur = `${h} ชม.${m > 0 ? ` ${m} นาที` : ""}`;
+                            const deficit = `ขาด ${540 - diffMinutes} นาที`;
+
+                            const dayCheckins = (checkinsByEmp[e.emp_id] || []).filter(c => c.date_key.toISOString().split("T")[0] === dStr);
+                            const inRecs = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
+                            const outRecs = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
+                            const inLoc = inRecs[0]?.project_name || inRecs[0]?.remark || inRecs[0]?.branch_name || "-";
+                            const outLoc = outRecs[outRecs.length - 1]?.project_name || outRecs[outRecs.length - 1]?.remark || outRecs[outRecs.length - 1]?.branch_name || "-";
+
+                            const r = logSheet.addRow({
+                                emp_id: e.emp_id,
+                                name: e.name,
+                                branch: e.branch_id || "-",
+                                date: dStr,
+                                in_time: formatTime(new Date(firstIn)),
+                                in_loc: inLoc,
+                                out_time: formatTime(new Date(lastOut)),
+                                out_loc: outLoc,
+                                duration: dur,
+                                deficit: deficit
+                            });
+                            r.eachCell(cell => {
+                                cell.fill = {
+                                    type: 'pattern',
+                                    pattern: 'solid',
+                                    fgColor: { argb: 'FFFFF3E0' }
+                                };
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 1.6 Consolidated Over 9h Master Log Sheet
+            if (onlyOver9h) {
+                const logSheet = workbook.addWorksheet("Over 9h Master Log");
+                logSheet.columns = [
+                    { header: "EMP_ID", key: "emp_id", width: 14 },
+                    { header: "NAME", key: "name", width: 25 },
+                    { header: "BRANCH", key: "branch", width: 15 },
+                    { header: "DATE", key: "date", width: 14 },
+                    { header: "IN_TIME", key: "in_time", width: 12 },
+                    { header: "IN_LOCATION", key: "in_loc", width: 30 },
+                    { header: "OUT_TIME", key: "out_time", width: 12 },
+                    { header: "OUT_LOCATION", key: "out_loc", width: 30 },
+                    { header: "DURATION", key: "duration", width: 16 },
+                    { header: "EXCESS", key: "excess", width: 16 },
+                ];
+                logSheet.getRow(1).font = { bold: true };
+                logSheet.getRow(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF3E8FF' }
+                };
+
+                for (const e of empsToExport) {
+                    const empDays = empDailyCheckins[e.emp_id] || {};
+                    const sortedDates = Object.keys(empDays).sort();
+                    for (const dStr of sortedDates) {
+                        const daily = empDays[dStr];
+                        if (daily.ins.length === 0 || daily.outs.length === 0) continue;
+                        const dt = new Date(dStr + "T00:00:00Z");
+                        const dayOfWeek = dt.getUTCDay();
+                        if (dayOfWeek < 1 || dayOfWeek > 5) continue;
+                        if (holidayDates.has(dStr)) continue;
+                        if (approvedLeaveEmpDates.has(`${e.emp_id}_${dStr}`)) continue;
+
+                        const firstIn = Math.min(...daily.ins.map(t => t.getTime()));
+                        const lastOut = Math.max(...daily.outs.map(t => t.getTime()));
+                        const diffMinutes = Math.round((lastOut - firstIn) / 60000);
+
+                        if (diffMinutes > 540) {
+                            const h = Math.floor(diffMinutes / 60);
+                            const m = diffMinutes % 60;
+                            const dur = `${h} ชม.${m > 0 ? ` ${m} นาที` : ""}`;
+                            const excessMins = diffMinutes - 540;
+                            const exH = Math.floor(excessMins / 60);
+                            const exM = excessMins % 60;
+                            const excess = `เกิน ${exH > 0 ? `${exH} ชม. ` : ""}${exM} นาที`;
+
+                            const dayCheckins = (checkinsByEmp[e.emp_id] || []).filter(c => c.date_key.toISOString().split("T")[0] === dStr);
+                            const inRecs = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
+                            const outRecs = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
+                            const inLoc = inRecs[0]?.project_name || inRecs[0]?.remark || inRecs[0]?.branch_name || "-";
+                            const outLoc = outRecs[outRecs.length - 1]?.project_name || outRecs[outRecs.length - 1]?.remark || outRecs[outRecs.length - 1]?.branch_name || "-";
+
+                            const r = logSheet.addRow({
+                                emp_id: e.emp_id,
+                                name: e.name,
+                                branch: e.branch_id || "-",
+                                date: dStr,
+                                in_time: formatTime(new Date(firstIn)),
+                                in_loc: inLoc,
+                                out_time: formatTime(new Date(lastOut)),
+                                out_loc: outLoc,
+                                duration: dur,
+                                excess: excess
+                            });
+                            r.eachCell(cell => {
+                                cell.fill = {
+                                    type: 'pattern',
+                                    pattern: 'solid',
+                                    fgColor: { argb: 'FFF3E8FF' }
+                                };
+                            });
+                        }
+                    }
+                }
+            }
+
+            for (const e of empsToExport) {
                 let sheetName = `${e.emp_id} - ${e.name}`.slice(0, 31);
                 const sheet = workbook.addWorksheet(sheetName);
                 
@@ -302,14 +531,17 @@ export async function GET(req: Request) {
                 const empLeaves = leavesByEmp[e.emp_id] || [];
                 const empTravels = travelsByEmp[e.emp_id] || [];
                 
-                processEmployeeSheet(sheet, e.emp_id, start, end, holidayMap, empCheckins, empLeaves, empTravels);
+                processEmployeeSheet(sheet, e.emp_id, start, end, holidayMap, empCheckins, empLeaves, empTravels, false, false);
             }
 
             const buffer = await workbook.xlsx.writeBuffer();
+            let exportTag = "ALL_";
+            if (onlyUnder9h) exportTag = "UNDER_9H_";
+            else if (onlyOver9h) exportTag = "OVER_9H_";
             return new Response(buffer, {
                 headers: {
                     "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "Content-Disposition": `attachment; filename="historical_records_ALL_${periodLabel}.xlsx"`,
+                    "Content-Disposition": `attachment; filename="historical_records_${exportTag}${periodLabel}.xlsx"`,
                 },
             });
         }
@@ -328,7 +560,9 @@ function processEmployeeSheet(
     holidayMap: Map<string, string>,
     checkins: any[],
     leaves: any[],
-    travels: any[]
+    travels: any[],
+    filterOnlyUnder9h: boolean = false,
+    filterOnlyOver9h: boolean = false
 ) {
     sheet.columns = [
         { header: "DATE", key: "date", width: 15 },
@@ -336,6 +570,9 @@ function processEmployeeSheet(
         { header: "IN_LOCATION", key: "in_loc", width: 30 },
         { header: "OUT_TIME", key: "out_time", width: 12 },
         { header: "OUT_LOCATION", key: "out_loc", width: 30 },
+        { header: "DURATION", key: "duration", width: 16 },
+        { header: "UNDER_9H", key: "is_under_9h", width: 16 },
+        { header: "OVER_9H", key: "is_over_9h", width: 16 },
         { header: "LATE_MINS", key: "late_mins", width: 12 },
         { header: "STATUS", key: "status", width: 25 },
         { header: "MORNING", key: "morning", width: 15 },
@@ -395,8 +632,6 @@ function processEmployeeSheet(
         const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
         const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
 
-        // if (isSunday && inRecords.length === 0 && outRecords.length === 0) continue;
-
         let status = "ขาด";
         if (isSunday) status = "วันหยุด";
         if (holName) status = `หยุดพิเศษ (${holName})`;
@@ -417,6 +652,32 @@ function processEmployeeSheet(
             status = "ไม่เช็คอิน";
         }
 
+        let durationStr = "-";
+        let isUnder9hStr = "-";
+        let isOver9hStr = "-";
+        if (inRecord && outRecord) {
+            const diff = Math.round((outRecord.timestamp.getTime() - inRecord.timestamp.getTime()) / 60000);
+            if (diff > 0) {
+                const h = Math.floor(diff / 60);
+                const m = diff % 60;
+                durationStr = `${h} ชม.${m > 0 ? ` ${m} นาที` : ""}`;
+                const dayOfWeek = dt.getUTCDay();
+                const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+                if (isWeekday && !holName && !leaveData) {
+                    if (diff < 540) {
+                        isUnder9hStr = `ใช่ (ขาด ${540 - diff} น.)`;
+                    } else if (diff > 540) {
+                        const ex = diff - 540;
+                        const exH = Math.floor(ex / 60);
+                        const exM = ex % 60;
+                        isOver9hStr = `ใช่ (+${exH > 0 ? `${exH} ชม. ` : ""}${exM} น.)`;
+                    } else {
+                        isUnder9hStr = "ครบ 9 ชม.";
+                    }
+                }
+            }
+        }
+
         const inLocs = new Set<string>();
         inRecords.forEach(c => {
             const loc = c.project_name || c.remark || c.branch_name;
@@ -428,17 +689,45 @@ function processEmployeeSheet(
             if (loc) outLocs.add(loc);
         });
 
-        sheet.addRow({
+        if (filterOnlyUnder9h && !isUnder9hStr.startsWith("ใช่")) {
+            continue;
+        }
+        if (filterOnlyOver9h && !isOver9hStr.startsWith("ใช่")) {
+            continue;
+        }
+
+        const addedRow = sheet.addRow({
             date: dateStr,
             in_time: inRecord ? formatTime(inRecord.timestamp) : "-",
             in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : (inRecord ? "-" : "ไม่เช็คอิน"),
             out_time: outRecord ? formatTime(outRecord.timestamp) : "-",
             out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : "-",
+            duration: durationStr,
+            is_under_9h: isUnder9hStr,
+            is_over_9h: isOver9hStr,
             late_mins: inRecord?.late_min || 0,
             status: status,
             morning: leaveData?.morning || "-",
             afternoon: leaveData?.afternoon || "-",
             weekend: isSunday ? "YES" : "NO"
         });
+
+        if (isUnder9hStr.startsWith("ใช่")) {
+            addedRow.eachCell((cell) => {
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFF3E0' }
+                };
+            });
+        } else if (isOver9hStr.startsWith("ใช่")) {
+            addedRow.eachCell((cell) => {
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF3E8FF' }
+                };
+            });
+        }
     }
 }

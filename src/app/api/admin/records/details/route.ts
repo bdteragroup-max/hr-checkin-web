@@ -243,12 +243,50 @@ export async function GET(req: Request) {
 
             const isTrip = inRecord?.is_trip || outRecord?.is_trip || dayCheckins.some(c => c.is_trip);
 
+            let work_duration_mins: number | null = null;
+            let work_duration_display: string | null = null;
+            let is_under_9h = false;
+            let under_9h_diff_mins = 0;
+            let is_over_9h = false;
+            let over_9h_diff_mins = 0;
+
+            if (inRecord && outRecord) {
+                const diff = Math.round((outRecord.timestamp.getTime() - inRecord.timestamp.getTime()) / 60000);
+                if (diff > 0) {
+                    work_duration_mins = diff;
+                    const h = Math.floor(diff / 60);
+                    const m = diff % 60;
+                    work_duration_display = `${h} ชม.${m > 0 ? ` ${m} นาที` : ""}`;
+
+                    const dayOfWeek = dt.getUTCDay();
+                    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+                    const isHoliday = Boolean(holName);
+                    const isLeave = Boolean(leaveType);
+
+                    if (!emp.is_checkin_exempt && isWeekday && !isHoliday && !isLeave) {
+                        if (diff < 540) {
+                            is_under_9h = true;
+                            under_9h_diff_mins = 540 - diff;
+                        } else if (diff > 540) {
+                            is_over_9h = true;
+                            over_9h_diff_mins = diff - 540;
+                        }
+                    }
+                }
+            }
+
             reports.push({
                 date: dateStr,
                 in_time: inRecord ? formatTime(inRecord.timestamp) : null,
                 in_loc: inLocs.size > 0 ? Array.from(inLocs).join(" → ") : null,
                 out_time: outRecord ? formatTime(outRecord.timestamp) : null,
                 out_loc: outLocs.size > 0 ? Array.from(outLocs).join(" → ") : null,
+                work_duration_mins,
+                work_duration_display,
+                is_under_9h,
+                under_9h_diff_mins,
+                is_over_9h,
+                over_9h_diff_mins,
                 late_mins: inRecord?.late_min || 0,
                 status,
                 is_trip: isTrip,

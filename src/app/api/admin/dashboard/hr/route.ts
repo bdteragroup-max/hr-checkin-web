@@ -435,6 +435,80 @@ export async function GET(req: Request) {
                 : '-'
         }));
 
+        // Under 9 Hours calculation within startOfRange and endOfRange
+        const [holidaysForUnder9, leavesForUnder9, activeEmployeesForUnder9] = await Promise.all([
+            prisma.holidays.findMany({
+                where: { date: { gte: startOfRange, lte: endOfRange } },
+                select: { date: true }
+            }),
+            prisma.leave_requests.findMany({
+                where: {
+                    status: 'approved',
+                    start_date: { lte: endOfRange },
+                    end_date: { gte: startOfRange }
+                },
+                select: { emp_id: true, start_date: true, end_date: true }
+            }),
+            prisma.employees.findMany({
+                where: { is_active: true, is_checkin_exempt: false },
+                select: { emp_id: true }
+            })
+        ]);
+
+        const holidayDatesUnder9 = new Set(holidaysForUnder9.map(h => h.date.toISOString().split('T')[0]));
+        const leaveDatesUnder9 = new Set<string>();
+        for (const l of leavesForUnder9) {
+            let cur = new Date(l.start_date);
+            const endD = new Date(l.end_date);
+            while (cur <= endD) {
+                leaveDatesUnder9.add(`${l.emp_id}_${cur.toISOString().split('T')[0]}`);
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+
+        const under9EmpIds = activeEmployeesForUnder9.map(e => e.emp_id);
+        const checkinsForUnder9 = await prisma.checkins.findMany({
+            where: {
+                emp_id: { in: under9EmpIds },
+                timestamp: { gte: startOfRange, lte: endOfRange }
+            },
+            select: { emp_id: true, date_key: true, timestamp: true, type: true }
+        });
+
+        const dayMapUnder9: Record<string, { ins: Date[]; outs: Date[]; dateStr: string; emp_id: string }> = {};
+        for (const c of checkinsForUnder9) {
+            const dStr = c.date_key.toISOString().split('T')[0];
+            const key = `${c.emp_id}_${dStr}`;
+            if (!dayMapUnder9[key]) {
+                dayMapUnder9[key] = { ins: [], outs: [], dateStr: dStr, emp_id: c.emp_id };
+            }
+            if (c.type.toLowerCase().includes('-in') || c.type === 'Trip-Update') {
+                dayMapUnder9[key].ins.push(new Date(c.timestamp));
+            }
+            if (c.type.toLowerCase().includes('-out') || c.type === 'Check-out') {
+                dayMapUnder9[key].outs.push(new Date(c.timestamp));
+            }
+        }
+
+        let under9Count = 0;
+        const affectedEmpsSet = new Set<string>();
+        for (const [key, d] of Object.entries(dayMapUnder9)) {
+            if (d.ins.length === 0 || d.outs.length === 0) continue;
+            const dt = new Date(d.dateStr + 'T00:00:00Z');
+            const dayOfWeek = dt.getUTCDay();
+            if (dayOfWeek < 1 || dayOfWeek > 5) continue; // Mon-Fri only
+            if (holidayDatesUnder9.has(d.dateStr)) continue;
+            if (leaveDatesUnder9.has(key)) continue;
+
+            const firstIn = Math.min(...d.ins.map(t => t.getTime()));
+            const lastOut = Math.max(...d.outs.map(t => t.getTime()));
+            const diff = (lastOut - firstIn) / 60000;
+            if (diff > 0 && diff < 540) {
+                under9Count++;
+                affectedEmpsSet.add(d.emp_id);
+            }
+        }
+
         return NextResponse.json({
             ok: true,
             kpis: {
@@ -445,7 +519,9 @@ export async function GET(req: Request) {
                 newHires: newEmployeesThisYear,
                 newHiresDiff: newEmployeesThisYear - newEmployeesLastYear,
                 resigned: resignedThisYear,
-                resignedDiff: resignedThisYear - resignedLastYear
+                resignedDiff: resignedThisYear - resignedLastYear,
+                under9HoursCount: under9Count,
+                under9HoursAffected: affectedEmpsSet.size
             },
             charts: {
                 deptData: deptChartData,
