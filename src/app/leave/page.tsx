@@ -64,49 +64,30 @@ function formatLeaveMins(totalMins?: number) {
     return res.trim() || "0 วัน";
 }
 
-function calculateNetMinutes(startStr: string, endStr: string) {
-    if (!startStr || !endStr) return 0;
-    const startAt = new Date(startStr);
-    const endAt = new Date(endStr);
-    if (endAt <= startAt) return 0;
-
-    let totalWorkingMinutes = 0;
-    const current = new Date(startAt.getTime());
-
-    while (current < endAt) {
-        const dateStr = current.getFullYear() + "-" + String(current.getMonth() + 1).padStart(2, '0') + "-" + String(current.getDate()).padStart(2, '0');
-        const dayStart = new Date(`${dateStr}T08:00:00+07:00`);
-        const lunchStart = new Date(`${dateStr}T12:00:00+07:00`);
-        const lunchEnd = new Date(`${dateStr}T13:00:00+07:00`);
-        const dayOfWeek = current.getDay();
-
-        // standard end 17:00, Saturday end 15:00
-        const dayEnd = new Date(`${dateStr}T${dayOfWeek === 6 ? "15" : "17"}:00:00+07:00`);
-
-        const actualStart = current > dayStart ? current : dayStart;
-        const actualEnd = endAt < dayEnd ? endAt : dayEnd;
-
-        if (actualStart < actualEnd) {
-            let mins = Math.floor((actualEnd.getTime() - actualStart.getTime()) / 60000);
-            const overlapLunchStart = actualStart > lunchStart ? actualStart : lunchStart;
-            const overlapLunchEnd = actualEnd < lunchEnd ? actualEnd : lunchEnd;
-            if (overlapLunchStart < overlapLunchEnd) {
-                const lunchOverlapMins = Math.floor((overlapLunchEnd.getTime() - overlapLunchStart.getTime()) / 60000);
-                mins -= lunchOverlapMins;
-            }
-            totalWorkingMinutes += Math.max(0, mins);
-        }
-        current.setDate(current.getDate() + 1);
-        current.setHours(0, 0, 0, 0);
-    }
-    return totalWorkingMinutes;
-}
-
 function fmtDateTimeTH(d: string) {
     try {
         const dateObj = new Date(d);
         return `${formatDateShortThai(dateObj)} ${formatTime24h(dateObj)}`;
     } catch { return d; }
+}
+
+function fmtDateTimeRangeTH(startStr: string, endStr?: string | null) {
+    try {
+        const startObj = new Date(startStr);
+        if (!endStr) return `${formatDateShortThai(startObj)} ${formatTime24h(startObj)}`;
+        const endObj = new Date(endStr);
+        const startThai = formatDateShortThai(startObj);
+        const endThai = formatDateShortThai(endObj);
+        const startTime = formatTime24h(startObj);
+        const endTime = formatTime24h(endObj);
+
+        if (startThai === endThai) {
+            return `${startThai} ${startTime} - ${endTime}`;
+        }
+        return `${startThai} ${startTime} - ${endThai} ${endTime}`;
+    } catch {
+        return startStr;
+    }
 }
 
 /* ── Status Badge ── */
@@ -727,7 +708,7 @@ export default function LeavePage() {
                                     <div className={styles.historyRowMid}>
                                         <CalendarIcon width={14} style={{ color: 'var(--text4)' }} />
                                         <div className={styles.colDate}>
-                                            {fmtDateTimeTH(x.start_at)}
+                                            {fmtDateTimeRangeTH(x.start_at, x.end_at)}
                                         </div>
                                     </div>
                                     {x.handover_person && (

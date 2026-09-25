@@ -450,6 +450,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
+                            {/* ✅ Activity & Uploads Report */}
+                            {hasAccess("/admin/reports/activity") && (
+                                <Link
+                                    href="/admin/reports/activity"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/reports/activity") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><ClipboardDocumentListIcon width={20} /></span>สรุปคำขอและไฟล์แนบ
+                                </Link>
+                            )}
+
                             {/* ✅ HR Coin System */}
                             {hasAccess("/admin/rewards") && <div className={styles.navSection}>ระบบเหรียญรางวัล</div>}
 
