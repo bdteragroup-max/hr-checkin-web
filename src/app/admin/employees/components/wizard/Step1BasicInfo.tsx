@@ -96,7 +96,9 @@ export default function Step1BasicInfo({
     positions,
     initialData,
     empId,
+    isEdit = false,
     onComplete,
+    onSaveAndClose,
     onClose
 }: {
     companies: any[];
@@ -105,7 +107,9 @@ export default function Step1BasicInfo({
     positions: any[];
     initialData?: any;
     empId?: string | null;
+    isEdit?: boolean;
     onComplete: (data: any, rawState?: any) => void;
+    onSaveAndClose?: (savedEmp?: any) => void;
     onClose: () => void;
 }) {
     const initNat = parseNationality(initialData);
@@ -301,8 +305,8 @@ export default function Step1BasicInfo({
         }));
     }, [filteredPositions]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleFormSubmit = async (e?: React.FormEvent, isSaveAndClose = false) => {
+        if (e) e.preventDefault();
         setError("");
 
         const parsed = parseFullName(fullName);
@@ -314,22 +318,36 @@ export default function Step1BasicInfo({
             ? (customDocType.trim() || "other")
             : docTypeCategory;
 
+        const effectiveEmpId = (empId || initialData?.emp_id || formData.emp_id.trim() || undefined);
+        const isExisting = Boolean(empId || initialData?.isExistingInDb || (initialData?.emp_id && initialData?.emp_id === effectiveEmpId));
+
         if (docTypeCategory === "national_id" && formData.national_id_card) {
-            if (!validateThaiNationalId(formData.national_id_card)) {
+            const isUnchangedLegacy = isExisting && formData.national_id_card === initialData?.national_id_card;
+            if (!isUnchangedLegacy && !validateThaiNationalId(formData.national_id_card)) {
                 return setError("หมายเลขบัตรประชาชนไม่ถูกต้องตามหลักการคำนวณ 13 หลัก");
             }
         }
 
+        if (!isExisting && !formData.national_id_card) {
+            return setError("กรุณาระบุหมายเลขเอกสารประจำตัว");
+        }
+
+        if (!formData.hire_date) {
+            return setError("กรุณาระบุวันที่เริ่มงาน");
+        }
+
         setLoading(true);
         try {
-            // Infer company_id from emp_id if typed, or default to 2
-            let companyId = Number(formData.company_id) || 2;
-            const empIdUpper = formData.emp_id.trim().toUpperCase();
-            if (empIdUpper.startsWith("TE")) companyId = 3;
-            else if (empIdUpper.startsWith("TP")) companyId = 4;
-            else if (empIdUpper.startsWith("TG")) companyId = 2;
+            // Infer company_id from employee data or emp_id prefix
+            let companyId = Number(formData.company_id);
+            if (!companyId || isNaN(companyId)) {
+                const empIdUpper = (formData.emp_id?.trim() || effectiveEmpId || "").toUpperCase();
+                if (empIdUpper.startsWith("TE")) companyId = 3;
+                else if (empIdUpper.startsWith("TP")) companyId = 4;
+                else companyId = 2;
+            }
 
-            const payload = {
+            const payload: any = {
                 emp_id: formData.emp_id.trim() || undefined,
                 company_id: companyId,
                 name: parsed.name,
@@ -352,11 +370,9 @@ export default function Step1BasicInfo({
                 is_checkin_exempt: formData.is_checkin_exempt,
                 is_active: formData.is_active,
                 resignation_date: !formData.is_active ? (formData.resignation_date || new Date().toISOString().split("T")[0]) : null,
-                is_onboarding_complete: false
+                // Existing employees being edited are verified; new employees remain false until completing onboarding (Step 3)
+                is_onboarding_complete: isExisting ? true : false
             };
-
-            const effectiveEmpId = (empId || initialData?.emp_id || formData.emp_id.trim() || undefined);
-            const isExisting = Boolean(empId || initialData?.isExistingInDb || (initialData?.emp_id && initialData?.emp_id === effectiveEmpId));
 
             if (!formData.is_active && !formData.resignation_date) {
                 setError("กรุณาระบุวันที่ลาออก");
@@ -399,7 +415,12 @@ export default function Step1BasicInfo({
                     },
                     isExistingInDb: true
                 };
-                onComplete(data.employee, currentRawState);
+
+                if (isSaveAndClose && onSaveAndClose) {
+                    onSaveAndClose(data.employee);
+                } else {
+                    onComplete(data.employee, currentRawState);
+                }
             } else {
                 setError(data.error || "ไม่สามารถบันทึกข้อมูลพนักงานได้");
             }
@@ -411,7 +432,7 @@ export default function Step1BasicInfo({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <form onSubmit={(e) => handleFormSubmit(e, false)} className="flex flex-col flex-1 min-h-0">
             {/* Scrollable Form Content */}
             <div className="overflow-y-auto flex-1 px-7 py-3 space-y-4 pr-6">
                 {error && (
@@ -638,7 +659,6 @@ export default function Step1BasicInfo({
                             value={formData.national_id_card}
                             onChange={e => setFormData({ ...formData, national_id_card: e.target.value })}
                             placeholder={docTypeCategory === "national_id" ? "เลขประจำตัว 13 หลัก" : "ระบุหมายเลขเอกสาร"}
-                            required
                         />
                     </div>
                     <div>
@@ -837,21 +857,44 @@ export default function Step1BasicInfo({
             </div>
 
             {/* Modal Footer Pinned at Bottom */}
-            <div className="px-7 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-white shrink-0">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium transition-all cursor-pointer"
-                >
-                    ยกเลิก
-                </button>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-medium shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                >
-                    {loading ? "กำลังบันทึก..." : "ถัดไป"}
-                </button>
+            <div className="px-7 py-4 border-t border-gray-100 flex flex-col gap-2 bg-white shrink-0">
+                {error && (
+                    <div className="p-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-medium border border-red-200 flex items-center gap-2">
+                        <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{error}</span>
+                    </div>
+                )}
+                <div className="flex items-center justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium transition-all cursor-pointer"
+                    >
+                        ยกเลิก
+                    </button>
+                    {isEdit && (
+                        <button
+                            type="button"
+                            onClick={(e) => handleFormSubmit(e, true)}
+                            disabled={loading}
+                            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                        </button>
+                    )}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-6 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-medium shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                        {loading ? "กำลังบันทึก..." : (isEdit ? "ถัดไป (สวัสดิการ) →" : "ถัดไป →")}
+                    </button>
+                </div>
             </div>
         </form>
     );

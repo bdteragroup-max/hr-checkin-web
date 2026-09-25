@@ -33,6 +33,7 @@ export default function EmployeeWizard({
     const [step1State, setStep1State] = useState<any>(null);
     const [companies, setCompanies] = useState<any[]>([]);
     const [fetchingDetails, setFetchingDetails] = useState(false);
+    const [hasSavedStep, setHasSavedStep] = useState(false);
 
     useEffect(() => {
         fetch("/api/admin/companies")
@@ -48,8 +49,8 @@ export default function EmployeeWizard({
                 .then(data => {
                     if (data.ok && data.employee) {
                         setEmployeeData((prev: any) => ({
-                            ...prev,
-                            ...data.employee
+                            ...data.employee,
+                            ...prev
                         }));
                     }
                 })
@@ -58,7 +59,15 @@ export default function EmployeeWizard({
         }
     }, [isEdit, initialEmployee?.emp_id]);
 
+    const handleSaveAndClose = (savedData?: any) => {
+        setHasSavedStep(true);
+        const idToPass = savedData?.emp_id || empId || initialEmployee?.emp_id || undefined;
+        onSuccess(idToPass);
+        onClose();
+    };
+
     const handleStep1Complete = (data: any, rawState?: any) => {
+        setHasSavedStep(true);
         setEmpId(data.emp_id);
         setEmployeeData((prev: any) => {
             const clean: any = {};
@@ -77,6 +86,7 @@ export default function EmployeeWizard({
     };
 
     const handleStep2Complete = (step2Data?: any) => {
+        setHasSavedStep(true);
         if (step2Data) {
             setEmployeeData((prev: any) => ({
                 ...prev,
@@ -87,8 +97,8 @@ export default function EmployeeWizard({
     };
 
     const handleClose = () => {
-        if (!isEdit && empId) {
-            onSuccess(empId);
+        if (hasSavedStep || (!isEdit && empId)) {
+            onSuccess(empId || undefined);
         }
         onClose();
     };
@@ -190,6 +200,8 @@ export default function EmployeeWizard({
                             positions={positions}
                             initialData={step1State || employeeData}
                             empId={empId}
+                            isEdit={isEdit}
+                            onSaveAndClose={handleSaveAndClose}
                             onComplete={handleStep1Complete}
                             onClose={handleClose}
                         />
@@ -204,6 +216,7 @@ export default function EmployeeWizard({
                                 departments={departments}
                                 mode={isEdit ? "edit" : "create"}
                                 onComplete={handleStep2Complete}
+                                onSaveAndClose={handleSaveAndClose}
                                 onBack={() => setCurrentStep(1)}
                                 onClose={handleClose}
                             />

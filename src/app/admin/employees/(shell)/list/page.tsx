@@ -74,6 +74,7 @@ type Emp = {
     first_name?: string | null;
     last_name?: string | null;
     allowance_mode?: string | null;
+    is_onboarding_complete?: boolean | null;
     co_evaluators?: { evaluator_id: string; order_no: number; name: string; nickname?: string | null }[] | null;
 };
 
@@ -122,6 +123,7 @@ type EditDraft = {
     first_name?: string | null;
     last_name?: string | null;
     allowance_mode?: string | null;
+    is_onboarding_complete?: boolean | null;
 };
 
 type Department = { id: number; name: string };
@@ -906,6 +908,7 @@ export default function AdminEmployeesPage() {
                                                             first_name: x.first_name || "",
                                                             last_name: x.last_name || "",
                                                             allowance_mode: x.allowance_mode || "itemized",
+                                                            is_onboarding_complete: x.is_onboarding_complete,
                                                         });
                                                     }}
                                                 >

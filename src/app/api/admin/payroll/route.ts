@@ -84,7 +84,8 @@ export async function GET(request: Request) {
                 status: "approved",
                 OR: [
                     { start_date: { gte: startDate, lte: endDate } },
-                    { end_date: { gte: startDate, lte: endDate } }
+                    { end_date: { gte: startDate, lte: endDate } },
+                    { AND: [{ start_date: { lte: startDate } }, { end_date: { gte: endDate } }] }
                 ]
             }
         });
@@ -686,18 +687,31 @@ export async function GET(request: Request) {
             // 5. AUTOMATED UNPAID LEAVE DEDUCTION
             let auto_unpaid_deduction = 0;
             if (!isDaily) {
-                // For monthly staff, sum up approved unpaid leave days
+                // For monthly staff, sum up approved unpaid leave days (supporting hourly/minute fractional days)
                 const unpaidLeaves = empLeaves.filter(l => l.leave_type_id === "unpaid");
                 let unpaidDaysCount = 0;
                 unpaidLeaves.forEach(l => {
-                    // Intersection of leave dates and cycle
+                    let totalLeaveDays = 0;
+                    let inCycleDays = 0;
                     let currL = new Date(l.start_date);
                     const endL = new Date(l.end_date);
                     while (currL <= endL) {
+                        totalLeaveDays++;
                         if (currL >= startDate && currL <= endDate) {
-                            unpaidDaysCount++;
+                            inCycleDays++;
                         }
                         currL.setDate(currL.getDate() + 1);
+                    }
+
+                    if (inCycleDays > 0) {
+                        if (l.minutes !== null && l.minutes !== undefined && Number(l.minutes) > 0) {
+                            // Standard work day = 8 hours = 480 minutes
+                            const totalEquivalentDays = Number(l.minutes) / 480;
+                            const cycleRatio = totalLeaveDays > 0 ? (inCycleDays / totalLeaveDays) : 1;
+                            unpaidDaysCount += totalEquivalentDays * cycleRatio;
+                        } else {
+                            unpaidDaysCount += inCycleDays;
+                        }
                     }
                 });
                 auto_unpaid_deduction = Math.round((unpaidDaysCount + unworkedDaysDueToResignationOrHire) * (Number(emp.base_salary || 0) / 30));

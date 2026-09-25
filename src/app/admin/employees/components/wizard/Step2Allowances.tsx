@@ -258,7 +258,8 @@ export default function Step2Allowances({
     mode = "create",
     onComplete,
     onBack,
-    onClose
+    onClose,
+    onSaveAndClose
 }: {
     empId: string;
     employeeData: any;
@@ -268,6 +269,7 @@ export default function Step2Allowances({
     onComplete: (data?: any) => void;
     onBack: () => void;
     onClose?: () => void;
+    onSaveAndClose?: (data?: any) => void;
 }) {
     const isEdit = mode === "edit" || Boolean(employeeData?.isExistingInDb || employeeData?.emp_id);
     const [allowanceTypes, setAllowanceTypes] = useState<any[]>([]);
@@ -462,7 +464,7 @@ export default function Step2Allowances({
         setAllowances(allowances.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent, isSaveAndClose: boolean = false) => {
         e.preventDefault();
         setError("");
 
@@ -531,7 +533,11 @@ export default function Step2Allowances({
 
             const data = await res.json();
             if (data.ok) {
-                onComplete(payload);
+                if (isSaveAndClose && onSaveAndClose) {
+                    onSaveAndClose(payload);
+                } else {
+                    onComplete(payload);
+                }
             } else {
                 setError(data.error || "ไม่สามารถบันทึกข้อมูลสวัสดิการได้");
             }
@@ -543,7 +549,7 @@ export default function Step2Allowances({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <form onSubmit={(e) => handleSubmit(e, false)} className="flex flex-col flex-1 min-h-0">
             <div className="overflow-y-auto flex-1 px-7 py-3 space-y-4 pr-6">
                 <div className="bg-red-50/70 text-red-800 text-sm p-3 rounded-xl border border-red-200">
                     กำลังตั้งค่าสำหรับรหัสพนักงาน: <strong className="font-mono font-bold">{empId}</strong>
@@ -1151,6 +1157,25 @@ export default function Step2Allowances({
             )}
             </div>
 
+            {/* Pinned Error Banner above footer */}
+            {error && (
+                <div className="mx-7 mb-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">{error}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setError("")}
+                        className="text-red-400 hover:text-red-600 text-xs font-semibold px-2 py-1 rounded"
+                    >
+                        ปิด
+                    </button>
+                </div>
+            )}
+
             <div className="px-7 py-4 border-t border-gray-100 flex items-center justify-between bg-white shrink-0">
                 <button
                     type="button"
@@ -1159,13 +1184,28 @@ export default function Step2Allowances({
                 >
                     ย้อนกลับ
                 </button>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-medium shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                >
-                    {loading ? "กำลังบันทึก..." : "ถัดไป"}
-                </button>
+                <div className="flex items-center gap-3">
+                    {isEdit && (
+                        <button
+                            type="button"
+                            disabled={loading}
+                            onClick={(e) => handleSubmit(e, true)}
+                            className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                        </button>
+                    )}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-6 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-medium shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                        {loading ? "กำลังบันทึก..." : isEdit ? "ถัดไป (ตั้งค่าระบบ) →" : "ถัดไป"}
+                    </button>
+                </div>
             </div>
         </form>
     );
