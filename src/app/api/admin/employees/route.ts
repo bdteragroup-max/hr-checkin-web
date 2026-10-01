@@ -333,8 +333,14 @@ export async function POST(req: Request) {
         const created = await prisma.$transaction(async (tx) => {
             let newEmpId = (customEmpId && !customEmpId.includes('XXXXX')) ? customEmpId : null;
             if (newEmpId) {
-                const conflict = await tx.employees.findUnique({ where: { emp_id: newEmpId } });
-                if (conflict) throw new Error("EMP_ID_ALREADY_EXISTS");
+                const conflict = await tx.employees.findUnique({
+                    where: { emp_id: newEmpId },
+                    select: { emp_id: true, name: true, is_active: true }
+                });
+                if (conflict) {
+                    const statusText = conflict.is_active ? "กำลังทำงานอยู่" : "สิ้นสุดการทำงาน/ลาออกแล้ว";
+                    throw new Error(`รหัสพนักงาน "${newEmpId}" มีอยู่ในระบบแล้ว (${conflict.name || "ไม่ระบุชื่อ"} - สถานะ: ${statusText}) กรุณาใช้รหัสอื่น`);
+                }
             } else {
                 // Find prefix for this company_id
                 let prefix = 'XX';
@@ -474,9 +480,13 @@ export async function POST(req: Request) {
         }).catch(console.error);
 
         return NextResponse.json({ ok: true, employee: created });
-    } catch (e) {
+    } catch (e: any) {
+        if (e?.code === 'P2002' && (e?.meta?.target?.includes('emp_id') || String(e?.message).includes('employees_emp_id_key'))) {
+            return NextResponse.json({ ok: false, error: "รหัสพนักงานนี้มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น" }, { status: 409 });
+        }
         const msg = e instanceof Error ? e.message : "ERROR";
-        const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : 500;
+        const isConflict = msg.includes("มีอยู่ในระบบแล้ว") || msg === "EMP_ID_ALREADY_EXISTS";
+        const status = msg === "UNAUTHORIZED" ? 401 : msg === "FORBIDDEN" ? 403 : isConflict ? 409 : 500;
         return NextResponse.json({ ok: false, error: msg }, { status });
     }
 }

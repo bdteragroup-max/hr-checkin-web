@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/jwt";
-import { cookies } from "next/headers";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import ExcelJS from "exceljs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 async function getAuth() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (!token) return null;
     try {
-        return verifyToken(token);
+        return await requireAdminOrSupervisor();
     } catch (e) {
         return null;
     }

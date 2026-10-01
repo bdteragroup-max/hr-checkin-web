@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/jwt";
-import { cookies } from "next/headers";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 
 async function getAuth() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (!token) return null;
     try {
-        return verifyToken(token);
+        return await requireAdminOrSupervisor();
     } catch (e) {
         return null;
     }
@@ -68,11 +64,18 @@ export async function PATCH(request: Request) {
 
     try {
         const body = await request.json();
-        const admin = await prisma.admins.findUnique({ where: { username: user.emp_id } });
+        const admin = await prisma.admins.findFirst({
+            where: {
+                OR: [
+                    { username: user.username },
+                    { username: user.emp_id }
+                ]
+            }
+        });
         let adminName = admin?.full_name;
         if (!adminName) {
             const emp = await prisma.employees.findUnique({ where: { emp_id: user.emp_id }, select: { name: true } });
-            adminName = emp?.name || user.emp_id;
+            adminName = emp?.name || user.username || user.emp_id;
         }
         const { id, action, remark, per_person_commission } = body;
 

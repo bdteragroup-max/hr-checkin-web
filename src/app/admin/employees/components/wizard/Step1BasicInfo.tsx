@@ -422,7 +422,19 @@ export default function Step1BasicInfo({
                     onComplete(data.employee, currentRawState);
                 }
             } else {
-                setError(data.error || "ไม่สามารถบันทึกข้อมูลพนักงานได้");
+                if (data.error === "EMP_ID_ALREADY_EXISTS" || data.error?.startsWith("EMP_ID_ALREADY_EXISTS")) {
+                    setError(`รหัสพนักงาน "${formData.emp_id}" มีอยู่ในระบบแล้ว กรุณาตรวจสอบหรือเปลี่ยนรหัสพนักงานใหม่`);
+                } else if (data.error === "NAME_REQUIRED") {
+                    setError("กรุณากรอกชื่อ-สกุลพนักงาน");
+                } else if (data.error === "COMPANY_NOT_FOUND") {
+                    setError("ไม่พบบริษัทที่เลือก");
+                } else if (data.error === "HIRE_DATE_INVALID") {
+                    setError("รูปแบบวันที่เริ่มงานไม่ถูกต้อง");
+                } else if (data.error === "BIRTH_DATE_INVALID") {
+                    setError("รูปแบบวันเกิดไม่ถูกต้อง");
+                } else {
+                    setError(data.message || data.error || "ไม่สามารถบันทึกข้อมูลพนักงานได้");
+                }
             }
         } catch (err: any) {
             setError(err.message || "เกิดข้อผิดพลาดในการบันทึก");

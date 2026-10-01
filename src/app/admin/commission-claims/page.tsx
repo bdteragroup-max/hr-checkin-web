@@ -109,9 +109,9 @@ export default function AdminCommissionClaimsPage() {
         return claims.filter(c => {
             const matchesStatus = statusFilter === "all" || c.status === statusFilter;
             const matchesSearch = !searchQuery ||
-                c.employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                c.emp_id.toLowerCase().includes(searchQuery.toLowerCase());
+                (c.employee?.name && c.employee.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (c.customer_name && c.customer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (c.emp_id && c.emp_id.toLowerCase().includes(searchQuery.toLowerCase()));
             return matchesStatus && matchesSearch;
         });
     }, [claims, statusFilter, searchQuery]);
@@ -256,7 +256,7 @@ export default function AdminCommissionClaimsPage() {
                                     filteredClaims.map(claim => (
                                         <tr key={claim.id}>
                                             <td>
-                                                <div className={styles.empName}>{claim.employee.name}</div>
+                                                <div className={styles.empName}>{claim.employee?.name || claim.emp_id}</div>
                                                 <div className={styles.empId}>{claim.emp_id}</div>
                                             </td>
                                             <td>{new Date(claim.date).toLocaleDateString("th-TH")}</td>
