@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { toBangkokWallClock } from "@/utils/time";
 
 export async function POST(req: Request) {
     try {
@@ -23,10 +24,13 @@ export async function POST(req: Request) {
 
         const now = new Date();
         const bDay = new Date(employee.birth_date);
+        const bkkNow = toBangkokWallClock(now);
+        const bkkTarget = substitute_date ? toBangkokWallClock(new Date(substitute_date)) : bkkNow;
 
-        // Check if today (or substitute) is birthday month/day
-        const targetDate = substitute_date ? new Date(substitute_date) : now;
-        const isBirthdayMonth = targetDate.getMonth() === bDay.getMonth();
+        // Check if target is birthday month (bDay is UTC midnight date)
+        const bDayMonth = bDay.getUTCMonth();
+        const targetMonth = bkkTarget.getMonth();
+        const isBirthdayMonth = targetMonth === bDayMonth;
 
         if (!isBirthdayMonth) {
             return NextResponse.json({ error: "NOT_BIRTHDAY_MONTH" }, { status: 400 });
@@ -36,55 +40,57 @@ export async function POST(req: Request) {
         const isSales = employee.job_positions?.title?.toLowerCase().includes("sales") ||
             employee.departments?.name?.toLowerCase().includes("sales");
 
-        // Attendance check: Any valid check-in/out pair in the birthday month
-        const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        const lastDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+        // Attendance check: Must have attendance in the birthday month
+        const year = bkkTarget.getFullYear();
+        const month = bkkTarget.getMonth();
+
+        // 1-day buffer before and after to ensure any UTC/Asia:Bangkok boundary overlap is covered
+        const firstDayOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+        firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() - 1);
+
+        const lastDayOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+        lastDayOfMonth.setUTCDate(lastDayOfMonth.getUTCDate() + 1);
+
+        const startDayStr = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+        const lastDateNum = new Date(year, month + 1, 0).getDate();
+        const endDayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDateNum).padStart(2, "0")}`;
 
         const monthScans = await prisma.checkins.findMany({
             where: {
                 emp_id,
-                timestamp: {
-                    gte: firstDayOfMonth,
-                    lte: lastDayOfMonth
-                }
+                OR: [
+                    {
+                        timestamp: {
+                            gte: firstDayOfMonth,
+                            lte: lastDayOfMonth
+                        }
+                    },
+                    {
+                        date_key: {
+                            gte: new Date(startDayStr),
+                            lte: new Date(endDayStr)
+                        }
+                    }
+                ]
             },
             orderBy: { timestamp: "asc" }
         });
 
-        // Group scans by date to find a day with both In and Out
-        const scansByDate: Record<string, any[]> = {};
-        monthScans.forEach(s => {
-            const d = new Date(s.timestamp);
-            const dateKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-            if (!scansByDate[dateKey]) scansByDate[dateKey] = [];
-            scansByDate[dateKey].push(s);
-        });
+        // Valid attendance types
+        const VALID_ATTENDANCE_TYPES = [
+            "Check-in", 
+            "Project-In", 
+            "Offsite-In", 
+            "Trip-Update",
+            "Check-out", 
+            "Project-Out", 
+            "Offsite-Out"
+        ];
 
-        let hasValidDay = false;
-        for (const dateKey in scansByDate) {
-            const dayScans = scansByDate[dateKey];
-            
-            // Broaden definitions to include Offsite and Trip records
-            const hasIn = dayScans.some(s => 
-                s.type === "Check-in" || 
-                s.type === "Project-In" || 
-                s.type === "Offsite-In" || 
-                s.type === "Trip-Update"
-            );
-            
-            const hasOut = dayScans.some(s => 
-                s.type === "Check-out" || 
-                s.type === "Project-Out" || 
-                s.type === "Offsite-Out"
-            );
+        // Eligible if employee has checked in (or checked out) at least once in the birthday month
+        const hasAttendance = monthScans.some(s => VALID_ATTENDANCE_TYPES.includes(s.type));
 
-            if (hasIn && hasOut) {
-                hasValidDay = true;
-                break;
-            }
-        }
-
-        if (!hasValidDay) {
+        if (!hasAttendance) {
             return NextResponse.json({
                 error: "NO_ATTENDANCE"
             }, { status: 400 });

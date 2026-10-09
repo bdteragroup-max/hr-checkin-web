@@ -118,7 +118,9 @@ export default function BirthdayPage() {
 
             if (!cRes.ok) {
                 const map: any = {
-                    NO_ATTENDANCE: "ไม่พบประวัติการรูดบัตรในวันเกิดของคุณ (ต้องรูดบัตรเข้า-ออกในวันเกิด)"
+                    NO_ATTENDANCE: "ไม่พบประวัติการเช็คอินในเดือนเกิดของคุณ (ต้องมีประวัติการเข้างานในเดือนเกิดอย่างน้อย 1 ครั้ง)",
+                    NOT_BIRTHDAY_MONTH: "ขณะนี้ยังไม่ถึงเดือนเกิดของคุณ",
+                    BIRTHDATE_NOT_SET: "ยังไม่ได้ระบุวันเกิดในระบบ กรุณาติดต่อฝ่ายบุคคล"
                 };
                 throw new Error(map[cRes.error] || cRes.error);
             }
