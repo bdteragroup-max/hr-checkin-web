@@ -452,6 +452,7 @@ export default function TripLogPage() {
                                                     width={500}
                                                     height={300}
                                                     style={{ width: '100%', height: 'auto' }}
+                                                    unoptimized
                                                 />
                                             </div>
                                         )}

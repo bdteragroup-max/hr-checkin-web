@@ -1,4 +1,4 @@
-﻿import type { NextConfig } from "next";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -15,6 +15,24 @@ const nextConfig: NextConfig = {
         hostname: 'uvbnlqwcdzlygykbhwhv.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.blob.core.windows.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'hmsstorage001.blob.core.windows.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.humansoft.co.th',
+        port: '',
+        pathname: '/**',
       },
     ],
   },

@@ -305,6 +305,7 @@ function HistoryCard({ today, todayKey }: { today: TodayItem[]; todayKey: string
                                         height={225} 
                                         className={styles.photoThumb} 
                                         loading="lazy"
+                                        unoptimized
                                     />
                                 )}
                             </div>

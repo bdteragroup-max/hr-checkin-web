@@ -153,7 +153,7 @@ export function calcLateOT(type: CheckType): LateInfo {
  */
 export function calcLateOTFromTimestamp(
     type: CheckType,
-    timestamp: string
+    timestamp: string | Date
 ): LateInfo {
     const dt = new Date(timestamp);
     const thaiStr = dt.toLocaleString("en-US", { timeZone: "Asia/Bangkok" });
