@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
 import { syncHumanSoftAttendanceToDatabase } from "@/lib/humansoft";
-import { getTodayBangkokISO } from "@/utils/time";
+import { getTodayBangkokISO, getYesterdayBangkokISO } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET: Cron job to sync HumanSoft attendance records for today.
+ * GET: Cron job to sync HumanSoft attendance records for yesterday and today.
  * Can be called by Cloud Scheduler or Vercel Cron periodically (e.g. every 10-15 minutes).
  */
 export async function GET(req: Request) {
     try {
-        const cronSecret = process.env.CRON_SECRET;
-        if (cronSecret) {
-            const authHeader = req.headers.get("authorization");
-            if (authHeader !== `Bearer ${cronSecret}`) {
-                return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-            }
+        const cronSecret = process.env.CRON_SECRET || "hr-checkin-secret-123";
+        const { searchParams } = new URL(req.url);
+        const querySecret = searchParams.get("secret");
+        const authHeader = req.headers.get("authorization");
+
+        if (cronSecret && authHeader !== `Bearer ${cronSecret}` && querySecret !== cronSecret) {
+            return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
         }
 
         const today = getTodayBangkokISO();
+        const yesterday = getYesterdayBangkokISO();
         const result = await syncHumanSoftAttendanceToDatabase({
-            date_from: today,
+            date_from: yesterday,
             date_to: today
         });
 

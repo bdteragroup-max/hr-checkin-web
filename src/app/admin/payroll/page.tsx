@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import styles from "./page.module.css";
 import {
     PencilSquareIcon,
@@ -19,7 +20,8 @@ import {
     ReceiptPercentIcon,
     CreditCardIcon,
     EyeSlashIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    TableCellsIcon
 } from "@heroicons/react/24/outline";
 import AlertModal, { AlertState } from "@/components/AlertModal";
 
@@ -651,6 +653,15 @@ export default function PayrollPage() {
                             </option>
                         ))}
                     </select>
+
+                    <Link
+                        href="/admin/payroll/monthly-summary"
+                        className={styles.btnMonthlySummary}
+                        title="สรุปฐานเงินเดือนและสวัสดิการรายเดือน (HumanSoft)"
+                    >
+                        <TableCellsIcon width={16} height={16} />
+                        <span>สรุปเงินเดือนรายเดือน (Excel)</span>
+                    </Link>
                 </div>
             </div>
 

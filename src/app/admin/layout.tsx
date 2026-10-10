@@ -9,7 +9,7 @@ import {
     BuildingOfficeIcon, MapPinIcon, BriefcaseIcon,
     SunIcon, ClockIcon, GiftIcon, TruckIcon,
     CalendarIcon, BanknotesIcon, PresentationChartLineIcon,
-    ArrowRightOnRectangleIcon,
+    ArrowRightOnRectangleIcon, TableCellsIcon,
     CubeIcon,
     DocumentCheckIcon,
     AcademicCapIcon,
@@ -433,12 +433,20 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
                             {/* ✅ Payroll / OT menu */}
                             {hasAccess("/admin/payroll") && (
-                                <Link
-                                    href="/admin/payroll"
-                                    className={`${styles.navItem} ${pathname.startsWith("/admin/payroll") ? styles.active : ""}`}
-                                >
-                                    <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ระบบเงินเดือน
-                                </Link>
+                                <>
+                                    <Link
+                                        href="/admin/payroll"
+                                        className={`${styles.navItem} ${pathname === "/admin/payroll" ? styles.active : ""}`}
+                                    >
+                                        <span className={styles.navIcon}><BanknotesIcon width={20} /></span>ระบบเงินเดือน & OT
+                                    </Link>
+                                    <Link
+                                        href="/admin/payroll/monthly-summary"
+                                        className={`${styles.navItem} ${pathname.startsWith("/admin/payroll/monthly-summary") ? styles.active : ""}`}
+                                    >
+                                        <span className={styles.navIcon}><TableCellsIcon width={20} /></span>สรุปเงินเดือนรายเดือน (Excel)
+                                    </Link>
+                                </>
                             )}
                             {/* ✅ Historical Records */}
                             {hasAccess("/admin/records") && (

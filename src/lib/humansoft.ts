@@ -1,4 +1,4 @@
-import { toBangkokWallClock, getTodayBangkokISO } from "../utils/time";
+import { toBangkokWallClock, getTodayBangkokISO, getYesterdayBangkokISO } from "../utils/time";
 import { prisma } from "./prisma";
 import { calcLateOTFromTimestamp } from "../utils/checkin";
 import { processCheckinCoins } from "../utils/coinAwards";
@@ -65,7 +65,7 @@ export function getApiKey(empId?: string): string | null {
             return process.env.HUMANSOFT_SUBSCRIPTION_KEY_TE;
         }
     }
-    return process.env.HUMANSOFT_SUBSCRIPTION_KEY || process.env.HUMANSOFT_API_KEY || null;
+    return process.env.HUMANSOFT_SUBSCRIPTION_KEY || process.env.HUMANSOFT_SUBSCRIPTION_KEY_TE || process.env.HUMANSOFT_API_KEY || null;
 }
 
 function getBaseUrl(): string {
@@ -224,24 +224,47 @@ export async function fetchHumanSoftAttendance(params: {
 
     try {
         const url = `${getBaseUrl()}/api/v1/open-apis/salary/get-data-filter?path_action=search_time_attendance_full`;
-        const res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Ocp-Apim-Subscription-Key": apiKey,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                date_from: params.date_from,
-                date_to: params.date_to
-            })
-        });
+        const pageSize = 100;
+        let page = 1;
+        const allRecords: any[] = [];
+        let totalRecords = 0;
 
-        const data = await res.json().catch(() => null);
-        if (!res.ok || (data && data.code !== 200)) {
-            return { ok: false, error: data?.errors || data?.message || "HTTP_ERROR", status: res.status };
+        while (true) {
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Ocp-Apim-Subscription-Key": apiKey,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    date_from: params.date_from,
+                    date_to: params.date_to,
+                    _PAGE: page,
+                    _NUMBER_PER_PAGE: pageSize
+                })
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok || (data && data.code !== 200)) {
+                if (allRecords.length > 0) {
+                    break;
+                }
+                return { ok: false, error: data?.errors || data?.message || "HTTP_ERROR", status: res.status };
+            }
+
+            const payload = data.payload || [];
+            allRecords.push(...payload);
+            totalRecords = data._PAGINATION?._TOTAL_RECORDS ?? allRecords.length;
+
+            if (allRecords.length >= totalRecords || payload.length === 0) {
+                break;
+            }
+
+            page++;
+            if (page > 50) break; // safety guard
         }
 
-        return { ok: true, records: data.payload || [], pagination: data._PAGINATION };
+        return { ok: true, records: allRecords, total: totalRecords };
     } catch (e: any) {
         return { ok: false, error: e.message };
     }
@@ -276,6 +299,9 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
 
         totalRecords += fetchRes.records.length;
 
+        // Sort records chronologically so morning check-in is processed before evening check-out
+        fetchRes.records.sort((a: any, b: any) => (a.attendance_datetime || "").localeCompare(b.attendance_datetime || ""));
+
         for (const record of fetchRes.records) {
             const empCode = record.employee_code;
             if (!empCode || !record.attendance_datetime) continue;
@@ -289,11 +315,44 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
             const dateStr = record.attendance_date || (record.attendance_datetime ? record.attendance_datetime.split(" ")[0] : params.date_from);
             const dateKey = new Date(`${dateStr}T00:00:00.000Z`);
 
-            // Determine type: 'Check-out' if attendance_inout is 'OUT' or 'O', else 'Check-in'
+            // Determine type: 'Check-in' vs 'Check-out'
+            // Note: HumanSoft Open API biometric machines always return attendance_inout as 'I'.
+            // We distinguish Check-in vs Check-out using work schedule and punch history:
             const inOut = (record.attendance_inout || "").toUpperCase();
-            const type = (inOut === "OUT" || inOut === "O") ? "Check-out" : "Check-in";
+            const remarkLower = (record.attendance_remark || "").toLowerCase();
+            const bkkTime = toBangkokWallClock(recordTime);
+            const bkkHour = bkkTime.getHours();
+
+            let type: "Check-in" | "Check-out" = "Check-in";
+
+            if (inOut === "OUT" || inOut === "O" || inOut === "CHECK-OUT" || 
+                remarkLower.includes("เลิกงาน") || remarkLower.includes("ออกงาน") || 
+                remarkLower.includes("checkout") || remarkLower.includes("check-out")) {
+                type = "Check-out";
+            } else {
+                // Check if employee already has an earlier check-in on this date
+                const earlierCheckin = await prisma.checkins.findFirst({
+                    where: {
+                        emp_id: empCode,
+                        date_key: dateKey,
+                        timestamp: { lt: recordTime }
+                    }
+                });
+
+                if (earlierCheckin) {
+                    const diffMs = recordTime.getTime() - earlierCheckin.timestamp.getTime();
+                    // If earlier check-in exists and this scan is at least 1 hour later or >= 12:00
+                    if (diffMs >= 60 * 60 * 1000 || bkkHour >= 12) {
+                        type = "Check-out";
+                    }
+                } else if (bkkHour >= 13) {
+                    // Afternoon/evening punch without morning punch is a check-out (forgot morning check-in)
+                    type = "Check-out";
+                }
+            }
+
             const empName = [record.employee_name, record.employee_last_name].filter(Boolean).join(" ") || empCode;
-            const lateInfo = calcLateOTFromTimestamp(type as "Check-in" | "Check-out", recordTime);
+            const lateInfo = calcLateOTFromTimestamp(type, recordTime);
             
             // Window check to prevent duplicate insertion (+/- 2 minutes)
             const windowStart = new Date(recordTime.getTime() - 2 * 60 * 1000);
@@ -310,6 +369,18 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
             });
 
             if (existing) {
+                // If existing record was wrongly marked as Check-in but should be Check-out, correct it
+                if (existing.type !== type && (existing.capture_mode?.toLowerCase().includes("facial") || existing.capture_mode === "humansoft")) {
+                    await prisma.checkins.update({
+                        where: { id: existing.id },
+                        data: {
+                            type,
+                            late_status: lateInfo.status,
+                            late_min: lateInfo.min ?? null
+                        }
+                    });
+                }
+
                 skippedCount++;
                 // Check if coin was already awarded for today (idempotent via source_key)
                 const coinAward = await processCheckinCoins(prisma, {
@@ -384,8 +455,10 @@ export async function triggerSmartSync(force = false) {
     }
     lastSyncTimestamp = now;
     const today = getTodayBangkokISO();
+    const yesterday = getYesterdayBangkokISO();
     try {
-        await syncHumanSoftAttendanceToDatabase({ date_from: today, date_to: today });
+        // Sync both yesterday and today so that evening checkouts or missed off-hours scans are automatically backfilled
+        await syncHumanSoftAttendanceToDatabase({ date_from: yesterday, date_to: today });
     } catch (err: any) {
         console.warn("[HumanSoft SmartSync Error]:", err?.message);
     }

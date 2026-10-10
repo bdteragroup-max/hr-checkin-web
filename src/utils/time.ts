@@ -39,6 +39,20 @@ export function getTodayBangkokISO(): string {
 }
 
 /**
+ * Returns yesterday's date in YYYY-MM-DD format for Bangkok.
+ */
+export function getYesterdayBangkokISO(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(d);
+}
+
+/**
  * Formats a date into 24-hour time (HH:mm) for Bangkok.
  */
 export function formatTime24h(date: Date | string | null): string {

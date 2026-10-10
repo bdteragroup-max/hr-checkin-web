@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { calcLateOTFromTimestamp } from "@/utils/checkin";
 import { processCheckinCoins } from "@/utils/coinAwards";
 import { syncHumanSoftAttendanceToDatabase } from "@/lib/humansoft";
-import { getTodayBangkokISO } from "@/utils/time";
+import { getTodayBangkokISO, toBangkokWallClock } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +55,36 @@ export async function POST(req: Request) {
                 const dateKey = new Date(`${dateStr}T00:00:00.000Z`);
 
                 const inOut = (item.attendance_inout || item.in_out || item.type || "").toUpperCase();
-                const type = (inOut === "OUT" || inOut === "O" || inOut === "CHECK-OUT") ? "Check-out" : "Check-in";
-                const lateInfo = calcLateOTFromTimestamp(type as "Check-in" | "Check-out", recordTime);
+                const remarkLower = (item.attendance_remark || "").toLowerCase();
+                const bkkTime = toBangkokWallClock(recordTime);
+                const bkkHour = bkkTime.getHours();
+
+                let type: "Check-in" | "Check-out" = "Check-in";
+
+                if (inOut === "OUT" || inOut === "O" || inOut === "CHECK-OUT" || 
+                    remarkLower.includes("เลิกงาน") || remarkLower.includes("ออกงาน") || 
+                    remarkLower.includes("checkout") || remarkLower.includes("check-out")) {
+                    type = "Check-out";
+                } else {
+                    const earlierCheckin = await prisma.checkins.findFirst({
+                        where: {
+                            emp_id: empCode,
+                            date_key: dateKey,
+                            timestamp: { lt: recordTime }
+                        }
+                    });
+
+                    if (earlierCheckin) {
+                        const diffMs = recordTime.getTime() - earlierCheckin.timestamp.getTime();
+                        if (diffMs >= 60 * 60 * 1000 || bkkHour >= 12) {
+                            type = "Check-out";
+                        }
+                    } else if (bkkHour >= 13) {
+                        type = "Check-out";
+                    }
+                }
+
+                const lateInfo = calcLateOTFromTimestamp(type, recordTime);
 
                 const windowStart = new Date(recordTime.getTime() - 2 * 60 * 1000);
                 const windowEnd = new Date(recordTime.getTime() + 2 * 60 * 1000);

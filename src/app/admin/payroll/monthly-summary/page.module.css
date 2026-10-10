@@ -1,0 +1,765 @@
+/* ─── Red / White / Gray Modern Symmetrical Design System ─────────────── */
+.container {
+  --red-primary: #c8291e;
+  --red-hover: #b91c1c;
+  --red-dark: #991b1b;
+  --red-light: #fef2f2;
+  --red-subtle: #fff5f5;
+  --red-border: #fecaca;
+  --red-ring: rgba(200, 41, 30, 0.18);
+  --red-shadow: rgba(200, 41, 30, 0.22);
+
+  --white: #ffffff;
+  --gray-25: #fcfdfd;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+  box-sizing: border-box;
+  font-family: var(--font-sans, "IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, sans-serif);
+  color: var(--gray-900);
+}
+
+/* ─── Symmetrical Hero Header Card ─────────────────────────────────────── */
+.headerCard {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.headerCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--red-primary) 0%, #e03428 50%, var(--red-primary) 100%);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.breadcrumbLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gray-600);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.breadcrumbLink:hover {
+  color: var(--red-primary);
+}
+
+.breadcrumbSep {
+  color: var(--gray-300);
+}
+
+.breadcrumbCurrent {
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+.apiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.apiDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.headerMain {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.titleIconBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--red-primary) 0%, #e03428 100%);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px var(--red-shadow);
+  flex-shrink: 0;
+}
+
+.titleContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ─── Symmetrical Company Segmented Control ────────────────────────────── */
+.companyTabs {
+  display: inline-flex;
+  background: var(--gray-100);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  gap: 4px;
+}
+
+.companyTab {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.companyTab:hover:not(.companyTabActive) {
+  color: var(--gray-900);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.companyTabActive {
+  background: var(--red-primary);
+  color: var(--white);
+  box-shadow: 0 2px 8px var(--red-shadow);
+}
+
+/* ─── Action Buttons ───────────────────────────────────────────────────── */
+.btnGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnRefresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--gray-700);
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid var(--gray-300);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.btnRefresh:hover:not(:disabled) {
+  background: var(--gray-50);
+  color: var(--gray-900);
+  border-color: var(--gray-400);
+}
+
+.btnRefresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnDownload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 10px;
+  background: var(--red-primary);
+  color: var(--white);
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px var(--red-shadow);
+}
+
+.btnDownload:hover:not(:disabled) {
+  background: var(--red-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--red-shadow);
+}
+
+.btnDownload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── Symmetrical 4-Card Stats Grid ───────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statCard {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  border-color: var(--gray-300);
+}
+
+.statCardHighlight {
+  border-color: var(--red-border);
+  background: linear-gradient(180deg, var(--white) 0%, var(--red-subtle) 100%);
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statIconBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statIconBoxRed {
+  background: var(--red-light);
+  color: var(--red-primary);
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1.1;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.statValueRed {
+  color: var(--red-primary);
+}
+
+.statUnit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-500);
+  margin-left: 4px;
+}
+
+.statFooter {
+  font-size: 12px;
+  color: var(--gray-500);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid var(--gray-100);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* Symmetrical Badges in Stats Card */
+.statBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.statBadgeDark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray-800);
+  color: var(--white);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statBadgeLight {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--gray-200);
+}
+
+/* ─── Symmetrical Toolbar (Search & Filter) ────────────────────────────── */
+.toolbarCard {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+}
+
+.searchBox {
+  position: relative;
+  flex: 1;
+  max-width: 440px;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: var(--gray-400);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 9px 36px 9px 38px;
+  border-radius: 10px;
+  border: 1px solid var(--gray-300);
+  background: var(--gray-50);
+  color: var(--gray-900);
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.searchInput:focus {
+  background: var(--white);
+  border-color: var(--red-primary);
+  box-shadow: 0 0 0 3px var(--red-ring);
+}
+
+.searchClearBtn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.searchClearBtn:hover {
+  color: var(--gray-700);
+}
+
+.filterControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.levelFilterGroup {
+  display: inline-flex;
+  background: var(--gray-100);
+  padding: 3px;
+  border-radius: 8px;
+  gap: 2px;
+  border: 1px solid var(--gray-200);
+}
+
+.levelFilterBtn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.levelFilterBtnActive {
+  background: var(--white);
+  color: var(--gray-900);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.countChip {
+  font-size: 12.5px;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.countHighlight {
+  font-weight: 700;
+  color: var(--red-primary);
+}
+
+/* ─── Executive Modern Table in Red / White / Gray ─────────────────────── */
+.tableContainer {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableWrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tableWrap::-webkit-scrollbar-track {
+  background: var(--gray-50);
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Table Header */
+.table th {
+  background: var(--gray-50);
+  color: var(--gray-700);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 12px 14px;
+  text-align: center;
+  border-bottom: 2px solid var(--gray-200);
+  border-right: 1px solid var(--gray-200);
+  user-select: none;
+  letter-spacing: 0.01em;
+}
+
+.table th:last-child {
+  border-right: none;
+}
+
+/* Highlighted Column Headers (Red Accent) */
+.table th.thSalary {
+  background: var(--red-light);
+  color: var(--red-dark);
+  font-weight: 700;
+  border-bottom-color: var(--red-border);
+}
+
+.table th.thTotal {
+  background: var(--red-light);
+  color: var(--red-dark);
+  font-weight: 700;
+  border-bottom-color: var(--red-border);
+}
+
+/* Table Body */
+.table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  border-right: 1px solid var(--gray-100);
+  color: var(--gray-800);
+  transition: background-color 0.12s ease;
+}
+
+.table td:last-child {
+  border-right: none;
+}
+
+.table tbody tr:nth-child(even) td {
+  background-color: #fafbfc;
+}
+
+.table tbody tr:hover td {
+  background-color: #fff8f8 !important;
+}
+
+/* Highlighted Column Cells */
+.tdSalary {
+  background-color: var(--red-subtle) !important;
+  color: var(--red-dark) !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody tr:hover .tdSalary {
+  background-color: #ffecec !important;
+}
+
+.tdTotal {
+  font-weight: 700 !important;
+  color: var(--gray-900) !important;
+  font-variant-numeric: tabular-nums;
+  background-color: #fcfdfd;
+}
+
+.table tbody tr:hover .tdTotal {
+  color: var(--red-primary) !important;
+}
+
+/* Text Alignments */
+.textCenter {
+  text-align: center;
+}
+
+.textLeft {
+  text-align: left;
+}
+
+.textRight {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Emp ID Pill */
+.empIdPill {
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-800);
+  background: var(--gray-100);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+}
+
+/* Manager vs Staff Badges */
+.badgeManager {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--gray-800);
+  color: var(--white);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.badgeStaff {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+}
+
+/* Commission Indicators */
+.commissionYes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--red-light);
+  color: var(--red-primary);
+  border: 1px solid var(--red-border);
+}
+
+.commissionNo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--gray-300);
+}
+
+/* Summary Footer Row */
+.totalRow td {
+  background: var(--gray-100) !important;
+  font-weight: 700;
+  color: var(--gray-900);
+  border-top: 2px solid var(--gray-300);
+  border-bottom: 3px solid var(--red-primary);
+  padding: 13px 14px;
+}
+
+.totalRow td.tdSalary {
+  background: var(--red-light) !important;
+  color: var(--red-dark) !important;
+}
+
+.totalRow td.tdTotal {
+  background: var(--red-light) !important;
+  color: var(--red-primary) !important;
+  font-size: 14px;
+}
+
+/* ─── Loading & Empty States ───────────────────────────────────────────── */
+.stateBox {
+  padding: 64px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  color: var(--red-primary);
+  animation: spin 1s linear infinite;
+}
+
+.stateTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.stateSubtitle {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin: 0;
+  max-width: 400px;
+}
