@@ -2940,9 +2940,16 @@ model sales_depreciation_claims {
   updated_at          DateTime                             @default(now()) @db.Timestamptz(6)
   initial_approved_by String?                              @db.VarChar(20)
   initial_approved_at DateTime?                            @db.Timestamptz(6)
+  claim_type          String                               @default("DEPRECIATION") @db.VarChar(50)
+  paid_by             String?                              @db.VarChar(20)
+  paid_at             DateTime?                            @db.Timestamptz(6)
   revisions           sales_depreciation_claim_revisions[]
   employee            employees                            @relation("EmployeeToDepreciation", fields: [emp_id], references: [emp_id], onDelete: Cascade)
   supervisor          employees                            @relation("SupervisorToDepreciation", fields: [submitted_by], references: [emp_id], onDelete: Cascade)
+
+  @@index([emp_id])
+  @@index([status])
+  @@index([claim_type])
 }
 
 model sales_depreciation_claim_revisions {

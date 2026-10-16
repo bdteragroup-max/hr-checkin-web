@@ -3557,24 +3557,35 @@ export async function sendDepreciationClaimNotification(data: {
   month: string;
   amount: string;
   receiptUrl: string;
-  status: string; // PENDING_INITIAL, PENDING_HR, APPROVED, RETURNED
+  status: string; // PENDING_INITIAL, PENDING_HR, APPROVED, RETURNED, PAID
+  claimType?: string; // DEPRECIATION | FUEL
   returnReason?: string;
 }, lineUserIds: string[]) {
   if (!lineUserIds || lineUserIds.length === 0) return false;
 
-  const statusColor = data.status === "APPROVED"
+  const isFuel = data.claimType === "FUEL";
+  const typeText = isFuel ? "ค่าน้ำมัน" : "ค่าเสื่อมสภาพรถ";
+
+  const statusColor = data.status === "PAID"
+    ? "#10b981"
+    : data.status === "APPROVED"
     ? "#059669"
     : data.status === "RETURNED" ? "#dc2626"
     : data.status === "PENDING_HR" ? "#2563eb" : "#d97706";
 
   const statusText = data.status === "PENDING_INITIAL" ? "รออนุมัติเบื้องต้น (คุณณัฎธินี)" :
     data.status === "PENDING_HR" ? "รอ HR อนุมัติขั้นสุดท้าย" :
-    data.status === "APPROVED" ? "อนุมัติเรียบร้อยแล้ว" :
+    data.status === "APPROVED" ? "อนุมัติแล้ว (รอรอบจ่ายเงินสิ้นเดือน)" :
+    data.status === "PAID" ? "จ่ายเงินเรียบร้อยแล้ว" :
     data.status === "RETURNED" ? "ตีกลับเพื่อแก้ไข" : data.status;
+
+  const headerTitle = data.status === "PAID" 
+    ? `${typeText} - จ่ายเงินเรียบร้อยแล้ว`
+    : `คำขอเบิก${typeText}`;
 
   const flexMessage: any = {
     type: "flex",
-    altText: `แจ้งเตือนคำขอเบิกค่าเสื่อม/ค่าน้ำมัน: ${data.employeeName}`,
+    altText: `แจ้งเตือนคำขอเบิก${typeText}: ${data.employeeName}`,
     contents: {
       type: "bubble",
       header: {
@@ -3582,7 +3593,7 @@ export async function sendDepreciationClaimNotification(data: {
         layout: "vertical",
         backgroundColor: statusColor,
         contents: [
-          { type: "text", text: "คำขอเบิกค่าเสื่อม/ค่าน้ำมัน", color: "#ffffff", weight: "bold", size: "md" }
+          { type: "text", text: headerTitle, color: "#ffffff", weight: "bold", size: "md" }
         ]
       },
       body: {
@@ -3596,6 +3607,14 @@ export async function sendDepreciationClaimNotification(data: {
             layout: "vertical",
             spacing: "xs",
             contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "ประเภท:", color: "#6b7280", size: "sm", flex: 3 },
+                  { type: "text", text: typeText, color: "#111827", weight: "bold", size: "sm", flex: 5 }
+                ]
+              },
               {
                 type: "box",
                 layout: "horizontal",

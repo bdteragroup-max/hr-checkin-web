@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import styles from "./page.module.css";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -20,6 +20,7 @@ import {
     ArrowTopRightOnSquareIcon,
     ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
+import { Car, Fuel } from "lucide-react";
 import {
     getCurrentDepreciationUser,
     getMyTeamClaims,
@@ -51,8 +52,10 @@ export default function TeamDepreciationClaimsPage() {
     // Form state
     const [showForm, setShowForm] = useState(false);
     const [resubmitId, setResubmitId] = useState<number | null>(null);
+    const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [formData, setFormData] = useState({
         emp_id: "",
+        claim_type: "DEPRECIATION", // "DEPRECIATION" | "FUEL"
         amount: "",
         claim_month: format(new Date(), "yyyy-MM"),
         file: null as File | null
@@ -212,7 +215,11 @@ export default function TeamDepreciationClaimsPage() {
             const amount = Number(formData.amount);
 
             if (resubmitId) {
-                await resubmitClaim(resubmitId, { amount, receipt_url });
+                await resubmitClaim(resubmitId, { 
+                    amount, 
+                    receipt_url,
+                    claim_type: formData.claim_type
+                });
                 setMsg({ text: "แก้ไขและส่งคำขอใหม่เรียบร้อยแล้ว (ส่งถึงคุณณัฎธินีเพื่ออนุมัติเบื้องต้น)", type: "ok" });
             } else {
                 const claimMonth = new Date(formData.claim_month + "-01");
@@ -220,14 +227,15 @@ export default function TeamDepreciationClaimsPage() {
                     emp_id: formData.emp_id,
                     amount,
                     receipt_url,
-                    claim_month: claimMonth
+                    claim_month: claimMonth,
+                    claim_type: formData.claim_type
                 });
                 setMsg({ text: "ส่งคำขอเรียบร้อยแล้ว (ส่งถึงคุณณัฎธินีเพื่ออนุมัติเบื้องต้น)", type: "ok" });
             }
 
             setShowForm(false);
             setResubmitId(null);
-            setFormData({ emp_id: "", amount: "", claim_month: format(new Date(), "yyyy-MM"), file: null });
+            setFormData({ emp_id: "", claim_type: "DEPRECIATION", amount: "", claim_month: format(new Date(), "yyyy-MM"), file: null });
             fetchInitialData();
 
         } catch (e: any) {
@@ -287,6 +295,7 @@ export default function TeamDepreciationClaimsPage() {
     function openResubmit(claim: any) {
         setFormData({
             emp_id: claim.emp_id,
+            claim_type: claim.claim_type || "DEPRECIATION",
             amount: claim.amount.toString(),
             claim_month: format(new Date(claim.claim_month), "yyyy-MM"),
             file: null
@@ -316,8 +325,16 @@ export default function TeamDepreciationClaimsPage() {
         if (status === "APPROVED") {
             return (
                 <span className={`${styles.statusBadge} ${styles.status_APPROVED}`} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <ClockIcon width={13} />
+                    อนุมัติแล้ว (รอรอบจ่ายเงินสิ้นเดือน)
+                </span>
+            );
+        }
+        if (status === "PAID") {
+            return (
+                <span className={`${styles.statusBadge} ${styles.status_PAID}`} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                     <CheckCircleIcon width={13} />
-                    อนุมัติแล้ว
+                    จ่ายเงินเรียบร้อยแล้ว (PAID)
                 </span>
             );
         }
@@ -336,15 +353,25 @@ export default function TeamDepreciationClaimsPage() {
         );
     }
 
+    const filteredInitialPendingClaims = useMemo(() => {
+        if (categoryFilter === "all") return initialPendingClaims;
+        return initialPendingClaims.filter(c => (c.claim_type || "DEPRECIATION") === categoryFilter);
+    }, [initialPendingClaims, categoryFilter]);
+
+    const filteredClaims = useMemo(() => {
+        if (categoryFilter === "all") return claims;
+        return claims.filter(c => (c.claim_type || "DEPRECIATION") === categoryFilter);
+    }, [claims, categoryFilter]);
+
     return (
         <div className={styles.page}>
             <div className={styles.wrap}>
                 <div className={styles.hero}>
-                    <h1 className={styles.heroH1}>ค่าเสื่อม/ค่าน้ำมัน (ทีม)</h1>
+                    <h1 className={styles.heroH1}>ค่าเสื่อม / ค่าน้ำมัน (ทีม)</h1>
                     <div className={styles.heroMeta}>
                         <div className={styles.heroMetaItem}>
                             <div className={styles.heroMetaDot} />
-                            ระบบขอเบิกและอนุมัติค่าเสื่อม/ค่าน้ำมัน
+                            ระบบขอเบิกและอนุมัติค่าเสื่อมและค่าน้ำมัน
                         </div>
                     </div>
                 </div>
@@ -416,82 +443,139 @@ export default function TeamDepreciationClaimsPage() {
                             </button>
                         </div>
 
+                        {/* Category filter chips */}
+                        <div className={styles.categoryFilterWrap}>
+                            <button 
+                                type="button" 
+                                className={`${styles.filterChip} ${categoryFilter === "all" ? styles.filterChipActive : ""}`}
+                                onClick={() => setCategoryFilter("all")}
+                            >
+                                ทั้งหมด ({initialPendingClaims.length})
+                            </button>
+                            <button 
+                                type="button" 
+                                className={`${styles.filterChip} ${categoryFilter === "DEPRECIATION" ? styles.filterChipActive : ""}`}
+                                onClick={() => setCategoryFilter("DEPRECIATION")}
+                            >
+                                <Car size={15} />
+                                <span>ค่าเสื่อมสภาพรถ</span>
+                            </button>
+                            <button 
+                                type="button" 
+                                className={`${styles.filterChip} ${categoryFilter === "FUEL" ? styles.filterChipActive : ""}`}
+                                onClick={() => setCategoryFilter("FUEL")}
+                            >
+                                <Fuel size={15} />
+                                <span>ค่าน้ำมัน</span>
+                            </button>
+                        </div>
+
                         {loading ? (
                             <div className={styles.emptyState}>
                                 <ArrowPathIcon width={32} className="animate-spin" style={{ color: "var(--gray-400)" }} />
                                 <span>กำลังโหลดข้อมูล...</span>
                             </div>
-                        ) : initialPendingClaims.length === 0 ? (
+                        ) : filteredInitialPendingClaims.length === 0 ? (
                             <div className={styles.emptyState}>
                                 <InboxIcon width={40} style={{ color: "var(--gray-400)" }} />
                                 <span>ไม่มีรายการรออนุมัติเบื้องต้นในขณะนี้</span>
                             </div>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                {initialPendingClaims.map((c: any) => (
-                                    <div key={c.id} className={styles.listItem} style={{ borderColor: "#fed7aa", background: "#fffdfb" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: 12 }}>
-                                            <div>
-                                                <div className={styles.empName}>
-                                                    {c.employee?.name} {c.employee?.nickname ? `(${c.employee.nickname})` : ""}
+                                {filteredInitialPendingClaims.map((c: any) => {
+                                    const isFuel = c.claim_type === "FUEL";
+
+                                    return (
+                                        <div key={c.id} className={styles.listItem} style={{ borderColor: "#fed7aa", background: "#fffdfb" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: 12 }}>
+                                                <div>
+                                                    <div className={styles.empName}>
+                                                        {c.employee?.name} {c.employee?.nickname ? `(${c.employee.nickname})` : ""}
+                                                    </div>
+                                                    <div className={styles.empId} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                                                        <span>รหัส: {c.emp_id} • ยื่นโดย: <strong style={{ color: "#374151" }}>{c.supervisor?.name || c.submitted_by}</strong></span>
+                                                        {isFuel ? (
+                                                            <span className={`${styles.typeBadge} ${styles.typeBadgeFuel}`}>
+                                                                <Fuel size={13} />
+                                                                <span>ค่าน้ำมัน</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`${styles.typeBadge} ${styles.typeBadgeDep}`}>
+                                                                <Car size={13} />
+                                                                <span>ค่าเสื่อมสภาพรถ</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className={styles.empId}>
-                                                    รหัสพนักงาน: {c.emp_id} • ยื่นโดย: <strong style={{ color: "#374151" }}>{c.supervisor?.name || c.submitted_by}</strong>
+                                                <div>
+                                                    {renderStatusBadge(c.status)}
                                                 </div>
                                             </div>
-                                            <div>
-                                                {renderStatusBadge(c.status)}
+
+                                            <div className={styles.kv}>
+                                                <span className={styles.kvKey}>ประเภท:</span>
+                                                <span className={styles.kvValBold} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                                    {isFuel ? (
+                                                        <>
+                                                            <Fuel size={14} style={{ color: "#b45309" }} />
+                                                            <span>ค่าน้ำมัน (Fuel Costs)</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Car size={14} style={{ color: "#1d4ed8" }} />
+                                                            <span>ค่าเสื่อมสภาพรถ (Depreciation)</span>
+                                                        </>
+                                                    )}
+                                                </span>
+
+                                                <span className={styles.kvKey}>เดือนที่ขอเบิก:</span>
+                                                <span className={styles.kvValBold}>{format(new Date(c.claim_month), "MMMM yyyy", { locale: th })}</span>
+
+                                                <span className={styles.kvKey}>จำนวนเงิน:</span>
+                                                <span className={styles.redText}>฿{Number(c.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.-</span>
+
+                                                <span className={styles.kvKey}>วันที่ยื่น:</span>
+                                                <span className={styles.kvValBold}>{format(new Date(c.created_at), "d MMM yyyy (HH:mm)", { locale: th })}</span>
+                                            </div>
+
+                                            <div style={{ marginTop: 14, padding: "10px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475569" }}>
+                                                    <PaperClipIcon width={18} style={{ color: "#2563eb" }} />
+                                                    <span>หลักฐานค่าใช้จ่าย:</span>
+                                                </div>
+                                                <a
+                                                    href={c.receipt_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.link}
+                                                    style={{ fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}
+                                                >
+                                                    <span>คลิกดูไฟล์แนบ (บิล/ใบเสร็จ)</span>
+                                                    <ArrowTopRightOnSquareIcon width={14} />
+                                                </a>
+                                            </div>
+
+                                            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setReturningClaim(c); setReturnReason(""); }}
+                                                    className={styles.btnReject}
+                                                    title="ตีกลับเพื่อให้แก้ไข"
+                                                >
+                                                    <XCircleIcon width={16} /> ตีกลับแก้ไข
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setApprovingClaim(c)}
+                                                    className={styles.btnApprove}
+                                                    title="อนุมัติเบื้องต้นและส่งต่อ HR"
+                                                >
+                                                    <CheckIcon width={16} /> อนุมัติเบื้องต้น
+                                                </button>
                                             </div>
                                         </div>
-
-                                        <div className={styles.kv}>
-                                            <span className={styles.kvKey}>เดือนที่ขอเบิก:</span>
-                                            <span className={styles.kvValBold}>{format(new Date(c.claim_month), "MMMM yyyy", { locale: th })}</span>
-
-                                            <span className={styles.kvKey}>จำนวนเงิน:</span>
-                                            <span className={styles.redText}>฿{Number(c.amount).toLocaleString()}.-</span>
-
-                                            <span className={styles.kvKey}>วันที่ยื่น:</span>
-                                            <span className={styles.kvValBold}>{format(new Date(c.created_at), "d MMM yyyy (HH:mm)", { locale: th })}</span>
-                                        </div>
-
-                                        <div style={{ marginTop: 14, padding: "10px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475569" }}>
-                                                <PaperClipIcon width={18} style={{ color: "#2563eb" }} />
-                                                <span>หลักฐานค่าใช้จ่าย:</span>
-                                            </div>
-                                            <a
-                                                href={c.receipt_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.link}
-                                                style={{ fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}
-                                            >
-                                                <span>คลิกดูไฟล์แนบ (บิล/ใบเสร็จ)</span>
-                                                <ArrowTopRightOnSquareIcon width={14} />
-                                            </a>
-                                        </div>
-
-                                        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setReturningClaim(c); setReturnReason(""); }}
-                                                className={styles.btnReject}
-                                                title="ตีกลับเพื่อให้แก้ไข"
-                                            >
-                                                <XCircleIcon width={16} /> ตีกลับแก้ไข
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setApprovingClaim(c)}
-                                                className={styles.btnApprove}
-                                                title="อนุมัติเบื้องต้นและส่งต่อ HR"
-                                            >
-                                                <CheckIcon width={16} /> อนุมัติเบื้องต้น
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -506,6 +590,37 @@ export default function TeamDepreciationClaimsPage() {
                                     {resubmitId ? "แก้ไขและส่งคำขอใหม่" : "สร้างคำขอเบิกใหม่"}
                                 </div>
                                 <form onSubmit={handleSubmit}>
+                                    {/* Category Selector */}
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>ประเภทรายการที่ต้องการเบิก</label>
+                                        <div className={styles.typeSelectorGrid}>
+                                            <div 
+                                                className={`${styles.typeSelectorCard} ${formData.claim_type === "DEPRECIATION" ? styles.typeSelectorCardActive : ""}`}
+                                                onClick={() => setFormData({ ...formData, claim_type: "DEPRECIATION" })}
+                                            >
+                                                <div className={styles.typeSelectorIcon}>
+                                                    <Car size={22} style={{ color: formData.claim_type === "DEPRECIATION" ? "#dc2626" : "#64748b" }} />
+                                                </div>
+                                                <div className={styles.typeSelectorText}>
+                                                    <span className={styles.typeSelectorTitle}>ค่าเสื่อมสภาพรถ</span>
+                                                    <span className={styles.typeSelectorSub}>เบิกค่าเสื่อมสภาพยานพาหนะตามสิทธิ์</span>
+                                                </div>
+                                            </div>
+                                            <div 
+                                                className={`${styles.typeSelectorCard} ${formData.claim_type === "FUEL" ? styles.typeSelectorCardActive : ""}`}
+                                                onClick={() => setFormData({ ...formData, claim_type: "FUEL" })}
+                                            >
+                                                <div className={styles.typeSelectorIcon}>
+                                                    <Fuel size={22} style={{ color: formData.claim_type === "FUEL" ? "#dc2626" : "#64748b" }} />
+                                                </div>
+                                                <div className={styles.typeSelectorText}>
+                                                    <span className={styles.typeSelectorTitle}>ค่าน้ำมัน</span>
+                                                    <span className={styles.typeSelectorSub}>เบิกค่าน้ำมันเชื้อเพลิงตามจริง</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label}>พนักงาน</label>
                                         <select
@@ -583,71 +698,139 @@ export default function TeamDepreciationClaimsPage() {
                                     </div>
                                 </div>
 
+                                {/* Category filter chips */}
+                                <div className={styles.categoryFilterWrap}>
+                                    <button 
+                                        type="button" 
+                                        className={`${styles.filterChip} ${categoryFilter === "all" ? styles.filterChipActive : ""}`}
+                                        onClick={() => setCategoryFilter("all")}
+                                    >
+                                        ทั้งหมด ({claims.length})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`${styles.filterChip} ${categoryFilter === "DEPRECIATION" ? styles.filterChipActive : ""}`}
+                                        onClick={() => setCategoryFilter("DEPRECIATION")}
+                                    >
+                                        <Car size={15} />
+                                        <span>ค่าเสื่อมสภาพรถ</span>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        className={`${styles.filterChip} ${categoryFilter === "FUEL" ? styles.filterChipActive : ""}`}
+                                        onClick={() => setCategoryFilter("FUEL")}
+                                    >
+                                        <Fuel size={15} />
+                                        <span>ค่าน้ำมัน</span>
+                                    </button>
+                                </div>
+
                                 {loading ? (
                                     <div className={styles.emptyState}>
                                         <ArrowPathIcon width={32} className="animate-spin" style={{ color: "var(--gray-400)" }} />
                                         <span>กำลังโหลดข้อมูล...</span>
                                     </div>
-                                ) : claims.length === 0 ? (
+                                ) : filteredClaims.length === 0 ? (
                                     <div className={styles.emptyState}>
                                         <DocumentCheckIcon width={40} style={{ color: "var(--gray-400)" }} />
-                                        <span>ยังไม่มีรายการขอเบิก</span>
+                                        <span>ไม่พบรายการขอเบิกในหมวดหมู่นี้</span>
                                     </div>
                                 ) : (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                        {claims.map((c: any) => (
-                                            <div key={c.id} className={styles.listItem}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: 12 }}>
-                                                    <div>
-                                                        <div className={styles.empName}>{c.employee?.name} {c.employee?.nickname ? `(${c.employee.nickname})` : ""}</div>
-                                                        <div className={styles.empId}>ID: {c.emp_id}</div>
-                                                    </div>
-                                                    <div>
-                                                        {renderStatusBadge(c.status)}
-                                                    </div>
-                                                </div>
+                                        {filteredClaims.map((c: any) => {
+                                            const isFuel = c.claim_type === "FUEL";
 
-                                                <div className={styles.kv}>
-                                                    <span className={styles.kvKey}>เดือนที่ขอเบิก:</span>
-                                                    <span className={styles.kvValBold}>{format(new Date(c.claim_month), "MMMM yyyy", { locale: th })}</span>
-
-                                                    <span className={styles.kvKey}>จำนวนเงิน:</span>
-                                                    <span className={styles.redText}>฿{Number(c.amount).toLocaleString()}.-</span>
-
-                                                    <span className={styles.kvKey}>วันที่ยื่น:</span>
-                                                    <span className={styles.kvValBold}>{format(new Date(c.created_at), "d MMM yyyy (HH:mm)", { locale: th })}</span>
-                                                </div>
-
-                                                {c.status === "RETURNED" && c.return_reason && (
-                                                    <div style={{ marginTop: 12, padding: 12, background: "#fee2e2", borderRadius: 8, fontSize: 14, color: "#991b1b", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                                                        <ExclamationTriangleIcon width={18} style={{ flexShrink: 0, marginTop: 2, color: "#b91c1c" }} />
+                                            return (
+                                                <div key={c.id} className={styles.listItem}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: 12 }}>
                                                         <div>
-                                                            <strong>เหตุผลที่ตีกลับ:</strong> {c.return_reason}
+                                                            <div className={styles.empName}>{c.employee?.name} {c.employee?.nickname ? `(${c.employee.nickname})` : ""}</div>
+                                                            <div className={styles.empId} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                                                                <span>ID: {c.emp_id}</span>
+                                                                {isFuel ? (
+                                                                    <span className={`${styles.typeBadge} ${styles.typeBadgeFuel}`}>
+                                                                        <Fuel size={13} />
+                                                                        <span>ค่าน้ำมัน</span>
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`${styles.typeBadge} ${styles.typeBadgeDep}`}>
+                                                                        <Car size={13} />
+                                                                        <span>ค่าเสื่อมสภาพรถ</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            {renderStatusBadge(c.status)}
                                                         </div>
                                                     </div>
-                                                )}
 
-                                                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: "wrap", gap: 8 }}>
-                                                    <a
-                                                        href={c.receipt_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={styles.link}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: 5 }}
-                                                    >
-                                                        <PaperClipIcon width={16} />
-                                                        <span>ดูไฟล์แนบ</span>
-                                                        <ArrowTopRightOnSquareIcon width={13} />
-                                                    </a>
+                                                    <div className={styles.kv}>
+                                                        <span className={styles.kvKey}>ประเภท:</span>
+                                                        <span className={styles.kvValBold} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                                            {isFuel ? (
+                                                                <>
+                                                                    <Fuel size={14} style={{ color: "#b45309" }} />
+                                                                    <span>ค่าน้ำมัน (Fuel Costs)</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Car size={14} style={{ color: "#1d4ed8" }} />
+                                                                    <span>ค่าเสื่อมสภาพรถ (Depreciation)</span>
+                                                                </>
+                                                            )}
+                                                        </span>
 
-                                                    {c.status === "RETURNED" && (
-                                                        <button onClick={() => openResubmit(c)} className={styles.btnSecondary} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: "6px 12px", fontSize: 13 }}>
-                                                            <PencilSquareIcon width={16} /> แก้ไขและส่งใหม่
-                                                        </button>
+                                                        <span className={styles.kvKey}>เดือนที่ขอเบิก:</span>
+                                                        <span className={styles.kvValBold}>{format(new Date(c.claim_month), "MMMM yyyy", { locale: th })}</span>
+
+                                                        <span className={styles.kvKey}>จำนวนเงิน:</span>
+                                                        <span className={styles.redText}>฿{Number(c.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.-</span>
+
+                                                        <span className={styles.kvKey}>วันที่ยื่น:</span>
+                                                        <span className={styles.kvValBold}>{format(new Date(c.created_at), "d MMM yyyy (HH:mm)", { locale: th })}</span>
+
+                                                        {c.status === "PAID" && (
+                                                            <>
+                                                                <span className={styles.kvKey}>สถานะการจ่ายเงิน:</span>
+                                                                <span className={styles.kvValBold} style={{ color: "#047857" }}>
+                                                                    จ่ายเงินเรียบร้อยแล้ว {c.paid_at ? `(${format(new Date(c.paid_at), "d MMM yyyy", { locale: th })})` : ''}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    {c.status === "RETURNED" && c.return_reason && (
+                                                        <div style={{ marginTop: 12, padding: 12, background: "#fee2e2", borderRadius: 8, fontSize: 14, color: "#991b1b", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                                                            <ExclamationTriangleIcon width={18} style={{ flexShrink: 0, marginTop: 2, color: "#b91c1c" }} />
+                                                            <div>
+                                                                <strong>เหตุผลที่ตีกลับ:</strong> {c.return_reason}
+                                                            </div>
+                                                        </div>
                                                     )}
+
+                                                    <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: "wrap", gap: 8 }}>
+                                                        <a
+                                                            href={c.receipt_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.link}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                                                        >
+                                                            <PaperClipIcon width={16} />
+                                                            <span>ดูไฟล์แนบ</span>
+                                                            <ArrowTopRightOnSquareIcon width={13} />
+                                                        </a>
+
+                                                        {c.status === "RETURNED" && (
+                                                            <button onClick={() => openResubmit(c)} className={styles.btnSecondary} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: "6px 12px", fontSize: 13 }}>
+                                                                <PencilSquareIcon width={16} /> แก้ไขและส่งใหม่
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

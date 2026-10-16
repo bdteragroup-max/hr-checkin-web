@@ -1,5 +1,5 @@
 'use server'
-// Force TS reload
+// Force TS & Next.js Turbopack reload with updated Prisma schema
 
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/jwt';
@@ -85,8 +85,10 @@ export async function createDepreciationClaim(data: {
     amount: number;
     receipt_url: string;
     claim_month: Date;
+    claim_type?: string;
 }) {
     const currentUser = await getUser();
+    const claimType = data.claim_type === 'FUEL' ? 'FUEL' : 'DEPRECIATION';
     
     // Check if the selected emp_id matches direct supervisor, secondary supervisor, or self
     const targetEmployee = await prisma.employees.findUnique({
@@ -112,10 +114,11 @@ export async function createDepreciationClaim(data: {
             amount: data.amount,
             receipt_url: data.receipt_url,
             claim_month: new Date(data.claim_month),
+            claim_type: claimType,
             status: initialStatus,
             initial_approved_by: currentUser.emp_id === 'TE65001' ? 'TE65001' : null,
             initial_approved_at: currentUser.emp_id === 'TE65001' ? new Date() : null,
-        }
+        } as any
     });
 
     const empDisplay = targetEmployee.name + (targetEmployee.nickname ? ` (${targetEmployee.nickname})` : '');
@@ -137,6 +140,7 @@ export async function createDepreciationClaim(data: {
                     month: monthStr,
                     amount: Number(data.amount).toLocaleString(),
                     receiptUrl: data.receipt_url,
+                    claimType: claimType,
                     status: 'PENDING_INITIAL'
                 }, [natthinee.line_user_id]);
             }
@@ -156,6 +160,7 @@ export async function createDepreciationClaim(data: {
                 month: monthStr,
                 amount: Number(data.amount).toLocaleString(),
                 receiptUrl: data.receipt_url,
+                claimType: claimType,
                 status: 'PENDING_HR'
             }, [process.env.HR_LINE_USER_ID]);
         } catch (notifyErr) {
@@ -242,6 +247,7 @@ export async function initialApproveClaim(id: number) {
                 month: monthStr,
                 amount: Number(claim.amount).toLocaleString(),
                 receiptUrl: claim.receipt_url,
+                claimType: (claim as any).claim_type,
                 status: 'PENDING_HR'
             }, [claim.supervisor.line_user_id]);
         } catch (e) {
@@ -260,6 +266,7 @@ export async function initialApproveClaim(id: number) {
                 month: monthStr,
                 amount: Number(claim.amount).toLocaleString(),
                 receiptUrl: claim.receipt_url,
+                claimType: (claim as any).claim_type,
                 status: 'PENDING_HR'
             }, [process.env.HR_LINE_USER_ID]);
         } catch (e) {
@@ -270,16 +277,20 @@ export async function initialApproveClaim(id: number) {
     return { success: true, claim: { ...updatedClaim, amount: updatedClaim.amount.toNumber() } };
 }
 
-export async function getMyTeamClaims(filters: { status?: string; month?: string } = {}) {
+export async function getMyTeamClaims(filters: { status?: string; month?: string; claim_type?: string } = {}) {
     const currentUser = await getUser();
     const where: any = { submitted_by: currentUser.emp_id };
     
-    if (filters.status) {
+    if (filters.status && filters.status !== 'all') {
         if (filters.status === 'PENDING') {
             where.status = { in: ['PENDING', 'PENDING_INITIAL', 'PENDING_HR'] };
         } else {
             where.status = filters.status;
         }
+    }
+
+    if (filters.claim_type && filters.claim_type !== 'all') {
+        where.claim_type = filters.claim_type;
     }
     
     if (filters.month) {
@@ -306,7 +317,7 @@ export async function getMyTeamClaims(filters: { status?: string; month?: string
     }));
 }
 
-export async function getAllClaims(filters: { status?: string; month?: string; startDate?: string; endDate?: string; supervisor_id?: string } = {}) {
+export async function getAllClaims(filters: { status?: string; month?: string; startDate?: string; endDate?: string; supervisor_id?: string; claim_type?: string } = {}) {
     const where: any = {};
     
     if (filters.status && filters.status !== 'all') {
@@ -319,6 +330,10 @@ export async function getAllClaims(filters: { status?: string; month?: string; s
         } else {
             where.status = filters.status;
         }
+    }
+
+    if (filters.claim_type && filters.claim_type !== 'all') {
+        where.claim_type = filters.claim_type;
     }
     
     if (filters.supervisor_id && filters.supervisor_id !== 'all') {
@@ -404,12 +419,192 @@ export async function approveClaim(id: number) {
                 month: monthStr,
                 amount: Number(claim.amount).toLocaleString(),
                 receiptUrl: claim.receipt_url,
+                claimType: (claim as any).claim_type,
                 status: 'APPROVED'
             }, lineRecipients);
         } catch (e) {
             console.error('Notify approved error (ignored):', e);
         }
     }
+
+    return { success: true, claim: { ...updatedClaim, amount: updatedClaim.amount.toNumber() } };
+}
+
+// Mark claim as Paid (Disbursed in monthly payment cycle) by HR / Admin
+export async function markClaimAsPaid(id: number) {
+    const currentUser = await getUser();
+    if (!(currentUser as any).isAdmin) {
+        throw new Error('เฉพาะเจ้าหน้าที่ฝ่ายบุคคลหรือผู้ดูแลระบบเท่านั้นที่สามารถบันทึกสถานะจ่ายเงินได้');
+    }
+    
+    const claim = await prisma.sales_depreciation_claims.findUnique({
+        where: { id },
+        include: {
+            employee: { select: { name: true, nickname: true, emp_id: true, line_user_id: true } },
+            supervisor: { select: { name: true, nickname: true, emp_id: true, line_user_id: true } }
+        }
+    });
+
+    if (!claim) throw new Error('ไม่พบข้อมูลคำขอเบิก');
+    if (claim.status !== 'APPROVED') {
+        throw new Error('สามารถบันทึกจ่ายเงินได้เฉพาะรายการที่ได้รับการอนุมัติ (APPROVED) แล้วเท่านั้น');
+    }
+
+    const updatedClaim = await prisma.sales_depreciation_claims.update({
+        where: { id },
+        data: {
+            status: 'PAID',
+            paid_by: currentUser.emp_id,
+            paid_at: new Date(),
+            revisions: {
+                create: {
+                    returned_by: currentUser.emp_id,
+                    snapshot: { 
+                        status: 'PAID', 
+                        paid_by: currentUser.emp_id,
+                        paid_at: new Date()
+                    }
+                }
+            }
+        } as any
+    });
+
+    const monthStr = new Date(claim.claim_month).toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+    const empDisplay = claim.employee.name + (claim.employee.nickname ? ` (${claim.employee.nickname})` : '');
+
+    // Notify Submitter and Employee
+    const lineRecipients: string[] = [];
+    if (claim.supervisor.line_user_id) lineRecipients.push(claim.supervisor.line_user_id);
+    if (claim.employee.line_user_id && !lineRecipients.includes(claim.employee.line_user_id)) {
+        lineRecipients.push(claim.employee.line_user_id);
+    }
+
+    if (lineRecipients.length > 0) {
+        try {
+            const { sendDepreciationClaimNotification } = await import("@/utils/lineMessaging");
+            await sendDepreciationClaimNotification({
+                id: claim.id,
+                employeeName: empDisplay,
+                submitterName: claim.supervisor.name,
+                month: monthStr,
+                amount: Number(claim.amount).toLocaleString(),
+                receiptUrl: claim.receipt_url,
+                claimType: (claim as any).claim_type,
+                status: 'PAID'
+            }, lineRecipients);
+        } catch (e) {
+            console.error('Notify paid error (ignored):', e);
+        }
+    }
+
+    return { success: true, claim: { ...updatedClaim, amount: updatedClaim.amount.toNumber() } };
+}
+
+// Bulk mark multiple approved claims as Paid
+export async function markMultipleClaimsAsPaid(ids: number[]) {
+    const currentUser = await getUser();
+    if (!(currentUser as any).isAdmin) {
+        throw new Error('เฉพาะเจ้าหน้าที่ฝ่ายบุคคลหรือผู้ดูแลระบบเท่านั้นที่สามารถบันทึกสถานะจ่ายเงินได้');
+    }
+    if (!ids || ids.length === 0) {
+        throw new Error('กรุณาเลือกรายการที่ต้องการจ่ายเงิน');
+    }
+
+    const now = new Date();
+    const claimsToUpdate = await prisma.sales_depreciation_claims.findMany({
+        where: {
+            id: { in: ids },
+            status: 'APPROVED'
+        },
+        include: {
+            employee: { select: { name: true, nickname: true, emp_id: true, line_user_id: true } },
+            supervisor: { select: { name: true, nickname: true, emp_id: true, line_user_id: true } }
+        }
+    });
+
+    if (claimsToUpdate.length === 0) {
+        throw new Error('ไม่พบรายการที่มีสถานะอนุมัติแล้ว (APPROVED) ที่พร้อมจ่ายเงิน');
+    }
+
+    const updatedIds = claimsToUpdate.map(c => c.id);
+
+    await prisma.$transaction(async (tx) => {
+        for (const c of claimsToUpdate) {
+            await tx.sales_depreciation_claims.update({
+                where: { id: c.id },
+                data: {
+                    status: 'PAID',
+                    paid_by: currentUser.emp_id,
+                    paid_at: now,
+                    revisions: {
+                        create: {
+                            returned_by: currentUser.emp_id,
+                            snapshot: { status: 'PAID', paid_by: currentUser.emp_id, paid_at: now }
+                        }
+                    }
+                } as any
+            });
+        }
+    });
+
+    // Notify asynchronously
+    try {
+        const { sendDepreciationClaimNotification } = await import("@/utils/lineMessaging");
+        for (const c of claimsToUpdate) {
+            const lineRecipients: string[] = [];
+            if (c.supervisor.line_user_id) lineRecipients.push(c.supervisor.line_user_id);
+            if (c.employee.line_user_id && !lineRecipients.includes(c.employee.line_user_id)) {
+                lineRecipients.push(c.employee.line_user_id);
+            }
+            if (lineRecipients.length > 0) {
+                const monthStr = new Date(c.claim_month).toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+                const empDisplay = c.employee.name + (c.employee.nickname ? ` (${c.employee.nickname})` : '');
+                sendDepreciationClaimNotification({
+                    id: c.id,
+                    employeeName: empDisplay,
+                    submitterName: c.supervisor.name,
+                    month: monthStr,
+                    amount: Number(c.amount).toLocaleString(),
+                    receiptUrl: c.receipt_url,
+                    claimType: (c as any).claim_type,
+                    status: 'PAID'
+                }, lineRecipients).catch(console.error);
+            }
+        }
+    } catch (err) {
+        console.error("Batch notify error (ignored):", err);
+    }
+
+    return { success: true, count: updatedIds.length };
+}
+
+// Revert Paid claim back to Approved (Awaiting payment)
+export async function unmarkClaimAsPaid(id: number) {
+    const currentUser = await getUser();
+    if (!(currentUser as any).isAdmin) {
+        throw new Error('เฉพาะเจ้าหน้าที่ฝ่ายบุคคลหรือผู้ดูแลระบบเท่านั้น');
+    }
+
+    const claim = await prisma.sales_depreciation_claims.findUnique({ where: { id } });
+    if (!claim) throw new Error('ไม่พบข้อมูลคำขอเบิก');
+    if (claim.status !== 'PAID') {
+        throw new Error('สามารถยกเลิกได้เฉพาะรายการที่จ่ายเงินแล้ว (PAID) เท่านั้น');
+    }
+
+    const updatedClaim = await prisma.sales_depreciation_claims.update({
+        where: { id },
+        data: {
+            status: 'APPROVED',
+            paid_by: null,
+            paid_at: null,
+            revisions: {
+                create: {
+                    returned_by: currentUser.emp_id,
+                    snapshot: { status: 'APPROVED', reverted_from: 'PAID', by: currentUser.emp_id }
+                }
+            }
+        } as any
+    });
 
     return { success: true, claim: { ...updatedClaim, amount: updatedClaim.amount.toNumber() } };
 }
@@ -459,6 +654,7 @@ export async function returnClaimForRevision(id: number, reason: string) {
                 month: monthStr,
                 amount: Number(claim.amount).toLocaleString(),
                 receiptUrl: claim.receipt_url,
+                claimType: (claim as any).claim_type,
                 status: 'RETURNED',
                 returnReason: reason
             }, [claim.supervisor.line_user_id]);
@@ -470,7 +666,7 @@ export async function returnClaimForRevision(id: number, reason: string) {
     return { success: true, claim: { ...updatedClaim, amount: updatedClaim.amount.toNumber() } };
 }
 
-export async function resubmitClaim(id: number, newData: { amount: number; receipt_url: string }) {
+export async function resubmitClaim(id: number, newData: { amount: number; receipt_url: string; claim_type?: string }) {
     const currentUser = await getUser();
     
     const claim = await prisma.sales_depreciation_claims.findUnique({
@@ -487,6 +683,7 @@ export async function resubmitClaim(id: number, newData: { amount: number; recei
     }
 
     const nextStatus = currentUser.emp_id === 'TE65001' ? 'PENDING_HR' : 'PENDING_INITIAL';
+    const finalClaimType = newData.claim_type ? (newData.claim_type === 'FUEL' ? 'FUEL' : 'DEPRECIATION') : (claim as any).claim_type;
 
     const updatedClaim = await prisma.sales_depreciation_claims.update({
         where: { id },
@@ -494,16 +691,17 @@ export async function resubmitClaim(id: number, newData: { amount: number; recei
             status: nextStatus,
             amount: newData.amount,
             receipt_url: newData.receipt_url,
+            claim_type: finalClaimType,
             return_reason: null, // clear the reason
             initial_approved_by: currentUser.emp_id === 'TE65001' ? 'TE65001' : null,
             initial_approved_at: currentUser.emp_id === 'TE65001' ? new Date() : null,
             revisions: {
                 create: {
                     returned_by: currentUser.emp_id,
-                    snapshot: newData as any
+                    snapshot: { ...newData, claim_type: finalClaimType } as any
                 }
             }
-        }
+        } as any
     });
 
     // Notify Khun Natthinee if needed
@@ -523,6 +721,7 @@ export async function resubmitClaim(id: number, newData: { amount: number; recei
                     month: monthStr,
                     amount: Number(newData.amount).toLocaleString(),
                     receiptUrl: newData.receipt_url,
+                    claimType: finalClaimType,
                     status: 'PENDING_INITIAL'
                 }, [natthinee.line_user_id]);
             }
