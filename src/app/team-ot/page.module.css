@@ -1,7 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
 
 .page {
-  font-family: "Sarabun", sans-serif;
+  font-family: var(--font-sans);
   background: #f4f6f9;
   min-height: 100vh;
   color: #111827;
@@ -35,7 +34,7 @@
 }
 
 .heroH1 {
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
   font-size: 36px;
   font-weight: 700;
   line-height: 1.15;
@@ -58,7 +57,7 @@
   font-weight: 600;
   letter-spacing: 0.8px;
   color: #6b7280;
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .heroMetaDot {
@@ -123,7 +122,7 @@
 }
 
 .cardTitle {
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 1.2px;
@@ -191,7 +190,7 @@
 }
 
 .detailValLarge {
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
   font-size: 18px;
   font-weight: 700;
   color: #111827;
@@ -240,7 +239,7 @@
 }
 
 .timeVal {
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 700;
   color: #111827;
@@ -440,7 +439,7 @@
 }
 
 .alertTitle {
-  font-family: "Prompt", sans-serif;
+  font-family: var(--font-sans);
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 8px;

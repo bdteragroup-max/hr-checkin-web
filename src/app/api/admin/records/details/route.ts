@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { adjustCheckinsForLeaves } from "@/utils/checkin";
+import { triggerSmartSync } from "@/lib/humansoft";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,6 +14,7 @@ function formatTime(d: Date) {
 export async function GET(req: Request) {
     try {
         const auth = await requireAdminOrSupervisor();
+        triggerSmartSync().catch(() => {});
 
         const url = new URL(req.url);
         const emp_id = url.searchParams.get("emp_id");
@@ -97,12 +99,6 @@ export async function GET(req: Request) {
             where: { date: { gte: startDate, lte: endDate } }
         });
 
-        const workPlans = await prisma.daily_work_plans.findMany({
-            where: {
-                emp_id,
-                date: { gte: startDate, lte: endDate }
-            }
-        });
 
         const holidayMap = new Map<string, string>();
         holidays.forEach(h => holidayMap.set(h.date.toISOString().split("T")[0], h.name));
@@ -178,7 +174,6 @@ export async function GET(req: Request) {
                 return false;
             });
 
-            const workPlan = workPlans.find(wp => wp.date.toISOString().split("T")[0] === dateStr);
 
             const inRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-in") || c.type === "Trip-Update");
             const outRecords = dayCheckins.filter(c => c.type.toLowerCase().includes("-out") || c.type === "Check-out");
@@ -291,15 +286,7 @@ export async function GET(req: Request) {
                 status,
                 is_trip: isTrip,
                 is_weekend: isSunday,
-                work_plan: workPlan ? {
-                    morning: workPlan.morning_plan,
-                    morning_loc: workPlan.morning_location,
-                    afternoon: workPlan.afternoon_plan,
-                    afternoon_loc: workPlan.afternoon_location,
-                    ot: workPlan.ot_plan,
-                    ot_loc: workPlan.ot_location,
-                    ot_attendant: workPlan.ot_attendant
-                } : null
+                work_plan: null
             });
         }
 

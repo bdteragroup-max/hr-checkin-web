@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { formatTime24h } from "@/utils/time";
 import AlertModal, { AlertState } from "@/components/AlertModal";
-import WorkPlanModal from "@/components/WorkPlanModal";
 import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
@@ -67,14 +66,6 @@ export default function TripLogPage() {
         }
     });
 
-    const { data: wpData, isLoading: isPlanLoading } = useQuery({
-        queryKey: ["work-plans"],
-        queryFn: async () => {
-            const r = await fetch("/api/work-plans");
-            return r.json();
-        }
-    });
-    const planSubmittedToday = wpData?.ok && wpData?.plan;
 
     const { data: history = [], isLoading: historyLoading } = useQuery({
         queryKey: ["checkins", "trip"],
@@ -96,7 +87,7 @@ export default function TripLogPage() {
         }
     });
 
-    const loading = meLoading || isPlanLoading || historyLoading;
+    const loading = meLoading || historyLoading;
 
     // Form State — single field: locationName is required, no separate remark
     const [locationName, setLocationName] = useState("");
@@ -107,13 +98,6 @@ export default function TripLogPage() {
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isCameraReady, setIsCameraReady] = useState(false);
     const [pendingAction, setPendingAction] = useState<'update' | 'accommodation' | 'checkout'>('update');
-    const [showWorkPlan, setShowWorkPlan] = useState(false);
-
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me]);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -148,13 +132,6 @@ export default function TripLogPage() {
             return;
         }
 
-        // If no plan today, show modal before camera
-        if (!planSubmittedToday && !me?.is_checkin_exempt) {
-            setPendingAction(action);
-            setShowWorkPlan(true);
-            return;
-        }
-
         proceedToCamera(action);
     }
 
@@ -176,26 +153,6 @@ export default function TripLogPage() {
         } catch (e) {
             setAlert({ visible: true, message: "ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง", type: "error" });
             setStep('log');
-        }
-    }
-
-    async function handleWorkPlanSubmit(data: any) {
-        try {
-            const res = await fetch("/api/work-plans", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            if (result.ok) {
-                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
-                setShowWorkPlan(false);
-                proceedToCamera(pendingAction);
-            } else {
-                throw new Error(result.error || "Failed to submit plan");
-            }
-        } catch (e: any) {
-            setAlert({ visible: true, message: "บันทึกแผนงานไม่สำเร็จ: " + e.message, type: "error" });
         }
     }
 
@@ -222,18 +179,18 @@ export default function TripLogPage() {
             ctx.fillRect(0, h - 90, w, 90);
 
             ctx.fillStyle = "white";
-            ctx.font = "bold 26px Sarabun";
+            ctx.font = "bold 26px 'Inter', 'Inter Thai Looped', sans-serif";
             ctx.textAlign = "left";
             ctx.fillText(me?.name || "", 20, h - 55);
 
-            ctx.font = "20px Sarabun";
+            ctx.font = "20px 'Inter', 'Inter Thai Looped', sans-serif";
             ctx.fillText(`📍 ${locationName}`, 20, h - 28);
 
-            ctx.font = "16px Sarabun";
+            ctx.font = "16px 'Inter', 'Inter Thai Looped', sans-serif";
             ctx.fillText(`${getThaiDateStr()} ${getThaiTimeStr()} น.`, 20, h - 8);
 
             ctx.textAlign = "right";
-            ctx.font = "14px Sarabun";
+            ctx.font = "14px 'Inter', 'Inter Thai Looped', sans-serif";
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             ctx.fillText("Smart Journey Tracking", w - 20, h - 8);
 
@@ -573,16 +530,6 @@ export default function TripLogPage() {
             <AlertModal
                 alert={alert}
                 onClose={() => setAlert({ ...alert, visible: false })}
-            />
-
-            <WorkPlanModal
-                isOpen={showWorkPlan}
-                onClose={() => {
-                    setShowWorkPlan(false);
-                    setStep('log'); // Reset to log if cancelled
-                }}
-                onSubmit={handleWorkPlanSubmit}
-                employeeName={me?.name || ""}
             />
 
             <canvas ref={canvasRef} style={{ display: "none" }} />

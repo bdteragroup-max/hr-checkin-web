@@ -19,7 +19,8 @@ import {
     EyeIcon,
     InboxIcon,
     SparklesIcon,
-    FireIcon
+    FireIcon,
+    CloudArrowDownIcon
 } from "@heroicons/react/24/outline";
 
 interface Employee {
@@ -131,6 +132,31 @@ export default function RecordsPage() {
     const [filterEmpId, setFilterEmpId] = useState("all");
     const [exportStatus, setExportStatus] = useState<"all" | "active" | "inactive">("all");
     const [exportingType, setExportingType] = useState<"pdf" | "excel" | null>(null);
+    const [isSyncingHumanSoft, setIsSyncingHumanSoft] = useState(false);
+
+    const handleSyncHumanSoft = async () => {
+        setIsSyncingHumanSoft(true);
+        showToast("กำลังเชื่อมต่อดึงข้อมูลจาก HumanSoft (TE, TP, TG)...");
+        try {
+            const res = await fetch("/api/admin/humansoft/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date_from: startDate, date_to: endDate })
+            });
+            const json = await res.json();
+            if (json.ok) {
+                showToast(`ดึงข้อมูลสำเร็จ: พบ ${json.total} รายการ (บันทึกใหม่ ${json.inserted} รายการ)`, "ok");
+                queryClient.invalidateQueries({ queryKey: ['admin-records-summary'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-records-details'] });
+            } else {
+                showToast(json.error || "ไม่สามารถดึงข้อมูลจาก HumanSoft ได้", "bad");
+            }
+        } catch {
+            showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ HumanSoft", "bad");
+        } finally {
+            setIsSyncingHumanSoft(false);
+        }
+    };
 
     // Filter states for working hours: "all" | "under_9h" | "over_9h"
     const [hourFilter, setHourFilter] = useState<"all" | "under_9h" | "over_9h">(() => {
@@ -147,11 +173,6 @@ export default function RecordsPage() {
     // In-table search for master summary view
     const [inTableSearch, setInTableSearch] = useState("");
 
-    // Modal state for viewing full work plan
-    const [activeWorkPlanModal, setActiveWorkPlanModal] = useState<{
-        date: string;
-        plan: WorkPlan;
-    } | null>(null);
 
     // Searchable Select dropdown states
     const [searchTerm, setSearchTerm] = useState("");
@@ -417,6 +438,21 @@ export default function RecordsPage() {
                 </div>
 
                 <div className={styles.headerActions}>
+                    <button
+                        className={styles.btnAction}
+                        onClick={handleSyncHumanSoft}
+                        disabled={isSyncingHumanSoft}
+                        title="ดึงข้อมูลเวลาเข้า-ออกจาก HumanSoft (TE, TP, TG) เข้าสู่ระบบ"
+                        style={{
+                            background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                            color: "#fff",
+                            borderColor: "#0284c7"
+                        }}
+                    >
+                        <CloudArrowDownIcon width={16} className={isSyncingHumanSoft ? styles.spinner : ""} />
+                        {isSyncingHumanSoft ? "กำลังดึง..." : "ดึง HumanSoft"}
+                    </button>
+
                     <button
                         className={styles.btnAction}
                         onClick={() => {
@@ -907,7 +943,6 @@ export default function RecordsPage() {
                                         <th>บันทึกเช็คอิน</th>
                                         <th>บันทึกเช็คเอาท์</th>
                                         <th style={{ textAlign: "center", width: 180 }}>ระยะเวลาทำงาน</th>
-                                        <th>แผนงานประจำวัน</th>
                                         <th style={{ textAlign: "center", width: 130 }}>สถานะ</th>
                                     </tr>
                                 </thead>
@@ -988,22 +1023,6 @@ export default function RecordsPage() {
                                                     )}
                                                 </td>
 
-                                                <td>
-                                                    {d.work_plan ? (
-                                                        <div
-                                                            className={styles.workPlanPreview}
-                                                            onClick={() => setActiveWorkPlanModal({ date: d.date, plan: d.work_plan! })}
-                                                            title="คลิกเพื่อดูรายละเอียดแผนงานเต็ม"
-                                                        >
-                                                            <EyeIcon width={14} style={{ flexShrink: 0 }} />
-                                                            <span>
-                                                                {d.work_plan.morning || d.work_plan.afternoon || "ดูแผนงาน"}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ color: "var(--text5)", fontSize: 12 }}>— ไม่มีแผนงาน —</span>
-                                                    )}
-                                                </td>
 
                                                 <td style={{ textAlign: "center" }}>
                                                     {renderStatusBadge(d.status)}
@@ -1270,74 +1289,7 @@ export default function RecordsPage() {
                 </div>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════
-                WORK PLAN MODAL
-                ══════════════════════════════════════════════════════════════ */}
-            {activeWorkPlanModal && (
-                <div
-                    className={styles.modalOverlay}
-                    onClick={() => setActiveWorkPlanModal(null)}
-                >
-                    <div
-                        className={styles.modalContent}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className={styles.modalHeader}>
-                            <div className={styles.modalTitle}>
-                                <CalendarIcon width={18} style={{ color: "#3b82f6" }} />
-                                <span>แผนงานประจำวัน: {activeWorkPlanModal.date}</span>
-                            </div>
-                            <button
-                                className={styles.modalClose}
-                                onClick={() => setActiveWorkPlanModal(null)}
-                                title="ปิดหน้าต่าง"
-                            >
-                                <XMarkIcon width={18} />
-                            </button>
-                        </div>
 
-                        <div className={styles.modalBody}>
-                            <div className={styles.planBlock}>
-                                <div className={styles.planBlockLabel}>ช่วงเช้า (Morning)</div>
-                                <div className={styles.planBlockText}>
-                                    {activeWorkPlanModal.plan.morning || "ไม่ได้ระบุ"}
-                                </div>
-                                {activeWorkPlanModal.plan.morning_loc && (
-                                    <div className={styles.planBlockSub}>
-                                        สถานที่: {activeWorkPlanModal.plan.morning_loc}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className={styles.planBlock}>
-                                <div className={styles.planBlockLabel}>ช่วงบ่าย (Afternoon)</div>
-                                <div className={styles.planBlockText}>
-                                    {activeWorkPlanModal.plan.afternoon || "ไม่ได้ระบุ"}
-                                </div>
-                                {activeWorkPlanModal.plan.afternoon_loc && (
-                                    <div className={styles.planBlockSub}>
-                                        สถานที่: {activeWorkPlanModal.plan.afternoon_loc}
-                                    </div>
-                                )}
-                            </div>
-
-                            {activeWorkPlanModal.plan.ot && (
-                                <div className={styles.planBlock} style={{ borderLeft: "3px solid #f59e0b" }}>
-                                    <div className={styles.planBlockLabel} style={{ color: "#f59e0b" }}>งานล่วงเวลา (OT)</div>
-                                    <div className={styles.planBlockText}>
-                                        {activeWorkPlanModal.plan.ot}
-                                    </div>
-                                    {activeWorkPlanModal.plan.ot_attendant && (
-                                        <div className={styles.planBlockSub}>
-                                            ผู้ช่วย/ผู้ร่วมงาน: {activeWorkPlanModal.plan.ot_attendant}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

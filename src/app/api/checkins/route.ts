@@ -236,7 +236,7 @@ export async function POST(req: Request) {
     const yesterdayISO = `${yesterdayBangkok.getFullYear()}-${String(yesterdayBangkok.getMonth() + 1).padStart(2, '0')}-${String(yesterdayBangkok.getDate()).padStart(2, '0')}`;
     const yesterday_date_key = new Date(yesterdayISO);
 
-    const [branch, project, todaysCheckins, yesterdaysCheckins, empWithPosition, dailyPlan] = await Promise.all([
+    const [branch, project, todaysCheckins, yesterdaysCheckins, empWithPosition] = await Promise.all([
         prisma.branches.findUnique({ where: { id: branch_id } }),
         customer_id ? prisma.projects.findUnique({ where: { id: customer_id } }) : Promise.resolve(null),
         prisma.checkins.findMany({
@@ -250,15 +250,6 @@ export async function POST(req: Request) {
         prisma.employees.findUnique({
             where: { emp_id: auth.emp.emp_id },
             include: { job_positions: { select: { is_ot_eligible: true } } }
-        }),
-        prisma.daily_work_plans.findFirst({
-            where: {
-                emp_id: auth.emp.emp_id,
-                date: {
-                    gte: new Date(`${getTodayBangkokISO()}T00:00:00.000Z`),
-                    lte: new Date(`${getTodayBangkokISO()}T23:59:59.999Z`)
-                }
-            }
         })
     ]);
 
@@ -267,13 +258,6 @@ export async function POST(req: Request) {
 
     if (customer_id && !project)
         return NextResponse.json({ error: "INVALID_PROJECT" }, { status: 400 });
-
-    // Mandatory Work Plan Enforcement (Backend)
-    const isInAction = type === "Check-in" || type === "Project-In" || type === "Offsite-In" || type === "Trip-Update";
-    if (isInAction && !dailyPlan && !auth.emp.is_checkin_exempt) {
-        console.log(`[CHECKIN_403] Missing plan for ${auth.emp.emp_id} on ${getTodayBangkokISO()} (${date_key.toISOString()}). Action: ${type}`);
-        return NextResponse.json({ error: "WORK_PLAN_REQUIRED", message: "กรุณาบันทึกแผนงานประจำวันก่อนทำรายการ" }, { status: 403 });
-    }
 
     // Block Late Check-ins after 12:00 PM without morning leave (Allowed for Offsite and Project check-ins)
     if (type === "Check-in") {

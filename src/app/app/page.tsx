@@ -25,7 +25,6 @@ import {
 import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { Camera, RotateCcw, X, Loader2 as LucideLoader } from "lucide-react";
 import { formatDateThai, formatTime24h, formatTimeFull24h, getBangkokWallClock } from "@/utils/time";
-import WorkPlanModal from "@/components/WorkPlanModal";
 
 /* ──────────────────────────────────────────
    CONFIG — เวลาเริ่ม/เลิกงาน (24h)
@@ -349,9 +348,6 @@ export default function AppPage() {
     const [warnings, setWarnings] = useState<{ id: number; date: string; reason: string }[]>([]);
     const [birthdays, setBirthdays] = useState<{ emp_id: string; name: string }[]>([]);
 
-    const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [planSubmittedToday, setPlanSubmittedToday] = useState(false);
-    const [isPlanLoading, setIsPlanLoading] = useState(true);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -364,11 +360,6 @@ export default function AppPage() {
     const hasOut = useMemo(() => today.some(x => x.type === "Check-out"), [today]);
     const selectedBranchObj = useMemo(() => branches.find(b => b.id === selectedBranch), [branches, selectedBranch]);
 
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt && !hasIn) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me, hasIn]);
 
     /* ── Alert ── */
     function showAlert(message: string, type: "error" | "ok" = "error") {
@@ -424,18 +415,10 @@ export default function AppPage() {
                 if (warningsData.ok && warningsData.warnings) setWarnings(warningsData.warnings);
                 if (birthdaysData.ok && birthdaysData.list) setBirthdays(birthdaysData.list);
                 
-                // Check if work plan is already submitted today
-                const planRes = await fetch("/api/work-plans", { cache: "no-store" });
-                const planData = await planRes.json();
-                if (planData.ok && planData.plan) {
-                    setPlanSubmittedToday(true);
-                }
-                setIsPlanLoading(false);
 
                 setStatus(<span><CheckCircleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />พร้อมใช้งาน</span>, "ok");
             } catch (error) {
                 console.error("Initialization failed:", error);
-                setIsPlanLoading(false);
                 setStatus(<span><ExclamationTriangleIcon width={14} style={{ display: 'inline', marginRight: 6 }} />เกิดข้อผิดพลาดในการโหลด</span>, "bad");
             }
         })();
@@ -649,12 +632,6 @@ export default function AppPage() {
         if (!empName) { showAlert("กรอกชื่อ-นามสกุลก่อน"); return; }
         if (!selectedBranch) { showAlert("กรุณาเลือกสาขา"); return; }
 
-        // If it's a Check-in and plan hasn't been submitted, show modal
-        if (type === "Check-in" && !planSubmittedToday) {
-            setShowWorkPlan(true);
-            return;
-        }
-
         proceedToGps();
     }
 
@@ -668,27 +645,6 @@ export default function AppPage() {
         }
         setStep(3);
         await startCamera(facingMode);
-    }
-
-    async function handleWorkPlanSubmit(data: any) {
-        try {
-            const res = await fetch("/api/work-plans", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            if (result.ok) {
-                setPlanSubmittedToday(true);
-                setShowWorkPlan(false);
-                // After submitting plan, proceed with check-in flow
-                proceedToGps();
-            } else {
-                throw new Error(result.error || "Failed to submit plan");
-            }
-        } catch (e: any) {
-            showAlert("บันทึกแผนงานไม่สำเร็จ: " + e.message);
-        }
     }
 
     /* ── Capture ── */
@@ -1068,16 +1024,6 @@ export default function AppPage() {
 
             {/* ── MODALS ── */}
             <AlertModal alert={alert} onClose={closeAlert} />
-
-            <WorkPlanModal
-                isOpen={showWorkPlan}
-                onClose={() => {
-                    setShowWorkPlan(false);
-                    setStep(1); // Return to start if modal closed/cancelled
-                }}
-                onSubmit={handleWorkPlanSubmit}
-                employeeName={empName}
-            />
 
             <canvas ref={canvasRef} style={{ display: "none" }} />
         </>

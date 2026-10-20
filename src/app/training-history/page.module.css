@@ -3,7 +3,6 @@
    Red · White · Gray · Premium Modern (Training History)
    ============================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
 
 :root {
   --red: #d93025;
@@ -37,8 +36,8 @@
   --radius: 16px;
   --radius-sm: 10px;
 
-  --font-th: "Sarabun", sans-serif;
-  --font-display: "Prompt", sans-serif;
+  --font-th: var(--font-sans);
+  --font-display: var(--font-sans);
 }
 
 /* ── Wrapper ── */

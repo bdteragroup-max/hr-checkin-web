@@ -63,7 +63,7 @@
 }
 
 .wrapper {
-  font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
   height: 100vh;

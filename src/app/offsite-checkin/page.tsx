@@ -17,7 +17,6 @@ import {
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight, Loader2 } from "lucide-react";
 import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
-import WorkPlanModal from "@/components/WorkPlanModal";
 import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
@@ -208,14 +207,6 @@ export default function OffsiteCheckinPage() {
         }
     });
 
-    const { data: wpData, isLoading: isPlanLoading } = useQuery({
-        queryKey: ["work-plans"],
-        queryFn: async () => {
-            const r = await fetch("/api/work-plans");
-            return r.json();
-        }
-    });
-    const planSubmittedToday = wpData?.ok && wpData?.plan;
 
     const { data: branches = [] } = useQuery({
         queryKey: ["branches"],
@@ -253,15 +244,6 @@ export default function OffsiteCheckinPage() {
     const [gps, setGps] = useState<GpsState>({ ok: false, lat: null, lon: null, accuracy: null });
     const [checkType, setCheckType] = useState<"Offsite-In" | "Offsite-Out">("Offsite-In");
 
-    // Work Plan State
-    const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me]);
 
     // Camera
     const [cameraReady, setCameraReady] = useState(false);
@@ -417,9 +399,9 @@ export default function OffsiteCheckinPage() {
         ctx.font = `${f2}px Arial, Tahoma`;
 
         let currentDuration = "";
-        const matchIn = today.filter(x => x.type.startsWith("Offsite")).find(c =>
+        const matchIn = [...today.filter(x => x.type.startsWith("Offsite"))].reverse().find(c =>
             c.type === "Offsite-In" &&
-            (c.remark?.split(" | ")[0] || "") === locationName.trim()
+            (c.remark?.split(" | ")[0] || "").trim() === locationName.trim()
         );
         if (matchIn && currentType === "Offsite-Out") {
             const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
@@ -453,13 +435,6 @@ export default function OffsiteCheckinPage() {
         if (!remark.trim()) return showAlert("กรุณาระบุรายละเอียดงาน/หมายเหตุ (จำเป็น)");
         if (!preview || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
         if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
-
-        // Mandatory Work Plan Check
-        if (!planSubmittedToday && !me.is_checkin_exempt) {
-            setPendingAction(() => () => executeSubmit(targetType));
-            setShowWorkPlan(true);
-            return;
-        }
 
         executeSubmit(targetType);
     }
@@ -500,9 +475,9 @@ export default function OffsiteCheckinPage() {
             // Calculate duration for shared message if it's an OUT
             let stayDuration = "";
             if (targetType === "Offsite-Out") {
-                const matchIn = today.filter(x => x.type.startsWith("Offsite")).find(c =>
+                const matchIn = [...today.filter(x => x.type.startsWith("Offsite"))].reverse().find(c =>
                     c.type === "Offsite-In" &&
-                    (c.remark?.split(" | ")[0] || "") === locationName.trim()
+                    (c.remark?.split(" | ")[0] || "").trim() === locationName.trim()
                 );
                 if (matchIn) {
                     const diffMs = new Date().getTime() - new Date(matchIn.timestamp).getTime();
@@ -555,25 +530,6 @@ export default function OffsiteCheckinPage() {
         }
     }
 
-    async function handleWorkPlanSubmit(data: any) {
-        try {
-            const res = await fetch("/api/work-plans", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
-                setShowWorkPlan(false);
-                if (pendingAction) {
-                    pendingAction();
-                    setPendingAction(null);
-                }
-            }
-        } catch (e) {
-            console.error("Failed to submit work plan", e);
-        }
-    }
 
     // Combine any checkin types today for the history
     const checkinsToday = today.filter(x => x.type.startsWith("Offsite"));
@@ -648,12 +604,11 @@ export default function OffsiteCheckinPage() {
                             <CameraIcon width={18} /> ถ่ายรูปยืนยันตัวตน
                         </div>
                         {locationName.trim() && (() => {
-                            const matchIn = checkinsToday.find(c =>
-                                c.type === "Offsite-In" &&
-                                (c.remark?.split(" | ")[0] || "") === locationName.trim()
-                            );
-                            if (matchIn) {
-                                const mins = Math.floor((new Date().getTime() - new Date(matchIn.timestamp).getTime()) / 60000);
+                            const locClean = locationName.trim();
+                            const locCheckins = checkinsToday.filter(c => (c.remark?.split(" | ")[0] || "").trim() === locClean);
+                            const lastLocCheckin = locCheckins.length > 0 ? locCheckins[locCheckins.length - 1] : null;
+                            if (lastLocCheckin && lastLocCheckin.type === "Offsite-In") {
+                                const mins = Math.floor((new Date().getTime() - new Date(lastLocCheckin.timestamp).getTime()) / 60000);
                                 const hrs = Math.floor(mins / 60);
                                 const dur = hrs > 0 ? `${hrs} ชม. ${mins % 60} นาที` : `${mins} นาที`;
                                 return <span style={{ fontSize: 12, background: "#e0e7ff", color: "#4f46e5", padding: "2px 8px", borderRadius: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon style={{ width: 14, height: 14 }} /> อยู่มาแล้ว {dur}</span>;
@@ -756,12 +711,9 @@ export default function OffsiteCheckinPage() {
                         </button>
                         {(() => {
                             const locClean = locationName.trim();
-                            const matchOut = checkinsToday.find(c =>
-                                c.type === "Offsite-Out" &&
-                                (c.remark?.split(" | ")[0] || "") === locClean &&
-                                new Date(c.timestamp) > new Date(checkinsToday.find(i => i.type === "Offsite-In" && (i.remark?.split(" | ")[0] || "") === locClean)?.timestamp || 0)
-                            );
-                            const isDone = !!matchOut;
+                            const locCheckins = checkinsToday.filter(c => (c.remark?.split(" | ")[0] || "").trim() === locClean);
+                            const lastLocCheckin = locCheckins.length > 0 ? locCheckins[locCheckins.length - 1] : null;
+                            const isDone = lastLocCheckin ? lastLocCheckin.type === "Offsite-Out" : false;
 
                             return (
                                 <button
@@ -808,12 +760,11 @@ export default function OffsiteCheckinPage() {
                                 // Check if this IN already has a corresponding OUT
                                 let hasOut = false;
                                 if (isIn) {
-                                    const xLoc = x.remark?.split(" | ")[0] || "";
-                                    hasOut = checkinsToday.some((other, idx) =>
-                                        idx > i &&
-                                        other.type === "Offsite-Out" &&
-                                        (other.remark?.split(" | ")[0] || "") === xLoc
+                                    const xLoc = (x.remark?.split(" | ")[0] || "").trim();
+                                    const nextForLoc = checkinsToday.slice(i + 1).find(other =>
+                                        (other.remark?.split(" | ")[0] || "").trim() === xLoc
                                     );
+                                    hasOut = nextForLoc?.type === "Offsite-Out";
                                 }
 
                                 let durationInfo = null;
@@ -826,9 +777,9 @@ export default function OffsiteCheckinPage() {
                                 }
 
                                 if (!isIn) {
-                                    const xLoc = x.remark?.split(" | ")[0] || "";
+                                    const xLoc = (x.remark?.split(" | ")[0] || "").trim();
                                     const matchIn = [...checkinsToday].slice(0, i).reverse().find((prev) => {
-                                        const prevLoc = prev.remark?.split(" | ")[0] || "";
+                                        const prevLoc = (prev.remark?.split(" | ")[0] || "").trim();
                                         return prev.type === "Offsite-In" && prevLoc === xLoc;
                                     });
 
@@ -888,15 +839,6 @@ export default function OffsiteCheckinPage() {
                 </div>
 
                 <AlertModal alert={alert} onClose={closeAlert} />
-
-            <WorkPlanModal
-                isOpen={showWorkPlan}
-                onClose={() => {
-                    setShowWorkPlan(false);
-                }}
-                onSubmit={handleWorkPlanSubmit}
-                employeeName={me?.name || ""}
-            />
         </div>
     </div>
     );

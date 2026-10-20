@@ -46,7 +46,7 @@
   margin: 0 auto;
   min-height: 100vh;
   background: var(--bg);
-  font-family: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* ── PAGE HEADER ── */

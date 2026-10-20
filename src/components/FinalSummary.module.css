@@ -1,6 +1,6 @@
 .container {
     width: 100%;
-    font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+    font-family: var(--font-sans);
     box-sizing: border-box;
     padding: 0;
     margin-top: 20px;

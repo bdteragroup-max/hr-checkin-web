@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
 
 :root {
     --red: #d93025;
@@ -42,8 +41,8 @@
     --radius-sm: 10px;
     --radius-xs: 8px;
 
-    --font-th: "Sarabun", sans-serif;
-    --font-display: "Prompt", sans-serif;
+    --font-th: var(--font-sans);
+    --font-display: var(--font-sans);
 }
 
 .page {

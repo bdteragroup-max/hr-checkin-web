@@ -4,7 +4,6 @@
    Matches the dashboard aesthetic
    ============================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap");
 
 :root {
   --red: #d93025;
@@ -22,8 +21,8 @@
   --shadow-red: 0 4px 16px rgba(217, 48, 37, 0.28);
   --radius: 16px;
   --radius-sm: 10px;
-  --font-th: "Sarabun", sans-serif;
-  --font-display: "Prompt", sans-serif;
+  --font-th: var(--font-sans);
+  --font-display: var(--font-sans);
 }
 
 .wrapper {

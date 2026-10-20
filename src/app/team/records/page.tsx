@@ -12,7 +12,9 @@ import {
     UserGroupIcon,
     CalendarIcon,
     InboxIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    ArrowPathIcon,
+    CloudArrowDownIcon
 } from "@heroicons/react/24/outline";
 
 interface Employee {
@@ -58,6 +60,30 @@ export default function TeamRecordsPage() {
 
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [filterEmpId, setFilterEmpId] = useState("all");
+    const [isSyncingHumanSoft, setIsSyncingHumanSoft] = useState(false);
+
+    const handleSyncHumanSoft = async () => {
+        setIsSyncingHumanSoft(true);
+        showToast("กำลังเชื่อมต่อดึงข้อมูลจาก HumanSoft...");
+        try {
+            const res = await fetch("/api/admin/humansoft/sync", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date_from: startDate, date_to: endDate })
+            });
+            const json = await res.json();
+            if (json.ok) {
+                showToast(`ดึงข้อมูลสำเร็จ: พบ ${json.total} รายการ (บันทึกใหม่ ${json.inserted} รายการ)`, "ok");
+                loadData();
+            } else {
+                showToast(json.error || "ไม่สามารถดึงข้อมูลได้", "bad");
+            }
+        } catch {
+            showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ HumanSoft", "bad");
+        } finally {
+            setIsSyncingHumanSoft(false);
+        }
+    };
     
     // Searchable Select States
     const [searchTerm, setSearchTerm] = useState("");
@@ -203,7 +229,49 @@ export default function TeamRecordsPage() {
                     <div className={styles.pageSubtitle}>ตรวจสอบและวิเคราะห์สถิติการเข้างานย้อนหลังของทีมงานในความดูแล</div>
                 </div>
                 
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <button
+                        onClick={handleSyncHumanSoft}
+                        disabled={isSyncingHumanSoft}
+                        title="ดึงข้อมูลเวลาเข้า-ออกจาก HumanSoft (TE, TP, TG) เข้าสู่ระบบ"
+                        style={{
+                            background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                            color: "#fff",
+                            padding: "8px 14px",
+                            borderRadius: "10px",
+                            border: "1px solid #0284c7",
+                            cursor: isSyncingHumanSoft ? "not-allowed" : "pointer",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                        }}
+                    >
+                        <CloudArrowDownIcon width={16} />
+                        {isSyncingHumanSoft ? "กำลังดึง..." : "ดึง HumanSoft"}
+                    </button>
+                    <button 
+                        onClick={() => loadData()}
+                        disabled={loading}
+                        title="รีเฟรชข้อมูล"
+                        style={{
+                            background: "var(--surface)",
+                            border: "1px solid var(--line)",
+                            padding: "8px 14px",
+                            borderRadius: "10px",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            color: "var(--text1)"
+                        }}
+                    >
+                        <ArrowPathIcon width={15} />
+                        รีโหลด
+                    </button>
                     <button className={styles.btnExcelSm} onClick={() => exportFile("excel")}>
                         <ArrowDownTrayIcon width={16} /> Export Excel
                     </button>
@@ -347,7 +415,6 @@ export default function TeamRecordsPage() {
                                         <th style={{ width: 160 }}>วันที่</th>
                                         <th>บันทึกเช็คอิน</th>
                                         <th>บันทึกเช็คเอาท์</th>
-                                        <th>แผนงานประจำวัน</th>
                                         <th style={{ textAlign: "center" }}>สถานะ</th>
                                     </tr>
                                 </thead>
@@ -376,41 +443,7 @@ export default function TeamRecordsPage() {
                                                         </>
                                                     ) : <span style={{ color: "var(--text5)" }}>—</span>}
                                                 </td>
-                                                <td>
-                                                    {d.work_plan ? (
-                                                        <div style={{ 
-                                                            fontSize: 12, 
-                                                            display: "flex", 
-                                                            flexDirection: "column", 
-                                                            gap: 6,
-                                                            minWidth: 250,
-                                                            padding: "10px 14px",
-                                                            background: "rgba(59, 130, 246, 0.04)",
-                                                            border: "1px solid rgba(59, 130, 246, 0.15)",
-                                                            borderRadius: 10
-                                                        }}>
-                                                            <div style={{ display: "flex", gap: 8 }}>
-                                                                <span style={{ color: "#3b82f6", fontWeight: 800, minWidth: 32 }}>เช้า:</span>
-                                                                <span style={{ color: "var(--text2)" }}>{d.work_plan.morning}</span>
-                                                                <span style={{ color: "var(--text4)", fontSize: 11 }}>({d.work_plan.morning_loc})</span>
-                                                            </div>
-                                                            <div style={{ display: "flex", gap: 8 }}>
-                                                                <span style={{ color: "#3b82f6", fontWeight: 800, minWidth: 32 }}>บ่าย:</span>
-                                                                <span style={{ color: "var(--text2)" }}>{d.work_plan.afternoon}</span>
-                                                                <span style={{ color: "var(--text4)", fontSize: 11 }}>({d.work_plan.afternoon_loc})</span>
-                                                            </div>
-                                                            {d.work_plan.ot && (
-                                                                <div style={{ display: "flex", gap: 8, borderTop: "1px dashed rgba(59, 130, 246, 0.2)", paddingTop: 6, marginTop: 4 }}>
-                                                                    <span style={{ color: "#f59e0b", fontWeight: 800, minWidth: 32 }}>OT:</span>
-                                                                    <span style={{ color: "var(--text2)" }}>{d.work_plan.ot}</span>
-                                                                    {d.work_plan.ot_attendant && <span style={{ color: "var(--text4)", fontSize: 11 }}>[ผช. {d.work_plan.ot_attendant}]</span>}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ color: "var(--text5)", fontSize: 12 }}>— ไม่มีแผนงาน —</span>
-                                                    )}
-                                                </td>
+
                                                 <td style={{ textAlign: "center" }}>
                                                     <span style={{
                                                         padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 900,

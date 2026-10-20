@@ -2,7 +2,7 @@
     padding: 24px;
     background: #f8fafc;
     min-height: 100vh;
-    font-family: 'Inter', 'Sarabun', sans-serif;
+    font-family: var(--font-sans);
 }
 
 .header {

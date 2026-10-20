@@ -1,12 +1,39 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════════
+   Inter Thai Looped (Cadson Demak Custom Font commissioned by Grab)
+   ══════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: 'Inter Thai Looped';
+  src: url('/fonts/InterThaiLooped[wght].ttf') format('truetype-variations'),
+       url('/fonts/InterThaiLooped-Regular.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Thai Looped';
+  src: url('/fonts/InterThaiLooped-Italic[wght].ttf') format('truetype-variations'),
+       url('/fonts/InterThaiLooped-Regular.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Geist variables from next/font (set in RootLayout html className) */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* English: Inter (Google) | Thai: Inter Thai Looped (Grab / Cadson Demak) */
+  --font-inter: var(--font-inter);
+  --font-inter-thai: var(--font-inter-thai), 'Inter Thai Looped';
+  --font-sans: var(--font-inter), var(--font-inter-thai), 'Inter Thai Looped', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* System aliases for components using --font-th / --font-display */
+  --font-th: var(--font-sans);
+  --font-display: var(--font-sans);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,14 +58,9 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family:
-    var(--font-sans),
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -51,6 +73,7 @@ input,
 select,
 textarea {
   font: inherit;
+  font-family: var(--font-sans);
 }
 
 @keyframes spin {

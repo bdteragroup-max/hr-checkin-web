@@ -1,7 +1,7 @@
 .container {
     width: 100%;
     margin-bottom: 20px;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-sans);
 }
 
 .header {

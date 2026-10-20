@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { syncHumanSoftAttendanceToDatabase, fetchHumanSoftAttendance } from "@/lib/humansoft";
 import { getTodayBangkokISO } from "@/utils/time";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
     try {
-        await requireAdmin();
+        await requireAdminOrSupervisor();
 
         const { searchParams } = new URL(req.url);
         const today = getTodayBangkokISO();
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
-        await requireAdmin();
+        await requireAdminOrSupervisor();
 
         const body = await req.json().catch(() => ({}));
         const today = getTodayBangkokISO();

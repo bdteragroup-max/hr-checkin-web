@@ -2,7 +2,6 @@
    ADMIN MEETING ROOMS — FULL-WIDTH MINIMAL
    ============================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap");
 
 :root {
     --red: #d93025;
@@ -20,7 +19,7 @@
 
 .container {
     padding: 1.75rem 2rem;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     min-height: 100vh;
     background: var(--bg);
     color: var(--text);
@@ -58,7 +57,7 @@
     font-weight: 600;
     font-size: 0.82rem;
     cursor: pointer;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     transition: background 0.18s;
     white-space: nowrap;
 }
@@ -117,7 +116,7 @@
     font-size: 0.72rem;
     cursor: pointer;
     padding: 0;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     text-decoration: underline;
 }
 .chipEdit:hover { color: var(--red); }
@@ -153,7 +152,7 @@
     padding: 0.45rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.875rem;
     background: var(--bg);
     color: var(--text);
@@ -178,7 +177,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     white-space: nowrap;
     transition: background 0.15s;
     align-self: flex-end;
@@ -206,7 +205,7 @@
     background: transparent;
     border: none;
     padding: 0.65rem 1.25rem;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--text3);
@@ -338,7 +337,7 @@
     border-radius: var(--radius-sm);
     font-weight: 600;
     cursor: pointer;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.78rem;
     white-space: nowrap;
     transition: background 0.15s;
@@ -399,7 +398,7 @@
     padding: 0.6rem 0.9rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     background: var(--bg);
     color: var(--text);
@@ -437,7 +436,7 @@
     border-radius: var(--radius-sm);
     font-weight: 700;
     cursor: pointer;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.875rem;
     transition: background 0.18s;
 }
@@ -452,7 +451,7 @@
     border-radius: var(--radius-sm);
     font-weight: 600;
     cursor: pointer;
-    font-family: "Sarabun", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.875rem;
 }
 

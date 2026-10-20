@@ -21,7 +21,6 @@ import {
 } from "@heroicons/react/24/solid";
 import { Camera, RotateCcw, ArrowRight, X, Play, Square, LogIn, LogOut, Loader2 } from "lucide-react";
 import { formatTime24h, formatTimeFull24h, formatDateShortThai } from "@/utils/time";
-import WorkPlanModal from "@/components/WorkPlanModal";
 import BirthdayBanner from "@/components/BirthdayBanner";
 
 /* ──────────────────────────────────────────
@@ -242,14 +241,6 @@ export default function ProjectCheckinPage() {
         }
     });
 
-    const { data: wpData, isLoading: isPlanLoading } = useQuery({
-        queryKey: ["work-plans"],
-        queryFn: async () => {
-            const r = await fetch("/api/work-plans");
-            return r.json();
-        }
-    });
-    const planSubmittedToday = wpData?.ok && wpData?.plan;
 
     const { data: branches = [] } = useQuery({
         queryKey: ["branches"],
@@ -315,14 +306,6 @@ export default function ProjectCheckinPage() {
     const [newCusGps, setNewCusGps] = useState<{ lat: number, lng: number } | null>(null);
     const [isSavingCus, setIsSavingCus] = useState(false);
 
-    const [showWorkPlan, setShowWorkPlan] = useState(false);
-    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-
-    useEffect(() => {
-        if (!isPlanLoading && !planSubmittedToday && me && !me.is_checkin_exempt) {
-            setShowWorkPlan(true);
-        }
-    }, [isPlanLoading, planSubmittedToday, me]);
 
     // Data fetching is now handled by useQuery hooks
 
@@ -598,13 +581,6 @@ export default function ProjectCheckinPage() {
         if (!preview || !selectedCustomer || !me) return showAlert("กรุณาถ่ายรูปเพื่อยืนยันตัวตน");
         if (gps.lat === 0 && gps.lon === 0) return showAlert("ไม่สามารถอ่านพิกัดได้ (GPS: 0, 0) กรุณารอสักครู่หรือเปิด GPS");
 
-        // Mandatory Work Plan Check
-        if (!planSubmittedToday && !me.is_checkin_exempt) {
-            setPendingAction(() => () => executeSubmit(targetType));
-            setShowWorkPlan(true);
-            return;
-        }
-
         executeSubmit(targetType);
     }
 
@@ -698,25 +674,6 @@ export default function ProjectCheckinPage() {
         }
     }
 
-    async function handleWorkPlanSubmit(data: any) {
-        try {
-            const res = await fetch("/api/work-plans", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                queryClient.invalidateQueries({ queryKey: ["work-plans"] });
-                setShowWorkPlan(false);
-                if (pendingAction) {
-                    pendingAction();
-                    setPendingAction(null);
-                }
-            }
-        } catch (e) {
-            console.error("Failed to submit work plan", e);
-        }
-    }
 
     /* ── RENDER ── */
     const filteredProjects = searchQ ? projects.filter(p => p.name.toLowerCase().includes(searchQ.toLowerCase()) || p.code?.toLowerCase().includes(searchQ.toLowerCase())) : projects;
@@ -1171,16 +1128,6 @@ export default function ProjectCheckinPage() {
                     </div>
                 </div>
             )}
-
-            <WorkPlanModal 
-                isOpen={showWorkPlan} 
-                onClose={() => {
-                    setShowWorkPlan(false);
-                    setPendingAction(null);
-                }} 
-                onSubmit={handleWorkPlanSubmit}
-                employeeName={me?.name || ""}
-            />
 
             <AlertModal alert={alert} onClose={closeAlert} />
         </div>

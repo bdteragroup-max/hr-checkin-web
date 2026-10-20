@@ -126,7 +126,7 @@ export default async function SharePage({ params }: Props) {
                 background: "#f8fafc",
                 minHeight: "100vh",
                 padding: "24px 16px",
-                fontFamily: "'Prompt', 'Sarabun', sans-serif",
+                fontFamily: "var(--font-sans)",
                 color: "#1e293b"
             }}>
                 <div style={{
@@ -295,7 +295,7 @@ export default async function SharePage({ params }: Props) {
                     __html: `
                     body { margin: 0; padding: 0; }
                     * { box-sizing: border-box; }
-                    h1, h2, h3 { font-family: 'Prompt', sans-serif; }
+                    h1, h2, h3 { font-family: var(--font-sans); }
                 `}} />
             </div>
         );

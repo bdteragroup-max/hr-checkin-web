@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrSupervisor } from "@/lib/adminAuth";
 import { adjustCheckinsForLeaves } from "@/utils/checkin";
+import { triggerSmartSync } from "@/lib/humansoft";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
     try {
         const auth = await requireAdminOrSupervisor();
+        triggerSmartSync().catch(() => {});
 
         const url = new URL(req.url);
         const startMonth = url.searchParams.get("start_month"); // e.g. "2026-01"

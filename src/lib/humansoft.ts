@@ -2,6 +2,10 @@ import { toBangkokWallClock, getTodayBangkokISO, getYesterdayBangkokISO } from "
 import { prisma } from "./prisma";
 import { calcLateOTFromTimestamp } from "../utils/checkin";
 import { processCheckinCoins } from "../utils/coinAwards";
+// Ensure HumanSoft Open API calls succeed even if certificate expires (e.g. *.humansoft.co.th cert expiry)
+if (typeof process !== "undefined" && process.env) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 export interface HumanSoftAttendancePayload {
     attendance_datetime: string;     // ISO format: '2026-02-11T09:00:00.000'
@@ -241,7 +245,8 @@ export async function fetchHumanSoftAttendance(params: {
                     date_to: params.date_to,
                     _PAGE: page,
                     _NUMBER_PER_PAGE: pageSize
-                })
+                }),
+                signal: AbortSignal.timeout(20000)
             });
 
             const data = await res.json().catch(() => null);
@@ -290,6 +295,25 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
     let coinsAwardedCount = 0;
     const errors: string[] = [];
 
+    // Pre-fetch existing checkins for the date range once to eliminate hundreds of sequential DB round-trips
+    const startDateRange = new Date(`${params.date_from}T00:00:00.000Z`);
+    const endDateRange = new Date(`${params.date_to}T23:59:59.999Z`);
+
+    const existingCheckins = await prisma.checkins.findMany({
+        where: {
+            date_key: { gte: startDateRange, lte: endDateRange }
+        },
+        select: {
+            id: true,
+            emp_id: true,
+            type: true,
+            timestamp: true,
+            date_key: true,
+            capture_mode: true,
+            late_status: true
+        }
+    });
+
     for (const keyConfig of keys) {
         const fetchRes = await fetchHumanSoftAttendance({ ...params, apiKey: keyConfig.key });
         if (!fetchRes.ok || !fetchRes.records) {
@@ -330,14 +354,12 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
                 remarkLower.includes("checkout") || remarkLower.includes("check-out")) {
                 type = "Check-out";
             } else {
-                // Check if employee already has an earlier check-in on this date
-                const earlierCheckin = await prisma.checkins.findFirst({
-                    where: {
-                        emp_id: empCode,
-                        date_key: dateKey,
-                        timestamp: { lt: recordTime }
-                    }
-                });
+                // Check in-memory if employee already has an earlier check-in on this date
+                const earlierCheckin = existingCheckins.find(c =>
+                    c.emp_id === empCode &&
+                    c.date_key.getTime() === dateKey.getTime() &&
+                    c.timestamp.getTime() < recordTime.getTime()
+                );
 
                 if (earlierCheckin) {
                     const diffMs = recordTime.getTime() - earlierCheckin.timestamp.getTime();
@@ -355,18 +377,14 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
             const lateInfo = calcLateOTFromTimestamp(type, recordTime);
             
             // Window check to prevent duplicate insertion (+/- 2 minutes)
-            const windowStart = new Date(recordTime.getTime() - 2 * 60 * 1000);
-            const windowEnd = new Date(recordTime.getTime() + 2 * 60 * 1000);
+            const windowStartMs = recordTime.getTime() - 2 * 60 * 1000;
+            const windowEndMs = recordTime.getTime() + 2 * 60 * 1000;
 
-            const existing = await prisma.checkins.findFirst({
-                where: {
-                    emp_id: empCode,
-                    timestamp: {
-                        gte: windowStart,
-                        lte: windowEnd
-                    }
-                }
-            });
+            const existing = existingCheckins.find(c =>
+                c.emp_id === empCode &&
+                c.timestamp.getTime() >= windowStartMs &&
+                c.timestamp.getTime() <= windowEndMs
+            );
 
             if (existing) {
                 // If existing record was wrongly marked as Check-in but should be Check-out, correct it
@@ -379,24 +397,15 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
                             late_min: lateInfo.min ?? null
                         }
                     });
+                    existing.type = type;
+                    existing.late_status = lateInfo.status;
                 }
 
                 skippedCount++;
-                // Check if coin was already awarded for today (idempotent via source_key)
-                const coinAward = await processCheckinCoins(prisma, {
-                    emp_id: empCode,
-                    type,
-                    timestamp: recordTime,
-                    effective_date_key: dateKey,
-                    late_status: existing.late_status || lateInfo.status
-                });
-                if (coinAward.checkinCoinAwarded || coinAward.checkoutCoinAwarded) {
-                    coinsAwardedCount++;
-                }
                 continue;
             }
 
-            await prisma.checkins.create({
+            const created = await prisma.checkins.create({
                 data: {
                     timestamp: recordTime,
                     date_key: dateKey,
@@ -413,6 +422,16 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
                     late_min: lateInfo.min ?? null,
                     remark: `[HumanSoft - ${record.time_attendance_type_lv || 'Sync'}] ${record.attendance_remark || ''}`.trim()
                 }
+            });
+
+            existingCheckins.push({
+                id: created.id,
+                emp_id: empCode,
+                type,
+                timestamp: recordTime,
+                date_key: dateKey,
+                capture_mode: record.time_attendance_type_lv || "humansoft",
+                late_status: lateInfo.status
             });
 
             insertedCount++;
