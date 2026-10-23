@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { calcLateOTFromTimestamp } from "@/utils/checkin";
 import { processCheckinCoins } from "@/utils/coinAwards";
 import { syncHumanSoftAttendanceToDatabase } from "@/lib/humansoft";
+import { upsertEmployeeFromHumanSoft } from "@/lib/humansoftSyncEmployees";
 import { getTodayBangkokISO, toBangkokWallClock } from "@/utils/time";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,12 @@ export async function GET(req: Request) {
     return NextResponse.json({
         ok: true,
         message: "HumanSoft Webhook endpoint is active and ready to receive events",
+        supported_events: [
+            "employee.create",
+            "employee.terminate",
+            "employee.structure.change",
+            "time_attendance (check-in / check-out)"
+        ],
         timestamp: new Date().toISOString()
     });
 }
@@ -31,7 +38,58 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: false, error: "EMPTY_BODY" }, { status: 400 });
         }
 
-        // Support array of records or single record or wrapped payload
+        // =====================================================================
+        // 1. Check for Employee Lifecycle Events (e.g. employee.create, employee.terminate)
+        // =====================================================================
+        const eventType = body?.event || body?.event_type;
+
+        if (eventType && typeof eventType === "string" && eventType.startsWith("employee.")) {
+            const empData = body.body || body.data || body.payload || body;
+            const empCode = empData.employee_code || empData.emp_id;
+
+            if (!empCode) {
+                return NextResponse.json({ ok: false, error: "MISSING_EMPLOYEE_CODE" }, { status: 400 });
+            }
+
+            console.log(`[HumanSoft Webhook] Processing event: ${eventType} for employee: ${empCode}`);
+
+            if (eventType === "employee.create" || eventType === "employee.structure.change") {
+                const result = await upsertEmployeeFromHumanSoft(empData);
+                return NextResponse.json({
+                    ok: true,
+                    event: eventType,
+                    action: result.action,
+                    emp_id: result.employee.emp_id,
+                    name: result.employee.name,
+                    message: result.action === "created" 
+                        ? `สร้างข้อมูลพนักงานใหม่ ${result.employee.emp_id} สำเร็จ`
+                        : `อัปเดตข้อมูลพนักงาน ${result.employee.emp_id} สำเร็จ`
+                });
+            }
+
+            if (eventType === "employee.terminate" || eventType === "employee.purge") {
+                const normId = empCode.trim().toUpperCase();
+                const updated = await prisma.employees.update({
+                    where: { emp_id: normId },
+                    data: {
+                        is_active: false,
+                        resignation_date: empData.resign_dt ? new Date(empData.resign_dt) : new Date()
+                    }
+                }).catch(() => null);
+
+                return NextResponse.json({
+                    ok: true,
+                    event: eventType,
+                    emp_id: normId,
+                    found: !!updated,
+                    message: updated ? `ปรับสถานะพนักงาน ${normId} เป็นพ้นสภาพเรียบร้อย` : `ไม่พบพนักงาน ${normId} ในระบบ`
+                });
+            }
+        }
+
+        // =====================================================================
+        // 2. Attendance Punches Handling (Check-in / Check-out)
+        // =====================================================================
         const records = Array.isArray(body) 
             ? body 
             : Array.isArray(body?.payload) 
@@ -44,6 +102,28 @@ export async function POST(req: Request) {
         let coinsAwardedCount = 0;
 
         for (const item of records) {
+            // Check if this item is an employee event wrapped in an array
+            const itemEvent = item?.event || item?.event_type;
+            if (itemEvent && typeof itemEvent === "string" && itemEvent.startsWith("employee.")) {
+                const empData = item.body || item.data || item.payload || item;
+                if (empData.employee_code) {
+                    if (itemEvent === "employee.create" || itemEvent === "employee.structure.change") {
+                        await upsertEmployeeFromHumanSoft(empData).catch(err => {
+                            console.error("[HumanSoft Webhook Item Employee Upsert Error]:", err);
+                        });
+                        processedCount++;
+                        continue;
+                    } else if (itemEvent === "employee.terminate") {
+                        await prisma.employees.update({
+                            where: { emp_id: empData.employee_code.trim().toUpperCase() },
+                            data: { is_active: false, resignation_date: new Date() }
+                        }).catch(() => null);
+                        processedCount++;
+                        continue;
+                    }
+                }
+            }
+
             // Find employee_code and attendance_datetime in various possible payload structures
             const empCode = item.employee_code || item.emp_id || item.employee_id_code;
             const datetimeStr = item.attendance_datetime || item.datetime || item.timestamp;

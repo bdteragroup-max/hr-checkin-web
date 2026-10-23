@@ -16,10 +16,12 @@ import {
     NoSymbolIcon,
     XCircleIcon,
     ArrowDownTrayIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    ArrowPathIcon
 } from "@heroicons/react/24/outline";
 import SearchableSelect from "@/components/SearchableSelect";
 import EmployeeWizard from "../../components/wizard/EmployeeWizard";
+import HumanSoftSyncModal from "../../components/HumanSoftSyncModal";
 import { formatDateThai } from "@/utils/time";
 
 /* ── Types ──────────────────────────────────────────────────── */
@@ -144,6 +146,7 @@ export default function AdminEmployeesPage() {
     const [branchFilter, setBranchFilter] = useState<string | "all">("all");
     const [pageIndex, setPageIndex] = useState(0);
     const [showExportGuide, setShowExportGuide] = useState(false);
+    const [showHumanSoftSyncModal, setShowHumanSoftSyncModal] = useState(false);
 
     // Debounce search
     useEffect(() => {
@@ -552,6 +555,15 @@ export default function AdminEmployeesPage() {
                     <div className={styles.sub}>รายชื่อพนักงานทั้งหมด ข้อมูลตำแหน่ง สวัสดิการ และการตั้งค่าระบบ</div>
                 </div>
                 <div className={styles.headerActions}>
+                    <button
+                        className={styles.btnSync}
+                        onClick={() => setShowHumanSoftSyncModal(true)}
+                        disabled={loading}
+                        title="ดึงและซิงค์ข้อมูลพนักงานจาก HumanSoft Open API"
+                    >
+                        <ArrowPathIcon width={17} height={17} />
+                        <span>ซิงค์ HumanSoft</span>
+                    </button>
                     <button
                         className={styles.btnExport}
                         onClick={handleExport}
@@ -1182,6 +1194,17 @@ export default function AdminEmployeesPage() {
                     </div>
                 </div>
             )}
+
+            {/* ── HumanSoft Sync Modal ── */}
+            <HumanSoftSyncModal
+                isOpen={showHumanSoftSyncModal}
+                onClose={() => setShowHumanSoftSyncModal(false)}
+                onSyncSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["admin-employees"] });
+                    reload();
+                    showToast("ซิงค์ข้อมูลจาก HumanSoft เรียบร้อยแล้ว", "ok");
+                }}
+            />
 
             {/* ── Toast ── */}
             {toast && (
