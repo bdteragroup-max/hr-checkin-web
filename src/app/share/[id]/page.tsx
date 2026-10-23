@@ -31,8 +31,26 @@ export async function generateMetadata(
 
         if (!checkin) return { title: "Check-in Report" };
 
-        const typeStr = checkin.type.toLowerCase().includes("-in") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
-        const location = checkin.project_name || checkin.branch_name || "สถานที่ปฏิบัติงาน";
+        const isProject = checkin.type.includes("Project");
+        const isOffsite = checkin.type.includes("Offsite");
+        const isOut = checkin.type.toLowerCase().includes("-out");
+
+        const typeStr = isProject 
+            ? (isOut ? "ออกโครงการ (OUT)" : "เข้าโครงการ (IN)")
+            : (isOffsite ? (isOut ? "ออกนอกสถานที่ (OUT)" : "เข้านอกสถานที่ (IN)") : (isOut ? "ออกงาน (OUT)" : "เข้างาน (IN)"));
+
+        let offsiteLocation = "";
+        let offsiteRemark = checkin.remark || "";
+        if (isOffsite && checkin.remark) {
+            const parts = checkin.remark.split(" | ");
+            offsiteLocation = parts[0]?.trim() || "";
+            if (parts.length > 1) {
+                offsiteRemark = parts.slice(1).join(" | ").trim();
+            }
+        }
+
+        const location = checkin.project_name || (isOffsite && offsiteLocation ? offsiteLocation : checkin.branch_name) || "สถานที่ปฏิบัติงาน";
+        const displayRemark = isOffsite ? offsiteRemark : (checkin.remark || "");
         
         // 🚀 Encode data into URL to avoid DB hits in the OG route
         const encodedData = new URLSearchParams({
@@ -41,17 +59,21 @@ export async function generateMetadata(
             l: Buffer.from(location).toString('base64'),
             tm: Buffer.from(formatTimeFull24h(checkin.timestamp)).toString('base64'),
             p: checkin.photo_url ? Buffer.from(checkin.photo_url).toString('base64') : '',
-            r: checkin.remark ? Buffer.from(checkin.remark.substring(0, 50)).toString('base64') : ''
+            r: displayRemark ? Buffer.from(displayRemark.substring(0, 50)).toString('base64') : ''
         }).toString();
 
         // 🚀 Force Big Card Support with .png extension hint
         const imageUrl = `${baseUrl}/share/${id}/og?${encodedData}&.png`;
 
+        const titleText = isProject 
+            ? `📍 รายงานปฏิบัติงานโครงการ: ${checkin.name}` 
+            : (isOffsite ? `📍 รายงานเช็กอินนอกสถานที่: ${checkin.name}` : `📍 รายงานการเช็กอิน: ${checkin.name}`);
+
         return {
             title: `เช็กอิน: ${checkin.name}`,
             description: `${typeStr} ณ ${location}\n🕒 เวลา: ${formatTimeFull24h(checkin.timestamp)} น.`,
             openGraph: {
-                title: `📍 รายงานการเช็กอิน: ${checkin.name}`,
+                title: titleText,
                 description: `${typeStr} ณ ${location}\n🕒 เวลา: ${formatTimeFull24h(checkin.timestamp)} น.`,
                 type: "website",
                 images: [
@@ -66,7 +88,7 @@ export async function generateMetadata(
             },
             twitter: {
                 card: "summary_large_image",
-                title: `📍 เช็กอินพนักงาน: ${checkin.name}`,
+                title: titleText,
                 images: [imageUrl],
             },
         };
@@ -116,10 +138,25 @@ export default async function SharePage({ params }: Props) {
             );
         }
 
-        const typeStr = checkin.type.toLowerCase().includes("-in") ? "เข้างาน (IN)" : "ออกงาน (OUT)";
         const isProject = checkin.type.includes("Project");
         const isOffsite = checkin.type.includes("Offsite");
+        const isOut = checkin.type.toLowerCase().includes("-out");
+        const typeStr = isProject 
+            ? (isOut ? "ออกโครงการ (OUT)" : "เข้าโครงการ (IN)")
+            : (isOffsite ? (isOut ? "ออกนอกสถานที่ (OUT)" : "เข้านอกสถานที่ (IN)") : (isOut ? "ออกงาน (OUT)" : "เข้างาน (IN)"));
         const title = isOffsite ? "รายงานการเช็กอินนอกสถานที่" : (isProject ? "รายงานการปฏิบัติงานในโครงการ" : "รายงานการเช็กอินพนักงาน");
+
+        let offsiteLocation = "";
+        let offsiteRemark = checkin.remark || "";
+        if (isOffsite && checkin.remark) {
+            const parts = checkin.remark.split(" | ");
+            offsiteLocation = parts[0]?.trim() || "";
+            if (parts.length > 1) {
+                offsiteRemark = parts.slice(1).join(" | ").trim();
+            }
+        }
+        const displayLocation = checkin.project_name || (isOffsite && offsiteLocation ? offsiteLocation : checkin.branch_name) || "—";
+        const displayRemark = isOffsite ? offsiteRemark : checkin.remark;
 
         return (
             <div style={{
@@ -205,7 +242,7 @@ export default async function SharePage({ params }: Props) {
                                 <div>
                                     <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 500 }}>สถานที่ / โครงการ</div>
                                     <div style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>
-                                        {checkin.project_name || checkin.branch_name || "—"}
+                                        {displayLocation}
                                     </div>
                                 </div>
                             </div>
@@ -259,7 +296,7 @@ export default async function SharePage({ params }: Props) {
                             )}
 
                             {/* 💬 Remark */}
-                            {checkin.remark && (
+                            {displayRemark && (
                                 <div style={{
                                     background: '#f8fafc',
                                     borderRadius: '16px',
@@ -271,7 +308,7 @@ export default async function SharePage({ params }: Props) {
                                         <DocumentTextIcon width={16} /> หมายเหตุ / บันทึกหน้างาน
                                     </div>
                                     <div style={{ fontSize: '15px', color: '#334155', lineHeight: 1.5 }}>
-                                        {checkin.remark}
+                                        {displayRemark}
                                     </div>
                                 </div>
                             )}

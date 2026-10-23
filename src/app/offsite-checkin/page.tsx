@@ -15,7 +15,7 @@ import {
     ClockIcon,
     ClipboardDocumentListIcon
 } from "@heroicons/react/24/solid";
-import { Camera, RotateCcw, ArrowRight, Loader2 } from "lucide-react";
+import { Camera, RotateCcw, ArrowRight, Loader2, Copy, Check } from "lucide-react";
 import { formatTimeFull24h, formatDateThai, formatDateShortThai } from "@/utils/time";
 import BirthdayBanner from "@/components/BirthdayBanner";
 
@@ -70,8 +70,83 @@ function getThaiTime() {
    COMPONENTS
 ────────────────────────────────────────── */
 function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: boolean) => void }) {
+    const [copied, setCopied] = useState(false);
     if (!alert.visible) return null;
     const isErr = alert.type === "error";
+
+    const buildShareContent = () => {
+        const d = alert.shareData!;
+        const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost')
+            ? 'https://hr-checkin-web.vercel.app'
+            : window.location.origin;
+        const shareLink = `${origin}/share/${alert.id}?t=${Date.now()}`;
+
+        const isOut = d.type.toLowerCase().includes("-out");
+        const typeLabel = isOut ? "ออกนอกสถานที่ (Offsite-Out)" : "เข้านอกสถานที่ (Offsite-In)";
+
+        const textLines = [
+            `📍 รายงานการเช็กอินนอกสถานที่`,
+            `👤 พนักงาน: ${d.name}`,
+            `📝 ประเภท: ${typeLabel}`,
+        ];
+        if (d.location) {
+            textLines.push(`📍 สถานที่: ${d.location}`);
+        }
+        textLines.push(`🕒 เวลา: ${d.time}`);
+        if (d.duration) {
+            textLines.push(`⏱️ ระยะเวลาที่อยู่: ${d.duration}`);
+        }
+        if (d.remark) {
+            textLines.push(`💬 หมายเหตุ: ${d.remark}`);
+        }
+        textLines.push(`📄 ดูรายงาน & พิกัด: ${shareLink}`);
+
+        return {
+            text: textLines.join('\n'),
+            shareLink
+        };
+    };
+
+    const handleShareToLine = () => {
+        const { text, shareLink } = buildShareContent();
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            // Universal Link / LINE URL Scheme: directly launches native LINE app to "Share with" screen
+            const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
+            window.location.href = lineUrl;
+        } else {
+            // Desktop fallback: LINE social plugin in a popup window
+            const shareUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
+            window.open(shareUrl, '_blank', 'width=600,height=600,menubar=no,toolbar=no');
+        }
+        onClose(true); // Signal that share was completed
+    };
+
+    const handleCopyText = async () => {
+        const { text } = buildShareContent();
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+            }
+            setCopied(true);
+            setTimeout(() => setCopied(false), 3000);
+            onClose(true);
+        } catch (err) {
+            console.error("Failed to copy:", err);
+        }
+    };
+
     return (
         <div className={styles.alertOverlay} onClick={() => onClose(false)} role="dialog" aria-modal="true" style={{ zIndex: 9999 }}>
             <div className={styles.alertModal} onClick={e => e.stopPropagation()}>
@@ -90,7 +165,7 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: 
                                 <div style={{ 
                                     background: '#fff7ed', 
                                     border: '1px solid #ffedd5', 
-                                    padding: '10px', 
+                                    padding: '10px 12px', 
                                     borderRadius: 8, 
                                     fontSize: 13, 
                                     color: '#c2410c',
@@ -116,29 +191,38 @@ function AlertModal({ alert, onClose }: { alert: AlertState; onClose: (shared?: 
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: 8,
-                                    animation: !alert.hasShared ? 'pulse 2s infinite' : 'none'
+                                    fontWeight: 600,
+                                    fontSize: 15,
+                                    animation: !alert.hasShared ? 'pulse 2s infinite' : 'none',
+                                    cursor: 'pointer'
                                 }}
-                                onClick={() => {
-                                    const d = alert.shareData!;
-                                    // Add cache buster to ensure LINE fetches fresh OG image every time
-                                    const shareLink = `${window.location.origin}/share/${alert.id}?t=${Date.now()}`;
-                                    const textLines = [
-                                        `📍 รายงานการเช็กอินนอกสถานที่: ${d.name}`,
-                                        `🕒 เวลา: ${d.time}`
-                                    ];
-                                    if (d.duration) {
-                                        textLines.push(`⏱️ ระยะเวลาที่อยู่: ${d.duration}`);
-                                    }
-                                    textLines.push(`📄 รายงานรายละเอียด: ${shareLink}`);
-                                    const text = textLines.join('\n');
-                                    
-                                    const shareUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
-                                    window.open(shareUrl, '_blank');
-                                    onClose(true);
-                                }}
+                                onClick={handleShareToLine}
                             >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 10.304c0-4.58-4.814-8.304-10.739-8.304-5.924 0-10.74 3.724-10.74 8.304 0 4.102 3.821 7.545 8.99 8.216.35.076.825.231 1.054.53.24.316.158.81.077 1.129l-.337 2.03c-.102.614.47.336.663.22 1.393-.84 7.525-4.433 10.27-7.585 1.547-1.848 1.764-3.565 1.764-4.54z"/></svg>
-                                {!alert.hasShared ? "แชร์เข้ากลุ่ม LINE ทันที" : "แชร์อีกครั้ง"}
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M24 10.304c0-4.58-4.814-8.304-10.739-8.304-5.924 0-10.74 3.724-10.74 8.304 0 4.102 3.821 7.545 8.99 8.216.35.076.825.231 1.054.53.24.316.158.81.077 1.129l-.337 2.03c-.102.614.47.336.663.22 1.393-.84 7.525-4.433 10.27-7.585 1.547-1.848 1.764-3.565 1.764-4.54z"/></svg>
+                                {!alert.hasShared ? "แชร์เข้ากลุ่ม LINE ทันที" : "แชร์เข้ากลุ่ม LINE อีกครั้ง"}
+                            </button>
+
+                            <button
+                                type="button"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    padding: '10px 14px',
+                                    background: copied ? '#f0fdf4' : '#f8fafc',
+                                    border: `1px solid ${copied ? '#86efac' : '#e2e8f0'}`,
+                                    borderRadius: 10,
+                                    color: copied ? '#15803d' : '#475569',
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onClick={handleCopyText}
+                            >
+                                {copied ? <Check width={16} /> : <Copy width={16} />}
+                                {copied ? "คัดลอกข้อความแล้ว! นำไปวางในกลุ่ม LINE ได้เลย" : "คัดลอกข้อความและลิงก์ (สำหรับส่งใน LINE)"}
                             </button>
                         </>
                     )}
