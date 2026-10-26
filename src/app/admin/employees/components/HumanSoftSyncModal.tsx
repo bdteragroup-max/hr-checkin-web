@@ -18,6 +18,8 @@ interface PreviewItem {
     department: string;
     position: string;
     company: string;
+    branch_id?: string;
+    branch_name?: string;
     is_new: boolean;
     is_active: boolean;
 }
@@ -43,8 +45,10 @@ export default function HumanSoftSyncModal({
     const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
     const [tabFilter, setTabFilter] = useState<"all" | "new" | "existing">("new");
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
 
     const [syncResult, setSyncResult] = useState<{
+        selectedCount?: number;
         createdCount: number;
         updatedCount: number;
         skippedCount: number;
@@ -76,9 +80,18 @@ export default function HumanSoftSyncModal({
             setTotalHumanSoft(data.totalHumanSoft || 0);
             setNewCount(data.newCount || 0);
             setExistingCount(data.existingCount || 0);
-            setPreviewItems(data.previewItems || []);
-            // Default to 'new' tab if there are new employees, otherwise 'all'
-            setTabFilter(data.newCount > 0 ? "new" : "all");
+            const items: PreviewItem[] = data.previewItems || [];
+            setPreviewItems(items);
+
+            // Pre-select: if there are new employees, select only new employees by default; otherwise select all
+            if ((data.newCount || 0) > 0) {
+                const newIds = items.filter(p => p.is_new).map(p => p.emp_id);
+                setSelectedEmpIds(new Set(newIds));
+                setTabFilter("new");
+            } else {
+                setSelectedEmpIds(new Set(items.map(p => p.emp_id)));
+                setTabFilter("all");
+            }
         } catch (err: any) {
             console.error(err);
             setError(err.message || "เกิดข้อผิดพลาดในการตรวจสอบข้อมูลจาก HumanSoft");
@@ -88,13 +101,17 @@ export default function HumanSoftSyncModal({
     }
 
     async function handleExecuteSync() {
+        if (selectedEmpIds.size === 0) return;
         setSyncing(true);
         setError(null);
         try {
             const res = await fetch("/api/admin/employees/humansoft-sync", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ dryRun: false })
+                body: JSON.stringify({
+                    dryRun: false,
+                    selectedEmpIds: Array.from(selectedEmpIds)
+                })
             });
 
             const data = await res.json();
@@ -103,6 +120,7 @@ export default function HumanSoftSyncModal({
             }
 
             setSyncResult({
+                selectedCount: data.selectedCount,
                 createdCount: data.createdCount || 0,
                 updatedCount: data.updatedCount || 0,
                 skippedCount: data.skippedCount || 0,
@@ -119,6 +137,28 @@ export default function HumanSoftSyncModal({
         }
     }
 
+    function toggleSelectOne(empId: string) {
+        setSelectedEmpIds(prev => {
+            const next = new Set(prev);
+            if (next.has(empId)) next.delete(empId);
+            else next.add(empId);
+            return next;
+        });
+    }
+
+    function selectOnlyNew() {
+        const newIds = previewItems.filter(i => i.is_new).map(i => i.emp_id);
+        setSelectedEmpIds(new Set(newIds));
+    }
+
+    function selectAll() {
+        setSelectedEmpIds(new Set(previewItems.map(i => i.emp_id)));
+    }
+
+    function clearAllSelection() {
+        setSelectedEmpIds(new Set());
+    }
+
     if (!isOpen) return null;
 
     const filteredItems = previewItems.filter(item => {
@@ -130,10 +170,26 @@ export default function HumanSoftSyncModal({
             const matchName = item.name.toLowerCase().includes(q);
             const matchDept = item.department.toLowerCase().includes(q);
             const matchPos = item.position.toLowerCase().includes(q);
-            if (!matchCode && !matchName && !matchDept && !matchPos) return false;
+            const matchBranch = item.branch_name?.toLowerCase().includes(q);
+            if (!matchCode && !matchName && !matchDept && !matchPos && !matchBranch) return false;
         }
         return true;
     });
+
+    const isAllFilteredSelected = filteredItems.length > 0 && filteredItems.every(i => selectedEmpIds.has(i.emp_id));
+    const isSomeFilteredSelected = filteredItems.some(i => selectedEmpIds.has(i.emp_id));
+
+    function toggleSelectFiltered() {
+        setSelectedEmpIds(prev => {
+            const next = new Set(prev);
+            if (isAllFilteredSelected) {
+                filteredItems.forEach(i => next.delete(i.emp_id));
+            } else {
+                filteredItems.forEach(i => next.add(i.emp_id));
+            }
+            return next;
+        });
+    }
 
     return (
         <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && !syncing && onClose()}>
@@ -183,6 +239,11 @@ export default function HumanSoftSyncModal({
                             <div className={styles.successHeader}>
                                 <CheckCircleIcon width={24} height={24} />
                                 <span>การซิงค์ข้อมูลเสร็จสมบูรณ์เรียบร้อย</span>
+                                {syncResult.selectedCount != null && (
+                                    <span style={{ fontSize: 13, fontWeight: 500, color: "#166534", marginLeft: "auto" }}>
+                                        (ดำเนินการซิงค์ตามที่เลือก {syncResult.selectedCount} คน)
+                                    </span>
+                                )}
                             </div>
                             <div className={styles.successMetrics}>
                                 <div className={styles.metricBox}>
@@ -232,18 +293,21 @@ export default function HumanSoftSyncModal({
                             <div className={styles.filterRow}>
                                 <div className={styles.filterTabs}>
                                     <button
+                                        type="button"
                                         className={`${styles.tabBtn} ${tabFilter === "new" ? styles.tabBtnActive : ""}`}
                                         onClick={() => setTabFilter("new")}
                                     >
                                         พนักงานใหม่ ({newCount})
                                     </button>
                                     <button
+                                        type="button"
                                         className={`${styles.tabBtn} ${tabFilter === "existing" ? styles.tabBtnActive : ""}`}
                                         onClick={() => setTabFilter("existing")}
                                     >
                                         มีในระบบแล้ว ({existingCount})
                                     </button>
                                     <button
+                                        type="button"
                                         className={`${styles.tabBtn} ${tabFilter === "all" ? styles.tabBtnActive : ""}`}
                                         onClick={() => setTabFilter("all")}
                                     >
@@ -255,10 +319,58 @@ export default function HumanSoftSyncModal({
                                     <input
                                         type="text"
                                         className={styles.searchInput}
-                                        placeholder="ค้นหารหัส, ชื่อ, แผนก..."
+                                        placeholder="ค้นหารหัส, ชื่อ, แผนก, สาขา..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
+                                </div>
+                            </div>
+
+                            {/* Selection Toolbar */}
+                            <div className={styles.selectionBar}>
+                                <div className={styles.selectionCountWrap}>
+                                    <span>เลือกที่จะซิงค์:</span>
+                                    <span className={styles.selectionCountBadge}>
+                                        {selectedEmpIds.size} / {totalHumanSoft} คน
+                                    </span>
+                                </div>
+                                <div className={styles.quickActions}>
+                                    {newCount > 0 && (
+                                        <button
+                                            type="button"
+                                            className={`${styles.quickBtn} ${styles.quickBtnHighlight}`}
+                                            onClick={selectOnlyNew}
+                                            title="เลือกเฉพาะพนักงานใหม่ที่ตรวจพบ"
+                                        >
+                                            + เลือกเฉพาะคนใหม่ ({newCount})
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        className={styles.quickBtn}
+                                        onClick={selectAll}
+                                    >
+                                        เลือกทั้งหมด ({totalHumanSoft})
+                                    </button>
+                                    {filteredItems.length > 0 && filteredItems.length !== totalHumanSoft && (
+                                        <button
+                                            type="button"
+                                            className={styles.quickBtn}
+                                            onClick={toggleSelectFiltered}
+                                        >
+                                            {isAllFilteredSelected ? `ยกเลิกในหน้านี้ (${filteredItems.length})` : `เลือกในหน้านี้ (${filteredItems.length})`}
+                                        </button>
+                                    )}
+                                    {selectedEmpIds.size > 0 && (
+                                        <button
+                                            type="button"
+                                            className={styles.quickBtn}
+                                            onClick={clearAllSelection}
+                                            style={{ color: "#ef4444" }}
+                                        >
+                                            ล้างการเลือก
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -267,10 +379,23 @@ export default function HumanSoftSyncModal({
                                 <table className={styles.table}>
                                     <thead>
                                         <tr>
+                                            <th style={{ width: 44, textAlign: "center" }}>
+                                                <input
+                                                    type="checkbox"
+                                                    className={styles.checkbox}
+                                                    checked={isAllFilteredSelected}
+                                                    ref={el => {
+                                                        if (el) el.indeterminate = isSomeFilteredSelected && !isAllFilteredSelected;
+                                                    }}
+                                                    onChange={toggleSelectFiltered}
+                                                    title={isAllFilteredSelected ? "ยกเลิกเลือกรายการในหน้านี้" : "เลือกทั้งหมดในหน้านี้"}
+                                                />
+                                            </th>
                                             <th>รหัส</th>
                                             <th>ชื่อ-นามสกุล</th>
                                             <th>แผนก</th>
                                             <th>ตำแหน่ง</th>
+                                            <th>สาขา</th>
                                             <th>สังกัด</th>
                                             <th>สถานะ</th>
                                         </tr>
@@ -278,41 +403,71 @@ export default function HumanSoftSyncModal({
                                     <tbody>
                                         {filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
+                                                <td colSpan={8} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
                                                     ไม่มีรายการในหมวดหมู่นี้
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredItems.map(item => (
-                                                <tr key={item.emp_id}>
-                                                    <td style={{ fontWeight: 700 }}>{item.emp_id}</td>
-                                                    <td>{item.name}</td>
-                                                    <td>{item.department}</td>
-                                                    <td>{item.position}</td>
-                                                    <td>
-                                                        <span style={{ fontSize: 12, color: "#64748b" }}>
-                                                            {item.company}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        {item.is_new ? (
-                                                            <span className={styles.badgeNew}>
-                                                                <UserPlusIcon width={13} height={13} />
-                                                                พนักงานใหม่
+                                            filteredItems.map(item => {
+                                                const isSelected = selectedEmpIds.has(item.emp_id);
+                                                return (
+                                                    <tr
+                                                        key={item.emp_id}
+                                                        className={isSelected ? styles.selectedRow : ""}
+                                                        onClick={() => toggleSelectOne(item.emp_id)}
+                                                        style={{ cursor: "pointer" }}
+                                                    >
+                                                        <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="checkbox"
+                                                                className={styles.checkbox}
+                                                                checked={isSelected}
+                                                                onChange={() => toggleSelectOne(item.emp_id)}
+                                                            />
+                                                        </td>
+                                                        <td style={{ fontWeight: 700 }}>{item.emp_id}</td>
+                                                        <td>{item.name}</td>
+                                                        <td>{item.department}</td>
+                                                        <td>{item.position}</td>
+                                                        <td>
+                                                            <span style={{
+                                                                fontSize: 12,
+                                                                fontWeight: 600,
+                                                                color: item.branch_name && item.branch_name !== "สำนักงานใหญ่" ? "#0284c7" : "#475569",
+                                                                background: item.branch_name && item.branch_name !== "สำนักงานใหญ่" ? "#e0f2fe" : "#f1f5f9",
+                                                                padding: "2px 8px",
+                                                                borderRadius: 6,
+                                                                display: "inline-block",
+                                                                border: item.branch_name && item.branch_name !== "สำนักงานใหญ่" ? "1px solid #bae6fd" : "1px solid #e2e8f0"
+                                                            }}>
+                                                                {item.branch_name || "สำนักงานใหญ่"}
                                                             </span>
-                                                        ) : (
-                                                            <span className={styles.badgeExisting}>
-                                                                มีในระบบแล้ว
+                                                        </td>
+                                                        <td>
+                                                            <span style={{ fontSize: 12, color: "#64748b" }}>
+                                                                {item.company}
                                                             </span>
-                                                        )}
-                                                        {!item.is_active && (
-                                                            <span className={styles.badgeResigned} style={{ marginLeft: 4 }}>
-                                                                ลาออก
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                        <td>
+                                                            {item.is_new ? (
+                                                                <span className={styles.badgeNew}>
+                                                                    <UserPlusIcon width={13} height={13} />
+                                                                    พนักงานใหม่
+                                                                </span>
+                                                            ) : (
+                                                                <span className={styles.badgeExisting}>
+                                                                    มีในระบบแล้ว
+                                                                </span>
+                                                            )}
+                                                            {!item.is_active && (
+                                                                <span className={styles.badgeResigned} style={{ marginLeft: 4 }}>
+                                                                    ลาออก
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -332,6 +487,7 @@ export default function HumanSoftSyncModal({
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
                         <button
+                            type="button"
                             className={styles.btnCancel}
                             onClick={onClose}
                             disabled={syncing}
@@ -340,12 +496,21 @@ export default function HumanSoftSyncModal({
                         </button>
                         {!syncResult && (
                             <button
+                                type="button"
                                 className={styles.btnPrimary}
                                 onClick={handleExecuteSync}
-                                disabled={loading || syncing || totalHumanSoft === 0}
+                                disabled={loading || syncing || selectedEmpIds.size === 0}
                             >
                                 <ArrowPathIcon width={16} height={16} className={syncing ? styles.spinner : ""} />
-                                <span>{syncing ? "กำลังซิงค์ข้อมูล..." : `เริ่มซิงค์ข้อมูล (${totalHumanSoft})`}</span>
+                                <span>
+                                    {syncing
+                                        ? "กำลังซิงค์ข้อมูล..."
+                                        : selectedEmpIds.size === 0
+                                            ? "กรุณาเลือกพนักงานที่จะซิงค์"
+                                            : selectedEmpIds.size === totalHumanSoft
+                                                ? `เริ่มซิงค์ข้อมูลทั้งหมด (${totalHumanSoft})`
+                                                : `เริ่มซิงค์ข้อมูล (เลือก ${selectedEmpIds.size} คน)`}
+                                </span>
                             </button>
                         )}
                     </div>

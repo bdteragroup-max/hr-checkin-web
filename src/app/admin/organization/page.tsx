@@ -588,7 +588,7 @@ export default function OrganizationPage() {
                                                         const apexNodes = nodes.filter(n => {
                                                             const t = n.pos.title.toLowerCase();
                                                             // Exclude branch-specific managers from the top Apex
-                                                            if (t.includes('branch')) return false;
+                                                            if (t.includes('branch') || t.includes('สาขา')) return false;
                                                             return t.includes('mgr') || t.includes('manager') || t.includes('ผู้จัดการ') || t.includes('head') || t.includes('หัวหน้า');
                                                         });
                                                         const leafNodes = nodes.filter(n => !apexNodes.includes(n));
@@ -597,7 +597,15 @@ export default function OrganizationPage() {
                                                         const branchGroups = branches.map(branch => {
                                                             const branchNodes = leafNodes.filter(({ emp }) => emp?.branches?.name === branch.name);
                                                             if (branchNodes.length === 0) return null;
-                                                            return { branch, nodes: branchNodes };
+                                                            // Sort branch manager to the top of branch stack
+                                                            const sortedNodes = [...branchNodes].sort((a, b) => {
+                                                                const isMgmtA = a.pos.title.toLowerCase().includes('mgr') || a.pos.title.toLowerCase().includes('manager') || a.pos.title.toLowerCase().includes('ผู้จัดการ');
+                                                                const isMgmtB = b.pos.title.toLowerCase().includes('mgr') || b.pos.title.toLowerCase().includes('manager') || b.pos.title.toLowerCase().includes('ผู้จัดการ');
+                                                                if (isMgmtA && !isMgmtB) return -1;
+                                                                if (!isMgmtA && isMgmtB) return 1;
+                                                                return 0;
+                                                            });
+                                                            return { branch, nodes: sortedNodes };
                                                         }).filter(Boolean) as { branch: { id: string; name: string }; nodes: { pos: JobPosition; emp: any | null }[] }[];
 
                                                         // 3. Leaf nodes without a branch (Central)

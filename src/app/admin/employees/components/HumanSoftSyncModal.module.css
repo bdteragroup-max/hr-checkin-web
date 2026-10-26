@@ -157,6 +157,85 @@
   gap: 8px;
 }
 
+.selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selectionCountWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.selectionCountBadge {
+  background: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.quickActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.quickBtn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quickBtn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.quickBtnHighlight {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+  font-weight: 600;
+}
+
+.quickBtnHighlight:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #0284c7;
+  vertical-align: middle;
+}
+
+.selectedRow td {
+  background: #f0f9ff !important;
+}
+
 .searchWrap {
   position: relative;
   display: flex;

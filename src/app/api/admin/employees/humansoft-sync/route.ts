@@ -33,8 +33,11 @@ export async function POST(req: Request) {
 
         const body = await req.json().catch(() => ({}));
         const dryRun = Boolean(body.dryRun);
+        const selectedEmpIds = Array.isArray(body.selectedEmpIds)
+            ? (body.selectedEmpIds as unknown[]).filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+            : undefined;
 
-        const result = await syncAllHumanSoftEmployees({ dryRun });
+        const result = await syncAllHumanSoftEmployees({ dryRun, selectedEmpIds });
         return NextResponse.json(result);
     } catch (e: any) {
         console.error("[HumanSoft Employee Sync POST Error]:", e);

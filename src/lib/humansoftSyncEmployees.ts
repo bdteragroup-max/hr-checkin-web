@@ -149,6 +149,139 @@ export async function fetchHumanSoftEmployeeDetail(empCode: string, apiKeyParam?
  * Maps raw HumanSoft employee data and upserts into local `employees` table.
  * Resolves or creates matching departments, job_positions, branches, and companies.
  */
+// Keyword mappings for identifying regional branches from position/department text
+export const BRANCH_KEYWORD_MAP: Array<{ keywords: string[]; branchNameMatch?: string }> = [
+    { keywords: ["กาญจนบุรี"], branchNameMatch: "กาญจนบุรี" },
+    { keywords: ["ร้อยเอ็ด"], branchNameMatch: "ร้อยเอ็ด" },
+    { keywords: ["ขอนแก่น"], branchNameMatch: "ขอนแก่น" },
+    { keywords: ["พิษณุโลก"], branchNameMatch: "พิษณุโลก" },
+    { keywords: ["พังโคน", "สกลนคร"], branchNameMatch: "สกลนคร" },
+    { keywords: ["สุราษฎร์ธานี", "สุราษฎร์"], branchNameMatch: "สุราษฎร์ธานี" },
+    { keywords: ["อุดรธานี", "อุดร"], branchNameMatch: "อุดรธานี" },
+    { keywords: ["อุบลราชธานี", "อุบล"], branchNameMatch: "อุบลราชธานี" },
+    { keywords: ["นครศรีธรรมราช"], branchNameMatch: "นครศรีธรรมราช" },
+    { keywords: ["สมุทรสาคร"], branchNameMatch: "สมุทรสาคร" },
+    { keywords: ["สุรินทร์"], branchNameMatch: "สุรินทร์" },
+    { keywords: ["เชียงใหม่"], branchNameMatch: "เชียงใหม่" },
+    { keywords: ["โกดัง 62", "โกดังซอย 62", "โกดังซอย62", "ซอย 62", "ซอย62", "warehouse 62"], branchNameMatch: "Warehouse" },
+];
+
+/**
+ * Intelligently resolves an employee's branch.
+ * Priority:
+ * 1. Keywords in position_name, department_name, division_name, section_name
+ * 2. Check-in history (top non-HQ branch if >= 10 checkins)
+ * 3. Specific branch from raw.branch_name (excluding generic "สำนักงานใหญ่")
+ * 4. Existing regional branch in database (preserve manual assignments)
+ * 5. Fallback to "BKK-HQ" (สำนักงานใหญ่)
+ */
+export async function resolveBranchForEmployee(
+    raw: {
+        employee_code?: string;
+        position_name?: string | null;
+        department_name?: string | null;
+        division_name?: string | null;
+        section_name?: string | null;
+        branch_name?: string | null;
+    },
+    existingBranchId?: string | null,
+    allBranchesCache?: Array<{ id: string; name: string }>
+): Promise<{ branchId: string; branchName: string }> {
+    const branches = allBranchesCache || await prisma.branches.findMany({ select: { id: true, name: true } });
+    const hqBranch = branches.find(b => b.name.includes("สำนักงานใหญ่") || b.id === "BKK-HQ") || { id: "BKK-HQ", name: "สำนักงานใหญ่" };
+
+    const combinedText = [
+        raw.position_name,
+        raw.department_name,
+        raw.division_name,
+        raw.section_name
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    // 1. Check known keywords from position / department against regional branches
+    for (const item of BRANCH_KEYWORD_MAP) {
+        for (const kw of item.keywords) {
+            if (combinedText.includes(kw.toLowerCase())) {
+                const matchedBranch = branches.find(b =>
+                    item.branchNameMatch ? b.name.toLowerCase().includes(item.branchNameMatch.toLowerCase()) : false
+                );
+                if (matchedBranch) {
+                    return { branchId: matchedBranch.id, branchName: matchedBranch.name };
+                }
+            }
+        }
+    }
+
+    // Dynamic check against any other branch in DB (except HQ)
+    for (const b of branches) {
+        if (b.id === hqBranch.id || b.name.includes("สำนักงานใหญ่")) continue;
+        if (combinedText.includes(b.name.toLowerCase())) {
+            return { branchId: b.id, branchName: b.name };
+        }
+    }
+
+    // 2. Check checkin history if employee has previous checkins
+    const empCode = raw.employee_code?.trim().toUpperCase();
+    if (empCode) {
+        try {
+            const checkins: any[] = await prisma.$queryRaw`
+                SELECT branch_name, COUNT(*)::int as c 
+                FROM checkins 
+                WHERE emp_id = ${empCode} 
+                  AND branch_name IS NOT NULL 
+                  AND branch_name NOT IN ('นอกสถานที่', 'HumanSoft', 'สำนักงานใหญ่', 'บริษัท เทอรา กรุ้ป จำกัด', 'บริษัท เทอรา อิเล็กทริค จำกัด', 'บริษัท เทอรา พาวเวอร์ จำกัด')
+                GROUP BY branch_name 
+                ORDER BY c DESC 
+                LIMIT 1
+            `;
+            if (checkins.length > 0 && checkins[0].c >= 10) {
+                const bName = (checkins[0].branch_name || "").toLowerCase();
+                for (const item of BRANCH_KEYWORD_MAP) {
+                    for (const kw of item.keywords) {
+                        if (bName.includes(kw.toLowerCase())) {
+                            const matched = branches.find(b =>
+                                item.branchNameMatch ? b.name.toLowerCase().includes(item.branchNameMatch.toLowerCase()) : false
+                            );
+                            if (matched) return { branchId: matched.id, branchName: matched.name };
+                        }
+                    }
+                }
+                const dynamicMatch = branches.find(b => b.id !== hqBranch.id && bName.includes(b.name.toLowerCase()));
+                if (dynamicMatch) return { branchId: dynamicMatch.id, branchName: dynamicMatch.name };
+            }
+        } catch {
+            // Ignore DB checkin query errors in fallback
+        }
+    }
+
+    // 3. Raw branch_name if it specifically mentions a regional branch (not generic "สำนักงานใหญ่")
+    const rawBranch = (raw.branch_name || "").toLowerCase();
+    if (rawBranch && !rawBranch.includes("สำนักงานใหญ่")) {
+        for (const item of BRANCH_KEYWORD_MAP) {
+            for (const kw of item.keywords) {
+                if (rawBranch.includes(kw.toLowerCase())) {
+                    const matched = branches.find(b =>
+                        item.branchNameMatch ? b.name.toLowerCase().includes(item.branchNameMatch.toLowerCase()) : false
+                    );
+                    if (matched) return { branchId: matched.id, branchName: matched.name };
+                }
+            }
+        }
+    }
+
+    // 4. Preserve existing regional branch in database if not HQ
+    if (existingBranchId && existingBranchId !== hqBranch.id) {
+        const existingB = branches.find(b => b.id === existingBranchId);
+        return { branchId: existingBranchId, branchName: existingB?.name || existingBranchId };
+    }
+
+    // 5. Default fallback to HQ
+    return { branchId: hqBranch.id, branchName: hqBranch.name };
+}
+
+/**
+ * Maps raw HumanSoft employee data and upserts into local `employees` table.
+ * Resolves or creates matching departments, job_positions, branches, and companies.
+ */
 export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
     if (!raw.employee_code) {
         throw new Error("EMPLOYEE_CODE_MISSING");
@@ -205,19 +338,15 @@ export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
         }
     }
 
-    // Resolve Branch (Default: BKK-HQ)
-    let branchId: string = "BKK-HQ";
-    const rawBranchName = (raw.branch_name || "").toLowerCase();
-    if (rawBranchName) {
-        const allBranches = await prisma.branches.findMany({ select: { id: true, name: true } });
-        const matched = allBranches.find(b =>
-            rawBranchName.includes(b.name.toLowerCase()) ||
-            b.name.toLowerCase().includes(rawBranchName)
-        );
-        if (matched) {
-            branchId = matched.id;
-        }
-    }
+    // Check if employee already exists in DB
+    const existing = await prisma.employees.findUnique({
+        where: { emp_id: empId },
+        select: { emp_id: true, pin_hash: true, line_user_id: true, is_active: true, branch_id: true }
+    });
+
+    // Resolve Branch (Intelligent resolution across position title, checkin history, etc.)
+    const branchInfo = await resolveBranchForEmployee(raw, existing?.branch_id);
+    const branchId = branchInfo.branchId;
 
     // Compose Full Name and Titles
     const titlePrefix = raw.employee_title_name?.trim() || null;
@@ -255,12 +384,6 @@ export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
     const baseSalary = raw.salary != null && !isNaN(Number(raw.salary)) && Number(raw.salary) > 0
         ? Number(raw.salary)
         : undefined;
-
-    // Check if employee already exists
-    const existing = await prisma.employees.findUnique({
-        where: { emp_id: empId },
-        select: { emp_id: true, pin_hash: true, line_user_id: true, is_active: true }
-    });
 
     if (existing) {
         // Update existing employee without overriding credentials
@@ -329,6 +452,7 @@ export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
 export interface SyncResult {
     ok: boolean;
     totalHumanSoft: number;
+    selectedCount?: number;
     newCount: number;
     existingCount: number;
     createdCount: number;
@@ -341,6 +465,8 @@ export interface SyncResult {
         department: string;
         position: string;
         company: string;
+        branch_id?: string;
+        branch_name?: string;
         is_new: boolean;
         is_active: boolean;
     }[];
@@ -349,8 +475,9 @@ export interface SyncResult {
 /**
  * Synchronize all employees from HumanSoft into our database.
  * If `dryRun: true`, it will preview the differences without writing to DB.
+ * If `selectedEmpIds` is provided, only those employees will be synchronized.
  */
-export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean } = {}): Promise<SyncResult> {
+export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; selectedEmpIds?: string[] } = {}): Promise<SyncResult> {
     const listRes = await fetchHumanSoftAllEmployeesList();
     if (!listRes.ok || !listRes.employees) {
         return {
@@ -367,26 +494,34 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean } = 
 
     const hsEmployees = listRes.employees;
 
-    // Load all existing employee IDs from DB
-    const existingEmployees = await prisma.employees.findMany({
-        select: { emp_id: true, name: true, is_active: true }
-    });
+    // Load all existing employee IDs and branches from DB
+    const [existingEmployees, allBranches] = await Promise.all([
+        prisma.employees.findMany({
+            select: { emp_id: true, name: true, is_active: true, branch_id: true }
+        }),
+        prisma.branches.findMany({
+            select: { id: true, name: true }
+        })
+    ]);
     const existingMap = new Map(existingEmployees.map(e => [e.emp_id, e]));
 
-    const previewItems = hsEmployees.map(hs => {
+    const previewItems = await Promise.all(hsEmployees.map(async hs => {
         const code = hs.employee_code.trim().toUpperCase();
-        const exists = existingMap.has(code);
+        const existingEmp = existingMap.get(code);
         const name = [hs.employee_title_name, hs.employee_name, hs.employee_last_name].filter(Boolean).join(" ") || code;
+        const branchInfo = await resolveBranchForEmployee(hs, existingEmp?.branch_id, allBranches);
         return {
             emp_id: code,
             name,
             department: hs.department_name || "-",
             position: hs.position_name || "-",
             company: hs.company_name || hs.employee_code.slice(0, 2),
-            is_new: !exists,
+            branch_id: branchInfo.branchId,
+            branch_name: branchInfo.branchName,
+            is_new: !existingEmp,
             is_active: hs.signout_flag !== "Y"
         };
-    });
+    }));
 
     const newItems = previewItems.filter(p => p.is_new);
     const existingItems = previewItems.filter(p => !p.is_new);
@@ -410,7 +545,16 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean } = 
     let skippedCount = 0;
     const errors: string[] = listRes.errors ? [...listRes.errors] : [];
 
-    for (const hs of hsEmployees) {
+    // Filter to selected employees if specified
+    const selectedSet = options.selectedEmpIds && options.selectedEmpIds.length > 0
+        ? new Set(options.selectedEmpIds.map(id => id.trim().toUpperCase()))
+        : null;
+
+    const employeesToSync = selectedSet
+        ? hsEmployees.filter(hs => selectedSet.has(hs.employee_code.trim().toUpperCase()))
+        : hsEmployees;
+
+    for (const hs of employeesToSync) {
         try {
             const res = await upsertEmployeeFromHumanSoft(hs);
             if (res.action === "created") {
@@ -427,6 +571,7 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean } = 
     return {
         ok: true,
         totalHumanSoft: hsEmployees.length,
+        selectedCount: employeesToSync.length,
         newCount: newItems.length,
         existingCount: existingItems.length,
         createdCount,
