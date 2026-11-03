@@ -65,7 +65,9 @@ function AdminClothingPageInner() {
     const [actionRequest, setActionRequest] = useState<any>(null);
     const [adminNote, setAdminNote] = useState("");
     const [showActionModal, setShowActionModal] = useState(false);
-    const [actionType, setActionType] = useState<"approved" | "rejected" | "fulfilled" | null>(null);
+    const [actionType, setActionType] = useState<"approved" | "rejected" | "fulfilled" | "edit" | null>(null);
+    const [actionVariantId, setActionVariantId] = useState<number>(0);
+    const [actionQuantity, setActionQuantity] = useState<number>(1);
     const [actionSaving, setActionSaving] = useState(false);
 
 
@@ -108,10 +110,12 @@ function AdminClothingPageInner() {
     }
 
     // Request Handlers
-    function openActionModal(req: any, type: "approved" | "rejected" | "fulfilled") {
+    function openActionModal(req: any, type: "approved" | "rejected" | "fulfilled" | "edit") {
         setActionRequest(req);
         setActionType(type);
-        setAdminNote("");
+        setAdminNote(req.admin_note || "");
+        setActionVariantId(req.variant_id || req.variant?.id || 0);
+        setActionQuantity(req.quantity || 1);
         setShowActionModal(true);
     }
 
@@ -122,9 +126,11 @@ function AdminClothingPageInner() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    status: actionType,
+                    status: actionType === "edit" ? actionRequest.status : actionType,
+                    variant_id: actionVariantId,
+                    quantity: actionQuantity,
                     admin_note: adminNote,
-                    approved_by: "Admin" 
+                    ...(actionType !== "edit" ? { approved_by: "Admin" } : {})
                 })
             });
             const data = await res.json();
@@ -383,6 +389,9 @@ function AdminClothingPageInner() {
                                             </td>
                                             <td>
                                                 <div className={styles.actions}>
+                                                    <button className={styles.editBtn} title="แก้ไขไซส์ / จำนวน" onClick={() => openActionModal(r, "edit")}>
+                                                        <PencilSquareIcon width={18} style={{ marginRight: 4 }} /> แก้ไข
+                                                    </button>
                                                     {r.status === "pending" && (
                                                         <>
                                                             <button className={styles.successBtn} onClick={() => openActionModal(r, "approved")}>อนุมัติ</button>
@@ -472,20 +481,56 @@ function AdminClothingPageInner() {
                     <div className={styles.modal}>
                         <div className={styles.modalHeader}>
                             <h2>
-                                {actionType === "approved" ? "ยืนยันการอนุมัติ" :
+                                {actionType === "edit" ? "แก้ไขรายละเอียดคำขอเบิก" :
+                                 actionType === "approved" ? "ยืนยันการอนุมัติ" :
                                  actionType === "rejected" ? "ยืนยันการปฏิเสธคำขอ" : "ยืนยันการส่งมอบชุด"}
                             </h2>
-                            <p>กรุณาตรวจสอบข้อมูลก่อนดำเนินการ</p>
+                            <p>กรุณาตรวจสอบหรือแก้ไขข้อมูลก่อนดำเนินการ</p>
                         </div>
                         <div style={{ marginBottom: 16, padding: "12px", background: "var(--surface2)", borderRadius: "var(--radius-sm)" }}>
                             <div>พนักงาน: <b>{actionRequest?.employee?.name}</b></div>
-                            <div>รายการ: {actionRequest?.variant?.item?.name} (ไซส์ {actionRequest?.variant?.size})</div>
-                            <div>จำนวน: {actionRequest?.quantity} ตัว</div>
+                            <div>รายการ: <b>{actionRequest?.variant?.item?.name}</b></div>
                         </div>
+
+                        {actionType !== "rejected" && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                <div className={styles.inputGroup}>
+                                    <label>ไซส์เสื้อ</label>
+                                    <select
+                                        value={actionVariantId}
+                                        onChange={e => setActionVariantId(Number(e.target.value))}
+                                    >
+                                        {(() => {
+                                            const itemObj = items.find((i: any) => i.id === actionRequest?.variant?.item_id || i.id === actionRequest?.variant?.item?.id);
+                                            const variants = itemObj?.variants || (actionRequest?.variant ? [actionRequest.variant] : []);
+                                            return variants.map((v: any) => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.size} (คงเหลือ: {v.stock_quantity})
+                                                </option>
+                                            ));
+                                        })()}
+                                    </select>
+                                </div>
+                                <div className={styles.inputGroup}>
+                                    <label>จำนวน (ตัว)</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={actionQuantity}
+                                        onChange={e => setActionQuantity(Math.max(1, Number(e.target.value)))}
+                                    />
+                                </div>
+                            </div>
+                        )}
                         
                         {actionType === "approved" && (
                             <div style={{ padding: "12px", background: "#fef3c7", color: "#b45309", borderRadius: "var(--radius-sm)", marginBottom: 16, fontSize: 13, display: "flex", gap: 6 }}>
                                 <CheckIcon width={16} /> <b>การอนุมัติ จะทำการตัดสต๊อกสินค้าทันที!</b>
+                            </div>
+                        )}
+                        {actionType === "edit" && (actionRequest?.status === "approved" || actionRequest?.status === "fulfilled") && (
+                            <div style={{ padding: "12px", background: "#fef3c7", color: "#b45309", borderRadius: "var(--radius-sm)", marginBottom: 16, fontSize: 13, display: "flex", gap: 6 }}>
+                                <CheckIcon width={16} /> <b>คำขอนี้อนุมัติแล้ว ระบบจะปรับปรุงสต๊อกอัตโนมัติตามไซส์/จำนวนที่แก้ไข</b>
                             </div>
                         )}
 
