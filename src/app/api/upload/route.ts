@@ -13,6 +13,79 @@ function safeFileName(name: string) {
     return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+/**
+ * PUT: Generate a signed upload URL for direct client -> Supabase Storage upload.
+ * This bypasses Vercel Serverless Function's 4.5MB request body limit (HTTP 413) for large PDFs or photos.
+ */
+export async function PUT(req: Request) {
+    const token = (await cookies()).get("token")?.value;
+    if (!token) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
+    let emp_id = "";
+    try {
+        const payload = verifyToken(token);
+        emp_id = payload.emp_id;
+    } catch {
+        return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    try {
+        const body = await req.json().catch(() => ({}));
+        const fileType = String(body.fileType || "").trim();
+        const prefix = String(body.prefix || "").trim();
+
+        const allowed = new Set([
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "application/pdf",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ]);
+        if (!allowed.has(fileType)) {
+            return NextResponse.json({ error: "INVALID_FILE_TYPE" }, { status: 400 });
+        }
+
+        const now = new Date();
+        const dateFolder = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+        const ext =
+            fileType === "image/png" ? "png" :
+            fileType === "image/webp" ? "webp" :
+            fileType === "application/pdf" ? "pdf" :
+            fileType === "application/vnd.ms-excel" ? "xls" :
+            fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? "xlsx" :
+            "jpg";
+
+        const ms = now.getTime();
+        const fileName = safeFileName(
+            `${emp_id}-${prefix ? prefix + "-" : ""}${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}-${ms}.${ext}`
+        );
+        const filePath = `${dateFolder}/${fileName}`;
+
+        const { data, error } = await supabaseAdmin.storage
+            .from("uploads")
+            .createSignedUploadUrl(filePath);
+
+        if (error || !data?.signedUrl) {
+            return NextResponse.json({ ok: false, error: error?.message || "SIGNED_URL_FAILED" }, { status: 500 });
+        }
+
+        const { data: { publicUrl } } = supabaseAdmin.storage
+            .from("uploads")
+            .getPublicUrl(filePath);
+
+        return NextResponse.json({
+            ok: true,
+            signedUrl: data.signedUrl,
+            token: data.token,
+            path: filePath,
+            publicUrl
+        });
+    } catch (e: any) {
+        return NextResponse.json({ ok: false, error: e.message || "ERROR" }, { status: 500 });
+    }
+}
+
 export async function POST(req: Request) {
     // auth
     const token = (await cookies()).get("token")?.value;

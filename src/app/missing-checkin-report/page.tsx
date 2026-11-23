@@ -231,7 +231,8 @@ export default function MissingCheckinReportPage() {
 
     async function compressImage(file: File): Promise<File> {
         if (!file.type.startsWith("image/")) return file;
-        if (file.size < 1024 * 1024) return file;
+        // Always compress images > 350KB to ensure fast upload and avoid Vercel 413 payload limits
+        if (file.size < 350 * 1024) return file;
 
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -242,7 +243,7 @@ export default function MissingCheckinReportPage() {
                 img.onload = () => {
                     const canvas = document.createElement("canvas");
                     let { width, height } = img;
-                    const MAX = 1600;
+                    const MAX = 1400;
 
                     if (width > height) {
                         if (width > MAX) { height = Math.round(height * (MAX / width)); width = MAX; }
@@ -259,7 +260,7 @@ export default function MissingCheckinReportPage() {
                         if (blob) {
                             resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: "image/jpeg" }));
                         } else resolve(file);
-                    }, "image/jpeg", 0.8);
+                    }, "image/jpeg", 0.75);
                 };
                 img.onerror = () => resolve(file);
             };
@@ -269,8 +270,31 @@ export default function MissingCheckinReportPage() {
 
     async function uploadFile(rawFile: File, prefix: string) {
         const file = await compressImage(rawFile);
-        const formData = new FormData();
 
+        // 1. If file is > 3MB (or as primary for large files), use Signed Upload URL directly to Supabase Storage to avoid Vercel 413 limit
+        if (file.size > 2.5 * 1024 * 1024) {
+            const signRes = await fetch("/api/upload", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fileType: file.type, prefix })
+            });
+            if (signRes.ok) {
+                const signData = await signRes.json();
+                if (signData.ok && signData.signedUrl) {
+                    const putRes = await fetch(signData.signedUrl, {
+                        method: "PUT",
+                        headers: { "Content-Type": file.type },
+                        body: file
+                    });
+                    if (putRes.ok) {
+                        return signData.publicUrl;
+                    }
+                }
+            }
+        }
+
+        // 2. Standard multipart upload (with automatic fallback to Signed URL if 413 occurs)
+        const formData = new FormData();
         const parts = file.name.split(".");
         let ext = parts.length > 1 ? parts.pop() || "tmp" : "tmp";
         ext = ext.replace(/[^a-zA-Z0-9]/g, "");
@@ -281,8 +305,28 @@ export default function MissingCheckinReportPage() {
         formData.append("prefix", prefix);
 
         const r = await fetch("/api/upload", { method: "POST", body: formData });
+        if (r.status === 413) {
+            // Fallback to direct signed upload URL when Vercel rejects body size (413)
+            const signRes = await fetch("/api/upload", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fileType: file.type, prefix })
+            });
+            const signData = await signRes.json().catch(() => ({}));
+            if (signRes.ok && signData.ok && signData.signedUrl) {
+                const putRes = await fetch(signData.signedUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file
+                });
+                if (putRes.ok) {
+                    return signData.publicUrl;
+                }
+            }
+            throw new Error("ไฟล์มีขนาดใหญ่เกินกำหนด กรุณาใช้ไฟล์รูปภาพหรือย่อขนาดไฟล์ PDF ให้ไม่เกิน 15MB");
+        }
         if (!r.ok) {
-            throw new Error(`Upload failed (${r.status})`);
+            throw new Error(`อัปโหลดไฟล์ไม่สำเร็จ (${r.status})`);
         }
 
         const res = await r.json();
@@ -476,18 +520,18 @@ export default function MissingCheckinReportPage() {
                     </div>
 
                     <div className={styles.form}>
-                        {/* 1. เลขที่รายการ & ประจำรอบเดือน — จัดสมมาตรระดับเดียวกัน */}
+                        {/* 1. เลขที่รายการ & ประจำรอบเดือน — จัดสมมาตรและรองรับจอมือถือแคบโดยไม่ล้น */}
                         <div style={{
                             display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                             gap: 16,
                             alignItems: "start"
                         }}>
                             {/* ฝั่งซ้าย: เลขที่รายการ */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                                 <label
                                     className={styles.label}
-                                    style={{ margin: 0, minHeight: 20, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
+                                    style={{ margin: 0, minHeight: 20, display: "flex", alignItems: "center" }}
                                 >
                                     เลขที่รายการ (DOCUMENT NO.)
                                 </label>
@@ -496,13 +540,14 @@ export default function MissingCheckinReportPage() {
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "space-between",
-                                        padding: "0 16px",
+                                        gap: 8,
+                                        padding: "0 14px",
                                         borderRadius: "var(--radius-sm)",
                                         border: "1.5px solid var(--gray-200)",
                                         background: "#f1f5f9",
                                         color: "#1e293b",
                                         fontWeight: 800,
-                                        fontSize: 15.5,
+                                        fontSize: 15,
                                         userSelect: "none",
                                         pointerEvents: "none",
                                         height: 48,
@@ -510,14 +555,17 @@ export default function MissingCheckinReportPage() {
                                     }}
                                     aria-readonly="true"
                                 >
-                                    <span>{editingReport ? editingReport.doc_no : nextDocNo}</span>
+                                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {editingReport ? editingReport.doc_no : nextDocNo}
+                                    </span>
                                     <span style={{
-                                        fontSize: 11,
+                                        fontSize: 10.5,
                                         fontWeight: 700,
                                         background: "#e2e8f0",
                                         color: "#475569",
-                                        padding: "3px 8px",
-                                        borderRadius: 6
+                                        padding: "3px 7px",
+                                        borderRadius: 6,
+                                        flexShrink: 0
                                     }}>
                                         AUTO
                                     </span>
@@ -532,10 +580,10 @@ export default function MissingCheckinReportPage() {
                             </div>
 
                             {/* ฝั่งขวา: ประจำรอบเดือน (ภาษาไทย) */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                                 <label
                                     className={styles.label}
-                                    style={{ margin: 0, minHeight: 20, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}
+                                    style={{ margin: 0, minHeight: 20, display: "flex", alignItems: "center" }}
                                 >
                                     ประจำรอบเดือน (ตัดรอบทุกวันที่ 25)
                                 </label>
@@ -546,9 +594,9 @@ export default function MissingCheckinReportPage() {
                                     required
                                     style={{
                                         height: 48,
-                                        padding: "0 16px",
+                                        padding: "0 14px",
                                         fontWeight: 800,
-                                        fontSize: 15.5,
+                                        fontSize: 15,
                                         color: "#1e293b",
                                         background: "#fff",
                                         boxSizing: "border-box"
