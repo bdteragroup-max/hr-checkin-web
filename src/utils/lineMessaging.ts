@@ -3734,12 +3734,12 @@ export async function sendMissingCheckinReportNotification(data: {
     data.status === "approved" ? "HR อนุมัติเรียบร้อยแล้ว" :
     data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
 
-  const firstEvidence = data.evidenceUrls
-    ? data.evidenceUrls.split(",").map(s => s.trim()).find(s => /^https?:\/\//i.test(s)) || ""
-    : "";
+  const evidenceList = data.evidenceUrls
+    ? data.evidenceUrls.split(",").map(s => s.trim()).filter(s => /^https?:\/\//i.test(s))
+    : [];
 
   const footerContents: any[] = [];
-  if (firstEvidence) {
+  if (evidenceList.length === 1) {
     footerContents.push({
       type: "button",
       style: "secondary",
@@ -3747,9 +3747,30 @@ export async function sendMissingCheckinReportNotification(data: {
       action: {
         type: "uri",
         label: "📎 ดูหลักฐานการทำงาน",
-        uri: firstEvidence
+        uri: evidenceList[0]
       }
     });
+  } else if (evidenceList.length > 1) {
+    // Render buttons in rows of up to 2 per row so multiple files look symmetrical and clean
+    for (let i = 0; i < evidenceList.length; i += 2) {
+      const pair = evidenceList.slice(i, i + 2);
+      footerContents.push({
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        contents: pair.map((url, idx) => ({
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          flex: 1,
+          action: {
+            type: "uri",
+            label: `📎 หลักฐาน ${i + idx + 1}`,
+            uri: url
+          }
+        }))
+      });
+    }
   }
 
   if (!data.hideButtons && (data.status === "pending_supervisor" || data.status === "pending_hr")) {

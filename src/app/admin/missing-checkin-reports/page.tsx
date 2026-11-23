@@ -13,7 +13,10 @@ import {
     XCircleIcon,
     CheckIcon,
     UserGroupIcon,
-    ShieldCheckIcon
+    ShieldCheckIcon,
+    ArrowDownTrayIcon,
+    CalendarIcon,
+    ClockIcon
 } from "@heroicons/react/24/outline";
 
 const THAI_MONTHS = [
@@ -50,6 +53,36 @@ export default function AdminMissingCheckinReportsPage() {
 
     const [statusFilter, setStatusFilter] = useState("pending_hr");
     const [searchQuery, setSearchQuery] = useState("");
+    const [exportingExcel, setExportingExcel] = useState(false);
+
+    async function handleExportExcel() {
+        setExportingExcel(true);
+        try {
+            const params = new URLSearchParams();
+            if (startDate) params.set("start_date", startDate);
+            if (endDate) params.set("end_date", endDate);
+            if (statusFilter) params.set("status", statusFilter);
+            if (searchQuery.trim()) params.set("q", searchQuery.trim());
+
+            const res = await fetch(`/api/admin/missing-checkin-reports/export?${params.toString()}`);
+            if (!res.ok) {
+                throw new Error("ไม่สามารถส่งออกไฟล์ Excel ได้");
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `missing_checkin_reports_${startDate || "all"}_to_${endDate || "all"}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e: any) {
+            setAlert({ visible: true, message: e.message || "เกิดข้อผิดพลาดในการส่งออก Excel", type: "error" });
+        } finally {
+            setExportingExcel(false);
+        }
+    }
 
     const closeAlert = () => {
         setAlert(p => ({ ...p, visible: false }));
@@ -70,8 +103,8 @@ export default function AdminMissingCheckinReportsPage() {
         setPendingAction({ id, status });
         setAlert({
             visible: true,
-            message: `ยืนยันการ${status === "approved" ? "อนุมัติรับทราบ" : "ปฏิเสธ"} รายงานการทำงานนี้?`,
-            type: "ok"
+            message: `ยืนยันการ${status === "approved" ? "อนุมัติรับทราบ" : "ไม่อนุมัติ"} รายงานการทำงานนี้?`,
+            type: status === "approved" ? "ok" : "error"
         });
     }
 
@@ -134,17 +167,44 @@ export default function AdminMissingCheckinReportsPage() {
             />
 
             {/* ── Header ── */}
-            <div className={styles.header}>
+            <div className={styles.header} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 <div>
                     <h1 className={styles.h1}>รายงานการทำงาน (Human Soft ลงเวลาไม่ครบ)</h1>
                     <div className={styles.sub}>ตรวจสอบและอนุมัติเอกสารรายงานการทำงานที่ผ่านการอนุมัติจากหัวหน้างาน</div>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button
+                        type="button"
+                        onClick={handleExportExcel}
+                        disabled={loading || exportingExcel}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            height: 40,
+                            padding: "0 16px",
+                            borderRadius: 10,
+                            border: "1px solid #0b6a36",
+                            background: "#107c41",
+                            color: "#ffffff",
+                            fontWeight: 700,
+                            fontSize: 13.5,
+                            cursor: loading || exportingExcel ? "not-allowed" : "pointer",
+                            opacity: loading || exportingExcel ? 0.65 : 1,
+                            boxShadow: "0 2px 6px rgba(16, 124, 65, 0.25)"
+                        }}
+                        title="ดาวน์โหลดรายงานเป็นไฟล์ Excel (.xlsx)"
+                    >
+                        <ArrowDownTrayIcon width={17} strokeWidth={2.2} />
+                        <span>{exportingExcel ? "กำลังสร้างไฟล์ Excel..." : "Export Excel"}</span>
+                    </button>
+                </div>
             </div>
 
-            {/* ── Filter Bar ── */}
+            {/* ── Symmetrical Filter Bar ── */}
             <div style={{
                 display: "grid",
-                gridTemplateColumns: "auto 240px 1fr auto",
+                gridTemplateColumns: "340px 260px 1fr 42px",
                 gap: 16,
                 alignItems: "end",
                 marginBottom: 20,
@@ -155,30 +215,71 @@ export default function AdminMissingCheckinReportsPage() {
                 boxShadow: "var(--shadow-sm)"
             }}>
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>DATE RANGE (วันที่ทำงาน)</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "150px auto 150px", gap: 8, alignItems: "center" }}>
-                        <input
-                            type="date"
-                            className={styles.input}
-                            style={{ width: "100%" }}
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                        />
-                        <span style={{ color: "var(--text4)", textAlign: "center" }}>-</span>
-                        <input
-                            type="date"
-                            className={styles.input}
-                            style={{ width: "100%" }}
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                        />
+                    <label className={styles.filterLabel}>ช่วงวันที่ทำงาน (วัน/เดือน/ปี)</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 16px 1fr", gap: 6, alignItems: "center" }}>
+                        {/* Start Date DD/MM/YYYY */}
+                        <div style={{
+                            position: "relative",
+                            height: 40,
+                            borderRadius: "var(--radius-sm)",
+                            border: "1.5px solid var(--line2)",
+                            background: "var(--surface)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0 11px",
+                            boxSizing: "border-box",
+                            boxShadow: "var(--shadow-xs)"
+                        }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                                {formatDateDMY(startDate)}
+                            </span>
+                            <CalendarIcon width={15} style={{ color: "var(--text4)", pointerEvents: "none" }} />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                onClick={e => { try { (e.currentTarget as any).showPicker?.(); } catch {} }}
+                                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
+                            />
+                        </div>
+
+                        <span style={{ color: "var(--text4)", textAlign: "center", fontWeight: 700 }}>–</span>
+
+                        {/* End Date DD/MM/YYYY */}
+                        <div style={{
+                            position: "relative",
+                            height: 40,
+                            borderRadius: "var(--radius-sm)",
+                            border: "1.5px solid var(--line2)",
+                            background: "var(--surface)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0 11px",
+                            boxSizing: "border-box",
+                            boxShadow: "var(--shadow-xs)"
+                        }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                                {formatDateDMY(endDate)}
+                            </span>
+                            <CalendarIcon width={15} style={{ color: "var(--text4)", pointerEvents: "none" }} />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                onClick={e => { try { (e.currentTarget as any).showPicker?.(); } catch {} }}
+                                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
+                            />
+                        </div>
                     </div>
                 </div>
+
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>STATUS</label>
+                    <label className={styles.filterLabel}>สถานะเอกสาร (STATUS)</label>
                     <select
                         className={styles.select}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", height: 40, boxSizing: "border-box" }}
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
@@ -189,42 +290,42 @@ export default function AdminMissingCheckinReportsPage() {
                         <option value="rejected">ไม่อนุมัติ</option>
                     </select>
                 </div>
+
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>SEARCH</label>
+                    <label className={styles.filterLabel}>ค้นหา (SEARCH)</label>
                     <input
                         className={styles.input}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", height: 40, boxSizing: "border-box" }}
                         type="text"
                         placeholder="เลขที่รายการ, ชื่อพนักงาน, รหัสพนักงาน, รายละเอียดงาน..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                        className={styles.btnRefresh}
-                        onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-missing-checkin-reports"] })}
-                        disabled={loading || saving}
-                        style={{ width: 40, height: 40, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
-                        title="รีเฟรช"
-                    >
-                        <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
-                    </button>
-                </div>
+
+                <button
+                    className={styles.btnRefresh}
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-missing-checkin-reports"] })}
+                    disabled={loading || saving}
+                    style={{ width: 42, height: 40, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box" }}
+                    title="รีเฟรช"
+                >
+                    <ArrowPathIcon width={16} className={loading ? "animate-spin" : ""} />
+                </button>
             </div>
 
             {/* ── Table Card ── */}
             <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
-                    <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className={styles.tableHeaderTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <FolderOpenIcon width={20} /> รายการเอกสารรายงานการทำงาน
                         {pendingCount > 0 && (
                             <span style={{
                                 background: "var(--red)",
                                 color: "white",
-                                padding: "1px 7px",
+                                padding: "2px 8px",
                                 borderRadius: 10,
-                                fontSize: 10,
+                                fontSize: 10.5,
                                 fontWeight: 800
                             }}>
                                 {pendingCount} รอ HR
@@ -241,14 +342,14 @@ export default function AdminMissingCheckinReportsPage() {
                             กำลังโหลดข้อมูล...
                         </div>
                     ) : (
-                        <table className={styles.table} style={{ tableLayout: "fixed", width: "100%" }}>
+                        <table className={styles.table} style={{ tableLayout: "fixed", width: "100%", minWidth: 980 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: "14%", textAlign: "center" }}>เลขที่รายการ</th>
-                                    <th style={{ width: "20%", textAlign: "left" }}>พนักงาน</th>
-                                    <th style={{ width: "16%", textAlign: "center" }}>วันที่ไม่ได้ลงเวลา / เวลาเข้า-ออก</th>
-                                    <th style={{ width: "22%", textAlign: "left" }}>รายละเอียดงานที่ทำ</th>
-                                    <th style={{ width: "10%", textAlign: "center" }}>หลักฐานการทำงาน</th>
+                                    <th style={{ width: "13%", textAlign: "center" }}>เลขที่รายการ</th>
+                                    <th style={{ width: "18%", textAlign: "left" }}>พนักงาน</th>
+                                    <th style={{ width: "14%", textAlign: "center" }}>ประจำรอบเดือน</th>
+                                    <th style={{ width: "26%", textAlign: "left" }}>รายการวันที่ไม่ได้ลงเวลา & รายละเอียดงาน</th>
+                                    <th style={{ width: "11%", textAlign: "center" }}>หลักฐานการทำงาน</th>
                                     <th style={{ width: "10%", textAlign: "center" }}>สถานะ</th>
                                     <th style={{ width: "8%", textAlign: "center" }}>จัดการ</th>
                                 </tr>
@@ -261,119 +362,177 @@ export default function AdminMissingCheckinReportsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredReports.map((r: any) => (
-                                        <tr key={r.id}>
-                                            <td style={{ fontWeight: 800, color: "var(--red)", whiteSpace: "nowrap", textAlign: "center", verticalAlign: "middle" }}>
-                                                {r.doc_no}
-                                            </td>
-                                            <td style={{ verticalAlign: "middle" }}>
-                                                <div className={styles.empName}>{r.employee?.name}</div>
-                                                <div className={styles.empId}>{r.emp_id} {r.employee?.departments?.name ? `· ${r.employee.departments.name}` : ""}</div>
-                                            </td>
-                                            <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                                                {r.period_month && (
-                                                    <div style={{
-                                                        fontSize: 11,
-                                                        fontWeight: 700,
-                                                        color: "#1d4ed8",
-                                                        background: "#eff6ff",
-                                                        border: "1px solid #bfdbfe",
-                                                        borderRadius: 6,
-                                                        padding: "2px 8px",
-                                                        display: "inline-block",
-                                                        marginBottom: 6
-                                                    }}>
-                                                        เดือน{formatPeriodMonthThai(r.period_month)} ({Array.isArray(r.items) ? r.items.length : 1} วัน)
+                                    filteredReports.map((r: any) => {
+                                        const items = Array.isArray(r.items) && r.items.length > 0
+                                            ? r.items
+                                            : [{
+                                                work_date: r.work_date,
+                                                check_in_time: r.check_in_time,
+                                                check_out_time: r.check_out_time,
+                                                work_details: r.work_details
+                                            }];
+                                        const evidences = r.evidence_urls
+                                            ? r.evidence_urls.split(",").map((s: string) => s.trim()).filter(Boolean)
+                                            : [];
+
+                                        return (
+                                            <tr key={r.id}>
+                                                {/* 1. เลขที่รายการ */}
+                                                <td style={{ fontWeight: 800, color: "var(--red)", whiteSpace: "nowrap", textAlign: "center", verticalAlign: "middle" }}>
+                                                    {r.doc_no}
+                                                </td>
+
+                                                {/* 2. พนักงาน */}
+                                                <td style={{ verticalAlign: "middle" }}>
+                                                    <div className={styles.empName}>{r.employee?.name}</div>
+                                                    <div className={styles.empId} style={{ marginTop: 2 }}>
+                                                        {r.emp_id} {r.employee?.departments?.name ? `· ${r.employee.departments.name}` : ""}
                                                     </div>
-                                                )}
-                                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
-                                                    {(Array.isArray(r.items) && r.items.length > 0 ? r.items : [{
-                                                        work_date: r.work_date,
-                                                        check_in_time: r.check_in_time,
-                                                        check_out_time: r.check_out_time
-                                                    }]).map((it: any, idx: number) => (
-                                                        <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                                                            <div style={{ fontWeight: 700, color: "var(--text)", fontSize: 12.5 }}>
-                                                                {formatDateDMY(it.work_date)}
+                                                </td>
+
+                                                {/* 3. ประจำรอบเดือน */}
+                                                <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                                    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                                                        <span style={{
+                                                            fontSize: 12,
+                                                            fontWeight: 800,
+                                                            color: "#1e40af",
+                                                            background: "#eff6ff",
+                                                            border: "1px solid #bfdbfe",
+                                                            borderRadius: 8,
+                                                            padding: "4px 10px",
+                                                            whiteSpace: "nowrap"
+                                                        }}>
+                                                            {r.period_month ? formatPeriodMonthThai(r.period_month) : "-"}
+                                                        </span>
+                                                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text4)" }}>
+                                                            รวม {items.length} วัน
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 4. รายการวันที่ไม่ได้ลงเวลา & รายละเอียดงาน (จัดสมมาตรรายวัน) */}
+                                                <td style={{ verticalAlign: "middle" }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                        {items.map((it: any, idx: number) => (
+                                                            <div
+                                                                key={idx}
+                                                                style={{
+                                                                    background: "#f8fafc",
+                                                                    border: "1px solid #e2e8f0",
+                                                                    borderRadius: 8,
+                                                                    padding: "7px 10px",
+                                                                    display: "flex",
+                                                                    flexDirection: "column",
+                                                                    gap: 3
+                                                                }}
+                                                            >
+                                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                                                                    <span style={{ fontWeight: 800, fontSize: 12.5, color: "#0f172a" }}>
+                                                                        {idx + 1}. วันที่ {formatDateDMY(it.work_date)}
+                                                                    </span>
+                                                                    <span className={styles.typeTag} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                                                        <ClockIcon width={11} />
+                                                                        {it.check_in_time} - {it.check_out_time} น.
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ fontSize: 12.5, color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                                                                    {it.work_details || "-"}
+                                                                </div>
                                                             </div>
-                                                            <span className={styles.typeTag}>
-                                                                {it.check_in_time} - {it.check_out_time} น.
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td style={{ verticalAlign: "middle" }}>
-                                                <div style={{ fontSize: 13, whiteSpace: "pre-wrap", lineHeight: 1.45, color: "var(--text)" }}>{r.work_details}</div>
-                                                {r.supervisor_approved_at && (
-                                                    <div style={{ fontSize: 11, color: "var(--ok)", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                                                        <CheckIcon width={12} strokeWidth={3} />
-                                                        หัวหน้าอนุมัติแล้ว ({r.supervisor?.name || r.supervisor_id || "-"}): {r.supervisor_remark || "-"}
+                                                        ))}
                                                     </div>
-                                                )}
-                                                {r.hr_remark && (
-                                                    <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
-                                                        หมายเหตุ HR: {r.hr_remark}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                                                <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                                                    {r.evidence_urls && r.evidence_urls.split(",").map((url: string, index: number) => (
-                                                        <a
-                                                            key={index}
-                                                            href={url}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className={styles.link}
-                                                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
-                                                        >
-                                                            <DocumentTextIcon width={14} /> หลักฐาน {r.evidence_urls.includes(",") ? `(${index + 1})` : ""}
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                                    <span className={getStatusBadge(r.status)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                                                        {r.status === "pending_hr" ? <><ShieldCheckIcon width={14} /> รอ HR</> :
-                                                         r.status === "pending_supervisor" ? <><UserGroupIcon width={14} /> รอหัวหน้า</> :
-                                                         r.status === "approved" ? <><CheckCircleIcon width={14} /> อนุมัติแล้ว</> :
-                                                         <><XCircleIcon width={14} /> ไม่อนุมัติ</>}
-                                                    </span>
-                                                    {r.hr_approved_by && (
-                                                        <div style={{ fontSize: 10, color: "var(--text4)", marginTop: 5 }}>
-                                                            โดย {r.hr_approved_by}
+
+                                                    {r.supervisor_approved_at && (
+                                                        <div style={{ fontSize: 11, color: "var(--ok)", marginTop: 6, display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                                                            <CheckIcon width={12} strokeWidth={3} style={{ flexShrink: 0 }} />
+                                                            <span>หัวหน้าอนุมัติแล้ว ({r.supervisor?.name || r.supervisor_id || "-"}){r.supervisor_remark ? `: ${r.supervisor_remark}` : ""}</span>
                                                         </div>
                                                     )}
-                                                </div>
-                                            </td>
-                                            <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                                                {r.status === "pending_hr" ? (
-                                                    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                                                        <button
-                                                            onClick={() => handleActionClick(r.id, "approved")}
-                                                            className={styles.btnApprove}
-                                                            title="อนุมัติ"
-                                                        >
-                                                            <CheckIcon width={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleActionClick(r.id, "rejected")}
-                                                            className={styles.btnReject}
-                                                            title="ไม่อนุมัติ"
-                                                        >
-                                                            <XCircleIcon width={16} />
-                                                        </button>
+                                                    {r.hr_remark && (
+                                                        <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                                                            หมายเหตุ HR: {r.hr_remark}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* 5. หลักฐานการทำงาน (ปุ่มบรรทัดเดียว ไม่ตกบรรทัด) */}
+                                                <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                                    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "stretch", gap: 6, minWidth: 96 }}>
+                                                        {evidences.map((url: string, index: number) => (
+                                                            <a
+                                                                key={index}
+                                                                href={url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                style={{
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
+                                                                    gap: 5,
+                                                                    padding: "5px 10px",
+                                                                    borderRadius: 6,
+                                                                    background: "#fef2f2",
+                                                                    border: "1px solid #fecaca",
+                                                                    color: "var(--red)",
+                                                                    fontSize: 11.5,
+                                                                    fontWeight: 700,
+                                                                    textDecoration: "none",
+                                                                    whiteSpace: "nowrap"
+                                                                }}
+                                                            >
+                                                                <DocumentTextIcon width={13} style={{ flexShrink: 0 }} />
+                                                                <span>หลักฐาน {evidences.length > 1 ? index + 1 : ""}</span>
+                                                            </a>
+                                                        ))}
                                                     </div>
-                                                ) : (
-                                                    <span style={{ fontSize: 11, color: "var(--text5)", fontWeight: 500 }}>
-                                                        {r.status === "pending_supervisor" ? "รอหัวหน้าอนุมัติ" : "ดำเนินการแล้ว"}
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+
+                                                {/* 6. สถานะ */}
+                                                <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                                        <span className={getStatusBadge(r.status)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                                                            {r.status === "pending_hr" ? <><ShieldCheckIcon width={14} /> รอ HR</> :
+                                                             r.status === "pending_supervisor" ? <><UserGroupIcon width={14} /> รอหัวหน้า</> :
+                                                             r.status === "approved" ? <><CheckCircleIcon width={14} /> อนุมัติแล้ว</> :
+                                                             <><XCircleIcon width={14} /> ไม่อนุมัติ</>}
+                                                        </span>
+                                                        {r.hr_approved_by && (
+                                                            <div style={{ fontSize: 10, color: "var(--text4)", marginTop: 5 }}>
+                                                                โดย {r.hr_approved_by}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* 7. จัดการ */}
+                                                <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                                    {r.status === "pending_hr" ? (
+                                                        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                                                            <button
+                                                                onClick={() => handleActionClick(r.id, "approved")}
+                                                                className={styles.btnApprove}
+                                                                title="อนุมัติ"
+                                                            >
+                                                                <CheckIcon width={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleActionClick(r.id, "rejected")}
+                                                                className={styles.btnReject}
+                                                                title="ไม่อนุมัติ"
+                                                            >
+                                                                <XCircleIcon width={16} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: 11, color: "var(--text5)", fontWeight: 500 }}>
+                                                            {r.status === "pending_supervisor" ? "รอหัวหน้าอนุมัติ" : "ดำเนินการแล้ว"}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>

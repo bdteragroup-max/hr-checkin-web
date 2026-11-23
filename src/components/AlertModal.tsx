@@ -79,7 +79,7 @@ export default function AlertModal({
                     />
                 )}
 
-                <div style={{ display: "flex", gap: 12, width: "100%" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isConfirm ? "1fr 1fr" : "1fr", gap: 12, width: "100%", boxSizing: "border-box" }}>
                     {isConfirm && (
                         <button className={styles.alertBtnSecondary} onClick={onClose}>
                             {cancelText}
@@ -87,8 +87,8 @@ export default function AlertModal({
                     )}
                     <button
                         className={`${styles.alertBtn} ${isErr ? styles.alertBtnErr : styles.alertBtnOk}`}
-                        onClick={handleConfirm} // Changed onClick to handleConfirm
-                        autoFocus={!isPrompt} // Updated autoFocus logic
+                        onClick={handleConfirm}
+                        autoFocus={!isPrompt}
                     >
                         {confirmText}
                     </button>

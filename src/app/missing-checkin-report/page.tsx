@@ -703,7 +703,9 @@ export default function MissingCheckinReportPage() {
                 uploadedUrls.push(url);
             }
 
-            const finalEvidenceUrls = uploadedUrls.length > 0 ? uploadedUrls.join(",") : existingEvidenceUrls;
+            const finalEvidenceUrls = editingReport
+                ? [existingEvidenceUrls, ...uploadedUrls].filter(Boolean).join(",")
+                : uploadedUrls.join(",");
 
             if (editingReport) {
                 const r = await fetch("/api/missing-checkin-reports", {
@@ -1199,9 +1201,9 @@ export default function MissingCheckinReportPage() {
                             <label className={styles.label}>
                                 แนบหลักฐานการทำงานทั้งหมดของรอบเดือนนี้ (เช่น รูปภาพงาน หรือ Google Timeline ที่เห็นชื่อบัญชี) *
                             </label>
-                            {editingReport && existingEvidenceUrls && evidenceFiles.length === 0 && (
+                            {editingReport && existingEvidenceUrls && (
                                 <div style={{ fontSize: 12, color: "var(--ok)", marginBottom: 6, fontWeight: 600 }}>
-                                    ✓ มีไฟล์หลักฐานเดิมแนบอยู่แล้ว ({existingEvidenceUrls.split(",").length} ไฟล์) — เลือกไฟล์ใหม่ด้านล่างหากต้องการเปลี่ยนไฟล์
+                                    ✓ มีไฟล์หลักฐานเดิมแนบอยู่แล้ว ({existingEvidenceUrls.split(",").length} ไฟล์) — สามารถกดเพิ่มไฟล์ด้านล่างหรือลบไฟล์ได้
                                 </div>
                             )}
                             <div className={styles.fileInputWrapper}>
@@ -1210,20 +1212,71 @@ export default function MissingCheckinReportPage() {
                                     className={styles.fileInput}
                                     accept="image/*,.pdf"
                                     multiple
-                                    onChange={e => setEvidenceFiles(Array.from(e.target.files || []))}
+                                    onChange={e => {
+                                        const newlySelected = Array.from(e.target.files || []);
+                                        if (newlySelected.length > 0) {
+                                            setEvidenceFiles(prev => [...prev, ...newlySelected]);
+                                        }
+                                        e.target.value = "";
+                                    }}
                                 />
                                 <div className={styles.uploadIcon}><PhotoIcon width={28} /></div>
                                 <div className={`${styles.fileHint} ${evidenceFiles.length > 0 ? styles.fileHintSuccess : ""}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                                     {evidenceFiles.length > 0 ? (
                                         <>
                                             <CheckCircleIcon width={18} style={{ flexShrink: 0 }} />
-                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                {evidenceFiles.length === 1 ? evidenceFiles[0].name : `${evidenceFiles.length} ไฟล์: ${evidenceFiles.map(f => f.name).join(", ")}`}
+                                            <span>
+                                                เลือกแล้ว {evidenceFiles.length} ไฟล์ (คลิกเพื่อเพิ่มไฟล์อีกได้)
                                             </span>
                                         </>
-                                    ) : "คลิกเพื่อเลือกรูปภาพงาน หรือภาพแคปหน้าจอ Google Timeline ที่เห็นชื่อบัญชีชัดเจน (แนบได้หลายไฟล์)"}
+                                    ) : "คลิกเพื่อเลือกรูปภาพงาน หรือภาพแคปหน้าจอ Google Timeline ที่เห็นชื่อบัญชีชัดเจน (เลือกเพิ่มทีละไฟล์หรือหลายไฟล์ได้)"}
                                 </div>
                             </div>
+
+                            {evidenceFiles.length > 0 && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                                    {evidenceFiles.map((f, fIdx) => (
+                                        <div
+                                            key={fIdx}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                gap: 8,
+                                                padding: "8px 12px",
+                                                borderRadius: 8,
+                                                background: "#f8fafc",
+                                                border: "1px solid #e2e8f0",
+                                                fontSize: 12.5
+                                            }}
+                                        >
+                                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                <DocumentTextIcon width={15} style={{ color: "#2563eb", flexShrink: 0 }} />
+                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {fIdx + 1}. {f.name}
+                                                </span>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEvidenceFiles(prev => prev.filter((_, i) => i !== fIdx))}
+                                                style={{
+                                                    border: "none",
+                                                    background: "#fef2f2",
+                                                    color: "#dc2626",
+                                                    padding: "3px 8px",
+                                                    borderRadius: 6,
+                                                    fontSize: 11.5,
+                                                    fontWeight: 700,
+                                                    cursor: "pointer",
+                                                    flexShrink: 0
+                                                }}
+                                            >
+                                                ลบไฟล์
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <button
