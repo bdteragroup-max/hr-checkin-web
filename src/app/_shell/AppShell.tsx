@@ -36,6 +36,7 @@ const NAV_MAIN_BASE = [
     { id: "project-checkin", href: "/project-checkin", icon: BuildingOfficeIcon, label: "เช็คอินโครงการ", sub: "Project Check-in", isProject: true },
     { id: "offsite-checkin", href: "/offsite-checkin", icon: GlobeAltIcon, label: "เช็คอินนอกสถานที่", sub: "Offsite Check-in" },
     { id: "trip-log", href: "/trip-log", icon: MapPinIcon, label: "เดินทางต่างจังหวัด", sub: "Trip Mode" },
+    { id: "missing-checkin-report", href: "/missing-checkin-report", icon: DocumentTextIcon, label: "รายงานทำงาน (ลงเวลาไม่ครบ)", sub: "Missing Check-in" },
     { id: "leave", href: "/leave", icon: ClipboardDocumentListIcon, label: "ลางาน", sub: "Leave" },
     { id: "travel", href: "/travel-allowance", icon: TruckIcon, label: "เบี้ยเลี้ยง", sub: "Travel" },
     { id: "ot", href: "/ot-request", icon: FireIcon, label: "ขอ OT", sub: "OT Request" },
@@ -117,6 +118,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (isSupervisor) {
         navMain.push({ id: "team-leaves", href: "/team-leaves", icon: ClipboardDocumentCheckIcon, label: "อนุมัติลา", sub: "Team Leaves" });
         navMain.push({ id: "team-ot", href: "/team-ot", icon: CalendarDaysIcon, label: "อนุมัติ OT", sub: "Team OT" });
+        navMain.push({ id: "team-missing-checkin", href: "/team/missing-checkin-reports", icon: DocumentTextIcon, label: "อนุมัติรายงานทำงาน (ลงเวลาไม่ครบ)", sub: "Missing Check-in" });
         navMain.push({ id: "team-travel", href: "/team/travel-claims", icon: UserGroupIcon, label: "อนุมัติเบี้ยเลี้ยงทีม", sub: "Team Travel" });
         navMain.push({ id: "team-commission", href: "/team/commission-claims", icon: BanknotesIcon, label: "อนุมัติค่าคอมทีม", sub: "Team Commission" });
         navMain.push({ id: "team-depreciation", href: "/team/depreciation-claims", icon: BanknotesIcon, label: "ค่าเสื่อม / ค่าน้ำมัน", sub: "Depreciation & Fuel" });

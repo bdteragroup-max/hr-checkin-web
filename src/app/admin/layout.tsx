@@ -279,6 +279,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )}
 
+                            {/* ✅ Missing Check-in Work Reports -> link to /admin/missing-checkin-reports */}
+                            {hasAccess("/admin/missing-checkin-reports") && (
+                                <Link
+                                    href="/admin/missing-checkin-reports"
+                                    className={`${styles.navItem} ${pathname.startsWith("/admin/missing-checkin-reports") ? styles.active : ""}`}
+                                >
+                                    <span className={styles.navIcon}><DocumentCheckIcon width={20} /></span>รายงานทำงาน (ลงเวลาไม่ครบ)
+                                </Link>
+                            )}
+
                             {/* ✅ Probation Evaluations */}
                             {hasAccess("/admin/probation") && (
                                 <Link

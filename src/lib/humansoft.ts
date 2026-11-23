@@ -2,6 +2,7 @@ import { toBangkokWallClock, getTodayBangkokISO, getYesterdayBangkokISO } from "
 import { prisma } from "./prisma";
 import { calcLateOTFromTimestamp } from "../utils/checkin";
 import { processCheckinCoins } from "../utils/coinAwards";
+import crypto from "crypto";
 // Ensure HumanSoft Open API calls succeed even if certificate expires (e.g. *.humansoft.co.th cert expiry)
 if (typeof process !== "undefined" && process.env) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -276,7 +277,96 @@ export async function fetchHumanSoftAttendance(params: {
 }
 
 /**
- * Fetch and import attendance records from HumanSoft into our local database (checkins table)
+ * Pull leave records from HumanSoft API (All employees)
+ * Tries HumanSoft salary/get-data-filter leave actions or leave endpoints
+ */
+export async function fetchHumanSoftLeaves(params: {
+    date_from: string; // YYYY-MM-DD
+    date_to: string;   // YYYY-MM-DD
+    apiKey?: string;
+}) {
+    const apiKey = params.apiKey || getApiKey();
+    if (!apiKey) return { ok: false, error: "NO_API_KEY", records: [] as any[] };
+
+    const candidateUrls = [
+        `${getBaseUrl()}/api/v1/open-apis/salary/get-data-filter?path_action=search_leave_full`,
+        `${getBaseUrl()}/api/v1/open-apis/salary/get-data-filter?path_action=search_leave`,
+        `${getBaseUrl()}/api/v1/open-apis/leave/get-leave-list`,
+    ];
+
+    for (const url of candidateUrls) {
+        try {
+            const pageSize = 100;
+            let page = 1;
+            const allRecords: any[] = [];
+            let totalRecords = 0;
+            let endpointValid = false;
+
+            while (true) {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Ocp-Apim-Subscription-Key": apiKey,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        date_from: params.date_from,
+                        date_to: params.date_to,
+                        _PAGE: page,
+                        _NUMBER_PER_PAGE: pageSize
+                    }),
+                    signal: AbortSignal.timeout(12000)
+                });
+
+                const data = await res.json().catch(() => null);
+                if (!res.ok || !data || (data.code && data.code !== 200)) {
+                    break;
+                }
+
+                const payload = Array.isArray(data.payload)
+                    ? data.payload
+                    : Array.isArray(data.data)
+                        ? data.data
+                        : null;
+                if (!payload) break;
+
+                endpointValid = true;
+                allRecords.push(...payload);
+                totalRecords = data._PAGINATION?._TOTAL_RECORDS ?? allRecords.length;
+
+                if (allRecords.length >= totalRecords || payload.length === 0) {
+                    break;
+                }
+                page++;
+                if (page > 30) break;
+            }
+
+            if (endpointValid && allRecords.length > 0) {
+                return { ok: true, records: allRecords, total: totalRecords };
+            }
+        } catch {
+            // Try next candidate URL
+        }
+    }
+
+    return { ok: true, records: [] as any[], total: 0 };
+}
+
+function mapHumanSoftLeaveType(rawType: string): { id: string; name: string } {
+    const t = (rawType || "").trim();
+    const lower = t.toLowerCase();
+    if (t.includes("ป่วย") || lower.includes("sick")) return { id: "sick", name: "ลาป่วย" };
+    if (t.includes("พักร้อน") || t.includes("พักผ่อน") || lower.includes("annual") || lower.includes("vacation")) return { id: "annual", name: "ลาพักร้อน" };
+    if (t.includes("ฉุกเฉิน") || lower.includes("emergency")) return { id: "emergency", name: "ลากรณีฉุกเฉิน" };
+    if (t.includes("กิจ") || lower.includes("personal") || lower.includes("business")) return { id: "personal", name: "ลากิจ" };
+    if (t.includes("คลอด") || lower.includes("maternity")) return { id: "maternity", name: "ลาคลอด" };
+    if (t.includes("บวช") || lower.includes("ordination")) return { id: "ordination", name: "ลาบวช" };
+    if (t.includes("ไม่รับค่าจ้าง") || lower.includes("unpaid") || lower.includes("without pay")) return { id: "unpaid", name: "ลาไม่รับค่าจ้าง" };
+    return { id: "personal", name: t || "ลากิจ" };
+}
+
+/**
+ * Fetch and import attendance & leave records from HumanSoft into our local database (checkins & leave_requests tables)
  * Automatically syncs across all configured company API keys (TE, TP, TG).
  */
 export async function syncHumanSoftAttendanceToDatabase(params: {
@@ -293,28 +383,146 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
     let insertedCount = 0;
     let skippedCount = 0;
     let coinsAwardedCount = 0;
+    let leavesSyncedCount = 0;
     const errors: string[] = [];
 
-    // Pre-fetch existing checkins for the date range once to eliminate hundreds of sequential DB round-trips
+    // Pre-fetch existing checkins and leaves for the date range once to eliminate hundreds of sequential DB round-trips
     const startDateRange = new Date(`${params.date_from}T00:00:00.000Z`);
     const endDateRange = new Date(`${params.date_to}T23:59:59.999Z`);
 
-    const existingCheckins = await prisma.checkins.findMany({
-        where: {
-            date_key: { gte: startDateRange, lte: endDateRange }
-        },
-        select: {
-            id: true,
-            emp_id: true,
-            type: true,
-            timestamp: true,
-            date_key: true,
-            capture_mode: true,
-            late_status: true
+    const [existingCheckins, existingLeaves, allEmps] = await Promise.all([
+        prisma.checkins.findMany({
+            where: {
+                date_key: { gte: startDateRange, lte: endDateRange }
+            },
+            select: {
+                id: true,
+                emp_id: true,
+                type: true,
+                timestamp: true,
+                date_key: true,
+                capture_mode: true,
+                late_status: true
+            }
+        }),
+        prisma.leave_requests.findMany({
+            where: {
+                start_date: { lte: endDateRange },
+                end_date: { gte: startDateRange }
+            },
+            select: {
+                id: true,
+                emp_id: true,
+                start_date: true,
+                end_date: true,
+                leave_type: true,
+                status: true
+            }
+        }),
+        prisma.employees.findMany({
+            select: { emp_id: true, name: true }
+        })
+    ]);
+
+    const empNameMap = new Map(allEmps.map(e => [e.emp_id.toUpperCase(), e.name]));
+
+    const upsertLeaveFromHumanSoft = async (empCodeRaw: string, empNameFallback: string, rawLeaveType: string, startDateStr: string, endDateStr: string, daysVal?: number, reasonStr?: string) => {
+        const empCode = empCodeRaw.trim().toUpperCase();
+        if (!empNameMap.has(empCode)) return false;
+
+        const sDateStr = startDateStr.split("T")[0].split(" ")[0];
+        const eDateStr = (endDateStr || startDateStr).split("T")[0].split(" ")[0];
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(sDateStr) || !/^\d{4}-\d{2}-\d{2}$/.test(eDateStr)) return false;
+
+        const sDate = new Date(`${sDateStr}T00:00:00.000Z`);
+        const eDate = new Date(`${eDateStr}T00:00:00.000Z`);
+        const mappedType = mapHumanSoftLeaveType(rawLeaveType);
+
+        // Check if employee already has a non-rejected leave covering this date
+        const alreadyExists = existingLeaves.some(l => {
+            if (l.emp_id.toUpperCase() !== empCode) return false;
+            if (l.status === "rejected" || l.status === "cancelled") return false;
+            const ls = l.start_date.toISOString().split("T")[0];
+            const le = l.end_date.toISOString().split("T")[0];
+            return sDateStr <= le && eDateStr >= ls;
+        });
+
+        if (alreadyExists) return false;
+
+        const days = daysVal && daysVal > 0 ? Number(daysVal) : Math.max(1, Math.round((eDate.getTime() - sDate.getTime()) / 86400000) + 1);
+        const minutes = Math.round(days * 480);
+        const startAt = new Date(`${sDateStr}T08:00:00+07:00`);
+        const endAt = days === 0.5 ? new Date(`${sDateStr}T12:00:00+07:00`) : new Date(`${eDateStr}T17:00:00+07:00`);
+
+        const hash = crypto.createHash("sha256")
+            .update(`HS|${empCode}|${sDateStr}|${eDateStr}|${mappedType.id}`)
+            .digest("hex")
+            .slice(0, 14);
+        const id = `LV-HS-${hash}`;
+
+        try {
+            await prisma.leave_requests.upsert({
+                where: { id },
+                create: {
+                    id,
+                    emp_id: empCode,
+                    name: empNameMap.get(empCode) || empNameFallback || empCode,
+                    leave_type_id: mappedType.id,
+                    leave_type: mappedType.name,
+                    start_at: startAt,
+                    end_at: endAt,
+                    start_date: sDate,
+                    end_date: eDate,
+                    days,
+                    minutes,
+                    reason: reasonStr || "[ดึงข้อมูลวันลาจาก HumanSoft]",
+                    status: "approved",
+                    approved_by: "HUMANSOFT_SYNC",
+                    approved_at: new Date()
+                },
+                update: {
+                    leave_type_id: mappedType.id,
+                    leave_type: mappedType.name,
+                    days,
+                    minutes,
+                    status: "approved"
+                }
+            });
+
+            existingLeaves.push({
+                id,
+                emp_id: empCode,
+                start_date: sDate,
+                end_date: eDate,
+                leave_type: mappedType.name,
+                status: "approved"
+            });
+            leavesSyncedCount++;
+            return true;
+        } catch {
+            return false;
         }
-    });
+    };
 
     for (const keyConfig of keys) {
+        // 1. Try dedicated HumanSoft leave search if available
+        const leaveRes = await fetchHumanSoftLeaves({ ...params, apiKey: keyConfig.key });
+        if (leaveRes.ok && leaveRes.records && leaveRes.records.length > 0) {
+            for (const lr of leaveRes.records) {
+                const empCode = lr.employee_code || lr.emp_code || lr.emp_id;
+                if (!empCode) continue;
+                const rawType = lr.leave_type_name || lr.leave_name || lr.leave_type || lr.absent_type_name || "ลากิจ";
+                const startD = lr.leave_date_from || lr.start_date || lr.leave_date || lr.work_cycle_date || lr.attendance_date;
+                const endD = lr.leave_date_to || lr.end_date || startD;
+                const daysVal = Number(lr.leave_day || lr.leave_days || lr.total_day || lr.days || 1);
+                const empName = [lr.employee_name, lr.employee_last_name].filter(Boolean).join(" ") || empCode;
+                if (startD) {
+                    await upsertLeaveFromHumanSoft(empCode, empName, rawType, String(startD), String(endD), daysVal, lr.leave_remark || lr.remark);
+                }
+            }
+        }
+
+        // 2. Fetch time attendance full records
         const fetchRes = await fetchHumanSoftAttendance({ ...params, apiKey: keyConfig.key });
         if (!fetchRes.ok || !fetchRes.records) {
             if (fetchRes.error) errors.push(`[${keyConfig.company}]: ${fetchRes.error}`);
@@ -327,16 +535,29 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
         fetchRes.records.sort((a: any, b: any) => (a.attendance_datetime || "").localeCompare(b.attendance_datetime || ""));
 
         for (const record of fetchRes.records) {
-            const empCode = record.employee_code;
-            if (!empCode || !record.attendance_datetime) continue;
+            const empCode = (record.employee_code || "").trim().toUpperCase();
+            if (!empCode) continue;
+
+            const empName = [record.employee_name, record.employee_last_name].filter(Boolean).join(" ") || empCode;
+            const dateStr = record.attendance_date || record.work_cycle_date || (record.attendance_datetime ? record.attendance_datetime.split(" ")[0].split("T")[0] : params.date_from);
+
+            // Check if this attendance record carries leave information from HumanSoft
+            const hsLeaveName = record.leave_name || record.leave_type_name || record.leave_type ||
+                ((record.attendance_remark && /(ลาป่วย|ลากิจ|ลาพักร้อน|ลาคลอด|ลาบวช|ลาฉุกเฉิน|ลาไม่รับค่าจ้าง)/.test(record.attendance_remark))
+                    ? record.attendance_remark.match(/(ลาป่วย|ลากิจ|ลาพักร้อน|ลาคลอด|ลาบวช|ลาฉุกเฉิน|ลาไม่รับค่าจ้าง)/)?.[1]
+                    : null);
+            if (hsLeaveName && dateStr) {
+                const hsLeaveDays = Number(record.leave_day || record.leave_days || 1);
+                await upsertLeaveFromHumanSoft(empCode, empName, String(hsLeaveName), dateStr, dateStr, hsLeaveDays, record.attendance_remark);
+            }
+
+            if (!record.attendance_datetime) continue;
 
             // Parse attendance_datetime (e.g. '2026-05-21 08:30:00' -> Date)
             const dtStr = record.attendance_datetime.includes("T") 
                 ? record.attendance_datetime 
                 : record.attendance_datetime.replace(" ", "T");
             const recordTime = new Date(dtStr.endsWith("Z") || dtStr.includes("+") ? dtStr : `${dtStr}+07:00`);
-            
-            const dateStr = record.attendance_date || (record.attendance_datetime ? record.attendance_datetime.split(" ")[0] : params.date_from);
             const dateKey = new Date(`${dateStr}T00:00:00.000Z`);
 
             // Determine type: 'Check-in' vs 'Check-out'
@@ -373,7 +594,6 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
                 }
             }
 
-            const empName = [record.employee_name, record.employee_last_name].filter(Boolean).join(" ") || empCode;
             const lateInfo = calcLateOTFromTimestamp(type, recordTime);
             
             // Window check to prevent duplicate insertion (+/- 2 minutes)
@@ -457,6 +677,7 @@ export async function syncHumanSoftAttendanceToDatabase(params: {
         inserted: insertedCount,
         skipped: skippedCount,
         coinsAwarded: coinsAwardedCount,
+        leavesSynced: leavesSyncedCount,
         errors: errors.length > 0 ? errors : undefined
     };
 }

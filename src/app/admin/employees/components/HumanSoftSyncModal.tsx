@@ -22,6 +22,9 @@ interface PreviewItem {
     branch_name?: string;
     is_new: boolean;
     is_active: boolean;
+    db_is_active?: boolean;
+    is_status_changed_to_resigned?: boolean;
+    resignation_date?: string | null;
 }
 
 interface HumanSoftSyncModalProps {
@@ -42,8 +45,10 @@ export default function HumanSoftSyncModal({
     const [totalHumanSoft, setTotalHumanSoft] = useState(0);
     const [newCount, setNewCount] = useState(0);
     const [existingCount, setExistingCount] = useState(0);
+    const [resignedCount, setResignedCount] = useState(0);
+    const [newlyResignedCount, setNewlyResignedCount] = useState(0);
     const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
-    const [tabFilter, setTabFilter] = useState<"all" | "new" | "existing">("new");
+    const [tabFilter, setTabFilter] = useState<"all" | "new" | "existing" | "resigned">("new");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
 
@@ -82,12 +87,19 @@ export default function HumanSoftSyncModal({
             setExistingCount(data.existingCount || 0);
             const items: PreviewItem[] = data.previewItems || [];
             setPreviewItems(items);
+            const rCount = data.resignedCount ?? items.filter(p => !p.is_active).length;
+            const nrCount = data.newlyResignedCount ?? items.filter(p => p.is_status_changed_to_resigned).length;
+            setResignedCount(rCount);
+            setNewlyResignedCount(nrCount);
 
-            // Pre-select: if there are new employees, select only new employees by default; otherwise select all
-            if ((data.newCount || 0) > 0) {
-                const newIds = items.filter(p => p.is_new).map(p => p.emp_id);
-                setSelectedEmpIds(new Set(newIds));
-                setTabFilter("new");
+            // Pre-select: new employees + employees whose status changed to resigned in HumanSoft
+            const defaultIds = items
+                .filter(p => p.is_new || p.is_status_changed_to_resigned)
+                .map(p => p.emp_id);
+
+            if (defaultIds.length > 0) {
+                setSelectedEmpIds(new Set(defaultIds));
+                setTabFilter((data.newCount || 0) > 0 ? "new" : "resigned");
             } else {
                 setSelectedEmpIds(new Set(items.map(p => p.emp_id)));
                 setTabFilter("all");
@@ -151,6 +163,12 @@ export default function HumanSoftSyncModal({
         setSelectedEmpIds(new Set(newIds));
     }
 
+    function selectOnlyResigned() {
+        const resignedIds = previewItems.filter(i => !i.is_active).map(i => i.emp_id);
+        setSelectedEmpIds(new Set(resignedIds));
+        setTabFilter("resigned");
+    }
+
     function selectAll() {
         setSelectedEmpIds(new Set(previewItems.map(i => i.emp_id)));
     }
@@ -164,6 +182,7 @@ export default function HumanSoftSyncModal({
     const filteredItems = previewItems.filter(item => {
         if (tabFilter === "new" && !item.is_new) return false;
         if (tabFilter === "existing" && item.is_new) return false;
+        if (tabFilter === "resigned" && item.is_active) return false;
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             const matchCode = item.emp_id.toLowerCase().includes(q);
@@ -274,9 +293,9 @@ export default function HumanSoftSyncModal({
                         /* Preview Stage */
                         <>
                             {/* Stats */}
-                            <div className={styles.statsGrid}>
+                            <div className={styles.statsGrid} style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
                                 <div className={styles.statCard}>
-                                    <span className={styles.statLabel}>พนักงานทั้งหมดใน HumanSoft</span>
+                                    <span className={styles.statLabel}>ทั้งหมดใน HumanSoft</span>
                                     <span className={styles.statValue}>{totalHumanSoft} คน</span>
                                 </div>
                                 <div className={`${styles.statCard} ${newCount > 0 ? styles.statCardHighlight : ""}`}>
@@ -284,8 +303,25 @@ export default function HumanSoftSyncModal({
                                     <span className={styles.statValue}>+{newCount} คน</span>
                                 </div>
                                 <div className={styles.statCard}>
-                                    <span className={styles.statLabel}>พนักงานที่มีในระบบแล้ว</span>
+                                    <span className={styles.statLabel}>มีในระบบแล้ว</span>
                                     <span className={styles.statValue}>{existingCount} คน</span>
+                                </div>
+                                <div
+                                    className={styles.statCard}
+                                    style={{
+                                        background: resignedCount > 0 ? "#fef2f2" : undefined,
+                                        borderColor: resignedCount > 0 ? "#fecaca" : undefined,
+                                        cursor: "pointer"
+                                    }}
+                                    onClick={() => setTabFilter("resigned")}
+                                    title="คลิกเพื่อดูรายชื่อพนักงานที่ลาออกใน HumanSoft"
+                                >
+                                    <span className={styles.statLabel} style={{ color: resignedCount > 0 ? "#b91c1c" : undefined }}>
+                                        พนักงานลาออก (ใน HS)
+                                    </span>
+                                    <span className={styles.statValue} style={{ color: resignedCount > 0 ? "#dc2626" : undefined }}>
+                                        {resignedCount} คน
+                                    </span>
                                 </div>
                             </div>
 
@@ -298,6 +334,14 @@ export default function HumanSoftSyncModal({
                                         onClick={() => setTabFilter("new")}
                                     >
                                         พนักงานใหม่ ({newCount})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.tabBtn} ${tabFilter === "resigned" ? styles.tabBtnActive : ""}`}
+                                        onClick={() => setTabFilter("resigned")}
+                                        style={tabFilter === "resigned" ? { background: "#dc2626" } : (resignedCount > 0 ? { color: "#dc2626" } : undefined)}
+                                    >
+                                        พ้นสภาพ / ลาออก ({resignedCount}{newlyResignedCount > 0 ? ` • อัปเดตใหม่ ${newlyResignedCount}` : ""})
                                     </button>
                                     <button
                                         type="button"
@@ -343,6 +387,17 @@ export default function HumanSoftSyncModal({
                                             title="เลือกเฉพาะพนักงานใหม่ที่ตรวจพบ"
                                         >
                                             + เลือกเฉพาะคนใหม่ ({newCount})
+                                        </button>
+                                    )}
+                                    {resignedCount > 0 && (
+                                        <button
+                                            type="button"
+                                            className={styles.quickBtn}
+                                            onClick={selectOnlyResigned}
+                                            style={{ background: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c", fontWeight: 600 }}
+                                            title="เลือกเฉพาะพนักงานที่ลาออกใน HumanSoft เพื่อดึงข้อมูลหรืออัปเดตสถานะพ้นสภาพ"
+                                        >
+                                            เลือกเฉพาะคนลาออก ({resignedCount})
                                         </button>
                                     )}
                                     <button
@@ -461,7 +516,8 @@ export default function HumanSoftSyncModal({
                                                             )}
                                                             {!item.is_active && (
                                                                 <span className={styles.badgeResigned} style={{ marginLeft: 4 }}>
-                                                                    ลาออก
+                                                                    {item.is_status_changed_to_resigned ? "เพิ่งลาออก (รอซิงค์)" : "ลาออก"}
+                                                                    {item.resignation_date ? ` (${item.resignation_date})` : ""}
                                                                 </span>
                                                             )}
                                                         </td>

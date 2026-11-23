@@ -1000,6 +1000,223 @@ export async function POST(req: Request) {
                         // Wait, sendTripFeeApprovalRequest doesn't have an "approvedBy" arg to replace the card.
                         // For now just reply to the token to confirm action, which we did.
 
+                    } else if (action === "approve_missing_checkin" || action === "reject_missing_checkin") {
+                        console.log(`[LINE WEBHOOK] Querying missing checkin report: ${targetId}`);
+                        const rows = await prisma.$queryRawUnsafe<any[]>(
+                            `SELECT * FROM "missing_checkin_reports" WHERE "id" = $1 LIMIT 1`,
+                            targetId
+                        ).catch(() => []);
+                        const report = rows?.[0];
+
+                        if (!report) {
+                            await sendReplyMessage(replyToken, "❌ ไม่พบข้อมูลเอกสารรายงานการทำงาน");
+                            continue;
+                        }
+
+                        const emp = await prisma.employees.findUnique({
+                            where: { emp_id: report.emp_id },
+                            select: {
+                                emp_id: true,
+                                name: true,
+                                nickname: true,
+                                line_user_id: true,
+                                supervisor_id: true,
+                                secondary_supervisor_id: true,
+                                supervisor: { select: { emp_id: true, name: true, line_user_id: true } },
+                                secondary_supervisor: { select: { emp_id: true, name: true, line_user_id: true } }
+                            }
+                        });
+
+                        const hrLineConfig = process.env.HR_LINE_USER_ID || "";
+                        const hrLineIds = hrLineConfig.split(",").map(id => id.trim()).filter(Boolean);
+                        const isHr = hrLineIds.includes(lineUserId || "");
+
+                        const approverEmp = await prisma.employees.findFirst({
+                            where: { line_user_id: lineUserId },
+                            select: { emp_id: true, name: true }
+                        });
+
+                        const isSupervisor = Boolean(
+                            (emp?.supervisor?.line_user_id === lineUserId) ||
+                            (emp?.secondary_supervisor?.line_user_id === lineUserId) ||
+                            (approverEmp && (
+                                approverEmp.emp_id === report.supervisor_id ||
+                                approverEmp.emp_id === emp?.supervisor_id ||
+                                approverEmp.emp_id === emp?.secondary_supervisor_id
+                            ))
+                        );
+
+                        if (!isHr && !isSupervisor) {
+                            await sendReplyMessage(replyToken, "⛔ คุณไม่มีสิทธิ์อนุมัติเอกสารนี้");
+                            continue;
+                        }
+
+                        let canAct = false;
+                        if (isSupervisor && report.status === "pending_supervisor") {
+                            canAct = true;
+                        } else if (isHr && ["pending_hr", "pending_supervisor"].includes(report.status)) {
+                            canAct = true;
+                        }
+
+                        if (!canAct) {
+                            const statusLabel =
+                                report.status === "approved" ? "อนุมัติแล้ว" :
+                                report.status === "rejected" ? "ไม่อนุมัติ" :
+                                report.status === "pending_hr" ? "ส่งต่อให้ HR แล้ว" : report.status;
+                            await sendReplyMessage(replyToken, `⚠️ รายการนี้ได้รับการดำเนินการไปแล้ว (${statusLabel})`);
+                            continue;
+                        }
+
+                        const { sendMissingCheckinReportNotification } = await import("@/utils/lineMessaging");
+                        const { normalizeReportItems, derivePeriodMonthFromRow, buildCombinedSummaryFromItems } = await import("@/app/api/missing-checkin-reports/route");
+                        const empDisplayName = emp?.nickname ? `${emp.name} (${emp.nickname})` : (emp?.name || report.emp_id);
+                        const periodMonth = derivePeriodMonthFromRow(report);
+                        const items = normalizeReportItems(report);
+                        const summary = buildCombinedSummaryFromItems(items, periodMonth);
+                        const dateStr = summary.workDateLabel;
+                        const approverName = approverEmp?.name || (isHr ? "HR_LINE" : "SUPERVISOR_LINE");
+
+                        if (action === "approve_missing_checkin") {
+                            const actingAsSupervisor = report.status === "pending_supervisor" && isSupervisor;
+                            const nextStatus = actingAsSupervisor ? "pending_hr" : "approved";
+
+                            if (actingAsSupervisor) {
+                                await prisma.$executeRawUnsafe(
+                                    `UPDATE "missing_checkin_reports"
+                                     SET "status" = 'pending_hr',
+                                         "supervisor_id" = COALESCE($1, "supervisor_id"),
+                                         "supervisor_approved_at" = NOW(),
+                                         "updated_at" = NOW()
+                                     WHERE "id" = $2`,
+                                    approverEmp?.emp_id || null,
+                                    targetId
+                                );
+                            } else {
+                                await prisma.$executeRawUnsafe(
+                                    `UPDATE "missing_checkin_reports"
+                                     SET "status" = 'approved',
+                                         "hr_approved_by" = $1,
+                                         "hr_approved_at" = NOW(),
+                                         "updated_at" = NOW()
+                                     WHERE "id" = $2`,
+                                    approverName,
+                                    targetId
+                                );
+                            }
+
+                            // 1. Reply updated card + explicit confirmation text to Approver (with push fallback via lineUserId)
+                            const confirmNotice = actingAsSupervisor
+                                ? `✅ ดำเนินการอนุมัติเอกสารเลขที่ ${report.doc_no} (${empDisplayName}) และส่งต่อให้ฝ่ายบุคคล (HR) เรียบร้อยแล้วค่ะ`
+                                : `✅ ดำเนินการอนุมัติเอกสารเลขที่ ${report.doc_no} (${empDisplayName}) เสร็จสิ้นเรียบร้อยแล้วค่ะ`;
+
+                            await sendMissingCheckinReportNotification({
+                                id: report.id,
+                                docNo: report.doc_no,
+                                employeeName: empDisplayName,
+                                workDate: dateStr,
+                                checkInTime: summary.firstIn,
+                                checkOutTime: summary.firstOut,
+                                timeSummaryLabel: summary.timeLabel,
+                                workDetails: summary.combinedDetails,
+                                evidenceUrls: report.evidence_urls,
+                                status: nextStatus,
+                                hideButtons: true,
+                                actionNotice: confirmNotice
+                            }, lineUserId ? [lineUserId] : [], replyToken);
+
+                            // 2. Notify Employee
+                            if (emp?.line_user_id) {
+                                await sendMissingCheckinReportNotification({
+                                    id: report.id,
+                                    docNo: report.doc_no,
+                                    employeeName: empDisplayName,
+                                    workDate: dateStr,
+                                    checkInTime: summary.firstIn,
+                                    checkOutTime: summary.firstOut,
+                                    timeSummaryLabel: summary.timeLabel,
+                                    workDetails: summary.combinedDetails,
+                                    evidenceUrls: report.evidence_urls,
+                                    status: nextStatus,
+                                    hideButtons: true
+                                }, [emp.line_user_id]);
+                            }
+
+                            // 3. If Supervisor approved -> Forward to HR with Approve/Reject buttons
+                            if (actingAsSupervisor && hrLineIds.length > 0) {
+                                await sendMissingCheckinReportNotification({
+                                    id: report.id,
+                                    docNo: report.doc_no,
+                                    employeeName: empDisplayName,
+                                    workDate: dateStr,
+                                    checkInTime: summary.firstIn,
+                                    checkOutTime: summary.firstOut,
+                                    timeSummaryLabel: summary.timeLabel,
+                                    workDetails: summary.combinedDetails,
+                                    evidenceUrls: report.evidence_urls,
+                                    status: "pending_hr"
+                                }, hrLineIds);
+                            }
+                        } else {
+                            // Reject
+                            if (report.status === "pending_supervisor" && isSupervisor) {
+                                await prisma.$executeRawUnsafe(
+                                    `UPDATE "missing_checkin_reports"
+                                     SET "status" = 'rejected',
+                                         "supervisor_id" = COALESCE($1, "supervisor_id"),
+                                         "supervisor_approved_at" = NOW(),
+                                         "updated_at" = NOW()
+                                     WHERE "id" = $2`,
+                                    approverEmp?.emp_id || null,
+                                    targetId
+                                );
+                            } else {
+                                await prisma.$executeRawUnsafe(
+                                    `UPDATE "missing_checkin_reports"
+                                     SET "status" = 'rejected',
+                                         "hr_approved_by" = $1,
+                                         "hr_approved_at" = NOW(),
+                                         "updated_at" = NOW()
+                                     WHERE "id" = $2`,
+                                    approverName,
+                                    targetId
+                                );
+                            }
+
+                            // Reply updated card + explicit rejection confirmation text to Approver
+                            const rejectNotice = `❌ ดำเนินการไม่อนุมัติเอกสารเลขที่ ${report.doc_no} (${empDisplayName}) เรียบร้อยแล้วค่ะ`;
+
+                            await sendMissingCheckinReportNotification({
+                                id: report.id,
+                                docNo: report.doc_no,
+                                employeeName: empDisplayName,
+                                workDate: dateStr,
+                                checkInTime: summary.firstIn,
+                                checkOutTime: summary.firstOut,
+                                timeSummaryLabel: summary.timeLabel,
+                                workDetails: summary.combinedDetails,
+                                evidenceUrls: report.evidence_urls,
+                                status: "rejected",
+                                hideButtons: true,
+                                actionNotice: rejectNotice
+                            }, lineUserId ? [lineUserId] : [], replyToken);
+
+                            // Notify Employee
+                            if (emp?.line_user_id) {
+                                await sendMissingCheckinReportNotification({
+                                    id: report.id,
+                                    docNo: report.doc_no,
+                                    employeeName: empDisplayName,
+                                    workDate: dateStr,
+                                    checkInTime: summary.firstIn,
+                                    checkOutTime: summary.firstOut,
+                                    timeSummaryLabel: summary.timeLabel,
+                                    workDetails: summary.combinedDetails,
+                                    evidenceUrls: report.evidence_urls,
+                                    status: "rejected",
+                                    hideButtons: true
+                                }, [emp.line_user_id]);
+                            }
+                        }
                     }
                 } else if (event.type === "message" && event.message?.type === "text") {
                     const lineUserId = event.source?.userId;

@@ -184,6 +184,8 @@ model employees {
   wheel_tickets             wheel_tickets[]
   wheel_winners             wheel_winners[]
   withholding_tax_documents withholding_tax_documents[]
+  missing_checkin_reports   missing_checkin_reports[]   @relation("EmployeeToMissingCheckinReports")
+  supervised_missing_reports missing_checkin_reports[]  @relation("SupervisorToMissingCheckinReports")
 
   @@index([is_active], map: "idx_employees_active")
 }
@@ -3738,4 +3740,31 @@ model supplier_payment_tasks {
 
   @@index([dueDate, status], map: "idx_spt_dueDate_status")
   @@index([poNumber], map: "idx_spt_poNumber")
+}
+
+model missing_checkin_reports {
+  id                     String     @id @default(uuid())
+  doc_no                 String     @unique @db.VarChar(50)
+  emp_id                 String     @db.VarChar(20)
+  work_date              DateTime   @db.Date
+  check_in_time          String     @db.VarChar(10)
+  check_out_time         String     @db.VarChar(10)
+  work_details           String
+  evidence_urls          String
+  status                 String     @default("pending_supervisor") @db.VarChar(30)
+  supervisor_id          String?    @db.VarChar(20)
+  supervisor_approved_at DateTime?  @db.Timestamptz(6)
+  supervisor_remark      String?
+  hr_approved_by         String?    @db.VarChar(100)
+  hr_approved_at         DateTime?  @db.Timestamptz(6)
+  hr_remark              String?
+  created_at             DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime   @default(now()) @db.Timestamptz(6)
+  employee               employees  @relation("EmployeeToMissingCheckinReports", fields: [emp_id], references: [emp_id], onDelete: Cascade)
+  supervisor             employees? @relation("SupervisorToMissingCheckinReports", fields: [supervisor_id], references: [emp_id])
+
+  @@index([emp_id])
+  @@index([supervisor_id])
+  @@index([status])
+  @@index([work_date])
 }

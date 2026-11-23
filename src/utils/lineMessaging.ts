@@ -3706,3 +3706,221 @@ export async function sendDepreciationClaimNotification(data: {
   }
 }
 
+export async function sendMissingCheckinReportNotification(data: {
+  id: string;
+  docNo: string;
+  employeeName: string;
+  workDate: string;
+  checkInTime: string;
+  checkOutTime: string;
+  timeSummaryLabel?: string;
+  workDetails: string;
+  evidenceUrls: string;
+  status: string; // pending_supervisor, pending_hr, approved, rejected
+  remark?: string;
+  hideButtons?: boolean;
+  actionNotice?: string;
+}, lineUserIds: string[], replyToken?: string) {
+  if ((!lineUserIds || lineUserIds.length === 0) && !replyToken) return false;
+
+  const statusColor = data.status === "approved"
+    ? "#059669"
+    : data.status === "rejected"
+    ? "#dc2626"
+    : data.status === "pending_hr" ? "#2563eb" : "#d97706";
+
+  const statusText = data.status === "pending_supervisor" ? "รอหัวหน้างานอนุมัติ" :
+    data.status === "pending_hr" ? "หัวหน้าอนุมัติแล้ว (ส่งต่อ HR)" :
+    data.status === "approved" ? "HR อนุมัติเรียบร้อยแล้ว" :
+    data.status === "rejected" ? "ไม่อนุมัติ" : data.status;
+
+  const firstEvidence = data.evidenceUrls
+    ? data.evidenceUrls.split(",").map(s => s.trim()).find(s => /^https?:\/\//i.test(s)) || ""
+    : "";
+
+  const footerContents: any[] = [];
+  if (firstEvidence) {
+    footerContents.push({
+      type: "button",
+      style: "secondary",
+      height: "sm",
+      action: {
+        type: "uri",
+        label: "📎 ดูหลักฐานการทำงาน",
+        uri: firstEvidence
+      }
+    });
+  }
+
+  if (!data.hideButtons && (data.status === "pending_supervisor" || data.status === "pending_hr")) {
+    footerContents.push({
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      margin: "md",
+      contents: [
+        {
+          type: "button",
+          action: {
+            type: "postback",
+            label: "อนุมัติ",
+            data: `action=approve_missing_checkin&id=${data.id}`,
+            displayText: "ดำเนินการอนุมัติรายงานการทำงาน"
+          },
+          style: "primary",
+          color: "#059669",
+          height: "sm"
+        },
+        {
+          type: "button",
+          action: {
+            type: "postback",
+            label: "ไม่อนุมัติ",
+            data: `action=reject_missing_checkin&id=${data.id}`,
+            displayText: "ไม่อนุมัติรายงานการทำงาน"
+          },
+          style: "primary",
+          color: "#dc2626",
+          height: "sm"
+        }
+      ]
+    });
+  }
+
+  const detailLines = (data.workDetails || "-")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const bubbleObj: any = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: statusColor,
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: "รายงานการทำงาน (Human Soft)", color: "#ffffff", weight: "bold", size: "md" },
+        { type: "text", text: `เลขที่: ${data.docNo}`, color: "#ffffff", size: "xs", margin: "xs" }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: data.employeeName, weight: "bold", size: "md", color: "#111827", wrap: true },
+        { type: "separator", color: "#e5e7eb" },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              alignItems: "center",
+              contents: [
+                { type: "text", text: "สถานะ:", color: "#6b7280", size: "sm", flex: 4 },
+                { type: "text", text: statusText, color: statusColor, weight: "bold", size: "sm", flex: 8, wrap: true }
+              ]
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              alignItems: "center",
+              contents: [
+                { type: "text", text: "ประจำเดือน:", color: "#6b7280", size: "sm", flex: 4 },
+                { type: "text", text: data.workDate, color: "#111827", weight: "bold", size: "sm", flex: 8, wrap: true }
+              ]
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              alignItems: "center",
+              contents: [
+                { type: "text", text: "สรุปรายการ:", color: "#6b7280", size: "sm", flex: 4 },
+                { type: "text", text: data.timeSummaryLabel || `${data.checkInTime} - ${data.checkOutTime}`, color: "#111827", weight: "bold", size: "sm", flex: 8, wrap: true }
+              ]
+            }
+          ]
+        },
+        { type: "separator", color: "#e5e7eb" },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: "รายละเอียดงานที่ทำ:", color: "#6b7280", size: "xs", weight: "bold" },
+            {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: "#f8fafc",
+              cornerRadius: "8px",
+              paddingAll: "10px",
+              spacing: "xs",
+              margin: "xs",
+              contents: (detailLines.length > 0 ? detailLines : ["-"]).map(line => ({
+                type: "text",
+                text: line,
+                color: "#1e293b",
+                size: "xs",
+                wrap: true
+              }))
+            }
+          ]
+        },
+        ...(data.remark ? [
+          {
+            type: "box",
+            layout: "vertical",
+            margin: "xs",
+            contents: [
+              { type: "text", text: "หมายเหตุ:", color: "#dc2626", size: "xs", weight: "bold" },
+              { type: "text", text: data.remark, color: "#4b5563", size: "xs", wrap: true, margin: "xs" }
+            ]
+          }
+        ] : [])
+      ]
+    }
+  };
+
+  if (footerContents.length > 0) {
+    bubbleObj.footer = {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      paddingAll: "14px",
+      contents: footerContents
+    };
+  }
+
+  const flexMessage: any = {
+    type: "flex",
+    altText: `รายงานการทำงาน (ลงเวลาไม่ครบ): ${data.docNo} - ${data.employeeName}`,
+    contents: bubbleObj
+  };
+
+  const messagesToSend: any[] = data.actionNotice
+    ? [{ type: "text", text: data.actionNotice }, flexMessage]
+    : [flexMessage];
+
+  try {
+    if (replyToken) {
+      const replied = await sendLineMessage("", messagesToSend, replyToken);
+      if (replied) return true;
+    }
+    const uniqueIds = Array.from(new Set(lineUserIds.filter(Boolean)));
+    for (const uid of uniqueIds) {
+      await sendLineMessage(uid, messagesToSend);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error sending missing checkin report notification:", error);
+    return false;
+  }
+}
+
+

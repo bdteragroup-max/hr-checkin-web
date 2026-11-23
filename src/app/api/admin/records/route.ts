@@ -128,6 +128,7 @@ export async function GET(req: Request) {
         const stats: Record<string, {
             leave_days: number;
             pending_leave_days: number;
+            leave_details: Array<{ date: string; leave_type: string; days: number; status: string }>;
             late_count: number;
             late_mins: number;
             present_dates: Set<string>;
@@ -164,7 +165,8 @@ export async function GET(req: Request) {
 
             stats[e.emp_id] = { 
                 leave_days: 0, 
-                pending_leave_days: 0, 
+                pending_leave_days: 0,
+                leave_details: [],
                 late_count: 0, 
                 late_mins: 0, 
                 present_dates: new Set(), 
@@ -178,6 +180,8 @@ export async function GET(req: Request) {
             };
         }
 
+        const PENDING_LEAVE_STATUSES = new Set(["pending", "pending_supervisor", "pending_hr", "pending_management"]);
+
         // Process leaves
         for (const l of leaves) {
             if (!stats[l.emp_id]) continue;
@@ -188,11 +192,13 @@ export async function GET(req: Request) {
             const actualStart = lStart < startDate ? startDate : lStart;
             const actualEnd = lEnd > endDate ? endDate : lEnd;
 
+            const coveredDates: string[] = [];
             if (actualStart <= actualEnd) {
                 for (let dt = new Date(actualStart); dt <= actualEnd; dt.setUTCDate(dt.getUTCDate() + 1)) {
                     const dStr = dt.toISOString().split("T")[0];
                     if (dt.getUTCDay() !== 0 && !holidayDates.has(dStr)) {
                         daysInPeriod++;
+                        coveredDates.push(dStr);
                     }
                 }
             }
@@ -207,10 +213,24 @@ export async function GET(req: Request) {
                 finalDaysToAdd = trueLeaveDuration; 
             }
 
-            if (l.status === "approved") {
+            const isApproved = l.status === "approved";
+            const isPending = PENDING_LEAVE_STATUSES.has(l.status);
+
+            if (isApproved) {
                 stats[l.emp_id].leave_days += finalDaysToAdd;
-            } else if (l.status === "pending") {
+            } else if (isPending) {
                 stats[l.emp_id].pending_leave_days += finalDaysToAdd;
+            }
+
+            if ((isApproved || isPending) && finalDaysToAdd > 0) {
+                const sStr = actualStart.toISOString().split("T")[0];
+                const eStr = actualEnd.toISOString().split("T")[0];
+                stats[l.emp_id].leave_details.push({
+                    date: sStr === eStr ? sStr : `${sStr} ถึง ${eStr}`,
+                    leave_type: l.leave_type || "ลา",
+                    days: finalDaysToAdd,
+                    status: isApproved ? "approved" : "pending"
+                });
             }
         }
 
@@ -367,6 +387,7 @@ export async function GET(req: Request) {
                 is_checkin_exempt: Boolean(e.is_checkin_exempt),
                 leave_days: s.leave_days,
                 pending_leave_days: s.pending_leave_days,
+                leave_details: s.leave_details,
                 late_count: s.late_count,
                 late_mins: s.late_mins,
                 absent_days: absences,

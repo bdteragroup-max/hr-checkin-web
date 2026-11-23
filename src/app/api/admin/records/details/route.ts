@@ -75,7 +75,7 @@ export async function GET(req: Request) {
         const leaves = await prisma.leave_requests.findMany({
             where: {
                 emp_id,
-                status: "approved",
+                status: { in: ["approved", "pending", "pending_supervisor", "pending_hr", "pending_management"] },
                 start_date: { lte: endDate },
                 end_date: { gte: startDate },
             },
@@ -105,15 +105,16 @@ export async function GET(req: Request) {
 
         const reports: any[] = [];
 
-        // Build a map of dates that fall under approved leaves
+        // Build a map of dates that fall under approved or pending leaves
         const leaveDaysMap = new Map<string, string>();
         leaves.forEach(l => {
             let cur = new Date(l.start_date);
             const endD = new Date(l.end_date);
+            const isPending = l.status !== "approved";
             while (cur <= endD) {
                 const ds = cur.toISOString().split("T")[0];
                 let leaveLabel = l.leave_type;
-                if (l.days === 0.5 && l.start_at) {
+                if ((l.days === 0.5 || (l.days === 1 && l.minutes > 0 && l.minutes < 480)) && l.start_at) {
                     const bkkHour = parseInt(new Date(l.start_at).toLocaleString("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }));
                     if (bkkHour < 12) {
                         leaveLabel += " (ครึ่งเช้า 08:00-12:00)";
@@ -123,7 +124,13 @@ export async function GET(req: Request) {
                 } else if (l.days < 1 && l.start_at && l.end_at) {
                     leaveLabel += ` (${formatTime(new Date(l.start_at))} - ${formatTime(new Date(l.end_at))})`;
                 }
-                leaveDaysMap.set(ds, leaveLabel);
+                if (isPending) {
+                    leaveLabel += " (รออนุมัติ)";
+                }
+                // Approved leave takes precedence over pending leave on the same date
+                if (!leaveDaysMap.has(ds) || !isPending) {
+                    leaveDaysMap.set(ds, leaveLabel);
+                }
                 cur.setDate(cur.getDate() + 1);
             }
         });

@@ -375,7 +375,7 @@ export async function GET(req: Request) {
                 }
 
                 if (l.status === "approved") stats[l.emp_id].leave_days += finalDaysToAdd;
-                else if (l.status === "pending") stats[l.emp_id].pending_leave_days += finalDaysToAdd;
+                else if (["pending", "pending_supervisor", "pending_hr", "pending_management"].includes(l.status)) stats[l.emp_id].pending_leave_days += finalDaysToAdd;
             }
 
             for (const r of rows) {

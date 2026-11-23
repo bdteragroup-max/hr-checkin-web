@@ -31,6 +31,13 @@ interface Employee {
     is_active?: boolean;
 }
 
+interface LeaveDetailItem {
+    date: string;
+    leave_type: string;
+    days: number;
+    status: string;
+}
+
 interface RecordSummary {
     emp_id: string;
     name: string;
@@ -39,6 +46,7 @@ interface RecordSummary {
     is_checkin_exempt?: boolean;
     leave_days: number;
     pending_leave_days: number;
+    leave_details?: LeaveDetailItem[];
     late_count: number;
     late_mins: number;
     absent_days: number;
@@ -145,7 +153,8 @@ export default function RecordsPage() {
             });
             const json = await res.json();
             if (json.ok) {
-                showToast(`ดึงข้อมูลสำเร็จ: พบ ${json.total} รายการ (บันทึกใหม่ ${json.inserted} รายการ)`, "ok");
+                const leaveMsg = json.leavesSynced ? ` • ดึงข้อมูลวันลา ${json.leavesSynced} รายการ` : "";
+                showToast(`ดึงข้อมูลสำเร็จ: พบ ${json.total} รายการ (บันทึกใหม่ ${json.inserted} รายการ${leaveMsg})`, "ok");
                 queryClient.invalidateQueries({ queryKey: ['admin-records-summary'] });
                 queryClient.invalidateQueries({ queryKey: ['admin-records-details'] });
             } else {
@@ -158,17 +167,18 @@ export default function RecordsPage() {
         }
     };
 
-    // Filter states for working hours: "all" | "under_9h" | "over_9h"
-    const [hourFilter, setHourFilter] = useState<"all" | "under_9h" | "over_9h">(() => {
+    // Filter states for working hours & leave: "all" | "under_9h" | "over_9h" | "leave"
+    const [hourFilter, setHourFilter] = useState<"all" | "under_9h" | "over_9h" | "leave">(() => {
         const tab = searchParams?.get("tab");
         const filter = searchParams?.get("filter");
         if (tab === "under_9h" || filter === "under_9h") return "under_9h";
         if (tab === "over_9h" || filter === "over_9h") return "over_9h";
+        if (tab === "leave" || filter === "leave") return "leave";
         return "all";
     });
 
-    // Detail view working hours filter: "all" | "under_9h" | "over_9h"
-    const [detailHourFilter, setDetailHourFilter] = useState<"all" | "under_9h" | "over_9h">("all");
+    // Detail view working hours & leave filter: "all" | "under_9h" | "over_9h" | "leave"
+    const [detailHourFilter, setDetailHourFilter] = useState<"all" | "under_9h" | "over_9h" | "leave">("all");
 
     // In-table search for master summary view
     const [inTableSearch, setInTableSearch] = useState("");
@@ -352,12 +362,17 @@ export default function RecordsPage() {
     }, [selectedEmployeeObj, filterEmpId]);
 
     // Sorted details for individual view
+    const isLeaveStatus = (s: string) =>
+        Boolean(s && (s.includes("ลาป่วย") || s.includes("ลากิจ") || s.includes("ลาพักร้อน") || s.includes("ลากรณีฉุกเฉิน") || s.includes("ลาคลอด") || s.includes("ลาบวช") || s.includes("ลาไม่รับค่าจ้าง") || s.includes("สลับวันหยุด") || (s.startsWith("ลา") && s !== "ลาออก")));
+
     const sortedDetails = useMemo(() => {
         let list = [...details].sort((a, b) => a.date.localeCompare(b.date));
         if (detailHourFilter === "under_9h") {
             list = list.filter(d => d.is_under_9h);
         } else if (detailHourFilter === "over_9h") {
             list = list.filter(d => d.is_over_9h);
+        } else if (detailHourFilter === "leave") {
+            list = list.filter(d => isLeaveStatus(d.status));
         }
         return list;
     }, [details, detailHourFilter]);
@@ -369,13 +384,16 @@ export default function RecordsPage() {
             list = list.filter(d => (d.under_9h_count || 0) > 0);
         } else if (hourFilter === "over_9h") {
             list = list.filter(d => (d.over_9h_count || 0) > 0);
+        } else if (hourFilter === "leave") {
+            list = list.filter(d => (d.leave_days || 0) > 0 || (d.pending_leave_days || 0) > 0);
         }
         if (inTableSearch.trim()) {
             const q = inTableSearch.toLowerCase().trim();
             list = list.filter(d =>
                 d.emp_id.toLowerCase().includes(q) ||
                 d.name.toLowerCase().includes(q) ||
-                (d.branch_id && d.branch_id.toLowerCase().includes(q))
+                (d.branch_id && d.branch_id.toLowerCase().includes(q)) ||
+                (d.leave_details && d.leave_details.some(ld => ld.leave_type.toLowerCase().includes(q) || ld.date.includes(q)))
             );
         }
         return list;
@@ -386,6 +404,8 @@ export default function RecordsPage() {
     const totalLateTimes = useMemo(() => data.reduce((acc, r) => acc + (r.late_count || 0), 0), [data]);
     const totalLateMinutes = useMemo(() => data.reduce((acc, r) => acc + (r.late_mins || 0), 0), [data]);
     const totalLeaveDays = useMemo(() => data.reduce((acc, r) => acc + (r.leave_days || 0), 0), [data]);
+    const totalPendingLeaveDays = useMemo(() => data.reduce((acc, r) => acc + (r.pending_leave_days || 0), 0), [data]);
+    const affectedLeaveEmployeesCount = useMemo(() => data.filter(r => (r.leave_days || 0) > 0 || (r.pending_leave_days || 0) > 0).length, [data]);
     
     // Under 9h metrics
     const totalUnder9h = kpiData.total_under_9h_count || data.reduce((acc, r) => acc + (r.under_9h_count || 0), 0);
@@ -712,19 +732,32 @@ export default function RecordsPage() {
                     </div>
                 </div>
 
-                {/* 3. Approved Leaves */}
-                <div className={`${styles.kpiCard} ${styles.kpiBlue}`}>
+                {/* 3. Approved & Pending Leaves Interactive Filter Card */}
+                <div
+                    className={`${styles.kpiCard} ${styles.kpiBlue} ${styles.kpiCardClickable} ${hourFilter === "leave" ? styles.kpiBlueActiveToggle : ""}`}
+                    onClick={() => setHourFilter(hourFilter === "leave" ? "all" : "leave")}
+                    title="คลิกเพื่อกรองตารางเฉพาะพนักงานที่มีวันลา"
+                    style={hourFilter === "leave" ? { border: "2px solid #2563eb", background: "#eff6ff", boxShadow: "0 4px 14px rgba(37, 99, 235, 0.18)" } : undefined}
+                >
                     <div className={styles.kpiTop}>
-                        <span className={styles.kpiLabel}>วันลาที่อนุมัติ</span>
-                        <div className={styles.kpiIconBox}>
-                            <CalendarIcon width={18} />
-                        </div>
+                        <span className={styles.kpiLabel} style={{ color: hourFilter === "leave" ? "#1d4ed8" : undefined }}>
+                            วันลาทั้งหมด
+                        </span>
+                        <span
+                            className={styles.kpiFilterBadge}
+                            style={{
+                                background: hourFilter === "leave" ? "#2563eb" : "#dbeafe",
+                                color: hourFilter === "leave" ? "#fff" : "#1e40af"
+                            }}
+                        >
+                            {hourFilter === "leave" ? "กำลังกรองอยู่" : "คลิกเพื่อกรอง"}
+                        </span>
                     </div>
                     <div className={styles.kpiVal} style={{ color: "#2563eb" }}>
                         {totalLeaveDays.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text4)" }}>วัน</span>
                     </div>
-                    <div className={styles.kpiSub}>
-                        รายการลาที่ได้รับการอนุมัติแล้ว
+                    <div className={styles.kpiSub} style={{ color: hourFilter === "leave" ? "#1d4ed8" : undefined, fontWeight: hourFilter === "leave" ? 600 : 400 }}>
+                        อนุมัติแล้ว ({affectedLeaveEmployeesCount} คน){totalPendingLeaveDays > 0 ? ` • รออนุมัติ ${totalPendingLeaveDays} วัน` : ""}
                     </div>
                 </div>
 
@@ -892,6 +925,14 @@ export default function RecordsPage() {
                                         onClick={() => setDetailHourFilter("all")}
                                     >
                                         ทั้งหมด ({details.length})
+                                    </button>
+                                    <button
+                                        className={`${styles.filterPillBtn} ${detailHourFilter === "leave" ? styles.filterPillActive : ""}`}
+                                        onClick={() => setDetailHourFilter("leave")}
+                                        style={{ color: detailHourFilter === "leave" ? "#2563eb" : undefined }}
+                                    >
+                                        <CalendarIcon width={13} style={{ display: "inline-block", marginRight: 3 }} />
+                                        วันลา ({details.filter(d => isLeaveStatus(d.status)).length})
                                     </button>
                                     <button
                                         className={`${styles.filterPillBtn} ${detailHourFilter === "under_9h" ? styles.filterPillActive : ""}`}
@@ -1084,6 +1125,22 @@ export default function RecordsPage() {
                                 />
                             </div>
 
+                            {/* Active filter badge if filtering leave */}
+                            {hourFilter === "leave" && (
+                                <div className={styles.activeFilterNotice} style={{ background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+                                    <CalendarIcon width={14} />
+                                    <span>กรองเฉพาะผู้ที่มีวันลา ({displayedSummaryData.length} คน)</span>
+                                    <button
+                                        className={styles.btnClearFilter}
+                                        style={{ color: "#1e40af" }}
+                                        onClick={() => setHourFilter("all")}
+                                        title="ล้างตัวกรอง"
+                                    >
+                                        <XMarkIcon width={13} />
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Active filter badge if filtering under 9h */}
                             {hourFilter === "under_9h" && (
                                 <div className={styles.activeFilterNotice}>
@@ -1196,15 +1253,48 @@ export default function RecordsPage() {
                                             </td>
 
                                             <td style={{ textAlign: "center" }}>
-                                                {row.leave_days > 0 ? (
-                                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                        <span className={`${styles.badge} ${styles.badgeLeave}`}>
-                                                            {row.leave_days} วัน
-                                                        </span>
+                                                {(row.leave_days > 0 || row.pending_leave_days > 0) ? (
+                                                    <div
+                                                        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer" }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setFilterEmpId(row.emp_id);
+                                                            setDetailHourFilter("leave");
+                                                        }}
+                                                        title={
+                                                            row.leave_details && row.leave_details.length > 0
+                                                                ? row.leave_details.map(ld => `${ld.leave_type}: ${ld.date} (${ld.days} วัน${ld.status === "pending" ? " - รออนุมัติ" : ""})`).join("\n")
+                                                                : "คลิกเพื่อดูรายละเอียดวันลา"
+                                                        }
+                                                    >
+                                                        {row.leave_days > 0 && (
+                                                            <span className={`${styles.badge} ${styles.badgeLeave}`}>
+                                                                {row.leave_days} วัน
+                                                            </span>
+                                                        )}
                                                         {row.pending_leave_days > 0 && (
-                                                            <small style={{ fontSize: 10, color: "#d97706", marginTop: 2 }}>
-                                                                (รออนุมัติ {row.pending_leave_days})
+                                                            <small style={{ fontSize: 10.5, color: "#d97706", fontWeight: 600, background: "#fffbeb", border: "1px solid #fde68a", padding: "1px 6px", borderRadius: 4 }}>
+                                                                รออนุมัติ {row.pending_leave_days} วัน
                                                             </small>
+                                                        )}
+                                                        {row.leave_details && row.leave_details.length > 0 && (
+                                                            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 3, maxWidth: 180 }}>
+                                                                {Array.from(new Set(row.leave_details.map(ld => ld.leave_type))).map((lt, idx) => (
+                                                                    <span
+                                                                        key={idx}
+                                                                        style={{
+                                                                            fontSize: 10,
+                                                                            color: "#1e40af",
+                                                                            background: "#dbeafe",
+                                                                            padding: "1px 5px",
+                                                                            borderRadius: 4,
+                                                                            fontWeight: 600
+                                                                        }}
+                                                                    >
+                                                                        {lt}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 ) : (

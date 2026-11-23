@@ -168,7 +168,7 @@ export default function AdminEmployeesPage() {
                 fetch("/api/branches", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
                 fetch("/api/admin/organization/departments", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
                 fetch("/api/admin/organization/positions", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-                fetch("/api/admin/employees?minimal=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
+                fetch("/api/admin/employees?minimal=1&status=all", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}))
             ]);
             return {
                 branches: (b.branches || []) as Branch[],
@@ -317,9 +317,13 @@ export default function AdminEmployeesPage() {
         setTimeout(() => setToast(null), 3000);
     }
 
-    const handleExport = () => {
+    const handleExport = (forceAllIncludingResigned: boolean = false) => {
         const params = new URLSearchParams();
-        if (statusFilter !== "all") params.append("status", statusFilter);
+        if (!forceAllIncludingResigned && statusFilter !== "all") {
+            params.append("status", statusFilter);
+        } else {
+            params.append("status", "all");
+        }
         if (typeFilter !== "all") params.append("salary_type", typeFilter);
         if (branchFilter !== "all") params.append("branch", branchFilter);
         if (deptFilter !== "all") params.append("dept", String(deptFilter));
@@ -566,13 +570,24 @@ export default function AdminEmployeesPage() {
                     </button>
                     <button
                         className={styles.btnExport}
-                        onClick={handleExport}
+                        onClick={() => handleExport(true)}
                         disabled={loading}
-                        title="ส่งออกรายชื่อพนักงานเป็นไฟล์ CSV"
+                        title="ส่งออกรายชื่อพนักงานทั้งหมด (รวมคนทำงานอยู่และคนลาออก) เป็นไฟล์ CSV"
                     >
                         <ArrowDownTrayIcon width={17} height={17} />
-                        <span>ส่งออก CSV</span>
+                        <span>ส่งออก CSV (รวมคนออก)</span>
                     </button>
+                    {statusFilter !== "all" && (
+                        <button
+                            className={styles.btnGhost}
+                            onClick={() => handleExport(false)}
+                            disabled={loading}
+                            title="ส่งออกเฉพาะแท็บสถานะที่เลือกอยู่ในปัจจุบัน"
+                        >
+                            <ArrowDownTrayIcon width={16} height={16} />
+                            <span>CSV เฉพาะแท็บนี้</span>
+                        </button>
+                    )}
                     <button
                         className={styles.btnGhost}
                         onClick={() => setShowExportGuide(!showExportGuide)}
@@ -1200,7 +1215,9 @@ export default function AdminEmployeesPage() {
                 isOpen={showHumanSoftSyncModal}
                 onClose={() => setShowHumanSoftSyncModal(false)}
                 onSyncSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["admin-employees"] });
+                    queryClient.invalidateQueries({ queryKey: ["admin-employees-list"] });
+                    queryClient.invalidateQueries({ queryKey: ["admin-org-data"] });
+                    queryClient.invalidateQueries({ queryKey: ["admin-employees-stats"] });
                     reload();
                     showToast("ซิงค์ข้อมูลจาก HumanSoft เรียบร้อยแล้ว", "ok");
                 }}

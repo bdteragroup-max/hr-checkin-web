@@ -34,8 +34,35 @@ export interface HumanSoftEmployeeItem {
     [key: string]: any;
 }
 
+export function isHumanSoftResigned(raw: HumanSoftEmployeeItem): boolean {
+    const signout = String(raw.signout_flag || raw.sign_out_flag || "").trim().toUpperCase();
+    if (signout === "Y" || signout === "1" || signout === "TRUE") return true;
+
+    const statusStr = String(raw.employee_status || raw.work_status || raw.status || "").trim().toLowerCase();
+    if (statusStr === "resigned" || statusStr === "inactive" || statusStr.includes("ลาออก") || statusStr.includes("พ้นสภาพ")) {
+        return true;
+    }
+
+    const resignDateRaw = raw.resign_dt || raw.resign_date || raw.signout_dt || raw.sign_out_dt || raw.resignation_date;
+    if (resignDateRaw && typeof resignDateRaw === "string" && resignDateRaw.trim() !== "" && !resignDateRaw.startsWith("0000")) {
+        const parsed = Date.parse(resignDateRaw);
+        if (!isNaN(parsed)) return true;
+    }
+    return false;
+}
+
+export function extractHumanSoftResignDate(raw: HumanSoftEmployeeItem): Date | null {
+    const resignDateRaw = raw.resign_dt || raw.resign_date || raw.signout_dt || raw.sign_out_dt || raw.resignation_date;
+    if (resignDateRaw && typeof resignDateRaw === "string" && resignDateRaw.trim() !== "" && !resignDateRaw.startsWith("0000")) {
+        const parsed = Date.parse(resignDateRaw);
+        if (!isNaN(parsed)) return new Date(parsed);
+    }
+    return null;
+}
+
 /**
  * Fetch all employee lists from HumanSoft Open API across all configured company API keys.
+ * Also fetches resigned employees (signout_flag=Y) so both active and resigned employees are included.
  * Endpoint: GET /api/v1/open-apis/employee/get-employee-list
  */
 export async function fetchHumanSoftAllEmployeesList(apiKeyParam?: string): Promise<{
@@ -56,57 +83,69 @@ export async function fetchHumanSoftAllEmployeesList(apiKeyParam?: string): Prom
     const errors: string[] = [];
 
     for (const keyConfig of keys) {
-        try {
-            const pageSize = 100;
-            let page = 1;
-            let totalRecords = 0;
+        // Pass 1: standard list (all or active), Pass 2: explicitly include signout_flag=Y in case HumanSoft filters resigned by default
+        const queryVariants = ["", "&signout_flag=Y"];
 
-            while (true) {
-                const url = `${getBaseUrl()}/api/v1/open-apis/employee/get-employee-list?_PAGE=${page}&_NUMBER_PER_PAGE=${pageSize}`;
-                const res = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        "Ocp-Apim-Subscription-Key": keyConfig.key,
-                        "Content-Type": "application/json"
-                    },
-                    signal: AbortSignal.timeout(20000)
-                });
+        for (const variant of queryVariants) {
+            try {
+                const pageSize = 100;
+                let page = 1;
+                let totalRecords = 0;
 
-                const data = await res.json().catch(() => null);
-                if (!res.ok || (data && data.code !== 200)) {
-                    const errMsg = `[${keyConfig.company}] ${data?.errors || data?.message || "HTTP_" + res.status}`;
-                    errors.push(errMsg);
-                    break;
-                }
+                while (true) {
+                    const url = `${getBaseUrl()}/api/v1/open-apis/employee/get-employee-list?_PAGE=${page}&_NUMBER_PER_PAGE=${pageSize}${variant}`;
+                    const res = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                            "Ocp-Apim-Subscription-Key": keyConfig.key,
+                            "Content-Type": "application/json"
+                        },
+                        signal: AbortSignal.timeout(20000)
+                    });
 
-                const payload: HumanSoftEmployeeItem[] = Array.isArray(data.payload)
-                    ? data.payload
-                    : Array.isArray(data.data)
-                        ? data.data
-                        : [];
-
-                for (const emp of payload) {
-                    if (!emp.employee_code) continue;
-                    const code = emp.employee_code.trim().toUpperCase();
-                    // If not already in map or if this one is active, store it
-                    if (!employeeMap.has(code) || emp.signout_flag !== "Y") {
-                        employeeMap.set(code, {
-                            ...emp,
-                            employee_code: code,
-                            _sourceCompany: keyConfig.company
-                        });
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok || (data && data.code !== 200)) {
+                        if (variant === "") {
+                            const errMsg = `[${keyConfig.company}] ${data?.errors || data?.message || "HTTP_" + res.status}`;
+                            errors.push(errMsg);
+                        }
+                        break;
                     }
-                }
 
-                totalRecords = data._PAGINATION?._TOTAL_RECORDS ?? payload.length;
-                if (payload.length === 0 || page * pageSize >= totalRecords) {
-                    break;
+                    const payload: HumanSoftEmployeeItem[] = Array.isArray(data.payload)
+                        ? data.payload
+                        : Array.isArray(data.data)
+                            ? data.data
+                            : [];
+
+                    for (const emp of payload) {
+                        if (!emp.employee_code) continue;
+                        const code = emp.employee_code.trim().toUpperCase();
+                        const existingInMap = employeeMap.get(code);
+                        const empIsResigned = isHumanSoftResigned(emp);
+                        // Store if not yet in map, or if existing was resigned and this entry is active
+                        if (!existingInMap || (isHumanSoftResigned(existingInMap) && !empIsResigned)) {
+                            employeeMap.set(code, {
+                                ...emp,
+                                employee_code: code,
+                                signout_flag: empIsResigned ? "Y" : (emp.signout_flag || "N"),
+                                _sourceCompany: keyConfig.company
+                            });
+                        }
+                    }
+
+                    totalRecords = data._PAGINATION?._TOTAL_RECORDS ?? payload.length;
+                    if (payload.length === 0 || page * pageSize >= totalRecords) {
+                        break;
+                    }
+                    page++;
+                    if (page > 30) break; // safety guard
                 }
-                page++;
-                if (page > 30) break; // safety guard
+            } catch (err: any) {
+                if (variant === "") {
+                    errors.push(`[${keyConfig.company}] ${err.message}`);
+                }
             }
-        } catch (err: any) {
-            errors.push(`[${keyConfig.company}] ${err.message}`);
         }
     }
 
@@ -341,7 +380,7 @@ export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
     // Check if employee already exists in DB
     const existing = await prisma.employees.findUnique({
         where: { emp_id: empId },
-        select: { emp_id: true, pin_hash: true, line_user_id: true, is_active: true, branch_id: true }
+        select: { emp_id: true, pin_hash: true, line_user_id: true, is_active: true, branch_id: true, resignation_date: true }
     });
 
     // Resolve Branch (Intelligent resolution across position title, checkin history, etc.)
@@ -376,9 +415,13 @@ export async function upsertEmployeeFromHumanSoft(raw: HumanSoftEmployeeItem) {
         ? new Date(raw.birth_dt)
         : undefined;
 
-    // Active Status: 'Y' in signout_flag means resigned/inactive
-    const isActive = raw.signout_flag !== "Y";
-    const resignationDate = !isActive ? (raw.resign_dt ? new Date(raw.resign_dt) : new Date()) : null;
+    // Active Status: check resignation flags/dates
+    const isResigned = isHumanSoftResigned(raw);
+    const isActive = !isResigned;
+    const extractedResignDate = extractHumanSoftResignDate(raw);
+    const resignationDate = !isActive
+        ? (extractedResignDate || existing?.resignation_date || new Date())
+        : null;
 
     // Base salary (if available in raw or detail)
     const baseSalary = raw.salary != null && !isNaN(Number(raw.salary)) && Number(raw.salary) > 0
@@ -455,6 +498,8 @@ export interface SyncResult {
     selectedCount?: number;
     newCount: number;
     existingCount: number;
+    resignedCount?: number;
+    newlyResignedCount?: number;
     createdCount: number;
     updatedCount: number;
     skippedCount: number;
@@ -469,6 +514,9 @@ export interface SyncResult {
         branch_name?: string;
         is_new: boolean;
         is_active: boolean;
+        db_is_active?: boolean;
+        is_status_changed_to_resigned?: boolean;
+        resignation_date?: string | null;
     }[];
 }
 
@@ -485,6 +533,8 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
             totalHumanSoft: 0,
             newCount: 0,
             existingCount: 0,
+            resignedCount: 0,
+            newlyResignedCount: 0,
             createdCount: 0,
             updatedCount: 0,
             skippedCount: 0,
@@ -497,7 +547,7 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
     // Load all existing employee IDs and branches from DB
     const [existingEmployees, allBranches] = await Promise.all([
         prisma.employees.findMany({
-            select: { emp_id: true, name: true, is_active: true, branch_id: true }
+            select: { emp_id: true, name: true, is_active: true, branch_id: true, resignation_date: true }
         }),
         prisma.branches.findMany({
             select: { id: true, name: true }
@@ -510,6 +560,9 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
         const existingEmp = existingMap.get(code);
         const name = [hs.employee_title_name, hs.employee_name, hs.employee_last_name].filter(Boolean).join(" ") || code;
         const branchInfo = await resolveBranchForEmployee(hs, existingEmp?.branch_id, allBranches);
+        const hsIsActive = !isHumanSoftResigned(hs);
+        const resignDt = extractHumanSoftResignDate(hs);
+        const isStatusChangedToResigned = Boolean(existingEmp && existingEmp.is_active && !hsIsActive);
         return {
             emp_id: code,
             name,
@@ -519,12 +572,17 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
             branch_id: branchInfo.branchId,
             branch_name: branchInfo.branchName,
             is_new: !existingEmp,
-            is_active: hs.signout_flag !== "Y"
+            is_active: hsIsActive,
+            db_is_active: existingEmp ? existingEmp.is_active : undefined,
+            is_status_changed_to_resigned: isStatusChangedToResigned,
+            resignation_date: resignDt ? resignDt.toISOString().split("T")[0] : (existingEmp?.resignation_date ? existingEmp.resignation_date.toISOString().split("T")[0] : null)
         };
     }));
 
     const newItems = previewItems.filter(p => p.is_new);
     const existingItems = previewItems.filter(p => !p.is_new);
+    const resignedItems = previewItems.filter(p => !p.is_active);
+    const newlyResignedItems = previewItems.filter(p => p.is_status_changed_to_resigned);
 
     if (options.dryRun) {
         return {
@@ -532,6 +590,8 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
             totalHumanSoft: hsEmployees.length,
             newCount: newItems.length,
             existingCount: existingItems.length,
+            resignedCount: resignedItems.length,
+            newlyResignedCount: newlyResignedItems.length,
             createdCount: 0,
             updatedCount: 0,
             skippedCount: 0,
@@ -574,6 +634,8 @@ export async function syncAllHumanSoftEmployees(options: { dryRun?: boolean; sel
         selectedCount: employeesToSync.length,
         newCount: newItems.length,
         existingCount: existingItems.length,
+        resignedCount: resignedItems.length,
+        newlyResignedCount: newlyResignedItems.length,
         createdCount,
         updatedCount,
         skippedCount,
