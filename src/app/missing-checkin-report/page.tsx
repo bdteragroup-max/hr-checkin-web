@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import styles from "../travel-allowance/page.module.css";
 import { format } from "date-fns";
@@ -20,8 +20,330 @@ import {
     PencilSquareIcon,
     TrashIcon,
     PlusIcon,
-    ClockIcon
+    ClockIcon,
+    ChevronDownIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    CheckIcon
 } from "@heroicons/react/24/outline";
+
+function CustomSelect({
+    value,
+    options,
+    onChange,
+    centerText = false,
+    height = 44
+}: {
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    onChange: (val: string) => void;
+    centerText?: boolean;
+    height?: number;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [open]);
+
+    const selected = options.find(o => o.value === value);
+
+    return (
+        <div ref={ref} style={{ position: "relative", width: "100%" }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    width: "100%",
+                    height,
+                    padding: centerText ? "0 10px" : "0 14px",
+                    borderRadius: "var(--radius-sm)",
+                    border: open ? "1.5px solid var(--red)" : "1.5px solid var(--gray-300)",
+                    background: "#fff",
+                    color: "#1e293b",
+                    fontWeight: 700,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 6,
+                    cursor: "pointer",
+                    boxShadow: open ? "0 0 0 3px rgba(217, 48, 37, 0.1)" : "var(--shadow-sm)",
+                    transition: "all 0.18s",
+                    boxSizing: "border-box"
+                }}
+            >
+                <span style={{
+                    flex: 1,
+                    textAlign: centerText ? "center" : "left",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                }}>
+                    {selected ? selected.label : value}
+                </span>
+                <ChevronDownIcon
+                    width={15}
+                    strokeWidth={2.5}
+                    style={{
+                        color: "#64748b",
+                        flexShrink: 0,
+                        transform: open ? "rotate(180deg)" : "none",
+                        transition: "transform 0.18s"
+                    }}
+                />
+            </button>
+
+            {open && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        left: 0,
+                        right: 0,
+                        background: "#fff",
+                        border: "1.5px solid #e2e8f0",
+                        borderRadius: 12,
+                        boxShadow: "0 12px 28px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06)",
+                        maxHeight: 210,
+                        overflowY: "auto",
+                        zIndex: 80,
+                        padding: 5
+                    }}
+                >
+                    {options.map(opt => {
+                        const isActive = opt.value === value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setOpen(false);
+                                }}
+                                style={{
+                                    width: "100%",
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: "none",
+                                    background: isActive ? "#fef2f2" : "transparent",
+                                    color: isActive ? "var(--red)" : "#1e293b",
+                                    fontWeight: isActive ? 800 : 600,
+                                    fontSize: 14,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: centerText ? "center" : "space-between",
+                                    cursor: "pointer",
+                                    textAlign: centerText ? "center" : "left",
+                                    transition: "background 0.12s"
+                                }}
+                            >
+                                <span>{opt.label}</span>
+                                {!centerText && isActive && <CheckIcon width={14} strokeWidth={3} />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ThaiMonthPicker({
+    value,
+    onChange
+}: {
+    value: string; // YYYY-MM
+    onChange: (val: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const [curY, curM] = (value && value.includes("-"))
+        ? value.split("-").map(Number)
+        : [new Date().getFullYear(), new Date().getMonth() + 1];
+
+    const [viewYear, setViewYear] = useState<number>(curY || new Date().getFullYear());
+
+    useEffect(() => {
+        if (curY) setViewYear(curY);
+    }, [curY]);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [open]);
+
+    return (
+        <div ref={ref} style={{ position: "relative", width: "100%" }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    width: "100%",
+                    height: 48,
+                    padding: "0 14px",
+                    borderRadius: "var(--radius-sm)",
+                    border: open ? "1.5px solid var(--red)" : "1.5px solid var(--gray-300)",
+                    background: "#fff",
+                    color: "#1e293b",
+                    fontWeight: 800,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    cursor: "pointer",
+                    boxShadow: open ? "0 0 0 3px rgba(217, 48, 37, 0.1)" : "var(--shadow-sm)",
+                    transition: "all 0.18s",
+                    boxSizing: "border-box"
+                }}
+            >
+                <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <CalendarIcon width={17} style={{ color: "var(--red)", flexShrink: 0 }} />
+                    <span>{formatPeriodMonthThai(value)}</span>
+                </span>
+                <ChevronDownIcon
+                    width={16}
+                    strokeWidth={2.5}
+                    style={{
+                        color: "#64748b",
+                        flexShrink: 0,
+                        transform: open ? "rotate(180deg)" : "none",
+                        transition: "transform 0.18s"
+                    }}
+                />
+            </button>
+
+            {open && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: "calc(100% + 8px)",
+                        right: 0,
+                        width: "min(300px, 88vw)",
+                        background: "#fff",
+                        border: "1.5px solid #e2e8f0",
+                        borderRadius: 16,
+                        boxShadow: "0 16px 36px rgba(15, 23, 42, 0.16), 0 4px 10px rgba(15, 23, 42, 0.06)",
+                        padding: 14,
+                        zIndex: 90
+                    }}
+                >
+                    {/* Year switcher header */}
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 12,
+                            paddingBottom: 10,
+                            borderBottom: "1px solid #f1f5f9"
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setViewYear(y => y - 1)}
+                            style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                border: "1px solid #e2e8f0",
+                                background: "#f8fafc",
+                                color: "#334155",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer"
+                            }}
+                            title="ปีก่อนหน้า"
+                        >
+                            <ChevronLeftIcon width={15} strokeWidth={2.5} />
+                        </button>
+                        <span style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>
+                            พ.ศ. {viewYear + 543}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setViewYear(y => y + 1)}
+                            style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                border: "1px solid #e2e8f0",
+                                background: "#f8fafc",
+                                color: "#334155",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer"
+                            }}
+                            title="ปีถัดไป"
+                        >
+                            <ChevronRightIcon width={15} strokeWidth={2.5} />
+                        </button>
+                    </div>
+
+                    {/* 12 Months 3x4 Grid */}
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(3, 1fr)",
+                            gap: 6
+                        }}
+                    >
+                        {THAI_MONTHS.map((mName, idx) => {
+                            const mNum = idx + 1;
+                            const candidateVal = `${viewYear}-${String(mNum).padStart(2, "0")}`;
+                            const isSelected = candidateVal === value;
+                            return (
+                                <button
+                                    key={mNum}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(candidateVal);
+                                        setOpen(false);
+                                    }}
+                                    style={{
+                                        padding: "9px 6px",
+                                        borderRadius: 9,
+                                        border: isSelected ? "1.5px solid var(--red)" : "1px solid #f1f5f9",
+                                        background: isSelected ? "linear-gradient(135deg, var(--red), var(--red-dark))" : "#f8fafc",
+                                        color: isSelected ? "#fff" : "#334155",
+                                        fontWeight: isSelected ? 800 : 600,
+                                        fontSize: 12.5,
+                                        cursor: "pointer",
+                                        textAlign: "center",
+                                        transition: "all 0.15s",
+                                        boxShadow: isSelected ? "0 3px 10px rgba(217, 48, 37, 0.25)" : "none"
+                                    }}
+                                >
+                                    {mName}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface DayItemDraft {
     workDate: string; // YYYY-MM-DD
@@ -579,7 +901,7 @@ export default function MissingCheckinReportPage() {
                                 </div>
                             </div>
 
-                            {/* ฝั่งขวา: ประจำรอบเดือน (ภาษาไทย) */}
+                            {/* ฝั่งขวา: ประจำรอบเดือน (ภาษาไทย - Custom Popover Grid) */}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                                 <label
                                     className={styles.label}
@@ -587,27 +909,10 @@ export default function MissingCheckinReportPage() {
                                 >
                                     ประจำรอบเดือน (ตัดรอบทุกวันที่ 25)
                                 </label>
-                                <select
-                                    className={styles.select}
+                                <ThaiMonthPicker
                                     value={periodMonth}
-                                    onChange={e => setPeriodMonth(e.target.value)}
-                                    required
-                                    style={{
-                                        height: 48,
-                                        padding: "0 14px",
-                                        fontWeight: 800,
-                                        fontSize: 15,
-                                        color: "#1e293b",
-                                        background: "#fff",
-                                        boxSizing: "border-box"
-                                    }}
-                                >
-                                    {monthSelectOptions.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={val => setPeriodMonth(val)}
+                                />
                                 <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600, minHeight: 18 }}>
                                     {getPeriodDateRangeLabel(periodMonth)}
                                 </div>
@@ -781,7 +1086,7 @@ export default function MissingCheckinReportPage() {
                                         </div>
                                     </div>
 
-                                    {/* เวลาเข้า-ออกงาน (สมมาตร 24 ชม.) */}
+                                    {/* เวลาเข้า-ออกงาน (สมมาตร 24 ชม. — Custom Dropdown) */}
                                     <div style={{
                                         display: "grid",
                                         gridTemplateColumns: "1fr 1fr",
@@ -795,26 +1100,24 @@ export default function MissingCheckinReportPage() {
                                             </label>
                                             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8 }}>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <select
-                                                        className={styles.select}
+                                                    <CustomSelect
                                                         value={item.inHour}
-                                                        onChange={e => updateDayItem(idx, { inHour: e.target.value })}
-                                                        style={{ textAlign: "center", fontWeight: 700, background: "#fff", height: 44, padding: "0 8px" }}
-                                                    >
-                                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                                    </select>
+                                                        options={HOUR_OPTIONS.map(h => ({ value: h, label: h }))}
+                                                        onChange={val => updateDayItem(idx, { inHour: val })}
+                                                        centerText
+                                                        height={44}
+                                                    />
                                                     <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text4)", textAlign: "center" }}>ชั่วโมง</span>
                                                 </div>
                                                 <span style={{ fontWeight: 800, fontSize: 18, color: "var(--gray-400)", marginTop: -18 }}>:</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <select
-                                                        className={styles.select}
+                                                    <CustomSelect
                                                         value={item.inMin}
-                                                        onChange={e => updateDayItem(idx, { inMin: e.target.value })}
-                                                        style={{ textAlign: "center", fontWeight: 700, background: "#fff", height: 44, padding: "0 8px" }}
-                                                    >
-                                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                                    </select>
+                                                        options={MINUTE_OPTIONS.map(m => ({ value: m, label: m }))}
+                                                        onChange={val => updateDayItem(idx, { inMin: val })}
+                                                        centerText
+                                                        height={44}
+                                                    />
                                                     <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text4)", textAlign: "center" }}>นาที</span>
                                                 </div>
                                             </div>
@@ -827,26 +1130,24 @@ export default function MissingCheckinReportPage() {
                                             </label>
                                             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8 }}>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <select
-                                                        className={styles.select}
+                                                    <CustomSelect
                                                         value={item.outHour}
-                                                        onChange={e => updateDayItem(idx, { outHour: e.target.value })}
-                                                        style={{ textAlign: "center", fontWeight: 700, background: "#fff", height: 44, padding: "0 8px" }}
-                                                    >
-                                                        {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                                                    </select>
+                                                        options={HOUR_OPTIONS.map(h => ({ value: h, label: h }))}
+                                                        onChange={val => updateDayItem(idx, { outHour: val })}
+                                                        centerText
+                                                        height={44}
+                                                    />
                                                     <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text4)", textAlign: "center" }}>ชั่วโมง</span>
                                                 </div>
                                                 <span style={{ fontWeight: 800, fontSize: 18, color: "var(--gray-400)", marginTop: -18 }}>:</span>
                                                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                                    <select
-                                                        className={styles.select}
+                                                    <CustomSelect
                                                         value={item.outMin}
-                                                        onChange={e => updateDayItem(idx, { outMin: e.target.value })}
-                                                        style={{ textAlign: "center", fontWeight: 700, background: "#fff", height: 44, padding: "0 8px" }}
-                                                    >
-                                                        {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                                                    </select>
+                                                        options={MINUTE_OPTIONS.map(m => ({ value: m, label: m }))}
+                                                        onChange={val => updateDayItem(idx, { outMin: val })}
+                                                        centerText
+                                                        height={44}
+                                                    />
                                                     <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text4)", textAlign: "center" }}>นาที</span>
                                                 </div>
                                             </div>
