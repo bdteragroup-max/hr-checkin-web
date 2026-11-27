@@ -62,6 +62,7 @@ const NAV_BOTTOM = [{ href: "/api/auth/logout", icon: LockClosedIcon, label: "�
 export default function AppShell({ children }: { children: ReactNode }) {
     const [collapsed, setCollapsed] = useState(false);
     const [isSupervisor, setIsSupervisor] = useState(false);
+    const [canClaimDepreciation, setCanClaimDepreciation] = useState(false);
     const [baseSalary, setBaseSalary] = useState(0);
     const [hasPayslip, setHasPayslip] = useState(false);
     const [birthMonth, setBirthMonth] = useState<number | null>(null);
@@ -74,6 +75,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             .then(r => r.json())
             .then(d => {
                 setIsSupervisor(!!d?.is_supervisor);
+                setCanClaimDepreciation(!!d?.can_claim_depreciation);
                 setBaseSalary(Number(d?.base_salary) || 0);
                 setHasPayslip(!!d?.has_published_payslips);
                 if (d?.birth_date) {
@@ -127,6 +129,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
         navMain.push({ id: "team-welfare", href: "/team/welfare", icon: BanknotesIcon, label: "อนุมัติสวัสดิการทีม", sub: "Team Welfare" });
         navMain.push({ id: "team-tasks", href: "/team/tasks", icon: ClipboardDocumentListIcon, label: "จัดการ Task ทีม", sub: "Team Tasks" });
         navMain.push({ id: "team-records", href: "/team/records", icon: ClipboardDocumentListIcon, label: "ประวัติการเช็คอินทีม", sub: "Team Records" });
+    } else if (canClaimDepreciation) {
+        navMain.push({ id: "team-depreciation", href: "/team/depreciation-claims", icon: BanknotesIcon, label: "ค่าเสื่อม / ค่าน้ำมัน", sub: "Depreciation & Fuel" });
     }
 
     // NOTE: Do not show Sidebar on Login or Admin pages

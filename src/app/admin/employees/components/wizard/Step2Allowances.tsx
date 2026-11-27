@@ -114,7 +114,7 @@ export function getPhoneAllowanceDetails(
     let autoCategoryId = "general";
     let autoRoleName = "พนักงานทั่วไป";
 
-    if (posTitle.includes("ผู้จัดการ") || posTitle.includes("manager")) {
+    if (posTitle.includes("ผู้จัดการ") || posTitle.includes("manager") || posTitle.includes("mgr")) {
         autoCategoryId = "manager";
         autoRoleName = "ผู้จัดการ";
     } else if (deptName.includes("บุคคล") || deptName.includes("hr") || posTitle.includes("บุคคล") || posTitle.includes("hr")) {

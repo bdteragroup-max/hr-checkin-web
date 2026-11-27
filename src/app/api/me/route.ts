@@ -13,10 +13,38 @@ export async function GET() {
             return NextResponse.json({ error: "INVALID_TOKEN_PAYLOAD" }, { status: 401 });
         }
 
-        const emp = await prisma.employees.findUnique({ where: { emp_id: payload.emp_id } });
+        const emp = await prisma.employees.findUnique({
+            where: { emp_id: payload.emp_id },
+            include: {
+                departments: { select: { name: true } },
+                job_positions: { select: { title: true } }
+            }
+        });
         if (!emp) return NextResponse.json({ error: "USER_NOT_FOUND" }, { status: 401 });
 
-        const subsCount = await prisma.employees.count({ where: { supervisor_id: emp.emp_id } });
+        const subsCount = await prisma.employees.count({
+            where: {
+                OR: [
+                    { supervisor_id: emp.emp_id },
+                    { secondary_supervisor_id: emp.emp_id }
+                ]
+            }
+        });
+
+        const deptName = (emp.departments?.name || "").toLowerCase();
+        const posTitle = (emp.job_positions?.title || "").toLowerCase();
+        const isSalesOrBranchMgr =
+            deptName.includes("sale") ||
+            deptName.includes("ขาย") ||
+            deptName.includes("การตลาด") ||
+            deptName.includes("marketing") ||
+            posTitle.includes("sale") ||
+            posTitle.includes("ขาย") ||
+            posTitle.includes("branch mgr") ||
+            posTitle.includes("mgr") ||
+            posTitle.includes("manager") ||
+            posTitle.includes("ผู้จัดการ");
+
         const publishedPayslipCount = await prisma.monthly_payroll_data.count({
             where: { 
                 emp_id: {
@@ -32,6 +60,9 @@ export async function GET() {
             name: emp.name,
             branch_id: emp.branch_id,
             is_supervisor: subsCount > 0,
+            can_claim_depreciation: subsCount > 0 || isSalesOrBranchMgr,
+            department_name: emp.departments?.name || null,
+            position_title: emp.job_positions?.title || null,
             base_salary: Number(emp.base_salary),
             birth_date: emp.birth_date,
             hire_date: emp.hire_date,
